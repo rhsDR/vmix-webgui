@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>vMix Live Control</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #111111;
+      --card:        #1c1c1c;
+      --card-border: #2a2a2a;
+      --text:        #ffffff;
+      --muted:       #777777;
+      --orange:      #f97316;
+      --red:         #ef4444;
+      --blue:        #3b82f6;
+      --green:       #22c55e;
+      --input-bg:    #0d0d0d;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* ── Header ───────────────────────────────────────────── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 24px;
+      border-bottom: 1px solid #252525;
+    }
+    .header-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 3px;
+    }
+    .clock {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      border: 2px solid #fff;
+      padding: 5px 14px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Tabs ─────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      padding: 12px 24px;
+      border-bottom: 1px solid #252525;
+    }
+    .tab-btn {
+      padding: 5px 16px;
+      border: 1px solid #333;
+      background: transparent;
+      color: #666;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover { color: #ccc; border-color: #555; }
+    .tab-btn.active { background: var(--orange); border-color: var(--orange); color: #fff; }
+
+    .tab-pane { display: none; padding: 18px 24px; }
+    .tab-pane.active { display: block; }
+    .coming-soon { padding: 60px; text-align: center; color: #333; font-size: 12px; letter-spacing: 3px; }
+
+    /* ── Kamp list ────────────────────────────────────────── */
+    .kamp-list { display: flex; flex-direction: column; gap: 10px; }
+
+    /* ── Kamp block ───────────────────────────────────────── */
+    .kamp-block {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    /* Red left border */
+    .kamp-block::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: transparent;
+      transition: background 0.2s;
+      z-index: 1;
+    }
+    .kamp-block.on-air::before { background: var(--red); }
+
+    /* ── Block header ─────────────────────────────────────── */
+    .kamp-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px 10px 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .kamp-header-left { display: flex; align-items: center; gap: 12px; }
+    .kamp-header-right { display: flex; align-items: center; gap: 4px; }
+
+    .on-air-btn {
+      padding: 3px 11px;
+      border-radius: 20px;
+      border: 1px solid #555;
+      background: transparent;
+      color: #666;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .on-air-btn.active { border-color: var(--red); background: var(--red); color: #fff; }
+
+    .kamp-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #555;
+      letter-spacing: 2px;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      color: #555;
+      cursor: pointer;
+      padding: 5px 7px;
+      border-radius: 4px;
+      font-size: 14px;
+      line-height: 1;
+      transition: all 0.15s;
+    }
+    .icon-btn:hover { color: #ccc; background: #252525; }
+
+    .collapse-arrow { display: inline-block; transition: transform 0.2s; font-style: normal; }
+    .kamp-block.collapsed .collapse-arrow { transform: rotate(180deg); }
+
+    /* ── Block body ───────────────────────────────────────── */
+    .kamp-body { padding: 4px 14px 16px 18px; }
+    .kamp-block.collapsed .kamp-body { display: none; }
+
+    /* ── Normal mode ──────────────────────────────────────── */
+    .normal-view {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .kamp-info {
+      min-width: 190px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .info-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #bbb;
+    }
+    .info-icon { color: #555; font-size: 13px; min-width: 16px; text-align: center; }
+    .info-link-text {
+      font-size: 12px;
+      color: #777;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 138px;
+    }
+    .copy-btn {
+      background: none;
+      border: none;
+      color: #555;
+      cursor: pointer;
+      padding: 2px 5px;
+      font-size: 14px;
+      border-radius: 3px;
+      transition: color 0.15s;
+      flex-shrink: 0;
+    }
+    .copy-btn:hover { color: #ccc; }
+
+    /* ── Score area ───────────────────────────────────────── */
+    .score-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .team-block { text-align: center; }
+    .team-name {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #fff;
+      min-height: 38px;
+      line-height: 1;
+    }
+    .score-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      justify-content: center;
+    }
+    .score-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 5px;
+      border: 1px solid #333;
+      background: #222;
+      color: #fff;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .score-btn:hover { background: #2e2e2e; }
+    .score-val {
+      font-size: 46px;
+      font-weight: 800;
+      color: var(--blue);
+      min-width: 52px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .vs-sep { font-size: 14px; color: #3a3a3a; font-weight: 700; padding: 0 6px; margin-top: 20px; }
+
+    /* ── Edit mode ────────────────────────────────────────── */
+    .edit-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .span2 { grid-column: span 2; }
+
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-label {
+      font-size: 10px;
+      color: #555;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .form-input, .form-select {
+      background: var(--input-bg);
+      border: 1px solid #2e2e2e;
+      color: #fff;
+      padding: 7px 10px;
+      border-radius: 4px;
+      font-size: 13px;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+    .form-input:focus, .form-select:focus { outline: none; border-color: var(--orange); }
+    .form-select { cursor: pointer; }
+
+    .vmix-row { display: flex; gap: 6px; align-items: center; }
+    .vmix-row .form-input { flex: 1; }
+
+    .edit-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      align-items: center;
+    }
+    .btn {
+      padding: 7px 18px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      transition: all 0.15s;
+    }
+    .btn-save   { background: var(--orange); color: #fff; }
+    .btn-save:hover { filter: brightness(1.1); }
+    .btn-cancel { background: #222; color: #888; border: 1px solid #333; }
+    .btn-cancel:hover { color: #fff; }
+    .btn-reset  { background: transparent; color: #666; border: 1px solid #2e2e2e; margin-left: auto; }
+    .btn-reset:hover { color: var(--red); border-color: var(--red); }
+
+    /* ── Toast ────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      background: #1c1c1c;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 9px 18px;
+      font-size: 13px;
+      color: #ccc;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.2s;
+      pointer-events: none;
+      z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok  { border-color: var(--green); color: var(--green); }
+    .toast.err { border-color: var(--red);   color: var(--red); }
+
+    /* ── Loading ──────────────────────────────────────────── */
+    .loading { padding: 40px; text-align: center; color: #444; font-size: 13px; letter-spacing: 1px; }
+    .load-err { padding: 40px; text-align: center; color: var(--red); font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-title">VMIX LIVE CONTROL</div>
+  <div class="clock" id="clock">00.00.00</div>
+</header>
+
+<!-- TABS -->
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="kampe">KAMPE</button>
+  <button class="tab-btn" data-tab="subs">SUBS</button>
+  <button class="tab-btn" data-tab="navneskilte">NAVNESKILTE</button>
+  <button class="tab-btn" data-tab="ticker">TICKER</button>
+  <button class="tab-btn" data-tab="credits">CREDITS</button>
+</nav>
+
+<!-- TAB: KAMPE -->
+<div id="tab-kampe" class="tab-pane active">
+  <div class="kamp-list" id="kampList">
+    <div class="loading">Henter data…</div>
+  </div>
+</div>
+
+<!-- TAB: SUBS -->
+<div id="tab-subs" class="tab-pane">
+  <div class="coming-soon">KOMMER SNART</div>
+</div>
+
+<!-- TAB: NAVNESKILTE -->
+<div id="tab-navneskilte" class="tab-pane">
+  <div class="coming-soon">KOMMER SNART</div>
+</div>
+
+<!-- TAB: TICKER -->
+<div id="tab-ticker" class="tab-pane">
+  <div class="coming-soon">KOMMER SNART</div>
+</div>
+
+<!-- TAB: CREDITS -->
+<div id="tab-credits" class="tab-pane">
+  <div class="coming-soon">KOMMER SNART</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────
+const SCRIPT_URL = 'DIN_APPS_SCRIPT_URL_HER';
+
+// ── STATE ─────────────────────────────────────────────────────
+let dropdowns = { holds: [], kommentatorer: [], lokationer: [] };
+
+const makeKamp = () => ({
+  hold1Lang: '', hold1Kort: '', hold1Score: 0,
+  hold2Score: 0, hold2Kort: '', hold2Lang: '',
+  kommentator: '', lokation: '', vmixcall: '', onAir: false,
+  // edit buffer
+  editMode: false, collapsed: false,
+  buf: { hold1Lang: '', hold2Lang: '', kommentator: '', lokation: '', vmixcall: '' }
+});
+
+let kampe = Array.from({ length: 6 }, makeKamp);
+
+// ── CLOCK ─────────────────────────────────────────────────────
+function tickClock() {
+  const d   = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('clock').textContent =
+    `${pad(d.getHours())}.${pad(d.getMinutes())}.${pad(d.getSeconds())}`;
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+// ── TABS ──────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── API ───────────────────────────────────────────────────────
+async function api(params) {
+  const url = SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+  const res  = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+// ── TOAST ─────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── CLIPBOARD ─────────────────────────────────────────────────
+async function copyText(text) {
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Kopieret!', 'ok');
+  } catch {
+    toast('Kopiering fejlede', 'err');
+  }
+}
+
+// ── HTML ESCAPE ───────────────────────────────────────────────
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ── RENDER ────────────────────────────────────────────────────
+function renderAll() {
+  const list = document.getElementById('kampList');
+  list.innerHTML = '';
+  kampe.forEach((_, i) => list.appendChild(buildBlock(i)));
+}
+
+function rerender(i) {
+  const old = document.getElementById('kamp-' + i);
+  if (old) old.replaceWith(buildBlock(i));
+}
+
+function buildBlock(i) {
+  const k = kampe[i];
+  const block = document.createElement('div');
+  block.id        = 'kamp-' + i;
+  block.className = 'kamp-block'
+    + (k.onAir     ? ' on-air'    : '')
+    + (k.collapsed ? ' collapsed' : '');
+
+  // Header
+  block.innerHTML = `
+    <div class="kamp-header" id="kamp-hdr-${i}">
+      <div class="kamp-header-left">
+        <button class="on-air-btn ${k.onAir ? 'active' : ''}"
+                id="oabtn-${i}">ON AIR</button>
+        <span class="kamp-label">KAMP ${i + 1}</span>
+      </div>
+      <div class="kamp-header-right">
+        ${!k.editMode
+          ? `<button class="icon-btn" id="editbtn-${i}" title="Rediger">✏️</button>`
+          : ''}
+        <button class="icon-btn" id="collbtn-${i}" title="Fold ind/ud">
+          <i class="collapse-arrow">▴</i>
+        </button>
+      </div>
+    </div>
+    <div class="kamp-body" id="kamp-body-${i}"></div>
+  `;
+
+  // Body content
+  const body = block.querySelector('#kamp-body-' + i);
+  body.appendChild(k.editMode ? buildEditView(i) : buildNormalView(i));
+
+  // Events — ON AIR
+  block.querySelector('#oabtn-' + i).addEventListener('click', e => {
+    e.stopPropagation();
+    toggleOnAir(i);
+  });
+
+  // Events — collapse (click header, but not buttons)
+  block.querySelector('#kamp-hdr-' + i).addEventListener('click', e => {
+    if (!e.target.closest('button')) toggleCollapse(i);
+  });
+  block.querySelector('#collbtn-' + i).addEventListener('click', e => {
+    e.stopPropagation();
+    toggleCollapse(i);
+  });
+
+  // Events — edit button (normal mode only)
+  const eb = block.querySelector('#editbtn-' + i);
+  if (eb) eb.addEventListener('click', e => { e.stopPropagation(); enterEdit(i); });
+
+  return block;
+}
+
+// ── NORMAL VIEW ───────────────────────────────────────────────
+function buildNormalView(i) {
+  const k   = kampe[i];
+  const div = document.createElement('div');
+  div.className = 'normal-view';
+
+  div.innerHTML = `
+    <div class="kamp-info">
+      <div class="info-row">
+        <span class="info-icon">🎙</span>
+        <span>${esc(k.kommentator) || '<span style="color:#444">—</span>'}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-icon">📍</span>
+        <span>${esc(k.lokation) || '<span style="color:#444">—</span>'}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-icon">🔗</span>
+        <span class="info-link-text" title="${esc(k.vmixcall)}">${esc(k.vmixcall) || '<span style="color:#444">—</span>'}</span>
+        <button class="copy-btn" id="cpnorm-${i}" title="Kopiér link">⎘</button>
+      </div>
+    </div>
+    <div class="score-area">
+      <div class="team-block">
+        <div class="team-name">${esc(k.hold1Kort) || '—'}</div>
+        <div class="score-row">
+          <button class="score-btn" id="s1m-${i}">−</button>
+          <div class="score-val" id="sv1-${i}">${k.hold1Score}</div>
+          <button class="score-btn" id="s1p-${i}">+</button>
+        </div>
+      </div>
+      <div class="vs-sep">VS</div>
+      <div class="team-block">
+        <div class="team-name">${esc(k.hold2Kort) || '—'}</div>
+        <div class="score-row">
+          <button class="score-btn" id="s2m-${i}">−</button>
+          <div class="score-val" id="sv2-${i}">${k.hold2Score}</div>
+          <button class="score-btn" id="s2p-${i}">+</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  div.querySelector('#cpnorm-' + i).addEventListener('click', () => copyText(k.vmixcall));
+  div.querySelector('#s1m-' + i).addEventListener('click', () => changeScore(i, 1, -1));
+  div.querySelector('#s1p-' + i).addEventListener('click', () => changeScore(i, 1, +1));
+  div.querySelector('#s2m-' + i).addEventListener('click', () => changeScore(i, 2, -1));
+  div.querySelector('#s2p-' + i).addEventListener('click', () => changeScore(i, 2, +1));
+
+  return div;
+}
+
+// ── EDIT VIEW ─────────────────────────────────────────────────
+function buildEditView(i) {
+  const k   = kampe[i];
+  const buf = k.buf;
+  const div = document.createElement('div');
+
+  const holdOpts = (selectedLang) => dropdowns.holds.map(h =>
+    `<option value="${esc(h.lang)}" ${buf[selectedLang] === h.lang ? 'selected' : ''}>${esc(h.lang)}</option>`
+  ).join('');
+
+  const kommOpts = dropdowns.kommentatorer.map(v =>
+    `<option value="${esc(v)}" ${buf.kommentator === v ? 'selected' : ''}>${esc(v)}</option>`
+  ).join('');
+
+  const lokOpts = dropdowns.lokationer.map(v =>
+    `<option value="${esc(v)}" ${buf.lokation === v ? 'selected' : ''}>${esc(v)}</option>`
+  ).join('');
+
+  div.innerHTML = `
+    <div class="edit-grid">
+      <div class="form-group">
+        <label class="form-label">Hold 1</label>
+        <select class="form-select" id="eh1-${i}">
+          <option value="">— Vælg hold —</option>
+          ${holdOpts('hold1Lang')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hold 2</label>
+        <select class="form-select" id="eh2-${i}">
+          <option value="">— Vælg hold —</option>
+          ${holdOpts('hold2Lang')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kommentator</label>
+        <select class="form-select" id="ek-${i}">
+          <option value="">— Vælg kommentator —</option>
+          ${kommOpts}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Lokation</label>
+        <select class="form-select" id="el-${i}">
+          <option value="">— Vælg lokation —</option>
+          ${lokOpts}
+        </select>
+      </div>
+      <div class="form-group span2">
+        <label class="form-label">vMix Call Link</label>
+        <div class="vmix-row">
+          <input class="form-input" type="text" id="ev-${i}"
+            value="${esc(buf.vmixcall)}" placeholder="https://…">
+          <button class="copy-btn icon-btn" id="cpedit-${i}" title="Kopiér link">⎘</button>
+        </div>
+      </div>
+    </div>
+    <div class="edit-actions">
+      <button class="btn btn-save"   id="gem-${i}">💾 GEM</button>
+      <button class="btn btn-cancel" id="ann-${i}">ANNULLER</button>
+      <button class="btn btn-reset"  id="nul-${i}">NULSTIL</button>
+    </div>
+  `;
+
+  // Live-update buffer on change
+  div.querySelector('#eh1-' + i).addEventListener('change', e => { buf.hold1Lang = e.target.value; });
+  div.querySelector('#eh2-' + i).addEventListener('change', e => { buf.hold2Lang = e.target.value; });
+  div.querySelector('#ek-'  + i).addEventListener('change', e => { buf.kommentator = e.target.value; });
+  div.querySelector('#el-'  + i).addEventListener('change', e => { buf.lokation = e.target.value; });
+  div.querySelector('#ev-'  + i).addEventListener('input',  e => { buf.vmixcall = e.target.value; });
+
+  div.querySelector('#cpedit-' + i).addEventListener('click', () =>
+    copyText(div.querySelector('#ev-' + i).value));
+
+  div.querySelector('#gem-' + i).addEventListener('click', () => saveKamp(i, div));
+  div.querySelector('#ann-' + i).addEventListener('click', () => cancelEdit(i));
+  div.querySelector('#nul-' + i).addEventListener('click', () => resetEdit(i, div));
+
+  return div;
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────
+
+function toggleCollapse(i) {
+  kampe[i].collapsed = !kampe[i].collapsed;
+  rerender(i);
+}
+
+function toggleOnAir(i) {
+  kampe[i].onAir = !kampe[i].onAir;
+  rerender(i);
+  api({ action: 'setOnAir', kampIndex: i, onAir: kampe[i].onAir })
+    .catch(() => toast('Fejl ved ON AIR opdatering', 'err'));
+}
+
+function enterEdit(i) {
+  const k = kampe[i];
+  k.buf = {
+    hold1Lang:   k.hold1Lang,
+    hold2Lang:   k.hold2Lang,
+    kommentator: k.kommentator,
+    lokation:    k.lokation,
+    vmixcall:    k.vmixcall
+  };
+  k.editMode = true;
+  rerender(i);
+}
+
+function cancelEdit(i) {
+  kampe[i].editMode = false;
+  rerender(i);
+}
+
+function resetEdit(i, div) {
+  // Clear dropdowns and score — keep vmixcall
+  const k = kampe[i];
+  k.buf.hold1Lang   = '';
+  k.buf.hold2Lang   = '';
+  k.buf.kommentator = '';
+  k.buf.lokation    = '';
+  k.hold1Score      = 0;
+  k.hold2Score      = 0;
+
+  div.querySelector('#eh1-' + i).value = '';
+  div.querySelector('#eh2-' + i).value = '';
+  div.querySelector('#ek-'  + i).value = '';
+  div.querySelector('#el-'  + i).value = '';
+}
+
+async function saveKamp(i, div) {
+  const k   = kampe[i];
+  const buf = k.buf;
+
+  // Resolve short names
+  const h1 = dropdowns.holds.find(h => h.lang === buf.hold1Lang);
+  const h2 = dropdowns.holds.find(h => h.lang === buf.hold2Lang);
+
+  k.hold1Lang   = buf.hold1Lang;
+  k.hold1Kort   = h1 ? h1.kort : buf.hold1Lang;
+  k.hold2Lang   = buf.hold2Lang;
+  k.hold2Kort   = h2 ? h2.kort : buf.hold2Lang;
+  k.kommentator = buf.kommentator;
+  k.lokation    = buf.lokation;
+  k.vmixcall    = buf.vmixcall;
+  k.editMode    = false;
+
+  rerender(i);
+
+  try {
+    await api({
+      action:      'saveKamp',
+      kampIndex:   i,
+      hold1Lang:   k.hold1Lang,
+      hold1Kort:   k.hold1Kort,
+      hold1Score:  k.hold1Score,
+      hold2Score:  k.hold2Score,
+      hold2Kort:   k.hold2Kort,
+      hold2Lang:   k.hold2Lang,
+      kommentator: k.kommentator,
+      lokation:    k.lokation,
+      vmixcall:    k.vmixcall,
+      onAir:       k.onAir
+    });
+    toast('Gemt ✓', 'ok');
+  } catch {
+    toast('Fejl ved gem — prøv igen', 'err');
+  }
+}
+
+async function changeScore(i, team, delta) {
+  const k = kampe[i];
+  if (team === 1) {
+    k.hold1Score = Math.max(0, k.hold1Score + delta);
+    const el = document.getElementById('sv1-' + i);
+    if (el) el.textContent = k.hold1Score;
+  } else {
+    k.hold2Score = Math.max(0, k.hold2Score + delta);
+    const el = document.getElementById('sv2-' + i);
+    if (el) el.textContent = k.hold2Score;
+  }
+  try {
+    await api({ action: 'updateScore', kampIndex: i, team, delta });
+  } catch {
+    toast('Fejl ved scoreopdatering', 'err');
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+async function init() {
+  try {
+    const [dd, kd] = await Promise.all([
+      api({ action: 'getDropdowns' }),
+      api({ action: 'getData' })
+    ]);
+
+    if (dd.error) throw new Error(dd.error);
+    dropdowns = dd;
+
+    kd.kampe.forEach((data, i) => {
+      kampe[i] = { ...kampe[i], ...data };
+    });
+
+    renderAll();
+  } catch (err) {
+    document.getElementById('kampList').innerHTML =
+      `<div class="load-err">Fejl ved indlæsning.<br>Tjek at Apps Script URL er indsat korrekt.<br><small style="color:#555">${err.message}</small></div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
