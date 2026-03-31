@@ -425,7 +425,7 @@
     /* ── Ticker ───────────────────────────────────────────── */
     --yellow: #eab308;
 
-    .ticker-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 40px; }
+    .ticker-list { display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px; }
 
     .ticker-block {
       background: var(--card);
@@ -433,7 +433,9 @@
       border-radius: 8px;
       overflow: hidden;
       position: relative;
+      transition: border-color 0.2s;
     }
+    .ticker-block.on-air-breaking { border-color: #eab308; }
     .ticker-block::before {
       content: '';
       position: absolute;
@@ -443,8 +445,8 @@
       transition: background 0.2s;
       z-index: 1;
     }
-    .ticker-block.on-air::before  { background: var(--red); }
-    .ticker-block.breaking::before { background: #eab308; }
+    .ticker-block.on-air::before         { background: var(--red); }
+    .ticker-block.on-air-breaking::before { background: var(--red); }
 
     .ticker-header {
       display: flex;
@@ -963,7 +965,7 @@ function buildTickerBlock(i) {
   const block = document.createElement('div');
   block.id = 'ticker-' + i;
   block.className = 'ticker-block'
-    + (t.onAir && t.breaking ? ' breaking' : '')
+    + (t.onAir && t.breaking ? ' on-air-breaking' : '')
     + (t.onAir && !t.breaking ? ' on-air' : '')
     + (t.collapsed ? ' collapsed' : '');
 
