@@ -776,6 +776,20 @@ async function init() {
 }
 
 init();
+
+// ── AUTO-SYNC hvert 15 sek ────────────────────────────────────
+setInterval(async () => {
+  try {
+    const kd = await api({ action: 'getData' });
+    kd.kampe.forEach((data, i) => {
+      // Opdater ikke blokke der er i edit mode
+      if (kampe[i].editMode) return;
+      const prev = kampe[i];
+      kampe[i] = { ...prev, ...data, editMode: false, collapsed: prev.collapsed, buf: prev.buf };
+      rerender(i);
+    });
+  } catch { /* stille fejl — ingen toast ved baggrundsopdatering */ }
+}, 15000);
 </script>
 </body>
 </html>
