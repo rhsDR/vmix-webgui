@@ -421,6 +421,70 @@
     .btn-sm.cancel:hover { color: #fff; }
     .btn-sm.reset  { background: transparent; color: #555; border: 1px solid #2a2a2a; }
     .btn-sm.reset:hover { color: var(--red); border-color: var(--red); }
+
+    /* ── Ticker ───────────────────────────────────────────── */
+    --yellow: #eab308;
+
+    .ticker-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 40px; }
+
+    .ticker-block {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    .ticker-block::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 6px;
+      background: transparent;
+      transition: background 0.2s;
+      z-index: 1;
+    }
+    .ticker-block.on-air::before  { background: var(--red); }
+    .ticker-block.breaking::before { background: #eab308; }
+
+    .ticker-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px 10px 18px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .ticker-header-left  { display: flex; align-items: center; gap: 10px; flex: 1; }
+    .ticker-header-center { flex: 1; text-align: center; }
+    .ticker-header-right { display: flex; align-items: center; gap: 4px; flex: 1; justify-content: flex-end; }
+
+    .ticker-num {
+      font-size: 18px;
+      font-weight: 700;
+      color: #555;
+      letter-spacing: 2px;
+    }
+
+    .breaking-btn {
+      padding: 3px 11px;
+      border-radius: 20px;
+      border: 1px solid #555;
+      background: transparent;
+      color: #666;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .breaking-btn.active { border-color: #eab308; background: #eab308; color: #000; }
+
+    .ticker-body { padding: 4px 14px 14px 18px; }
+    .ticker-block.collapsed .ticker-body { display: none; }
+
+    .ticker-normal { display: flex; flex-direction: column; gap: 4px; }
+    .ticker-overskrift { font-size: 15px; font-weight: 700; color: #fff; }
+    .ticker-tekst { font-size: 13px; color: #888; }
   </style>
 </head>
 <body>
@@ -459,7 +523,7 @@
 
 <!-- TAB: TICKER -->
 <div id="tab-ticker" class="tab-pane">
-  <div class="coming-soon">KOMMER SNART</div>
+  <div id="tickerList"><div class="loading">Henter data…</div></div>
 </div>
 
 <!-- TAB: CREDITS -->
@@ -487,6 +551,14 @@ const makeKamp = () => ({
 });
 
 let kampe = Array.from({ length: 6 }, makeKamp);
+
+// ── TICKER STATE ──────────────────────────────────────────────
+const makeTicker = () => ({
+  overskrift: '', tekst: '', onAir: false, breaking: false,
+  editMode: false, collapsed: false,
+  buf: { overskrift: '', tekst: '' }
+});
+let tickers = Array.from({ length: 20 }, makeTicker);
 
 // ── SUBS STATE ────────────────────────────────────────────────
 const makeSub      = () => ({ navn: '', titel: '', editMode: false, buf: { navn: '', titel: '' } });
@@ -870,6 +942,149 @@ async function changeScore(i, team, delta) {
   }
 }
 
+// ── TICKER RENDER ─────────────────────────────────────────────
+function renderTickers() {
+  const list = document.getElementById('tickerList');
+  if (!list) return;
+  list.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'ticker-list';
+  tickers.forEach((_, i) => wrap.appendChild(buildTickerBlock(i)));
+  list.appendChild(wrap);
+}
+
+function rerenderTicker(i) {
+  const old = document.getElementById('ticker-' + i);
+  if (old) old.replaceWith(buildTickerBlock(i));
+}
+
+function buildTickerBlock(i) {
+  const t = tickers[i];
+  const block = document.createElement('div');
+  block.id = 'ticker-' + i;
+  block.className = 'ticker-block'
+    + (t.onAir && t.breaking ? ' breaking' : '')
+    + (t.onAir && !t.breaking ? ' on-air' : '')
+    + (t.collapsed ? ' collapsed' : '');
+
+  block.innerHTML = `
+    <div class="ticker-header" id="ticker-hdr-${i}">
+      <div class="ticker-header-left">
+        <button class="on-air-btn ${t.onAir ? 'active' : ''}" id="toa-${i}">ON AIR</button>
+        <button class="breaking-btn ${t.breaking ? 'active' : ''}" id="tbr-${i}">BREAKING</button>
+      </div>
+      <div class="ticker-header-center">
+        <span class="ticker-num">TICKER ${i + 1}</span>
+      </div>
+      <div class="ticker-header-right">
+        ${!t.editMode ? `<button class="icon-btn" id="teb-${i}" title="Rediger">✏️</button>` : ''}
+        <button class="icon-btn" id="tcol-${i}" title="Fold ind/ud">
+          <i class="collapse-arrow">▴</i>
+        </button>
+      </div>
+    </div>
+    <div class="ticker-body" id="ticker-body-${i}"></div>
+  `;
+
+  const body = block.querySelector('#ticker-body-' + i);
+  body.appendChild(t.editMode ? buildTickerEdit(i) : buildTickerNormal(i));
+
+  block.querySelector('#toa-' + i).addEventListener('click', e => { e.stopPropagation(); toggleTickerOnAir(i); });
+  block.querySelector('#tbr-' + i).addEventListener('click', e => { e.stopPropagation(); toggleTickerBreaking(i); });
+
+  block.querySelector('#ticker-hdr-' + i).addEventListener('click', e => {
+    if (!e.target.closest('button')) toggleTickerCollapse(i);
+  });
+  block.querySelector('#tcol-' + i).addEventListener('click', e => { e.stopPropagation(); toggleTickerCollapse(i); });
+
+  const eb = block.querySelector('#teb-' + i);
+  if (eb) eb.addEventListener('click', e => { e.stopPropagation(); enterTickerEdit(i); });
+
+  return block;
+}
+
+function buildTickerNormal(i) {
+  const t = tickers[i];
+  const div = document.createElement('div');
+  div.className = 'ticker-normal';
+  div.innerHTML = `
+    <div class="ticker-overskrift">${esc(t.overskrift) || '<span style="color:#333">—</span>'}</div>
+    <div class="ticker-tekst">${esc(t.tekst) || ''}</div>
+  `;
+  return div;
+}
+
+function buildTickerEdit(i) {
+  const t = tickers[i];
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <div class="edit-grid" style="margin-bottom:10px;">
+      <div class="form-group span2">
+        <label class="form-label">Overskrift</label>
+        <input class="form-input" id="tov-${i}" value="${esc(t.buf.overskrift)}" placeholder="Overskrift">
+      </div>
+      <div class="form-group span2">
+        <label class="form-label">Tekst</label>
+        <input class="form-input" id="ttx-${i}" value="${esc(t.buf.tekst)}" placeholder="Ticker tekst">
+      </div>
+    </div>
+    <div class="edit-actions">
+      <button class="btn btn-save"   id="tgem-${i}">💾 GEM</button>
+      <button class="btn btn-cancel" id="tann-${i}">ANNULLER</button>
+      <button class="btn btn-reset"  id="tnul-${i}">RYD</button>
+    </div>
+  `;
+
+  div.querySelector('#tov-' + i).addEventListener('input', e => { t.buf.overskrift = e.target.value; });
+  div.querySelector('#ttx-' + i).addEventListener('input', e => { t.buf.tekst      = e.target.value; });
+  titleCaseInput(div.querySelector('#tov-' + i), t.buf, 'overskrift');
+
+  div.querySelector('#tgem-' + i).addEventListener('click', () => saveTickerRow(i));
+  div.querySelector('#tann-' + i).addEventListener('click', () => { t.editMode = false; rerenderTicker(i); });
+  div.querySelector('#tnul-' + i).addEventListener('click', () => {
+    t.buf.overskrift = ''; t.buf.tekst = '';
+    div.querySelector('#tov-' + i).value = '';
+    div.querySelector('#ttx-' + i).value = '';
+  });
+
+  return div;
+}
+
+function toggleTickerCollapse(i) { tickers[i].collapsed = !tickers[i].collapsed; rerenderTicker(i); }
+
+function toggleTickerOnAir(i) {
+  tickers[i].onAir = !tickers[i].onAir;
+  rerenderTicker(i);
+  api({ action: 'setTickerOnAir', tickerIndex: i, onAir: tickers[i].onAir })
+    .catch(() => toast('Fejl ved ON AIR', 'err'));
+}
+
+function toggleTickerBreaking(i) {
+  tickers[i].breaking = !tickers[i].breaking;
+  rerenderTicker(i);
+  api({ action: 'setTickerBreaking', tickerIndex: i, breaking: tickers[i].breaking })
+    .catch(() => toast('Fejl ved BREAKING', 'err'));
+}
+
+function enterTickerEdit(i) {
+  const t = tickers[i];
+  t.buf = { overskrift: t.overskrift, tekst: t.tekst };
+  t.editMode = true;
+  rerenderTicker(i);
+}
+
+async function saveTickerRow(i) {
+  const t = tickers[i];
+  t.overskrift = t.buf.overskrift;
+  t.tekst      = t.buf.tekst;
+  t.editMode   = false;
+  rerenderTicker(i);
+  try {
+    await api({ action: 'saveTicker', tickerIndex: i, overskrift: t.overskrift, tekst: t.tekst });
+    toast('Gemt ✓', 'ok');
+  } catch { toast('Fejl ved gem', 'err'); }
+}
+
 // ── SUBS RENDER ───────────────────────────────────────────────
 function renderSubs() {
   const container = document.getElementById('subsList');
@@ -1043,10 +1258,11 @@ async function saveVmixCallRow(i) {
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
   try {
-    const [dd, kd, sd] = await Promise.all([
+    const [dd, kd, sd, td] = await Promise.all([
       api({ action: 'getDropdowns' }),
       api({ action: 'getData' }),
-      api({ action: 'getSubs' }).catch(() => null)
+      api({ action: 'getSubs' }).catch(() => null),
+      api({ action: 'getTickers' }).catch(() => null)
     ]);
 
     if (dd.error) throw new Error(dd.error);
@@ -1062,8 +1278,13 @@ async function init() {
       sd.vmixCalls.forEach((data, i) => { vmixCalls[i] = { ...vmixCalls[i], ...data }; });
     }
 
+    if (td && !td.error) {
+      td.tickers.forEach((data, i) => { tickers[i] = { ...tickers[i], ...data }; });
+    }
+
     renderAll();
     renderSubs();
+    renderTickers();
   } catch (err) {
     document.getElementById('kampList').innerHTML =
       `<div class="load-err">Fejl ved indlæsning.<br>Tjek at Apps Script URL er indsat korrekt.<br><small style="color:#555">${err.message}</small></div>`;
@@ -1075,9 +1296,10 @@ init();
 // ── AUTO-SYNC hvert 15 sek ────────────────────────────────────
 setInterval(async () => {
   try {
-    const [kd, sd] = await Promise.all([
+    const [kd, sd, td] = await Promise.all([
       api({ action: 'getData' }),
-      api({ action: 'getSubs' })
+      api({ action: 'getSubs' }),
+      api({ action: 'getTickers' }).catch(() => null)
     ]);
 
     kd.kampe.forEach((data, i) => {
@@ -1097,6 +1319,14 @@ setInterval(async () => {
       vmixCalls[i] = { ...vmixCalls[i], ...data };
       rerenderVmixCall(i);
     });
+
+    if (td && !td.error) {
+      td.tickers.forEach((data, i) => {
+        if (tickers[i].editMode) return;
+        tickers[i] = { ...tickers[i], ...data };
+        rerenderTicker(i);
+      });
+    }
   } catch { /* stille fejl */ }
 }, 15000);
 </script>
