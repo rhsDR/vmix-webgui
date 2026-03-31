@@ -349,7 +349,7 @@
       border: 1px solid var(--card-border);
       border-radius: 6px;
       margin-bottom: 6px;
-      min-height: 58px;
+      min-height: 77px;
     }
     .sub-row.grayed {
       opacity: 0.35;
@@ -989,10 +989,9 @@ function buildVmixCallRow(i) {
       ${kampBruger
         ? `<span class="sub-uses-kamp">BRUGES AF KAMP ${i + 1}</span>`
         : `<span class="sub-text ${hasData ? '' : 'empty'}">${hasData
-            ? `<span class="sub-navn">${esc(c.navn)}</span><span class="sub-titel">${esc(c.titel)}</span>`
+            ? `<span class="sub-navn">${esc(c.navn)}</span><span class="sub-titel">${esc(c.titel)}</span><span class="sub-link" title="${esc(c.link)}">${esc(c.link) || ''}</span>`
             : '—'}</span>`}
       ${!kampBruger ? `
-        <span class="sub-link" title="${esc(c.link)}">${esc(c.link) || ''}</span>
         <button class="copy-btn icon-btn" id="vccp2-${i}" title="Kopiér link">⎘</button>
         <button class="icon-btn" id="vceb-${i}" title="Rediger">✏️</button>` : ''}`;
     if (!kampBruger) {
