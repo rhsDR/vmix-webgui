@@ -378,15 +378,16 @@
       overflow: hidden;
     }
     .sub-text.empty { color: #333; font-style: italic; }
-    .sub-navn  { font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .sub-titel { font-size: 12px; font-weight: 400; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sub-navn  { font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sub-titel { font-size: 14px; font-weight: 400; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sub-link-row { display: flex; align-items: center; gap: 4px; }
     .sub-link {
-      font-size: 12px;
+      font-size: 13px;
       color: #555;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 180px;
+      max-width: 200px;
     }
     .sub-uses-kamp {
       font-size: 11px;
@@ -997,11 +998,9 @@ function buildVmixCallRow(i) {
       ${kampBruger
         ? `<span class="sub-uses-kamp">BRUGES AF KAMP ${i + 1}</span>`
         : `<span class="sub-text ${hasData ? '' : 'empty'}">${hasData
-            ? `<span class="sub-navn">${esc(c.navn)}</span><span class="sub-titel">${esc(c.titel)}</span><span class="sub-link" title="${esc(c.link)}">${esc(c.link) || ''}</span>`
+            ? `<span class="sub-navn">${esc(c.navn)}</span><span class="sub-titel">${esc(c.titel)}</span><span class="sub-link-row"><span class="sub-link" title="${esc(c.link)}">${esc(c.link) || ''}</span><button class="copy-btn icon-btn" id="vccp2-${i}" title="Kopiér link">⎘</button></span>`
             : '—'}</span>`}
-      ${!kampBruger ? `
-        <button class="copy-btn icon-btn" id="vccp2-${i}" title="Kopiér link">⎘</button>
-        <button class="icon-btn" id="vceb-${i}" title="Rediger">✏️</button>` : ''}`;
+      ${!kampBruger ? `<button class="icon-btn" id="vceb-${i}" title="Rediger">✏️</button>` : ''}`;
     if (!kampBruger) {
       row.querySelector('#vccp2-' + i).addEventListener('click', () => copyText(c.link));
       row.querySelector('#vceb-'  + i).addEventListener('click', () => {
