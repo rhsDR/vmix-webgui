@@ -1044,22 +1044,21 @@ async function init() {
     const [dd, kd, sd] = await Promise.all([
       api({ action: 'getDropdowns' }),
       api({ action: 'getData' }),
-      api({ action: 'getSubs' })
+      api({ action: 'getSubs' }).catch(() => null)
     ]);
 
     if (dd.error) throw new Error(dd.error);
+    if (kd.error) throw new Error(kd.error);
     dropdowns = dd;
 
     kd.kampe.forEach((data, i) => {
       kampe[i] = { ...kampe[i], ...data };
     });
 
-    sd.subs.forEach((data, i) => {
-      subs[i] = { ...subs[i], ...data };
-    });
-    sd.vmixCalls.forEach((data, i) => {
-      vmixCalls[i] = { ...vmixCalls[i], ...data };
-    });
+    if (sd && !sd.error) {
+      sd.subs.forEach((data, i) => { subs[i] = { ...subs[i], ...data }; });
+      sd.vmixCalls.forEach((data, i) => { vmixCalls[i] = { ...vmixCalls[i], ...data }; });
+    }
 
     renderAll();
     renderSubs();
