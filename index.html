@@ -322,6 +322,89 @@
     /* ── Loading ──────────────────────────────────────────── */
     .loading { padding: 40px; text-align: center; color: #444; font-size: 13px; letter-spacing: 1px; }
     .load-err { padding: 40px; text-align: center; color: var(--red); font-size: 13px; }
+
+    /* ── Subs ─────────────────────────────────────────────── */
+    .subs-section { margin-bottom: 28px; }
+    .subs-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #444;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #222;
+    }
+    .sub-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 12px;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      min-height: 44px;
+    }
+    .sub-row.grayed {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .sub-num {
+      font-size: 11px;
+      color: #444;
+      font-weight: 700;
+      min-width: 22px;
+      text-align: right;
+    }
+    .sub-text {
+      flex: 1;
+      font-size: 13px;
+      color: #ccc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sub-text.empty { color: #333; font-style: italic; }
+    .sub-sep { color: #333; font-size: 12px; padding: 0 4px; }
+    .sub-link {
+      font-size: 12px;
+      color: #555;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+    .sub-uses-kamp {
+      font-size: 11px;
+      color: #555;
+      letter-spacing: 1px;
+      font-weight: 700;
+    }
+    .sub-edit-fields {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+      align-items: center;
+    }
+    .sub-edit-fields .form-input { flex: 1; padding: 5px 8px; font-size: 13px; }
+    .sub-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .btn-sm {
+      padding: 4px 12px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      transition: all 0.15s;
+    }
+    .btn-sm.save   { background: var(--orange); color: #fff; }
+    .btn-sm.save:hover { filter: brightness(1.1); }
+    .btn-sm.cancel { background: #222; color: #666; border: 1px solid #333; }
+    .btn-sm.cancel:hover { color: #fff; }
+    .btn-sm.reset  { background: transparent; color: #555; border: 1px solid #2a2a2a; }
+    .btn-sm.reset:hover { color: var(--red); border-color: var(--red); }
   </style>
 </head>
 <body>
@@ -350,7 +433,7 @@
 
 <!-- TAB: SUBS -->
 <div id="tab-subs" class="tab-pane">
-  <div class="coming-soon">KOMMER SNART</div>
+  <div id="subsList"><div class="loading">Henter data…</div></div>
 </div>
 
 <!-- TAB: NAVNESKILTE -->
@@ -388,6 +471,12 @@ const makeKamp = () => ({
 });
 
 let kampe = Array.from({ length: 6 }, makeKamp);
+
+// ── SUBS STATE ────────────────────────────────────────────────
+const makeSub      = () => ({ navn: '', titel: '', editMode: false, buf: { navn: '', titel: '' } });
+const makeVmixCall = () => ({ navn: '', titel: '', link: '', editMode: false, buf: { navn: '', titel: '', link: '' } });
+let subs      = Array.from({ length: 15 }, makeSub);
+let vmixCalls = Array.from({ length: 8  }, makeVmixCall);
 
 // ── CLOCK ─────────────────────────────────────────────────────
 function tickClock() {
@@ -753,12 +842,173 @@ async function changeScore(i, team, delta) {
   }
 }
 
+// ── SUBS RENDER ───────────────────────────────────────────────
+function renderSubs() {
+  const container = document.getElementById('subsList');
+  if (!container) return;
+  container.innerHTML = '';
+
+  // Sektion: SUBS
+  const sec1 = document.createElement('div');
+  sec1.className = 'subs-section';
+  sec1.innerHTML = '<div class="subs-section-title">Subs</div>';
+  subs.forEach((_, i) => sec1.appendChild(buildSubRow(i)));
+  container.appendChild(sec1);
+
+  // Sektion: VMIX CALLS
+  const sec2 = document.createElement('div');
+  sec2.className = 'subs-section';
+  sec2.innerHTML = '<div class="subs-section-title">vMix Calls</div>';
+  vmixCalls.forEach((_, i) => sec2.appendChild(buildVmixCallRow(i)));
+  container.appendChild(sec2);
+}
+
+function rerenderSub(i) {
+  const old = document.getElementById('sub-' + i);
+  if (old) old.replaceWith(buildSubRow(i));
+}
+
+function rerenderVmixCall(i) {
+  const old = document.getElementById('vcall-' + i);
+  if (old) old.replaceWith(buildVmixCallRow(i));
+}
+
+function buildSubRow(i) {
+  const s   = subs[i];
+  const row = document.createElement('div');
+  row.id        = 'sub-' + i;
+  row.className = 'sub-row';
+
+  if (s.editMode) {
+    row.innerHTML = `
+      <span class="sub-num">${i + 1}</span>
+      <div class="sub-edit-fields">
+        <input class="form-input" id="sn-${i}"  value="${esc(s.buf.navn)}"  placeholder="Navn">
+        <input class="form-input" id="st-${i}"  value="${esc(s.buf.titel)}" placeholder="Titel">
+      </div>
+      <div class="sub-actions">
+        <button class="btn-sm save"   id="sg-${i}">GEM</button>
+        <button class="btn-sm cancel" id="sa-${i}">ANNULLER</button>
+        <button class="btn-sm reset"  id="sr-${i}">RYD</button>
+      </div>`;
+    row.querySelector('#sn-' + i).addEventListener('input',  e => { s.buf.navn  = e.target.value; });
+    row.querySelector('#st-' + i).addEventListener('input',  e => { s.buf.titel = e.target.value; });
+    row.querySelector('#sg-' + i).addEventListener('click',  () => saveSubRow(i));
+    row.querySelector('#sa-' + i).addEventListener('click',  () => { s.editMode = false; rerenderSub(i); });
+    row.querySelector('#sr-' + i).addEventListener('click',  () => {
+      s.buf.navn = ''; s.buf.titel = '';
+      row.querySelector('#sn-' + i).value = '';
+      row.querySelector('#st-' + i).value = '';
+    });
+  } else {
+    const hasData = s.navn || s.titel;
+    row.innerHTML = `
+      <span class="sub-num">${i + 1}</span>
+      <span class="sub-text ${hasData ? '' : 'empty'}">${hasData
+        ? esc(s.navn) + '<span class="sub-sep">|</span>' + esc(s.titel)
+        : '—'}</span>
+      <button class="icon-btn" id="seb-${i}" title="Rediger">✏️</button>`;
+    row.querySelector('#seb-' + i).addEventListener('click', () => {
+      s.buf = { navn: s.navn, titel: s.titel };
+      s.editMode = true;
+      rerenderSub(i);
+    });
+  }
+  return row;
+}
+
+function buildVmixCallRow(i) {
+  const c    = vmixCalls[i];
+  const row  = document.createElement('div');
+  row.id     = 'vcall-' + i;
+
+  // Tjek om kamp 1-6 bruger denne slot
+  const kampBruger = i < 6 && kampe[i] && kampe[i].hold1Lang;
+  row.className = 'sub-row' + (kampBruger && !c.editMode ? ' grayed' : '');
+
+  if (c.editMode) {
+    row.innerHTML = `
+      <span class="sub-num">${i + 1}</span>
+      <div class="sub-edit-fields">
+        <input class="form-input" id="vcn-${i}"  value="${esc(c.buf.navn)}"  placeholder="Navn">
+        <input class="form-input" id="vct-${i}"  value="${esc(c.buf.titel)}" placeholder="Titel">
+        <input class="form-input" id="vcl-${i}"  value="${esc(c.buf.link)}"  placeholder="vMix Call Link">
+        <button class="copy-btn icon-btn" id="vccp-${i}" title="Kopiér link">⎘</button>
+      </div>
+      <div class="sub-actions">
+        <button class="btn-sm save"   id="vcg-${i}">GEM</button>
+        <button class="btn-sm cancel" id="vca-${i}">ANNULLER</button>
+        <button class="btn-sm reset"  id="vcr-${i}">RYD</button>
+      </div>`;
+    row.querySelector('#vcn-'  + i).addEventListener('input', e => { c.buf.navn  = e.target.value; });
+    row.querySelector('#vct-'  + i).addEventListener('input', e => { c.buf.titel = e.target.value; });
+    row.querySelector('#vcl-'  + i).addEventListener('input', e => { c.buf.link  = e.target.value; });
+    row.querySelector('#vccp-' + i).addEventListener('click', () => copyText(row.querySelector('#vcl-' + i).value));
+    row.querySelector('#vcg-'  + i).addEventListener('click', () => saveVmixCallRow(i));
+    row.querySelector('#vca-'  + i).addEventListener('click', () => { c.editMode = false; rerenderVmixCall(i); });
+    row.querySelector('#vcr-'  + i).addEventListener('click', () => {
+      c.buf.navn = ''; c.buf.titel = ''; c.buf.link = '';
+      row.querySelector('#vcn-' + i).value = '';
+      row.querySelector('#vct-' + i).value = '';
+      row.querySelector('#vcl-' + i).value = '';
+    });
+  } else {
+    const hasData = c.navn || c.titel;
+    row.innerHTML = `
+      <span class="sub-num">${i + 1}</span>
+      ${kampBruger
+        ? `<span class="sub-uses-kamp">BRUGES AF KAMP ${i + 1}</span>`
+        : `<span class="sub-text ${hasData ? '' : 'empty'}">${hasData
+            ? esc(c.navn) + '<span class="sub-sep">|</span>' + esc(c.titel)
+            : '—'}</span>`}
+      ${!kampBruger ? `
+        <span class="sub-link" title="${esc(c.link)}">${esc(c.link) || ''}</span>
+        <button class="copy-btn icon-btn" id="vccp2-${i}" title="Kopiér link">⎘</button>
+        <button class="icon-btn" id="vceb-${i}" title="Rediger">✏️</button>` : ''}`;
+    if (!kampBruger) {
+      row.querySelector('#vccp2-' + i).addEventListener('click', () => copyText(c.link));
+      row.querySelector('#vceb-'  + i).addEventListener('click', () => {
+        c.buf = { navn: c.navn, titel: c.titel, link: c.link };
+        c.editMode = true;
+        rerenderVmixCall(i);
+      });
+    }
+  }
+  return row;
+}
+
+async function saveSubRow(i) {
+  const s = subs[i];
+  s.navn  = s.buf.navn;
+  s.titel = s.buf.titel;
+  s.editMode = false;
+  rerenderSub(i);
+  try {
+    await api({ action: 'saveSub', subIndex: i, navn: s.navn, titel: s.titel });
+    toast('Gemt ✓', 'ok');
+  } catch { toast('Fejl ved gem', 'err'); }
+}
+
+async function saveVmixCallRow(i) {
+  const c = vmixCalls[i];
+  c.navn  = c.buf.navn;
+  c.titel = c.buf.titel;
+  c.link  = c.buf.link;
+  c.editMode = false;
+  rerenderVmixCall(i);
+  try {
+    await api({ action: 'saveVmixCall', callIndex: i, navn: c.navn, titel: c.titel, link: c.link });
+    toast('Gemt ✓', 'ok');
+  } catch { toast('Fejl ved gem', 'err'); }
+}
+
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
   try {
-    const [dd, kd] = await Promise.all([
+    const [dd, kd, sd] = await Promise.all([
       api({ action: 'getDropdowns' }),
-      api({ action: 'getData' })
+      api({ action: 'getData' }),
+      api({ action: 'getSubs' })
     ]);
 
     if (dd.error) throw new Error(dd.error);
@@ -768,7 +1018,15 @@ async function init() {
       kampe[i] = { ...kampe[i], ...data };
     });
 
+    sd.subs.forEach((data, i) => {
+      subs[i] = { ...subs[i], ...data };
+    });
+    sd.vmixCalls.forEach((data, i) => {
+      vmixCalls[i] = { ...vmixCalls[i], ...data };
+    });
+
     renderAll();
+    renderSubs();
   } catch (err) {
     document.getElementById('kampList').innerHTML =
       `<div class="load-err">Fejl ved indlæsning.<br>Tjek at Apps Script URL er indsat korrekt.<br><small style="color:#555">${err.message}</small></div>`;
@@ -780,15 +1038,29 @@ init();
 // ── AUTO-SYNC hvert 15 sek ────────────────────────────────────
 setInterval(async () => {
   try {
-    const kd = await api({ action: 'getData' });
+    const [kd, sd] = await Promise.all([
+      api({ action: 'getData' }),
+      api({ action: 'getSubs' })
+    ]);
+
     kd.kampe.forEach((data, i) => {
-      // Opdater ikke blokke der er i edit mode
       if (kampe[i].editMode) return;
       const prev = kampe[i];
       kampe[i] = { ...prev, ...data, editMode: false, collapsed: prev.collapsed, buf: prev.buf };
       rerender(i);
     });
-  } catch { /* stille fejl — ingen toast ved baggrundsopdatering */ }
+
+    sd.subs.forEach((data, i) => {
+      if (subs[i].editMode) return;
+      subs[i] = { ...subs[i], ...data };
+      rerenderSub(i);
+    });
+    sd.vmixCalls.forEach((data, i) => {
+      if (vmixCalls[i].editMode) return;
+      vmixCalls[i] = { ...vmixCalls[i], ...data };
+      rerenderVmixCall(i);
+    });
+  } catch { /* stille fejl */ }
 }, 15000);
 </script>
 </body>
