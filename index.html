@@ -1002,8 +1002,10 @@ function buildVmixCallRow(i) {
             : '—'}</span>`}
       ${!kampBruger ? `<button class="icon-btn" id="vceb-${i}" title="Rediger">✏️</button>` : ''}`;
     if (!kampBruger) {
-      row.querySelector('#vccp2-' + i).addEventListener('click', () => copyText(c.link));
-      row.querySelector('#vceb-'  + i).addEventListener('click', () => {
+      const cpBtn = row.querySelector('#vccp2-' + i);
+      if (cpBtn) cpBtn.addEventListener('click', () => copyText(c.link));
+      const ebBtn = row.querySelector('#vceb-' + i);
+      if (ebBtn) ebBtn.addEventListener('click', () => {
         c.buf = { navn: c.navn, titel: c.titel, link: c.link };
         c.editMode = true;
         rerenderVmixCall(i);
