@@ -343,13 +343,19 @@
     .sub-row {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 16px;
       padding: 10px 12px;
       background: var(--card);
       border: 1px solid var(--card-border);
       border-radius: 6px;
       margin-bottom: 6px;
       min-height: 77px;
+    }
+    .sub-row.vmix-call-row {
+      min-height: 95px;
+      align-items: flex-start;
+      padding-top: 12px;
+      padding-bottom: 12px;
     }
     .sub-row.grayed {
       opacity: 0.35;
@@ -361,6 +367,8 @@
       font-weight: 700;
       min-width: 22px;
       text-align: right;
+      align-self: flex-start;
+      padding-top: 2px;
     }
     .sub-text {
       flex: 1;
@@ -950,7 +958,7 @@ function buildVmixCallRow(i) {
 
   // Tjek om kamp 1-6 bruger denne slot
   const kampBruger = i < 6 && kampe[i] && kampe[i].hold1Lang;
-  row.className = 'sub-row' + (kampBruger && !c.editMode ? ' grayed' : '');
+  row.className = 'sub-row vmix-call-row' + (kampBruger && !c.editMode ? ' grayed' : '');
 
   if (c.editMode) {
     row.innerHTML = `
