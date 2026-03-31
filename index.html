@@ -324,6 +324,11 @@
     .load-err { padding: 40px; text-align: center; color: var(--red); font-size: 13px; }
 
     /* ── Subs ─────────────────────────────────────────────── */
+    .subs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
     .subs-section { margin-bottom: 28px; }
     .subs-section-title {
       font-size: 11px;
@@ -848,19 +853,24 @@ function renderSubs() {
   if (!container) return;
   container.innerHTML = '';
 
-  // Sektion: SUBS
+  const grid = document.createElement('div');
+  grid.className = 'subs-grid';
+
+  // Sektion: SUBS (venstre)
   const sec1 = document.createElement('div');
   sec1.className = 'subs-section';
   sec1.innerHTML = '<div class="subs-section-title">Subs</div>';
   subs.forEach((_, i) => sec1.appendChild(buildSubRow(i)));
-  container.appendChild(sec1);
+  grid.appendChild(sec1);
 
-  // Sektion: VMIX CALLS
+  // Sektion: VMIX CALLS (højre)
   const sec2 = document.createElement('div');
   sec2.className = 'subs-section';
   sec2.innerHTML = '<div class="subs-section-title">vMix Calls</div>';
   vmixCalls.forEach((_, i) => sec2.appendChild(buildVmixCallRow(i)));
-  container.appendChild(sec2);
+  grid.appendChild(sec2);
+
+  container.appendChild(grid);
 }
 
 function rerenderSub(i) {
