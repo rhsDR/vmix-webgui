@@ -155,13 +155,12 @@
 
     /* ── Normal mode ──────────────────────────────────────── */
     .normal-view {
-      display: flex;
+      display: grid;
+      grid-template-columns: 200px 1fr 200px;
       align-items: center;
-      gap: 16px;
     }
 
     .kamp-info {
-      min-width: 190px;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -554,6 +553,7 @@ function buildNormalView(i) {
         </div>
       </div>
     </div>
+    <div></div>
   `;
 
   div.querySelector('#cpnorm-' + i).addEventListener('click', () => copyText(k.vmixcall));
