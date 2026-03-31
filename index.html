@@ -72,7 +72,7 @@
     .tab-btn:hover { color: #ccc; border-color: #555; }
     .tab-btn.active { background: var(--orange); border-color: var(--orange); color: #fff; }
 
-    .tab-pane { display: none; padding: 18px 24px; }
+    .tab-pane { display: none; padding: 20px 40px; }
     .tab-pane.active { display: block; }
     .coming-soon { padding: 60px; text-align: center; color: #333; font-size: 12px; letter-spacing: 3px; }
 
@@ -108,8 +108,9 @@
       cursor: pointer;
       user-select: none;
     }
-    .kamp-header-left { display: flex; align-items: center; gap: 12px; }
-    .kamp-header-right { display: flex; align-items: center; gap: 4px; }
+    .kamp-header-left  { display: flex; align-items: center; gap: 12px; flex: 1; }
+    .kamp-header-center { flex: 1; text-align: center; }
+    .kamp-header-right { display: flex; align-items: center; gap: 4px; flex: 1; justify-content: flex-end; }
 
     .on-air-btn {
       padding: 3px 11px;
@@ -240,7 +241,7 @@
       text-align: center;
       font-variant-numeric: tabular-nums;
     }
-    .vs-sep { font-size: 14px; color: #3a3a3a; font-weight: 700; padding: 0 6px; margin-top: 20px; }
+    .vs-sep { font-size: 22px; color: #3a3a3a; font-weight: 700; padding: 0 14px; align-self: center; margin-top: 28px; letter-spacing: 2px; }
 
     /* ── Edit mode ────────────────────────────────────────── */
     .edit-grid {
@@ -470,6 +471,8 @@ function buildBlock(i) {
       <div class="kamp-header-left">
         <button class="on-air-btn ${k.onAir ? 'active' : ''}"
                 id="oabtn-${i}">ON AIR</button>
+      </div>
+      <div class="kamp-header-center">
         <span class="kamp-label">KAMP ${i + 1}</span>
       </div>
       <div class="kamp-header-right">
