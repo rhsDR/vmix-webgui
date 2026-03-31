@@ -344,12 +344,12 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 7px 12px;
+      padding: 10px 12px;
       background: var(--card);
       border: 1px solid var(--card-border);
       border-radius: 6px;
       margin-bottom: 6px;
-      min-height: 44px;
+      min-height: 58px;
     }
     .sub-row.grayed {
       opacity: 0.35;
@@ -388,11 +388,13 @@
     }
     .sub-edit-fields {
       display: flex;
-      gap: 8px;
+      flex-direction: column;
+      gap: 5px;
       flex: 1;
-      align-items: center;
     }
-    .sub-edit-fields .form-input { flex: 1; padding: 5px 8px; font-size: 13px; }
+    .sub-edit-fields .form-input { width: 100%; padding: 5px 8px; font-size: 13px; }
+    .sub-edit-fields .form-input.navn-input  { font-weight: 700; }
+    .sub-edit-fields .form-input.titel-input { color: #aaa; }
     .sub-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
     .btn-sm {
       padding: 4px 12px;
@@ -905,8 +907,8 @@ function buildSubRow(i) {
     row.innerHTML = `
       <span class="sub-num">${i + 1}</span>
       <div class="sub-edit-fields">
-        <input class="form-input" id="sn-${i}"  value="${esc(s.buf.navn)}"  placeholder="Navn">
-        <input class="form-input" id="st-${i}"  value="${esc(s.buf.titel)}" placeholder="Titel">
+        <input class="form-input navn-input"  id="sn-${i}" value="${esc(s.buf.navn)}"  placeholder="Navn">
+        <input class="form-input titel-input" id="st-${i}" value="${esc(s.buf.titel)}" placeholder="Titel">
       </div>
       <div class="sub-actions">
         <button class="btn-sm save"   id="sg-${i}">GEM</button>
@@ -954,10 +956,12 @@ function buildVmixCallRow(i) {
     row.innerHTML = `
       <span class="sub-num">${i + 1}</span>
       <div class="sub-edit-fields">
-        <input class="form-input" id="vcn-${i}"  value="${esc(c.buf.navn)}"  placeholder="Navn">
-        <input class="form-input" id="vct-${i}"  value="${esc(c.buf.titel)}" placeholder="Titel">
-        <input class="form-input" id="vcl-${i}"  value="${esc(c.buf.link)}"  placeholder="vMix Call Link">
-        <button class="copy-btn icon-btn" id="vccp-${i}" title="Kopiér link">⎘</button>
+        <input class="form-input navn-input"  id="vcn-${i}" value="${esc(c.buf.navn)}"  placeholder="Navn">
+        <input class="form-input titel-input" id="vct-${i}" value="${esc(c.buf.titel)}" placeholder="Titel">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input class="form-input" id="vcl-${i}" value="${esc(c.buf.link)}" placeholder="vMix Call Link" style="flex:1;">
+          <button class="copy-btn icon-btn" id="vccp-${i}" title="Kopiér link">⎘</button>
+        </div>
       </div>
       <div class="sub-actions">
         <button class="btn-sm save"   id="vcg-${i}">GEM</button>
