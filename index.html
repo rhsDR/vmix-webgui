@@ -36,11 +36,19 @@
       align-items: center;
       padding: 14px clamp(8px, 22vw, 340px);
       border-bottom: 1px solid #252525;
+      position: relative;
     }
     .header-title {
       font-size: 15px;
       font-weight: 700;
       letter-spacing: 3px;
+      line-height: 1.3;
+    }
+    .header-logo {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      height: 36px;
     }
     .clock {
       font-size: 22px;
@@ -492,7 +500,8 @@
 
 <!-- HEADER -->
 <header class="header">
-  <div class="header-title">VMIX LIVE CONTROL</div>
+  <div class="header-title">VMIX LIVE<br>CONTROL</div>
+  <img class="header-logo" src="logo.png" alt="DR">
   <div class="clock" id="clock">00.00.00</div>
 </header>
 
