@@ -950,9 +950,11 @@ function toggleCollapse(i) {
 function toggleOnAir(i) {
   if (!kampe[i].onAir && !kampKlarTilOnAir(i)) return;
   kampe[i].onAir = !kampe[i].onAir;
+  kampe[i].onAirPending = true;
   rerender(i);
   api({ action: 'setOnAir', kampIndex: i, onAir: kampe[i].onAir })
-    .catch(() => toast('Fejl ved ON AIR opdatering', 'err'));
+    .then(() => { kampe[i].onAirPending = false; })
+    .catch(() => { kampe[i].onAirPending = false; toast('Fejl ved ON AIR opdatering', 'err'); });
 }
 
 function enterEdit(i) {
@@ -1164,17 +1166,21 @@ function toggleTickerCollapse(i) { tickers[i].collapsed = !tickers[i].collapsed;
 function toggleTickerOnAir(i) {
   if (!tickers[i].onAir && !tickerKlarTilOnAir(i)) return;
   tickers[i].onAir = !tickers[i].onAir;
+  tickers[i].onAirPending = true;
   rerenderTicker(i);
   api({ action: 'setTickerOnAir', tickerIndex: i, onAir: tickers[i].onAir })
-    .catch(() => toast('Fejl ved ON AIR', 'err'));
+    .then(() => { tickers[i].onAirPending = false; })
+    .catch(() => { tickers[i].onAirPending = false; toast('Fejl ved ON AIR', 'err'); });
 }
 
 function toggleTickerBreaking(i) {
   if (!tickers[i].breaking && !tickerKlarTilOnAir(i)) return;
   tickers[i].breaking = !tickers[i].breaking;
+  tickers[i].breakingPending = true;
   rerenderTicker(i);
   api({ action: 'setTickerBreaking', tickerIndex: i, breaking: tickers[i].breaking })
-    .catch(() => toast('Fejl ved BREAKING', 'err'));
+    .then(() => { tickers[i].breakingPending = false; })
+    .catch(() => { tickers[i].breakingPending = false; toast('Fejl ved BREAKING', 'err'); });
 }
 
 function enterTickerEdit(i) {
@@ -1426,7 +1432,9 @@ setInterval(async () => {
     all.kampe.forEach((data, i) => {
       if (kampe[i].editMode) return;
       const prev = kampe[i];
-      kampe[i] = { ...prev, ...data, editMode: false, collapsed: prev.collapsed, buf: prev.buf };
+      const merged = { ...prev, ...data, editMode: false, collapsed: prev.collapsed, buf: prev.buf };
+      if (prev.onAirPending) merged.onAir = prev.onAir;
+      kampe[i] = merged;
       rerender(i);
     });
 
@@ -1446,7 +1454,11 @@ setInterval(async () => {
     if (all.tickers) {
       all.tickers.forEach((data, i) => {
         if (tickers[i].editMode) return;
-        tickers[i] = { ...tickers[i], ...data };
+        const prev = tickers[i];
+        const merged = { ...prev, ...data };
+        if (prev.onAirPending)    merged.onAir    = prev.onAir;
+        if (prev.breakingPending) merged.breaking = prev.breaking;
+        tickers[i] = merged;
         rerenderTicker(i);
       });
     }
