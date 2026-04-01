@@ -376,9 +376,18 @@
       padding-top: 12px;
       padding-bottom: 12px;
     }
+    .sub-row.vmix-call-row.collapsed {
+      min-height: 0;
+      align-items: center;
+      padding-top: 6px;
+      padding-bottom: 6px;
+    }
     .sub-row.grayed {
       opacity: 0.35;
       pointer-events: none;
+    }
+    .sub-row.grayed .vmix-col-btn {
+      pointer-events: auto;
     }
     .sub-num {
       font-size: 11px;
@@ -1244,7 +1253,9 @@ function buildVmixCallRow(i) {
 
   // Tjek om kamp 1-6 bruger denne slot
   const kampBruger = i < 6 && kampe[i] && kampe[i].hold1Lang;
-  row.className = 'sub-row vmix-call-row' + (kampBruger && !c.editMode ? ' grayed' : '');
+  row.className = 'sub-row vmix-call-row'
+    + (kampBruger && !c.editMode ? ' grayed' : '')
+    + (c.collapsed && !c.editMode ? ' collapsed' : '');
 
   // Collapsed: vis kun nummer + navn som én linje
   if (c.collapsed && !c.editMode) {
@@ -1254,7 +1265,7 @@ function buildVmixCallRow(i) {
       <span class="sub-text" style="flex:1">${hasData
         ? `<span class="sub-navn">${esc(c.navn)}</span>`
         : '<span style="color:#333">—</span>'}</span>
-      <button class="icon-btn" id="vccol-${i}" title="Fold ud"><i class="collapse-arrow" style="transform:rotate(180deg)">▴</i></button>`;
+      <button class="icon-btn vmix-col-btn" id="vccol-${i}" title="Fold ud"><i class="collapse-arrow" style="transform:rotate(180deg)">▴</i></button>`;
     row.querySelector('#vccol-' + i).addEventListener('click', () => {
       c.collapsed = false; rerenderVmixCall(i);
     });
@@ -1301,7 +1312,7 @@ function buildVmixCallRow(i) {
             ? `<span class="sub-navn">${esc(c.navn)}</span><span class="sub-titel">${esc(c.titel)}</span><span class="sub-link-row"><span class="sub-link" title="${esc(c.link)}">${esc(c.link) || ''}</span><button class="copy-btn icon-btn" id="vccp2-${i}" title="Kopiér link">⎘</button></span>`
             : '—'}</span>`}
       ${!kampBruger ? `<button class="icon-btn" id="vceb-${i}" title="Rediger">✏️</button>` : ''}
-      <button class="icon-btn" id="vccol-${i}" title="Fold ind"><i class="collapse-arrow">▴</i></button>`;
+      <button class="icon-btn vmix-col-btn" id="vccol-${i}" title="Fold ind"><i class="collapse-arrow">▴</i></button>`;
     const colBtn = row.querySelector('#vccol-' + i);
     if (colBtn) colBtn.addEventListener('click', () => { c.collapsed = true; rerenderVmixCall(i); });
 
