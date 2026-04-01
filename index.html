@@ -563,6 +563,11 @@
 </head>
 <body>
 
+<!-- PAGE LOADER -->
+<div id="pageLoader" style="position:fixed;inset:0;background:#111111;z-index:9999;display:flex;align-items:center;justify-content:center;transition:opacity 0.2s;">
+  <div style="color:#333;font-size:11px;letter-spacing:4px;font-family:'Segoe UI',system-ui,sans-serif;font-weight:700;">INDLÆSER</div>
+</div>
+
 <!-- HEADER -->
 <header class="header">
   <div class="header-title"><span>VMIX LIVE</span><span class="control">C O N T R O L</span></div>
@@ -1440,7 +1445,11 @@ async function init() {
     renderAll();
     renderSubs();
     renderTickers();
+    const loader = document.getElementById('pageLoader');
+    loader.style.opacity = '0';
+    setTimeout(() => loader.style.display = 'none', 200);
   } catch (err) {
+    document.getElementById('pageLoader').style.display = 'none';
     document.getElementById('kampList').innerHTML =
       `<div class="load-err">Fejl ved indlæsning.<br>Tjek at Apps Script URL er indsat korrekt.<br><small style="color:#555">${err.message}</small></div>`;
   }
