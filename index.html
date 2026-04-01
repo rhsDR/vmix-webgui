@@ -590,6 +590,7 @@ const makeSub      = () => ({ navn: '', titel: '', editMode: false, buf: { navn:
 const makeVmixCall = () => ({ navn: '', titel: '', link: '', editMode: false, buf: { navn: '', titel: '', link: '' } });
 let subs      = Array.from({ length: 15 }, makeSub);
 let vmixCalls = Array.from({ length: 8  }, makeVmixCall);
+let vmixCallsCollapsed = false;
 
 // ── CLOCK ─────────────────────────────────────────────────────
 function tickClock() {
@@ -1174,11 +1175,28 @@ function renderSubs() {
   // Sektion: VMIX CALLS (højre)
   const sec2 = document.createElement('div');
   sec2.className = 'subs-section';
-  sec2.innerHTML = '<div class="subs-section-title" style="color:#a855f7">vMix Calls</div>';
-  vmixCalls.forEach((_, i) => sec2.appendChild(buildVmixCallRow(i)));
+  sec2.innerHTML = `
+    <div class="subs-section-title" style="color:#a855f7;display:flex;align-items:center;justify-content:space-between;">
+      <span>vMix Calls</span>
+      <button class="icon-btn" id="vcollBtn" title="Fold ind/ud" style="font-size:13px;">
+        <i class="collapse-arrow" style="${vmixCallsCollapsed ? 'transform:rotate(180deg)' : ''}">▴</i>
+      </button>
+    </div>`;
+  const vcollWrap = document.createElement('div');
+  vcollWrap.id = 'vcollWrap';
+  if (vmixCallsCollapsed) vcollWrap.style.display = 'none';
+  vmixCalls.forEach((_, i) => vcollWrap.appendChild(buildVmixCallRow(i)));
+  sec2.appendChild(vcollWrap);
   grid.appendChild(sec2);
 
   container.appendChild(grid);
+
+  document.getElementById('vcollBtn').addEventListener('click', () => {
+    vmixCallsCollapsed = !vmixCallsCollapsed;
+    document.getElementById('vcollWrap').style.display = vmixCallsCollapsed ? 'none' : '';
+    const arrow = document.querySelector('#vcollBtn .collapse-arrow');
+    arrow.style.transform = vmixCallsCollapsed ? 'rotate(180deg)' : '';
+  });
 }
 
 function rerenderSub(i) {
