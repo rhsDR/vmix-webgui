@@ -361,14 +361,16 @@
       display: flex;
       align-items: center;
       gap: 16px;
-      padding: 10px 12px;
+      padding: 10px 12px 10px 16px;
       background: var(--card);
       border: 1px solid var(--card-border);
+      border-left: 3px solid var(--blue);
       border-radius: 6px;
       margin-bottom: 10px;
       min-height: 77px;
     }
     .sub-row.vmix-call-row {
+      border-left: 3px solid #a855f7;
       min-height: 95px;
       align-items: flex-start;
       padding-top: 12px;
@@ -380,13 +382,14 @@
     }
     .sub-num {
       font-size: 11px;
-      color: #444;
       font-weight: 700;
       min-width: 22px;
       text-align: right;
       align-self: flex-start;
       padding-top: 2px;
+      color: var(--blue);
     }
+    .vmix-call-row .sub-num { color: #a855f7; }
     .sub-text {
       flex: 1;
       display: flex;
