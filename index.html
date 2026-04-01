@@ -1038,7 +1038,11 @@ function buildTickerEdit(i) {
 
   div.querySelector('#tov-' + i).addEventListener('input', e => { t.buf.overskrift = e.target.value; });
   div.querySelector('#ttx-' + i).addEventListener('input', e => { t.buf.tekst      = e.target.value; });
-  titleCaseInput(div.querySelector('#tov-' + i), t.buf, 'overskrift');
+  div.querySelector('#tov-' + i).addEventListener('blur',  e => {
+    const val = e.target.value.toUpperCase();
+    e.target.value   = val;
+    t.buf.overskrift = val;
+  });
 
   div.querySelector('#tgem-' + i).addEventListener('click', () => saveTickerRow(i));
   div.querySelector('#tann-' + i).addEventListener('click', () => { t.editMode = false; rerenderTicker(i); });
@@ -1076,7 +1080,7 @@ function enterTickerEdit(i) {
 
 async function saveTickerRow(i) {
   const t = tickers[i];
-  t.overskrift = t.buf.overskrift;
+  t.overskrift = t.buf.overskrift.toUpperCase();
   t.tekst      = t.buf.tekst;
   t.editMode   = false;
   rerenderTicker(i);
