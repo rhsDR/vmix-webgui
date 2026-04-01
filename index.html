@@ -134,6 +134,7 @@
       transition: all 0.15s;
     }
     .on-air-btn.active { border-color: var(--red); background: var(--red); color: #fff; }
+    .on-air-btn:disabled { opacity: 0.25; cursor: not-allowed; }
 
     .kamp-label {
       font-size: 18px;
@@ -669,7 +670,7 @@ function buildBlock(i) {
     <div class="kamp-header" id="kamp-hdr-${i}">
       <div class="kamp-header-left">
         <button class="on-air-btn ${k.onAir ? 'active' : ''}"
-                id="oabtn-${i}">ON AIR</button>
+                id="oabtn-${i}" ${!kampKlarTilOnAir(i) ? 'disabled' : ''}>ON AIR</button>
       </div>
       <div class="kamp-header-center">
         <span class="kamp-label">KAMP ${i + 1}</span>
@@ -848,12 +849,23 @@ function buildEditView(i) {
 
 // ── ACTIONS ───────────────────────────────────────────────────
 
+function kampKlarTilOnAir(i) {
+  const k = kampe[i];
+  return k.hold1Lang && k.hold2Lang && k.kommentator;
+}
+
+function tickerKlarTilOnAir(i) {
+  const t = tickers[i];
+  return t.overskrift && t.tekst;
+}
+
 function toggleCollapse(i) {
   kampe[i].collapsed = !kampe[i].collapsed;
   rerender(i);
 }
 
 function toggleOnAir(i) {
+  if (!kampe[i].onAir && !kampKlarTilOnAir(i)) return;
   kampe[i].onAir = !kampe[i].onAir;
   rerender(i);
   api({ action: 'setOnAir', kampIndex: i, onAir: kampe[i].onAir })
@@ -980,7 +992,7 @@ function buildTickerBlock(i) {
   block.innerHTML = `
     <div class="ticker-header" id="ticker-hdr-${i}">
       <div class="ticker-header-left">
-        <button class="on-air-btn ${t.onAir ? 'active' : ''}" id="toa-${i}">ON AIR</button>
+        <button class="on-air-btn ${t.onAir ? 'active' : ''}" id="toa-${i}" ${!tickerKlarTilOnAir(i) ? 'disabled' : ''}>ON AIR</button>
         <button class="breaking-btn ${t.breaking ? 'active' : ''}" id="tbr-${i}">BREAKING</button>
       </div>
       <div class="ticker-header-center">
@@ -1067,6 +1079,7 @@ function buildTickerEdit(i) {
 function toggleTickerCollapse(i) { tickers[i].collapsed = !tickers[i].collapsed; rerenderTicker(i); }
 
 function toggleTickerOnAir(i) {
+  if (!tickers[i].onAir && !tickerKlarTilOnAir(i)) return;
   tickers[i].onAir = !tickers[i].onAir;
   rerenderTicker(i);
   api({ action: 'setTickerOnAir', tickerIndex: i, onAir: tickers[i].onAir })
