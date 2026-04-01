@@ -1272,28 +1272,20 @@ async function saveVmixCallRow(i) {
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
   try {
-    const [dd, kd, sd, td] = await Promise.all([
-      api({ action: 'getDropdowns' }),
-      api({ action: 'getData' }),
-      api({ action: 'getSubs' }).catch(() => null),
-      api({ action: 'getTickers' }).catch(() => null)
-    ]);
+    const all = await api({ action: 'getAll' });
+    if (all.error) throw new Error(all.error);
 
-    if (dd.error) throw new Error(dd.error);
-    if (kd.error) throw new Error(kd.error);
-    dropdowns = dd;
+    dropdowns = all.dropdowns;
 
-    kd.kampe.forEach((data, i) => {
-      kampe[i] = { ...kampe[i], ...data };
-    });
+    all.kampe.forEach((data, i) => { kampe[i] = { ...kampe[i], ...data }; });
 
-    if (sd && !sd.error) {
-      sd.subs.forEach((data, i) => { subs[i] = { ...subs[i], ...data }; });
-      sd.vmixCalls.forEach((data, i) => { vmixCalls[i] = { ...vmixCalls[i], ...data }; });
+    if (all.subs) {
+      all.subs.subs.forEach((data, i)      => { subs[i]      = { ...subs[i],      ...data }; });
+      all.subs.vmixCalls.forEach((data, i) => { vmixCalls[i] = { ...vmixCalls[i], ...data }; });
     }
 
-    if (td && !td.error) {
-      td.tickers.forEach((data, i) => { tickers[i] = { ...tickers[i], ...data }; });
+    if (all.tickers) {
+      all.tickers.forEach((data, i) => { tickers[i] = { ...tickers[i], ...data }; });
     }
 
     renderAll();
@@ -1310,32 +1302,31 @@ init();
 // ── AUTO-SYNC hvert 15 sek ────────────────────────────────────
 setInterval(async () => {
   try {
-    const [kd, sd, td] = await Promise.all([
-      api({ action: 'getData' }),
-      api({ action: 'getSubs' }),
-      api({ action: 'getTickers' }).catch(() => null)
-    ]);
+    const all = await api({ action: 'getAll' });
+    if (all.error) return;
 
-    kd.kampe.forEach((data, i) => {
+    all.kampe.forEach((data, i) => {
       if (kampe[i].editMode) return;
       const prev = kampe[i];
       kampe[i] = { ...prev, ...data, editMode: false, collapsed: prev.collapsed, buf: prev.buf };
       rerender(i);
     });
 
-    sd.subs.forEach((data, i) => {
-      if (subs[i].editMode) return;
-      subs[i] = { ...subs[i], ...data };
-      rerenderSub(i);
-    });
-    sd.vmixCalls.forEach((data, i) => {
-      if (vmixCalls[i].editMode) return;
-      vmixCalls[i] = { ...vmixCalls[i], ...data };
-      rerenderVmixCall(i);
-    });
+    if (all.subs) {
+      all.subs.subs.forEach((data, i) => {
+        if (subs[i].editMode) return;
+        subs[i] = { ...subs[i], ...data };
+        rerenderSub(i);
+      });
+      all.subs.vmixCalls.forEach((data, i) => {
+        if (vmixCalls[i].editMode) return;
+        vmixCalls[i] = { ...vmixCalls[i], ...data };
+        rerenderVmixCall(i);
+      });
+    }
 
-    if (td && !td.error) {
-      td.tickers.forEach((data, i) => {
+    if (all.tickers) {
+      all.tickers.forEach((data, i) => {
         if (tickers[i].editMode) return;
         tickers[i] = { ...tickers[i], ...data };
         rerenderTicker(i);
