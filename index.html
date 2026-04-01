@@ -514,7 +514,10 @@
 <header class="header">
   <div class="header-title"><span>VMIX LIVE</span><span class="control">C O N T R O L</span></div>
   <img class="header-logo" src="logo.png" alt="DR">
-  <div class="clock" id="clock">00.00.00</div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button class="icon-btn" id="playBtn" title="Afspil sang" style="font-size:20px;">▶</button>
+    <div class="clock" id="clock">00.00.00</div>
+  </div>
 </header>
 
 <!-- TABS -->
@@ -597,6 +600,34 @@ function tickClock() {
 }
 setInterval(tickClock, 1000);
 tickClock();
+
+// ── MUSIK ─────────────────────────────────────────────────────
+const sange = ['sang1.mp3', 'sang2.mp3', 'sang3.mp3'];
+const audio = new Audio();
+let spillerNu = false;
+
+function tilfældigSang() {
+  return sange[Math.floor(Math.random() * sange.length)];
+}
+
+document.getElementById('playBtn').addEventListener('click', () => {
+  if (spillerNu) {
+    audio.pause();
+    audio.currentTime = 0;
+    spillerNu = false;
+    document.getElementById('playBtn').textContent = '▶';
+  } else {
+    audio.src = tilfældigSang();
+    audio.play();
+    spillerNu = true;
+    document.getElementById('playBtn').textContent = '⏹';
+  }
+});
+
+audio.addEventListener('ended', () => {
+  spillerNu = false;
+  document.getElementById('playBtn').textContent = '▶';
+});
 
 // ── TABS ──────────────────────────────────────────────────────
 document.querySelectorAll('.tab-btn').forEach(btn => {
