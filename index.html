@@ -1010,6 +1010,7 @@ async function saveKamp(i, div) {
 
   rerender(i);
 
+  kampe[i].savePending = true;
   try {
     await api({
       action:      'saveKamp',
@@ -1028,6 +1029,8 @@ async function saveKamp(i, div) {
     toast('Gemt ✓', 'ok');
   } catch {
     toast('Fejl ved gem — prøv igen', 'err');
+  } finally {
+    kampe[i].savePending = false;
   }
 }
 
@@ -1195,11 +1198,13 @@ async function saveTickerRow(i) {
   t.overskrift = t.buf.overskrift.toUpperCase();
   t.tekst      = t.buf.tekst;
   t.editMode   = false;
+  t.savePending = true;
   rerenderTicker(i);
   try {
     await api({ action: 'saveTicker', tickerIndex: i, overskrift: t.overskrift, tekst: t.tekst });
     toast('Gemt ✓', 'ok');
   } catch { toast('Fejl ved gem', 'err'); }
+  finally { t.savePending = false; }
 }
 
 // ── SUBS RENDER ───────────────────────────────────────────────
@@ -1373,11 +1378,13 @@ async function saveSubRow(i) {
   s.navn  = s.buf.navn;
   s.titel = s.buf.titel;
   s.editMode = false;
+  s.savePending = true;
   rerenderSub(i);
   try {
     await api({ action: 'saveSub', subIndex: i, navn: s.navn, titel: s.titel });
     toast('Gemt ✓', 'ok');
   } catch { toast('Fejl ved gem', 'err'); }
+  finally { s.savePending = false; }
 }
 
 async function saveVmixCallRow(i) {
@@ -1386,11 +1393,13 @@ async function saveVmixCallRow(i) {
   c.titel = c.buf.titel;
   c.link  = c.buf.link;
   c.editMode = false;
+  c.savePending = true;
   rerenderVmixCall(i);
   try {
     await api({ action: 'saveVmixCall', callIndex: i, navn: c.navn, titel: c.titel, link: c.link });
     toast('Gemt ✓', 'ok');
   } catch { toast('Fejl ved gem', 'err'); }
+  finally { c.savePending = false; }
 }
 
 // ── INIT ──────────────────────────────────────────────────────
@@ -1430,7 +1439,7 @@ setInterval(async () => {
     if (all.error) return;
 
     all.kampe.forEach((data, i) => {
-      if (kampe[i].editMode) return;
+      if (kampe[i].editMode || kampe[i].savePending) return;
       const prev = kampe[i];
       const merged = { ...prev, ...data, editMode: false, collapsed: prev.collapsed, buf: prev.buf };
       if (prev.onAirPending) merged.onAir = prev.onAir;
@@ -1440,12 +1449,12 @@ setInterval(async () => {
 
     if (all.subs) {
       all.subs.subs.forEach((data, i) => {
-        if (subs[i].editMode) return;
+        if (subs[i].editMode || subs[i].savePending) return;
         subs[i] = { ...subs[i], ...data };
         rerenderSub(i);
       });
       all.subs.vmixCalls.forEach((data, i) => {
-        if (vmixCalls[i].editMode) return;
+        if (vmixCalls[i].editMode || vmixCalls[i].savePending) return;
         vmixCalls[i] = { ...vmixCalls[i], ...data };
         rerenderVmixCall(i);
       });
@@ -1453,7 +1462,7 @@ setInterval(async () => {
 
     if (all.tickers) {
       all.tickers.forEach((data, i) => {
-        if (tickers[i].editMode) return;
+        if (tickers[i].editMode || tickers[i].savePending) return;
         const prev = tickers[i];
         const merged = { ...prev, ...data };
         if (prev.onAirPending)    merged.onAir    = prev.onAir;
