@@ -587,10 +587,9 @@ let tickers = Array.from({ length: 20 }, makeTicker);
 
 // ── SUBS STATE ────────────────────────────────────────────────
 const makeSub      = () => ({ navn: '', titel: '', editMode: false, buf: { navn: '', titel: '' } });
-const makeVmixCall = () => ({ navn: '', titel: '', link: '', editMode: false, buf: { navn: '', titel: '', link: '' } });
+const makeVmixCall = () => ({ navn: '', titel: '', link: '', editMode: false, collapsed: false, buf: { navn: '', titel: '', link: '' } });
 let subs      = Array.from({ length: 15 }, makeSub);
 let vmixCalls = Array.from({ length: 8  }, makeVmixCall);
-let vmixCallsCollapsed = false;
 
 // ── CLOCK ─────────────────────────────────────────────────────
 function tickClock() {
@@ -1175,28 +1174,11 @@ function renderSubs() {
   // Sektion: VMIX CALLS (højre)
   const sec2 = document.createElement('div');
   sec2.className = 'subs-section';
-  sec2.innerHTML = `
-    <div class="subs-section-title" style="color:#a855f7;display:flex;align-items:center;justify-content:space-between;">
-      <span>vMix Calls</span>
-      <button class="icon-btn" id="vcollBtn" title="Fold ind/ud" style="font-size:13px;">
-        <i class="collapse-arrow" style="${vmixCallsCollapsed ? 'transform:rotate(180deg)' : ''}">▴</i>
-      </button>
-    </div>`;
-  const vcollWrap = document.createElement('div');
-  vcollWrap.id = 'vcollWrap';
-  if (vmixCallsCollapsed) vcollWrap.style.display = 'none';
-  vmixCalls.forEach((_, i) => vcollWrap.appendChild(buildVmixCallRow(i)));
-  sec2.appendChild(vcollWrap);
+  sec2.innerHTML = '<div class="subs-section-title" style="color:#a855f7">vMix Calls</div>';
+  vmixCalls.forEach((_, i) => sec2.appendChild(buildVmixCallRow(i)));
   grid.appendChild(sec2);
 
   container.appendChild(grid);
-
-  document.getElementById('vcollBtn').addEventListener('click', () => {
-    vmixCallsCollapsed = !vmixCallsCollapsed;
-    document.getElementById('vcollWrap').style.display = vmixCallsCollapsed ? 'none' : '';
-    const arrow = document.querySelector('#vcollBtn .collapse-arrow');
-    arrow.style.transform = vmixCallsCollapsed ? 'rotate(180deg)' : '';
-  });
 }
 
 function rerenderSub(i) {
@@ -1264,6 +1246,21 @@ function buildVmixCallRow(i) {
   const kampBruger = i < 6 && kampe[i] && kampe[i].hold1Lang;
   row.className = 'sub-row vmix-call-row' + (kampBruger && !c.editMode ? ' grayed' : '');
 
+  // Collapsed: vis kun nummer + navn som én linje
+  if (c.collapsed && !c.editMode) {
+    const hasData = c.navn || c.titel;
+    row.innerHTML = `
+      <span class="sub-num">${i + 1}</span>
+      <span class="sub-text" style="flex:1">${hasData
+        ? `<span class="sub-navn">${esc(c.navn)}</span>`
+        : '<span style="color:#333">—</span>'}</span>
+      <button class="icon-btn" id="vccol-${i}" title="Fold ud"><i class="collapse-arrow" style="transform:rotate(180deg)">▴</i></button>`;
+    row.querySelector('#vccol-' + i).addEventListener('click', () => {
+      c.collapsed = false; rerenderVmixCall(i);
+    });
+    return row;
+  }
+
   if (c.editMode) {
     row.innerHTML = `
       <span class="sub-num">${i + 1}</span>
@@ -1303,7 +1300,11 @@ function buildVmixCallRow(i) {
         : `<span class="sub-text ${hasData ? '' : 'empty'}">${hasData
             ? `<span class="sub-navn">${esc(c.navn)}</span><span class="sub-titel">${esc(c.titel)}</span><span class="sub-link-row"><span class="sub-link" title="${esc(c.link)}">${esc(c.link) || ''}</span><button class="copy-btn icon-btn" id="vccp2-${i}" title="Kopiér link">⎘</button></span>`
             : '—'}</span>`}
-      ${!kampBruger ? `<button class="icon-btn" id="vceb-${i}" title="Rediger">✏️</button>` : ''}`;
+      ${!kampBruger ? `<button class="icon-btn" id="vceb-${i}" title="Rediger">✏️</button>` : ''}
+      <button class="icon-btn" id="vccol-${i}" title="Fold ind"><i class="collapse-arrow">▴</i></button>`;
+    const colBtn = row.querySelector('#vccol-' + i);
+    if (colBtn) colBtn.addEventListener('click', () => { c.collapsed = true; rerenderVmixCall(i); });
+
     if (!kampBruger) {
       const cpBtn = row.querySelector('#vccp2-' + i);
       if (cpBtn) cpBtn.addEventListener('click', () => copyText(c.link));
