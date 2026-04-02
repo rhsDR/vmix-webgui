@@ -12,6 +12,9 @@
       background: transparent;
       overflow: hidden;
     }
+    body.preview-mode {
+      background: #0a1628;
+    }
 
     #wrapper {
       position: fixed;
@@ -113,6 +116,10 @@
       } catch (err) {
         console.error('Credits fejl:', err);
       }
+    }
+
+    if (new URLSearchParams(location.search).get('preview') === '1') {
+      document.body.classList.add('preview-mode');
     }
 
     load();

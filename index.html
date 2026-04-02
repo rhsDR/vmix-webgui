@@ -645,6 +645,52 @@
     textarea.form-input { resize: vertical; min-height: 64px; font-family: inherit; line-height: 1.5; }
     @media (max-width: 640px) { .credits-cols { grid-template-columns: 1fr; } }
 
+    .preview-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .preview-modal-inner {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      aspect-ratio: 16/9;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 60px rgba(0,0,0,0.8);
+      border: 1px solid #333;
+    }
+    .preview-modal-inner iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .preview-close {
+      position: absolute;
+      top: -16px;
+      right: -16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #333;
+      border: 1px solid #555;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      transition: background 0.15s;
+      z-index: 1;
+    }
+    .preview-close:hover { background: var(--red); border-color: var(--red); }
+
     /* ── Mobil ────────────────────────────────────────────── */
     @media (max-width: 640px) {
       .header {
@@ -748,6 +794,14 @@
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- CREDITS PREVIEW MODAL -->
+<div class="preview-modal" id="previewModal" style="display:none;">
+  <div class="preview-modal-inner">
+    <button class="preview-close" id="previewClose">✕</button>
+    <iframe id="previewFrame" src=""></iframe>
+  </div>
+</div>
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
@@ -1586,7 +1640,8 @@ function renderCredits() {
     <span class="credits-speed-label">Hastighed</span>
     <input type="range" class="speed-slider" id="speedSlider" min="10" max="120" step="5" value="${creditsData.speed}">
     <span class="credits-speed-val" id="speedVal">${creditsData.speed} sek</span>
-    <button class="btn btn-save" id="saveSpeedBtn">GEM</button>`;
+    <button class="btn btn-save" id="saveSpeedBtn">GEM</button>
+    <button class="btn btn-cancel" id="previewBtn" style="margin-left:auto;">▶ PREVIEW</button>`;
   container.appendChild(speedBar);
   speedBar.querySelector('#speedSlider').addEventListener('input', e => {
     creditsData.speed = parseInt(e.target.value);
@@ -1597,6 +1652,12 @@ function renderCredits() {
       await api({ action: 'saveCreditsSpeed', speed: creditsData.speed });
       toast('Hastighed gemt ✓', 'ok');
     } catch { toast('Fejl ved gem', 'err'); }
+  });
+  speedBar.querySelector('#previewBtn').addEventListener('click', () => {
+    const modal = document.getElementById('previewModal');
+    const frame = document.getElementById('previewFrame');
+    frame.src = 'credits.html?preview=1&t=' + Date.now();
+    modal.style.display = 'flex';
   });
 
   // Two columns
@@ -1735,6 +1796,17 @@ async function init() {
     if (all.credits) {
       initCreditsFromData(all.credits);
     }
+
+    document.getElementById('previewClose').addEventListener('click', () => {
+      document.getElementById('previewModal').style.display = 'none';
+      document.getElementById('previewFrame').src = '';
+    });
+    document.getElementById('previewModal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) {
+        e.currentTarget.style.display = 'none';
+        document.getElementById('previewFrame').src = '';
+      }
+    });
 
     renderAll();
     renderSubs();
