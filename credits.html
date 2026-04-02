@@ -13,25 +13,22 @@
       overflow: hidden;
     }
 
-    /* Blå baggrund kun i nederste tredjedel */
+    /* Blå boks — klipping container */
     #bg {
       position: fixed;
       left: 0; right: 0;
       bottom: 0;
       height: 33.333%;
       background: rgba(5, 15, 50, 0.82);
-      z-index: 0;
+      overflow: hidden;
     }
 
-    /* Wrapper starter nedefra og ruller op */
+    /* Wrapper ruller inden i #bg */
     #wrapper {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      position: absolute;
+      left: 0; right: 0;
+      top: 100%;
       padding: 0 6%;
-      transform: translateY(100%);
-      z-index: 1;
     }
 
     .credits-grid {
@@ -63,8 +60,8 @@
     }
 
     @keyframes scroll-up {
-      from { transform: translateY(100%); }
-      to   { transform: translateY(calc(-1 * var(--content-h, 2000px))); }
+      from { top: 100%; }
+      to   { top: calc(-1 * var(--content-h, 2000px)); }
     }
   </style>
 </head>
@@ -114,6 +111,7 @@
           requestAnimationFrame(() => {
             const contentH = wrapper.offsetHeight;
             wrapper.style.setProperty('--content-h', contentH + 'px');
+            wrapper.style.top = '100%';
             wrapper.style.animation = `scroll-up ${speed}s linear forwards`;
 
             wrapper.addEventListener('animationend', () => {
