@@ -12,53 +12,64 @@
       background: transparent;
       overflow: hidden;
     }
-    body.preview-mode {
-      background: #0a1628;
+
+    /* Blå baggrund kun i nederste tredjedel */
+    #bg {
+      position: fixed;
+      left: 0; right: 0;
+      bottom: 0;
+      height: 33.333%;
+      background: rgba(5, 15, 50, 0.82);
+      z-index: 0;
     }
 
+    /* Wrapper starter nedefra og ruller op */
     #wrapper {
       position: fixed;
       left: 0;
       right: 0;
-      padding: 0 8%;
-      transform: translateY(100vh);
+      bottom: 0;
+      padding: 0 6%;
+      transform: translateY(100%);
+      z-index: 1;
     }
 
     .credits-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 80px;
-      padding-bottom: 80px;
+      gap: 60px;
+      padding-bottom: 40px;
     }
 
     .credit-section {
-      margin-bottom: 36px;
+      margin-bottom: 28px;
     }
 
     .credit-titel {
       font-family: 'Segoe UI', Arial, sans-serif;
-      font-size: 17px;
+      font-size: 15px;
       font-weight: 700;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: #f5c518;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
 
     .credit-navne {
       font-family: 'Segoe UI', Arial, sans-serif;
-      font-size: 16px;
+      font-size: 14px;
       color: #ffffff;
       line-height: 1.65;
     }
 
     @keyframes scroll-up {
-      from { transform: translateY(100vh); }
+      from { transform: translateY(100%); }
       to   { transform: translateY(calc(-1 * var(--content-h, 2000px))); }
     }
   </style>
 </head>
 <body>
+  <div id="bg"></div>
   <div id="wrapper">
     <div id="creditsGrid" class="credits-grid">
       <div></div>
@@ -99,7 +110,6 @@
         const speed = data.speed || 30;
         const wrapper = document.getElementById('wrapper');
 
-        // Wait for layout to settle before measuring height
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             const contentH = wrapper.offsetHeight;
@@ -107,7 +117,6 @@
             wrapper.style.animation = `scroll-up ${speed}s linear forwards`;
 
             wrapper.addEventListener('animationend', () => {
-              // Pause 3 sek, derefter genstart
               setTimeout(() => location.reload(), 3000);
             });
           });
@@ -116,10 +125,6 @@
       } catch (err) {
         console.error('Credits fejl:', err);
       }
-    }
-
-    if (new URLSearchParams(location.search).get('preview') === '1') {
-      document.body.classList.add('preview-mode');
     }
 
     load();
