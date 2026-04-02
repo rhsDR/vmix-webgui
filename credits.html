@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <title>Credits</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+    }
+
+    #wrapper {
+      position: fixed;
+      left: 0;
+      right: 0;
+      padding: 0 8%;
+      transform: translateY(100vh);
+    }
+
+    .credits-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      padding-bottom: 80px;
+    }
+
+    .credit-section {
+      margin-bottom: 36px;
+    }
+
+    .credit-titel {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #f5c518;
+      margin-bottom: 6px;
+    }
+
+    .credit-navne {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 16px;
+      color: #ffffff;
+      line-height: 1.65;
+    }
+
+    @keyframes scroll-up {
+      from { transform: translateY(100vh); }
+      to   { transform: translateY(calc(-1 * var(--content-h, 2000px))); }
+    }
+  </style>
+</head>
+<body>
+  <div id="wrapper">
+    <div id="creditsGrid" class="credits-grid">
+      <div></div>
+      <div></div>
+    </div>
+  </div>
+
+  <script>
+    const API = 'https://script.google.com/macros/s/AKfycbxRufEbQXaXP4JtAgEnUep-yW5RzCh_qsStXUTEO_402rthriL6yL6XFsRS_Qw_f5TN6A/exec';
+
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    async function load() {
+      try {
+        const data = await fetch(API + '?action=getCredits').then(r => r.json());
+
+        const left  = (data.items || []).filter(i => i.side === 'V').sort((a, b) => a.orden - b.orden);
+        const right = (data.items || []).filter(i => i.side === 'H').sort((a, b) => a.orden - b.orden);
+
+        function renderCol(items) {
+          return items.map(item => `
+            <div class="credit-section">
+              <div class="credit-titel">${esc(item.titel)}</div>
+              <div class="credit-navne">${item.navne.split(',').map(n => esc(n.trim())).filter(Boolean).join('<br>')}</div>
+            </div>
+          `).join('');
+        }
+
+        const grid = document.getElementById('creditsGrid');
+        grid.children[0].innerHTML = renderCol(left);
+        grid.children[1].innerHTML = renderCol(right);
+
+        const speed = data.speed || 30;
+        const wrapper = document.getElementById('wrapper');
+
+        // Wait for layout to settle before measuring height
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const contentH = wrapper.offsetHeight;
+            wrapper.style.setProperty('--content-h', contentH + 'px');
+            wrapper.style.animation = `scroll-up ${speed}s linear forwards`;
+
+            wrapper.addEventListener('animationend', () => {
+              // Pause 3 sek, derefter genstart
+              setTimeout(() => location.reload(), 3000);
+            });
+          });
+        });
+
+      } catch (err) {
+        console.error('Credits fejl:', err);
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

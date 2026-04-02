@@ -560,6 +560,91 @@
     .ticker-overskrift { font-size: 15px; font-weight: 400; color: #fff; text-transform: uppercase; white-space: nowrap; }
     .ticker-tekst { font-size: 15px; color: #888; }
 
+    /* ── Credits ──────────────────────────────────────────── */
+    .credits-speed-bar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 0 22px;
+      border-bottom: 1px solid #222;
+      margin-bottom: 24px;
+    }
+    .credits-speed-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #555;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    input[type=range].speed-slider {
+      flex: 1;
+      max-width: 200px;
+      accent-color: var(--orange);
+      cursor: pointer;
+    }
+    .credits-speed-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: #ccc;
+      min-width: 52px;
+    }
+    .credits-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      padding-bottom: 40px;
+    }
+    .credits-col-header {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #444;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #222;
+    }
+    .credit-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-left: 3px solid var(--yellow);
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .credit-card-header { display: flex; align-items: flex-start; gap: 8px; }
+    .credit-card-content { flex: 1; }
+    .credit-card-titel {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--yellow);
+      margin-bottom: 4px;
+    }
+    .credit-card-navne { font-size: 13px; color: #ccc; line-height: 1.5; }
+    .credit-card-actions { display: flex; gap: 2px; flex-shrink: 0; }
+    .credit-add-btn {
+      width: 100%;
+      padding: 9px;
+      background: transparent;
+      border: 1px dashed #2e2e2e;
+      border-radius: 6px;
+      color: #444;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+      margin-top: 4px;
+    }
+    .credit-add-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+    textarea.form-input { resize: vertical; min-height: 64px; font-family: inherit; line-height: 1.5; }
+    @media (max-width: 640px) { .credits-cols { grid-template-columns: 1fr; } }
+
     /* ── Mobil ────────────────────────────────────────────── */
     @media (max-width: 640px) {
       .header {
@@ -658,7 +743,7 @@
 
 <!-- TAB: CREDITS -->
 <div id="tab-credits" class="tab-pane">
-  <div class="coming-soon">KOMMER SNART</div>
+  <div id="creditsList"><div class="loading">Henter data…</div></div>
 </div>
 
 <!-- TOAST -->
@@ -1470,6 +1555,164 @@ async function saveVmixCallRow(i) {
   finally { c.savePending = false; }
 }
 
+// ── CREDITS STATE ─────────────────────────────────────────────
+let creditsData = { items: [], speed: 30 };
+let creditNewCounter = 0;
+
+function initCreditsFromData(data) {
+  creditsData.speed = data.speed || 30;
+  creditsData.items = (data.items || []).map(d => ({
+    ...d, editMode: false, isNew: false, buf: { titel: d.titel, navne: d.navne }
+  }));
+}
+
+async function refreshCredits() {
+  try {
+    const data = await api({ action: 'getCredits' });
+    if (!data.error) initCreditsFromData(data);
+  } catch { /* stille */ }
+  renderCredits();
+}
+
+function renderCredits() {
+  const container = document.getElementById('creditsList');
+  if (!container) return;
+  container.innerHTML = '';
+
+  // Speed bar
+  const speedBar = document.createElement('div');
+  speedBar.className = 'credits-speed-bar';
+  speedBar.innerHTML = `
+    <span class="credits-speed-label">Hastighed</span>
+    <input type="range" class="speed-slider" id="speedSlider" min="10" max="120" step="5" value="${creditsData.speed}">
+    <span class="credits-speed-val" id="speedVal">${creditsData.speed} sek</span>
+    <button class="btn btn-save" id="saveSpeedBtn">GEM</button>`;
+  container.appendChild(speedBar);
+  speedBar.querySelector('#speedSlider').addEventListener('input', e => {
+    creditsData.speed = parseInt(e.target.value);
+    document.getElementById('speedVal').textContent = creditsData.speed + ' sek';
+  });
+  speedBar.querySelector('#saveSpeedBtn').addEventListener('click', async () => {
+    try {
+      await api({ action: 'saveCreditsSpeed', speed: creditsData.speed });
+      toast('Hastighed gemt ✓', 'ok');
+    } catch { toast('Fejl ved gem', 'err'); }
+  });
+
+  // Two columns
+  const cols = document.createElement('div');
+  cols.className = 'credits-cols';
+
+  function buildCol(side, label) {
+    const items = creditsData.items.filter(i => i.side === side).sort((a, b) => a.orden - b.orden);
+    const col = document.createElement('div');
+    col.innerHTML = `<div class="credits-col-header">${label}</div>`;
+    items.forEach(item => col.appendChild(buildCreditCard(item)));
+    const addBtn = document.createElement('button');
+    addBtn.className = 'credit-add-btn';
+    addBtn.textContent = '+ TILFØJ SEKTION';
+    addBtn.addEventListener('click', () => addCreditItem(side));
+    col.appendChild(addBtn);
+    return col;
+  }
+
+  cols.appendChild(buildCol('V', 'Venstre kolonne'));
+  cols.appendChild(buildCol('H', 'Højre kolonne'));
+  container.appendChild(cols);
+}
+
+function buildCreditCard(item) {
+  const card = document.createElement('div');
+  card.className = 'credit-card';
+  card.id = 'credit-' + item.row;
+
+  if (item.editMode) {
+    card.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <input class="form-input" id="crt-${item.row}" value="${esc(item.buf.titel)}" placeholder="Titel (f.eks. VÆRTER)">
+        <textarea class="form-input" id="crn-${item.row}" placeholder="Navne, kommasepareret (f.eks. Bo Jensen, Anne Hansen)">${esc(item.buf.navne)}</textarea>
+        <div style="display:flex;gap:8px;margin-top:2px;">
+          <button class="btn btn-save" id="crg-${item.row}">GEM</button>
+          <button class="btn btn-cancel" id="cra-${item.row}">ANNULLER</button>
+        </div>
+      </div>`;
+    card.querySelector('#crt-' + item.row).addEventListener('input', e => { item.buf.titel = e.target.value; });
+    card.querySelector('#crn-' + item.row).addEventListener('input', e => { item.buf.navne = e.target.value; });
+    card.querySelector('#crg-' + item.row).addEventListener('click', () => saveCreditItem(item));
+    card.querySelector('#cra-' + item.row).addEventListener('click', () => {
+      if (item.isNew) creditsData.items = creditsData.items.filter(i => i !== item);
+      else item.editMode = false;
+      renderCredits();
+    });
+    setTimeout(() => { const el = card.querySelector('#crt-' + item.row); if (el) el.focus(); }, 30);
+  } else {
+    const navneLines = item.navne.split(',').map(n => n.trim()).filter(Boolean);
+    card.innerHTML = `
+      <div class="credit-card-header">
+        <div class="credit-card-content">
+          <div class="credit-card-titel">${esc(item.titel)}</div>
+          <div class="credit-card-navne">${navneLines.map(esc).join('<br>')}</div>
+        </div>
+        <div class="credit-card-actions">
+          <button class="icon-btn" id="creb-${item.row}" title="Rediger">✏️</button>
+          <button class="icon-btn" id="crdel-${item.row}" title="Slet">🗑</button>
+        </div>
+      </div>`;
+    card.querySelector('#creb-' + item.row).addEventListener('click', () => {
+      item.buf = { titel: item.titel, navne: item.navne };
+      item.editMode = true;
+      renderCredits();
+    });
+    card.querySelector('#crdel-' + item.row).addEventListener('click', () => deleteCreditItem(item));
+  }
+  return card;
+}
+
+function addCreditItem(side) {
+  const sideItems = creditsData.items.filter(i => i.side === side);
+  const maxOrden = sideItems.length > 0 ? Math.max(...sideItems.map(i => i.orden)) : 0;
+  const tempRow = 'new' + (++creditNewCounter);
+  creditsData.items.push({
+    row: tempRow, isNew: true, side,
+    orden: maxOrden + 1,
+    titel: '', navne: '',
+    editMode: true, buf: { titel: '', navne: '' }
+  });
+  renderCredits();
+}
+
+async function saveCreditItem(item) {
+  item.titel = item.buf.titel;
+  item.navne = item.buf.navne;
+  try {
+    await api({
+      action: 'saveCredit',
+      row:    item.isNew ? '' : item.row,
+      side:   item.side,
+      orden:  item.orden,
+      titel:  item.titel,
+      navne:  item.navne
+    });
+    toast('Gemt ✓', 'ok');
+    await refreshCredits();
+  } catch {
+    item.editMode = false;
+    toast('Fejl ved gem', 'err');
+    renderCredits();
+  }
+}
+
+async function deleteCreditItem(item) {
+  creditsData.items = creditsData.items.filter(i => i !== item);
+  renderCredits();
+  if (!item.isNew) {
+    try {
+      await api({ action: 'deleteCredit', row: item.row });
+      await refreshCredits();
+    } catch { toast('Fejl ved sletning', 'err'); }
+  }
+}
+
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
   try {
@@ -1489,9 +1732,14 @@ async function init() {
       all.tickers.forEach((data, i) => { tickers[i] = { ...tickers[i], ...data }; });
     }
 
+    if (all.credits) {
+      initCreditsFromData(all.credits);
+    }
+
     renderAll();
     renderSubs();
     renderTickers();
+    renderCredits();
     const loader = document.getElementById('pageLoader');
     loader.style.opacity = '0';
     setTimeout(() => loader.style.display = 'none', 200);
