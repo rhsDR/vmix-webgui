@@ -13,22 +13,19 @@
       overflow: hidden;
     }
 
-    /* Blå boks — klipping container */
-    #bg {
+    #clip {
       position: fixed;
-      left: 0; right: 0;
-      bottom: 0;
-      height: 33.333%;
+      left: 0; right: 0; bottom: 0;
+      height: 33.333vh;
       background: rgba(5, 15, 50, 0.82);
       overflow: hidden;
     }
 
-    /* Wrapper ruller inden i #bg */
     #wrapper {
       position: absolute;
       left: 0; right: 0;
-      top: 100%;
       padding: 0 6%;
+      will-change: transform;
     }
 
     .credits-grid {
@@ -38,9 +35,7 @@
       padding-bottom: 40px;
     }
 
-    .credit-section {
-      margin-bottom: 28px;
-    }
+    .credit-section { margin-bottom: 28px; }
 
     .credit-titel {
       font-family: 'Segoe UI', Arial, sans-serif;
@@ -58,19 +53,15 @@
       color: #ffffff;
       line-height: 1.65;
     }
-
-    @keyframes scroll-up {
-      from { top: 100%; }
-      to   { top: calc(-1 * var(--content-h, 2000px)); }
-    }
   </style>
 </head>
 <body>
-  <div id="bg"></div>
-  <div id="wrapper">
-    <div id="creditsGrid" class="credits-grid">
-      <div></div>
-      <div></div>
+  <div id="clip">
+    <div id="wrapper">
+      <div id="creditsGrid" class="credits-grid">
+        <div></div>
+        <div></div>
+      </div>
     </div>
   </div>
 
@@ -104,19 +95,34 @@
         grid.children[0].innerHTML = renderCol(left);
         grid.children[1].innerHTML = renderCol(right);
 
-        const speed = data.speed || 30;
+        const speed   = data.speed || 30;
+        const clip    = document.getElementById('clip');
         const wrapper = document.getElementById('wrapper');
 
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
+            const clipH    = clip.offsetHeight;
             const contentH = wrapper.offsetHeight;
-            wrapper.style.setProperty('--content-h', contentH + 'px');
-            wrapper.style.top = '100%';
-            wrapper.style.animation = `scroll-up ${speed}s linear forwards`;
+            const startY   = clipH;
+            const endY     = -contentH;
+            const duration = speed * 1000;
+            let startTime  = null;
 
-            wrapper.addEventListener('animationend', () => {
-              setTimeout(() => location.reload(), 3000);
-            });
+            wrapper.style.transform = `translateY(${startY}px)`;
+
+            function animate(ts) {
+              if (!startTime) startTime = ts;
+              const progress = Math.min((ts - startTime) / duration, 1);
+              const y = startY + (endY - startY) * progress;
+              wrapper.style.transform = `translateY(${y}px)`;
+              if (progress < 1) {
+                requestAnimationFrame(animate);
+              } else {
+                setTimeout(() => location.reload(), 3000);
+              }
+            }
+
+            requestAnimationFrame(animate);
           });
         });
 
