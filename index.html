@@ -559,6 +559,53 @@
     .ticker-normal { display: flex; flex-direction: row; align-items: baseline; gap: 14px; }
     .ticker-overskrift { font-size: 15px; font-weight: 400; color: #fff; text-transform: uppercase; white-space: nowrap; }
     .ticker-tekst { font-size: 15px; color: #888; }
+
+    /* ── Mobil ────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .header {
+        padding: 10px 14px;
+        gap: 8px;
+      }
+      .header-logo { height: 26px; }
+      .header-title { font-size: 12px; letter-spacing: 2px; }
+      .clock { font-size: 16px; letter-spacing: 2px; padding: 4px 8px; }
+
+      .tabs {
+        padding: 8px 10px;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .tab-btn { padding: 5px 10px; font-size: 11px; }
+
+      .tab-pane { padding: 12px 10px; }
+
+      .kamp-header { padding: 10px 10px 10px 14px; }
+
+      .normal-view {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .kamp-info { order: 2; }
+      .score-area { order: 1; }
+
+      .team-name { font-size: 22px; }
+      .score-val { font-size: 38px; min-width: 44px; }
+      .score-btn { width: 40px; height: 40px; font-size: 22px; }
+      .vs-sep { padding: 0 8px; font-size: 18px; }
+
+      .edit-grid { grid-template-columns: 1fr; }
+      .span2 { grid-column: span 1; }
+
+      .subs-grid { grid-template-columns: 1fr; }
+
+      .sub-row { min-height: 60px; }
+      .sub-row.vmix-call-row { min-height: 80px; }
+
+      .ticker-header { padding: 10px 12px 10px 14px; }
+      .ticker-body { padding: 4px 12px 14px 16px; }
+      .ticker-normal { flex-direction: column; gap: 4px; }
+      .ticker-overskrift, .ticker-tekst { white-space: normal; }
+    }
   </style>
 </head>
 <body>
