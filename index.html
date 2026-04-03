@@ -888,8 +888,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // ── SUPABASE HELPERS ──────────────────────────────────────────
 const SB_HEADERS = {
-  'apikey':       SB_KEY,
-  'Content-Type': 'application/json'
+  'apikey':        SB_ANON,
+  'Authorization': 'Bearer ' + SB_ANON,
+  'Content-Type':  'application/json'
 };
 const SB_HEADERS_MINIMAL = { ...SB_HEADERS, 'Prefer': 'return=minimal' };
 
