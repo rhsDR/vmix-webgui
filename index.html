@@ -1923,7 +1923,7 @@ async function init() {
 init();
 
 // ── REALTIME ──────────────────────────────────────────────────
-const supabase = window.supabase.createClient(SB_URL, SB_ANON);
+const sbClient = window.supabase.createClient(SB_URL, SB_ANON);
 
 function applyKampRow(row) {
   const i = row.id - 1;
@@ -1972,7 +1972,7 @@ function applyTickerRow(row) {
   rerenderTicker(i);
 }
 
-supabase.channel('db-changes')
+sbClient.channel('db-changes')
   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kampe' },
       p => applyKampRow(p.new))
   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'subs' },
