@@ -90,7 +90,9 @@
   <video id="logoVideo" preload="auto" playsinline muted></video>
 
   <script>
-    const API = 'https://script.google.com/macros/s/AKfycbxRufEbQXaXP4JtAgEnUep-yW5RzCh_qsStXUTEO_402rthriL6yL6XFsRS_Qw_f5TN6A/exec';
+    const SB_URL = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
+    const SB_KEY = 'sb_publishable_dE8VWimD15O5nYvha1B6lA_KW9ZtO1C';
+    const SB_HEADERS = { 'apikey': SB_KEY, 'Content-Type': 'application/json' };
 
     function esc(s) {
       return String(s)
@@ -101,7 +103,15 @@
 
     async function load() {
       try {
-        const data = await fetch(API + '?action=getCredits').then(r => r.json());
+        const [creditsRaw, settingsRaw] = await Promise.all([
+          fetch(SB_URL + '/rest/v1/credits?select=*', { headers: SB_HEADERS }).then(r => r.json()),
+          fetch(SB_URL + '/rest/v1/settings?select=*', { headers: SB_HEADERS }).then(r => r.json())
+        ]);
+        const speedRow = settingsRaw.find(r => r.key === 'credits_speed');
+        const data = {
+          items: creditsRaw.map(r => ({ row: r.id, side: r.side, orden: r.orden, titel: r.titel || '', navne: r.navne || '' })),
+          speed: speedRow ? parseFloat(speedRow.value) : 30
+        };
 
         const left  = (data.items || []).filter(i => i.side === 'V').sort((a, b) => a.orden - b.orden);
         const right = (data.items || []).filter(i => i.side === 'H').sort((a, b) => a.orden - b.orden);

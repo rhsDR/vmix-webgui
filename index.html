@@ -805,7 +805,8 @@
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxRufEbQXaXP4JtAgEnUep-yW5RzCh_qsStXUTEO_402rthriL6yL6XFsRS_Qw_f5TN6A/exec';
+const SB_URL = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
+const SB_KEY = 'sb_publishable_dE8VWimD15O5nYvha1B6lA_KW9ZtO1C';
 
 // ── STATE ─────────────────────────────────────────────────────
 let dropdowns = { holds: [], kommentatorer: [], lokationer: [] };
@@ -883,12 +884,95 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 
-// ── API ───────────────────────────────────────────────────────
-async function api(params) {
-  const url = SCRIPT_URL + '?' + new URLSearchParams(params).toString();
-  const res  = await fetch(url);
+// ── SUPABASE HELPERS ──────────────────────────────────────────
+const SB_HEADERS = {
+  'apikey':       SB_KEY,
+  'Content-Type': 'application/json'
+};
+const SB_HEADERS_MINIMAL = { ...SB_HEADERS, 'Prefer': 'return=minimal' };
+
+async function sbGet(path) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, { headers: SB_HEADERS });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
+}
+
+async function sbPatch(path, body) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, {
+    method: 'PATCH', headers: SB_HEADERS_MINIMAL, body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+}
+
+async function sbPost(path, body) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, {
+    method: 'POST', headers: SB_HEADERS_MINIMAL, body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+}
+
+async function sbDelete(path) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, {
+    method: 'DELETE', headers: SB_HEADERS_MINIMAL
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+}
+
+// ── FETCH ALL DATA ────────────────────────────────────────────
+async function fetchAll() {
+  const [dropdownsRaw, kampeRaw, subsRaw, vmixCallsRaw, tickersRaw, settingsRaw, creditsRaw] =
+    await Promise.all([
+      sbGet('dropdowns?select=*&order=orden.asc'),
+      sbGet('kampe?select=*&order=id.asc'),
+      sbGet('subs?select=*&order=id.asc'),
+      sbGet('vmix_calls?select=*&order=id.asc'),
+      sbGet('tickers?select=*&order=id.asc'),
+      sbGet('settings?select=*'),
+      sbGet('credits?select=*')
+    ]);
+
+  const speedRow = settingsRaw.find(r => r.key === 'credits_speed');
+  const speed = speedRow ? parseFloat(speedRow.value) : 30;
+
+  return {
+    dropdowns: {
+      kommentatorer: dropdownsRaw.filter(r => r.type === 'kommentator').map(r => r.lang),
+      lokationer:    dropdownsRaw.filter(r => r.type === 'lokation').map(r => r.lang),
+      holds:         dropdownsRaw.filter(r => r.type === 'hold').map(r => ({ lang: r.lang, kort: r.kort }))
+    },
+    kampe: kampeRaw.map(r => ({
+      hold1Lang:   r.hold1_lang  || '',
+      hold1Kort:   r.hold1_kort  || '',
+      hold1Score:  r.hold1_score || 0,
+      hold2Score:  r.hold2_score || 0,
+      hold2Kort:   r.hold2_kort  || '',
+      hold2Lang:   r.hold2_lang  || '',
+      kommentator: r.kommentator || '',
+      lokation:    r.lokation    || '',
+      vmixcall:    r.vmixcall    || '',
+      onAir:       r.on_air      || false
+    })),
+    subs: {
+      subs:      subsRaw.map(r => ({ navn: r.navn || '', titel: r.titel || '' })),
+      vmixCalls: vmixCallsRaw.map(r => ({ navn: r.navn || '', titel: r.titel || '', link: r.link || '' }))
+    },
+    tickers: tickersRaw.map(r => ({
+      overskrift: r.overskrift || '',
+      tekst:      r.tekst      || '',
+      onAir:      r.on_air     || false,
+      breaking:   r.breaking   || false
+    })),
+    credits: {
+      items: creditsRaw.map(r => ({
+        row:    r.id,
+        side:   r.side,
+        orden:  r.orden,
+        titel:  r.titel || '',
+        navne:  r.navne || ''
+      })),
+      speed
+    }
+  };
 }
 
 // ── TOAST ─────────────────────────────────────────────────────
@@ -1155,7 +1239,7 @@ function toggleOnAir(i) {
   kampe[i].onAir = !kampe[i].onAir;
   kampe[i].onAirPending = true;
   rerender(i);
-  api({ action: 'setOnAir', kampIndex: i, onAir: kampe[i].onAir })
+  sbPatch('kampe?id=eq.' + (i + 1), { on_air: kampe[i].onAir })
     .then(() => { kampe[i].onAirPending = false; })
     .catch(() => { kampe[i].onAirPending = false; toast('Fejl ved ON AIR opdatering', 'err'); });
 }
@@ -1215,19 +1299,17 @@ async function saveKamp(i, div) {
 
   kampe[i].savePending = true;
   try {
-    await api({
-      action:      'saveKamp',
-      kampIndex:   i,
-      hold1Lang:   k.hold1Lang,
-      hold1Kort:   k.hold1Kort,
-      hold1Score:  k.hold1Score,
-      hold2Score:  k.hold2Score,
-      hold2Kort:   k.hold2Kort,
-      hold2Lang:   k.hold2Lang,
-      kommentator: k.kommentator,
-      lokation:    k.lokation,
-      vmixcall:    k.vmixcall,
-      onAir:       k.onAir
+    await sbPatch('kampe?id=eq.' + (i + 1), {
+      hold1_lang:   k.hold1Lang,
+      hold1_kort:   k.hold1Kort,
+      hold1_score:  k.hold1Score,
+      hold2_score:  k.hold2Score,
+      hold2_kort:   k.hold2Kort,
+      hold2_lang:   k.hold2Lang,
+      kommentator:  k.kommentator,
+      lokation:     k.lokation,
+      vmixcall:     k.vmixcall,
+      on_air:       k.onAir
     });
     toast('Gemt ✓', 'ok');
   } catch {
@@ -1249,7 +1331,10 @@ async function changeScore(i, team, delta) {
     if (el) el.textContent = k.hold2Score;
   }
   try {
-    await api({ action: 'updateScore', kampIndex: i, team, delta });
+    const body = team === 1
+      ? { hold1_score: kampe[i].hold1Score }
+      : { hold2_score: kampe[i].hold2Score };
+    await sbPatch('kampe?id=eq.' + (i + 1), body);
   } catch {
     toast('Fejl ved scoreopdatering', 'err');
   }
@@ -1374,7 +1459,7 @@ function toggleTickerOnAir(i) {
   tickers[i].onAir = !tickers[i].onAir;
   tickers[i].onAirPending = true;
   rerenderTicker(i);
-  api({ action: 'setTickerOnAir', tickerIndex: i, onAir: tickers[i].onAir })
+  sbPatch('tickers?id=eq.' + (i + 1), { on_air: tickers[i].onAir })
     .then(() => { tickers[i].onAirPending = false; })
     .catch(() => { tickers[i].onAirPending = false; toast('Fejl ved ON AIR', 'err'); });
 }
@@ -1384,7 +1469,7 @@ function toggleTickerBreaking(i) {
   tickers[i].breaking = !tickers[i].breaking;
   tickers[i].breakingPending = true;
   rerenderTicker(i);
-  api({ action: 'setTickerBreaking', tickerIndex: i, breaking: tickers[i].breaking })
+  sbPatch('tickers?id=eq.' + (i + 1), { breaking: tickers[i].breaking })
     .then(() => { tickers[i].breakingPending = false; })
     .catch(() => { tickers[i].breakingPending = false; toast('Fejl ved BREAKING', 'err'); });
 }
@@ -1404,7 +1489,7 @@ async function saveTickerRow(i) {
   t.savePending = true;
   rerenderTicker(i);
   try {
-    await api({ action: 'saveTicker', tickerIndex: i, overskrift: t.overskrift, tekst: t.tekst });
+    await sbPatch('tickers?id=eq.' + (i + 1), { overskrift: t.overskrift, tekst: t.tekst });
     toast('Gemt ✓', 'ok');
   } catch { toast('Fejl ved gem', 'err'); }
   finally { t.savePending = false; }
@@ -1584,7 +1669,7 @@ async function saveSubRow(i) {
   s.savePending = true;
   rerenderSub(i);
   try {
-    await api({ action: 'saveSub', subIndex: i, navn: s.navn, titel: s.titel });
+    await sbPatch('subs?id=eq.' + (i + 1), { navn: s.navn, titel: s.titel });
     toast('Gemt ✓', 'ok');
     const el = document.getElementById('sub-' + i);
     if (el) { el.classList.add('flash-saved'); el.addEventListener('animationend', () => el.classList.remove('flash-saved'), { once: true }); }
@@ -1601,7 +1686,7 @@ async function saveVmixCallRow(i) {
   c.savePending = true;
   rerenderVmixCall(i);
   try {
-    await api({ action: 'saveVmixCall', callIndex: i, navn: c.navn, titel: c.titel, link: c.link });
+    await sbPatch('vmix_calls?id=eq.' + (i + 1), { navn: c.navn, titel: c.titel, link: c.link });
     toast('Gemt ✓', 'ok');
     const el = document.getElementById('vcall-' + i);
     if (el) { el.classList.add('flash-saved'); el.addEventListener('animationend', () => el.classList.remove('flash-saved'), { once: true }); }
@@ -1622,8 +1707,16 @@ function initCreditsFromData(data) {
 
 async function refreshCredits() {
   try {
-    const data = await api({ action: 'getCredits' });
-    if (!data.error) initCreditsFromData(data);
+    const [creditsRaw, settingsRaw] = await Promise.all([
+      sbGet('credits?select=*'),
+      sbGet('settings?select=*')
+    ]);
+    const speedRow = settingsRaw.find(r => r.key === 'credits_speed');
+    const data = {
+      items: creditsRaw.map(r => ({ row: r.id, side: r.side, orden: r.orden, titel: r.titel || '', navne: r.navne || '' })),
+      speed: speedRow ? parseFloat(speedRow.value) : 30
+    };
+    initCreditsFromData(data);
   } catch { /* stille */ }
   renderCredits();
 }
@@ -1653,7 +1746,7 @@ function renderCredits() {
   });
   speedBar.querySelector('#saveSpeedBtn').addEventListener('click', async () => {
     try {
-      await api({ action: 'saveCreditsSpeed', speed: creditsData.speed });
+      await sbPatch('settings?key=eq.credits_speed', { value: creditsData.speed.toString() });
       toast('Hastighed gemt ✓', 'ok');
     } catch { toast('Fejl ved gem', 'err'); }
   });
@@ -1751,14 +1844,12 @@ async function saveCreditItem(item) {
   item.titel = item.buf.titel;
   item.navne = item.buf.navne;
   try {
-    await api({
-      action: 'saveCredit',
-      row:    item.isNew ? '' : item.row,
-      side:   item.side,
-      orden:  item.orden,
-      titel:  item.titel,
-      navne:  item.navne
-    });
+    const creditBody = { side: item.side, orden: item.orden, titel: item.titel, navne: item.navne };
+    if (!item.row || String(item.row).startsWith('new')) {
+      await sbPost('credits', creditBody);
+    } else {
+      await sbPatch('credits?id=eq.' + item.row, creditBody);
+    }
     toast('Gemt ✓', 'ok');
     await refreshCredits();
   } catch {
@@ -1773,7 +1864,7 @@ async function deleteCreditItem(item) {
   renderCredits();
   if (!item.isNew) {
     try {
-      await api({ action: 'deleteCredit', row: item.row });
+      await sbDelete('credits?id=eq.' + item.row);
       await refreshCredits();
     } catch { toast('Fejl ved sletning', 'err'); }
   }
@@ -1782,8 +1873,7 @@ async function deleteCreditItem(item) {
 // ── INIT ──────────────────────────────────────────────────────
 async function init() {
   try {
-    const all = await api({ action: 'getAll' });
-    if (all.error) throw new Error(all.error);
+    const all = await fetchAll();
 
     dropdowns = all.dropdowns;
 
@@ -1823,7 +1913,7 @@ async function init() {
   } catch (err) {
     document.getElementById('pageLoader').style.display = 'none';
     document.getElementById('kampList').innerHTML =
-      `<div class="load-err">Fejl ved indlæsning.<br>Tjek at Apps Script URL er indsat korrekt.<br><small style="color:#555">${err.message}</small></div>`;
+      `<div class="load-err">Fejl ved indlæsning.<br>Tjek Supabase forbindelsen.<br><small style="color:#555">${err.message}</small></div>`;
   }
 }
 
@@ -1832,8 +1922,7 @@ init();
 // ── AUTO-SYNC hvert 15 sek ────────────────────────────────────
 setInterval(async () => {
   try {
-    const all = await api({ action: 'getAll' });
-    if (all.error) return;
+    const all = await fetchAll();
 
     all.kampe.forEach((data, i) => {
       if (kampe[i].editMode || kampe[i].savePending) return;
