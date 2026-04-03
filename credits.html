@@ -161,12 +161,14 @@
                 clip.style.opacity = '0';
                 setTimeout(() => {
                   clip.style.display = 'none';
-                  // Fase 4: Vis logo-video
-                  video.style.display = 'block';
-                  const playPromise = video.play();
-                  if (playPromise !== undefined) {
-                    playPromise.catch(err => console.error('Video play fejl:', err));
-                  }
+                  // Fase 4: Vent 0.5 sek, vis logo-video
+                  setTimeout(() => {
+                    video.style.display = 'block';
+                    const playPromise = video.play();
+                    if (playPromise !== undefined) {
+                      playPromise.catch(err => console.error('Video play fejl:', err));
+                    }
+                  }, 500);
                 }, 600);
               }
             }
