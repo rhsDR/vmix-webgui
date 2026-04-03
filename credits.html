@@ -17,7 +17,7 @@
       position: fixed;
       left: 0; right: 0; bottom: 0;
       height: 33.333vh;
-      background: linear-gradient(to top, rgba(0,0,75,0) 0%, rgb(0,0,75) 18%);
+      background: linear-gradient(to top, rgba(0,0,75,0) 0%, rgb(0,0,75) 35%);
       overflow: hidden;
       transform: translateY(100%);
     }
@@ -48,12 +48,13 @@
       margin-bottom: 5px;
     }
 
-    .credit-navne {
+    .credit-navn {
       font-family: 'Segoe UI', Arial, sans-serif;
       font-size: 14px;
       font-weight: 400;
       color: rgb(255, 255, 255);
       line-height: 1.65;
+      display: block;
     }
 
     #logoVideo {
@@ -62,6 +63,8 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
+      max-width: 80%;
+      max-height: 80%;
     }
   </style>
 </head>
@@ -75,7 +78,7 @@
     </div>
   </div>
 
-  <video id="logoVideo" src="DR_KREDITERINGSLOGO_INTERN_INGEN_TEKST_4SEK.webm" preload="auto" playsinline></video>
+  <video id="logoVideo" preload="auto" playsinline muted></video>
 
   <script>
     const API = 'https://script.google.com/macros/s/AKfycbxRufEbQXaXP4JtAgEnUep-yW5RzCh_qsStXUTEO_402rthriL6yL6XFsRS_Qw_f5TN6A/exec';
@@ -95,12 +98,14 @@
         const right = (data.items || []).filter(i => i.side === 'H').sort((a, b) => a.orden - b.orden);
 
         function renderCol(items) {
-          return items.map(item => `
-            <div class="credit-section">
-              <div class="credit-titel">${esc(item.titel)}</div>
-              <div class="credit-navne">${item.navne.split(',').map(n => esc(n.trim())).filter(Boolean).join('<br>')}</div>
-            </div>
-          `).join('');
+          return items.map(item => {
+            const navne = item.navne.split(/[\n,]/).map(n => n.trim()).filter(Boolean);
+            return `
+              <div class="credit-section">
+                <div class="credit-titel">${esc(item.titel)}</div>
+                ${navne.map(n => `<span class="credit-navn">${esc(n)}</span>`).join('')}
+              </div>`;
+          }).join('');
         }
 
         const grid = document.getElementById('creditsGrid');
@@ -112,17 +117,20 @@
         const wrapper = document.getElementById('wrapper');
         const video   = document.getElementById('logoVideo');
 
+        // Sæt video src og lyt efter at den er klar
+        video.src = 'DR_KREDITERINGSLOGO_INTERN_INGEN_TEKST_4SEK.webm';
+
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             const clipH    = clip.offsetHeight;
             const contentH = wrapper.offsetHeight;
 
-            // ── Fase 1: Blå boks glider op (0.8 sek) ─────────
+            // Fase 1: Blå boks glider op
             const slideMs = 800;
             clip.style.transition = `transform ${slideMs}ms ease-out`;
             clip.style.transform  = 'translateY(0)';
 
-            // ── Fase 2: Tekst ruller indefra (starter samtidig)
+            // Fase 2: Tekst ruller indefra samtidig
             const startY   = clipH;
             const endY     = -contentH;
             const duration = speed * 1000;
@@ -139,13 +147,17 @@
               if (progress < 1) {
                 requestAnimationFrame(animate);
               } else {
-                // ── Fase 3: Fade boks ud, vis logo-video ──────
+                // Fase 3: Fade boks ud
                 clip.style.transition = 'opacity 0.6s ease-out';
-                clip.style.opacity    = '0';
+                clip.style.opacity = '0';
                 setTimeout(() => {
                   clip.style.display = 'none';
+                  // Fase 4: Vis logo-video
                   video.style.display = 'block';
-                  video.play();
+                  const playPromise = video.play();
+                  if (playPromise !== undefined) {
+                    playPromise.catch(err => console.error('Video play fejl:', err));
+                  }
                 }, 600);
               }
             }

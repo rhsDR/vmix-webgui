@@ -1696,7 +1696,7 @@ function buildCreditCard(item) {
     card.innerHTML = `
       <div style="display:flex;flex-direction:column;gap:8px;">
         <input class="form-input" id="crt-${item.row}" value="${esc(item.buf.titel)}" placeholder="Titel (f.eks. VÆRTER)">
-        <textarea class="form-input" id="crn-${item.row}" placeholder="Navne, kommasepareret (f.eks. Bo Jensen, Anne Hansen)">${esc(item.buf.navne)}</textarea>
+        <textarea class="form-input" id="crn-${item.row}" placeholder="Ét navn per linje">${esc(item.buf.navne)}</textarea>
         <div style="display:flex;gap:8px;margin-top:2px;">
           <button class="btn btn-save" id="crg-${item.row}">GEM</button>
           <button class="btn btn-cancel" id="cra-${item.row}">ANNULLER</button>
@@ -1712,7 +1712,7 @@ function buildCreditCard(item) {
     });
     setTimeout(() => { const el = card.querySelector('#crt-' + item.row); if (el) el.focus(); }, 30);
   } else {
-    const navneLines = item.navne.split(',').map(n => n.trim()).filter(Boolean);
+    const navneLines = item.navne.split(/[\n,]/).map(n => n.trim()).filter(Boolean);
     card.innerHTML = `
       <div class="credit-card-header">
         <div class="credit-card-content">
