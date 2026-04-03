@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>vMix Live Control</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -807,6 +808,7 @@
 // ── CONFIG ────────────────────────────────────────────────────
 const SB_URL = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
 const SB_KEY = 'sb_publishable_dE8VWimD15O5nYvha1B6lA_KW9ZtO1C';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
 
 // ── STATE ─────────────────────────────────────────────────────
 let dropdowns = { holds: [], kommentatorer: [], lokationer: [] };
@@ -1919,46 +1921,70 @@ async function init() {
 
 init();
 
-// ── AUTO-SYNC hvert 15 sek ────────────────────────────────────
-setInterval(async () => {
-  try {
-    const all = await fetchAll();
+// ── REALTIME ──────────────────────────────────────────────────
+const supabase = window.supabase.createClient(SB_URL, SB_ANON);
 
-    all.kampe.forEach((data, i) => {
-      if (kampe[i].editMode || kampe[i].savePending) return;
-      const prev = kampe[i];
-      const merged = { ...prev, ...data, editMode: false, collapsed: prev.collapsed, buf: prev.buf };
-      if (prev.onAirPending) merged.onAir = prev.onAir;
-      kampe[i] = merged;
-      rerender(i);
-    });
+function applyKampRow(row) {
+  const i = row.id - 1;
+  if (i < 0 || i > 5) return;
+  if (kampe[i].editMode || kampe[i].savePending) return;
+  const prev = kampe[i];
+  const data = {
+    hold1Lang: row.hold1_lang || '', hold1Kort: row.hold1_kort || '',
+    hold1Score: row.hold1_score || 0, hold2Score: row.hold2_score || 0,
+    hold2Kort: row.hold2_kort || '', hold2Lang: row.hold2_lang || '',
+    kommentator: row.kommentator || '', lokation: row.lokation || '',
+    vmixcall: row.vmixcall || '', onAir: row.on_air === true
+  };
+  const merged = { ...prev, ...data, editMode: false, collapsed: prev.collapsed, buf: prev.buf };
+  if (prev.onAirPending) merged.onAir = prev.onAir;
+  kampe[i] = merged;
+  rerender(i);
+}
 
-    if (all.subs) {
-      all.subs.subs.forEach((data, i) => {
-        if (subs[i].editMode || subs[i].savePending) return;
-        subs[i] = { ...subs[i], ...data };
-        rerenderSub(i);
-      });
-      all.subs.vmixCalls.forEach((data, i) => {
-        if (vmixCalls[i].editMode || vmixCalls[i].savePending) return;
-        vmixCalls[i] = { ...vmixCalls[i], ...data };
-        rerenderVmixCall(i);
-      });
-    }
+function applySubRow(row) {
+  const i = row.id - 1;
+  if (i < 0 || i > 14) return;
+  if (subs[i].editMode || subs[i].savePending) return;
+  subs[i] = { ...subs[i], navn: row.navn || '', titel: row.titel || '' };
+  rerenderSub(i);
+}
 
-    if (all.tickers) {
-      all.tickers.forEach((data, i) => {
-        if (tickers[i].editMode || tickers[i].savePending) return;
-        const prev = tickers[i];
-        const merged = { ...prev, ...data };
-        if (prev.onAirPending)    merged.onAir    = prev.onAir;
-        if (prev.breakingPending) merged.breaking = prev.breaking;
-        tickers[i] = merged;
-        rerenderTicker(i);
-      });
-    }
-  } catch { /* stille fejl */ }
-}, 15000);
+function applyVmixCallRow(row) {
+  const i = row.id - 1;
+  if (i < 0 || i > 7) return;
+  if (vmixCalls[i].editMode || vmixCalls[i].savePending) return;
+  vmixCalls[i] = { ...vmixCalls[i], navn: row.navn || '', titel: row.titel || '', link: row.link || '' };
+  rerenderVmixCall(i);
+}
+
+function applyTickerRow(row) {
+  const i = row.id - 1;
+  if (i < 0 || i > 19) return;
+  if (tickers[i].editMode || tickers[i].savePending) return;
+  const prev = tickers[i];
+  const merged = { ...prev, overskrift: row.overskrift || '', tekst: row.tekst || '',
+    onAir: row.on_air === true, breaking: row.breaking === true };
+  if (prev.onAirPending)    merged.onAir    = prev.onAir;
+  if (prev.breakingPending) merged.breaking = prev.breaking;
+  tickers[i] = merged;
+  rerenderTicker(i);
+}
+
+supabase.channel('db-changes')
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kampe' },
+      p => applyKampRow(p.new))
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'subs' },
+      p => applySubRow(p.new))
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'vmix_calls' },
+      p => applyVmixCallRow(p.new))
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickers' },
+      p => applyTickerRow(p.new))
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'credits' },
+      () => refreshCredits())
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings' },
+      () => refreshCredits())
+  .subscribe();
 </script>
 </body>
 </html>
