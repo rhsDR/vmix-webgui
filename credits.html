@@ -19,6 +19,7 @@
       height: 33.333vh;
       background: rgba(5, 15, 50, 0.82);
       overflow: hidden;
+      transform: translateY(100%);
     }
 
     #wrapper {
@@ -53,6 +54,14 @@
       color: #ffffff;
       line-height: 1.65;
     }
+
+    #logoVideo {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
   </style>
 </head>
 <body>
@@ -64,6 +73,8 @@
       </div>
     </div>
   </div>
+
+  <video id="logoVideo" src="DR_KREDITERINGSLOGO_INTERN_INGEN_TEKST_4SEK.mov" preload="auto" playsinline></video>
 
   <script>
     const API = 'https://script.google.com/macros/s/AKfycbxRufEbQXaXP4JtAgEnUep-yW5RzCh_qsStXUTEO_402rthriL6yL6XFsRS_Qw_f5TN6A/exec';
@@ -98,11 +109,19 @@
         const speed   = data.speed || 30;
         const clip    = document.getElementById('clip');
         const wrapper = document.getElementById('wrapper');
+        const video   = document.getElementById('logoVideo');
 
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             const clipH    = clip.offsetHeight;
             const contentH = wrapper.offsetHeight;
+
+            // ── Fase 1: Blå boks glider op (0.8 sek) ─────────
+            const slideMs = 800;
+            clip.style.transition = `transform ${slideMs}ms ease-out`;
+            clip.style.transform  = 'translateY(0)';
+
+            // ── Fase 2: Tekst ruller indefra (starter samtidig)
             const startY   = clipH;
             const endY     = -contentH;
             const duration = speed * 1000;
@@ -115,10 +134,18 @@
               const progress = Math.min((ts - startTime) / duration, 1);
               const y = startY + (endY - startY) * progress;
               wrapper.style.transform = `translateY(${y}px)`;
+
               if (progress < 1) {
                 requestAnimationFrame(animate);
               } else {
-                setTimeout(() => location.reload(), 3000);
+                // ── Fase 3: Fade boks ud, vis logo-video ──────
+                clip.style.transition = 'opacity 0.6s ease-out';
+                clip.style.opacity    = '0';
+                setTimeout(() => {
+                  clip.style.display = 'none';
+                  video.style.display = 'block';
+                  video.play();
+                }, 600);
               }
             }
 
