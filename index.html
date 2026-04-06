@@ -1820,6 +1820,7 @@ function buildCreditCard(item, side) {
     if (dragSrc === item.row) return;
     reorderCredits(dragSrc, item.row, side);
   });
+  card.addEventListener('dragenter', e => { e.preventDefault(); });
 
   // Touch support
   let touchStartY = 0;
@@ -1835,7 +1836,7 @@ function buildCreditCard(item, side) {
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
     const target = el && el.closest('.credit-card');
     if (target && target.dataset.row !== String(item.row)) {
-      reorderCredits(item.row, target.dataset.row, side);
+      reorderCredits(item.row, target.dataset.row, target.dataset.side || side);
     }
   });
 
@@ -1881,21 +1882,36 @@ function buildCreditCard(item, side) {
   return card;
 }
 
-async function reorderCredits(srcRow, targetRow, side) {
-  const sideItems = creditsData.items.filter(i => i.side === side).sort((a, b) => a.orden - b.orden);
-  const srcIdx    = sideItems.findIndex(i => String(i.row) === String(srcRow));
-  const targetIdx = sideItems.findIndex(i => String(i.row) === String(targetRow));
-  if (srcIdx === -1 || targetIdx === -1) return;
+async function reorderCredits(srcRow, targetRow, targetSide) {
+  const srcItem = creditsData.items.find(i => String(i.row) === String(srcRow));
+  if (!srcItem) return;
 
-  // Flyt element i arrayet
-  const [moved] = sideItems.splice(srcIdx, 1);
-  sideItems.splice(targetIdx, 0, moved);
+  // Opdater side hvis kortet flyttes til anden kolonne
+  srcItem.side = targetSide;
 
-  // Opdater orden lokalt og i Supabase
-  const updates = sideItems.map((item, idx) => {
+  // Genberegn orden i target-kolonnen
+  const targetItems = creditsData.items.filter(i => i.side === targetSide).sort((a, b) => a.orden - b.orden);
+  const srcIdx    = targetItems.findIndex(i => String(i.row) === String(srcRow));
+  const targetIdx = targetItems.findIndex(i => String(i.row) === String(targetRow));
+
+  if (srcIdx !== -1) targetItems.splice(srcIdx, 1);
+  const insertAt = targetItems.findIndex(i => String(i.row) === String(targetRow));
+  targetItems.splice(insertAt === -1 ? targetItems.length : insertAt, 0, srcItem);
+
+  const updates = targetItems.map((item, idx) => {
     item.orden = idx + 1;
-    return sbPatch('credits?id=eq.' + item.row, { orden: item.orden });
+    return sbPatch('credits?id=eq.' + item.row, { side: item.side, orden: item.orden });
   });
+
+  // Genberegn orden i kilde-kolonnen hvis forskellig
+  if (srcItem.side !== targetSide) {
+    const srcSideItems = creditsData.items.filter(i => i.side !== targetSide).sort((a, b) => a.orden - b.orden);
+    srcSideItems.forEach((item, idx) => {
+      item.orden = idx + 1;
+      updates.push(sbPatch('credits?id=eq.' + item.row, { orden: item.orden }));
+    });
+  }
+
   renderCredits();
   try {
     await Promise.all(updates);
