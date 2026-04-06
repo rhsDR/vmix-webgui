@@ -1739,7 +1739,7 @@ function renderCredits() {
   speedBar.className = 'credits-speed-bar';
   speedBar.innerHTML = `
     <span class="credits-speed-label">Hastighed</span>
-    <input type="range" class="speed-slider" id="speedSlider" min="10" max="120" step="5" value="${creditsData.speed}">
+    <input type="range" class="speed-slider" id="speedSlider" min="10" max="30" step="1" value="${creditsData.speed}">
     <span class="credits-speed-val" id="speedVal">${creditsData.speed} sek</span>
     <button class="btn btn-save" id="saveSpeedBtn">GEM</button>
     <button class="btn btn-cancel" id="previewBtn" style="margin-left:auto;">▶ PREVIEW</button>
