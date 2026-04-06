@@ -646,6 +646,11 @@
     textarea.form-input { resize: vertical; min-height: 64px; font-family: inherit; line-height: 1.5; }
     @media (max-width: 640px) { .credits-cols { grid-template-columns: 1fr; } }
 
+    .credit-card { cursor: grab; user-select: none; transition: opacity 0.15s, box-shadow 0.15s; }
+    .credit-card.dragging { opacity: 0.4; cursor: grabbing; }
+    .credit-card.drag-over { box-shadow: 0 -3px 0 0 var(--yellow); }
+    .credit-card.editMode-active { cursor: default; }
+
     .preview-modal {
       position: fixed;
       inset: 0;
@@ -1768,8 +1773,9 @@ function renderCredits() {
   function buildCol(side, label) {
     const items = creditsData.items.filter(i => i.side === side).sort((a, b) => a.orden - b.orden);
     const col = document.createElement('div');
+    col.dataset.side = side;
     col.innerHTML = `<div class="credits-col-header">${label}</div>`;
-    items.forEach(item => col.appendChild(buildCreditCard(item)));
+    items.forEach(item => col.appendChild(buildCreditCard(item, side)));
     const addBtn = document.createElement('button');
     addBtn.className = 'credit-add-btn';
     addBtn.textContent = '+ TILFØJ SEKTION';
@@ -1783,10 +1789,55 @@ function renderCredits() {
   container.appendChild(cols);
 }
 
-function buildCreditCard(item) {
+let dragSrc = null;
+
+function buildCreditCard(item, side) {
   const card = document.createElement('div');
   card.className = 'credit-card';
   card.id = 'credit-' + item.row;
+  card.draggable = true;
+  card.dataset.row = item.row;
+  card.dataset.side = side;
+
+  card.addEventListener('dragstart', e => {
+    dragSrc = item.row;
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  card.addEventListener('dragend', () => {
+    card.classList.remove('dragging');
+    document.querySelectorAll('.credit-card.drag-over').forEach(el => el.classList.remove('drag-over'));
+  });
+  card.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragSrc !== item.row) card.classList.add('drag-over');
+  });
+  card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+  card.addEventListener('drop', e => {
+    e.preventDefault();
+    card.classList.remove('drag-over');
+    if (dragSrc === item.row) return;
+    reorderCredits(dragSrc, item.row, side);
+  });
+
+  // Touch support
+  let touchStartY = 0;
+  card.addEventListener('touchstart', e => {
+    touchStartY = e.touches[0].clientY;
+    dragSrc = item.row;
+    card.classList.add('dragging');
+  }, { passive: true });
+  card.addEventListener('touchmove', e => { e.preventDefault(); }, { passive: false });
+  card.addEventListener('touchend', e => {
+    card.classList.remove('dragging');
+    const touch = e.changedTouches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const target = el && el.closest('.credit-card');
+    if (target && target.dataset.row !== String(item.row)) {
+      reorderCredits(item.row, target.dataset.row, side);
+    }
+  });
 
   if (item.editMode) {
     card.innerHTML = `
@@ -1828,6 +1879,27 @@ function buildCreditCard(item) {
     card.querySelector('#crdel-' + item.row).addEventListener('click', () => deleteCreditItem(item));
   }
   return card;
+}
+
+async function reorderCredits(srcRow, targetRow, side) {
+  const sideItems = creditsData.items.filter(i => i.side === side).sort((a, b) => a.orden - b.orden);
+  const srcIdx    = sideItems.findIndex(i => String(i.row) === String(srcRow));
+  const targetIdx = sideItems.findIndex(i => String(i.row) === String(targetRow));
+  if (srcIdx === -1 || targetIdx === -1) return;
+
+  // Flyt element i arrayet
+  const [moved] = sideItems.splice(srcIdx, 1);
+  sideItems.splice(targetIdx, 0, moved);
+
+  // Opdater orden lokalt og i Supabase
+  const updates = sideItems.map((item, idx) => {
+    item.orden = idx + 1;
+    return sbPatch('credits?id=eq.' + item.row, { orden: item.orden });
+  });
+  renderCredits();
+  try {
+    await Promise.all(updates);
+  } catch { toast('Fejl ved rækkefølge', 'err'); }
 }
 
 function addCreditItem(side) {
