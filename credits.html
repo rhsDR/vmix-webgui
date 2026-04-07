@@ -30,6 +30,7 @@
       );
       overflow: hidden;
       transform: translateY(100%);
+      opacity: 1;
     }
 
     #wrapper {
@@ -90,10 +91,18 @@
 
   <video id="logoVideo" preload="auto" playsinline muted></video>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script>
     const SB_URL = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
     const SB_KEY = 'sb_publishable_dE8VWimD15O5nYvha1B6lA_KW9ZtO1C';
-    const SB_HEADERS = { 'apikey': SB_KEY, 'Content-Type': 'application/json' };
+    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3Bubm5ybiIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzQ3MDYxNjUxLCJleHAiOjIwNjI2Mzc2NTF9.mOBOSPMDcTMEBRlhHNHOqL2YMWbvLQZbpZHPnO7vBL0';
+    const SB_HEADERS = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Content-Type': 'application/json' };
+
+    const sbClient = window.supabase.createClient(SB_URL, SB_KEY);
+
+    let animating = false;
+    let creditsLoaded = false;
+    let speed = 30;
 
     function esc(s) {
       return String(s)
@@ -102,20 +111,19 @@
         .replace(/>/g, '&gt;');
     }
 
-    async function load() {
+    async function loadCredits() {
       try {
         const [creditsRaw, settingsRaw] = await Promise.all([
           fetch(SB_URL + '/rest/v1/credits?select=*', { headers: SB_HEADERS }).then(r => r.json()),
           fetch(SB_URL + '/rest/v1/settings?select=*', { headers: SB_HEADERS }).then(r => r.json())
         ]);
-        const speedRow = settingsRaw.find(r => r.key === 'credits_speed');
-        const data = {
-          items: creditsRaw.map(r => ({ row: r.id, side: r.side, orden: r.orden, titel: r.titel || '', navne: r.navne || '' })),
-          speed: speedRow ? parseFloat(speedRow.value) : 30
-        };
 
-        const left  = (data.items || []).filter(i => i.side === 'V').sort((a, b) => a.orden - b.orden);
-        const right = (data.items || []).filter(i => i.side === 'H').sort((a, b) => a.orden - b.orden);
+        const speedRow = settingsRaw.find(r => r.key === 'credits_speed');
+        speed = speedRow ? parseFloat(speedRow.value) : 30;
+
+        const items = creditsRaw.map(r => ({ row: r.id, side: r.side, orden: r.orden, titel: r.titel || '', navne: r.navne || '' }));
+        const left  = items.filter(i => i.side === 'V').sort((a, b) => a.orden - b.orden);
+        const right = items.filter(i => i.side === 'H').sort((a, b) => a.orden - b.orden);
 
         function renderCol(items) {
           return items.map(item => {
@@ -132,12 +140,50 @@
         grid.children[0].innerHTML = renderCol(left);
         grid.children[1].innerHTML = renderCol(right);
 
-        const speed   = data.speed || 30;
+        creditsLoaded = true;
+      } catch (err) {
+        console.error('Credits load fejl:', err);
+      }
+    }
+
+    function resetState() {
+      const clip    = document.getElementById('clip');
+      const wrapper = document.getElementById('wrapper');
+      const video   = document.getElementById('logoVideo');
+
+      clip.style.transition = '';
+      clip.style.transform  = 'translateY(100%)';
+      clip.style.opacity    = '1';
+      clip.style.display    = '';
+      wrapper.style.transform = '';
+      video.style.display   = 'none';
+      video.pause();
+      video.currentTime = 0;
+      animating = false;
+    }
+
+    async function resetTrigger() {
+      try {
+        await fetch(SB_URL + '/rest/v1/settings?key=eq.credits_trigger', {
+          method: 'PATCH',
+          headers: SB_HEADERS,
+          body: JSON.stringify({ value: 'out' })
+        });
+      } catch (err) {
+        console.error('Reset trigger fejl:', err);
+      }
+    }
+
+    function playAnimation() {
+      if (animating || !creditsLoaded) return;
+      animating = true;
+
+      // Genindlæs credits inden afspilning så data er friskt
+      loadCredits().then(() => {
         const clip    = document.getElementById('clip');
         const wrapper = document.getElementById('wrapper');
         const video   = document.getElementById('logoVideo');
 
-        // Sæt video src og lyt efter at den er klar
         video.src = 'DR_KREDITERINGSLOGO_INTERN_INGEN_TEKST_4SEK.webm';
 
         requestAnimationFrame(() => {
@@ -150,7 +196,6 @@
             clip.style.transition = `transform ${slideMs}ms ease-out`;
             clip.style.transform  = 'translateY(0)';
 
-            // Fase 2: Tekst ruller indefra samtidig
             const startY   = clipH;
             const endY     = -contentH;
             const duration = speed * 1000;
@@ -179,6 +224,11 @@
                     if (playPromise !== undefined) {
                       playPromise.catch(err => console.error('Video play fejl:', err));
                     }
+                    // Fase 5: Når video er færdig → reset og sæt trigger tilbage til 0
+                    video.onended = async () => {
+                      await resetTrigger();
+                      resetState();
+                    };
                   }, 500);
                 }, 600);
               }
@@ -187,13 +237,37 @@
             requestAnimationFrame(animate);
           });
         });
-
-      } catch (err) {
-        console.error('Credits fejl:', err);
-      }
+      });
     }
 
-    load();
+    async function init() {
+      await loadCredits();
+
+      // Lyt på credits_trigger via real-time
+      sbClient
+        .channel('credits-trigger')
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'settings',
+          filter: 'key=eq.credits_trigger'
+        }, payload => {
+          if (payload.new.value === 'in') {
+            playAnimation();
+          }
+        })
+        .subscribe();
+
+      // Tjek om trigger allerede er sat ved load (fx hvis siden reloadede mens trigger var aktiv)
+      try {
+        const rows = await fetch(SB_URL + '/rest/v1/settings?key=eq.credits_trigger&select=value', { headers: SB_HEADERS }).then(r => r.json());
+        if (rows[0] && rows[0].value === 'in') {
+          playAnimation();
+        }
+      } catch {}
+    }
+
+    init();
   </script>
 </body>
 </html>
