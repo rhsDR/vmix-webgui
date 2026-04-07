@@ -18,21 +18,13 @@ export default async function handler(req, res) {
 
     if (teams.length === 0) return res.status(200).json({ fixtures: [], debug: { teamSearch: teamData } });
 
-    // Hent kampe for de fundne hold i Superligaen (league 119)
-    // Prøv next=5 — hvis tomt, brug last=5 (sæson starter juli 2025)
-    const fixturePromises = teams.slice(0, 3).map(async teamId => {
-      let fd = await fetch(
+    // Hent kommende kampe for de fundne hold i Superligaen (league 119, sæson 2025)
+    const fixturePromises = teams.slice(0, 3).map(teamId =>
+      fetch(
         `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=119&season=2025&next=5`,
         { headers: { 'x-apisports-key': API_KEY } }
-      ).then(r => r.json());
-      if (!fd.response || fd.response.length === 0) {
-        fd = await fetch(
-          `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=119&season=2024&last=5`,
-          { headers: { 'x-apisports-key': API_KEY } }
-        ).then(r => r.json());
-      }
-      return fd;
-    });
+      ).then(r => r.json())
+    );
     const fixtureResults = await Promise.all(fixturePromises);
 
     const seen = new Set();
