@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>vMix Control — Projekter</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111;
+      color: #e5e5e5;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1c1c1c;
+      border-bottom: 1px solid #2a2a2a;
+      padding: 0 clamp(16px, 4vw, 48px);
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-left img { height: 28px; }
+
+    .header-left span {
+      font-size: 16px;
+      font-weight: 600;
+      color: #f97316;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .user-email {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .admin-badge {
+      font-size: 11px;
+      background: #f97316;
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      display: none;
+    }
+
+    .logout-btn {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #888;
+      padding: 5px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .logout-btn:hover { border-color: #666; color: #ccc; }
+
+    main {
+      padding: clamp(24px, 4vw, 48px) clamp(16px, 4vw, 48px);
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 24px;
+      color: #ccc;
+    }
+
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    .project-card {
+      background: #1c1c1c;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 24px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+    }
+
+    .project-card:hover {
+      border-color: #f97316;
+      background: #222;
+    }
+
+    .project-type {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #555;
+      margin-bottom: 8px;
+    }
+
+    .project-card.kampdag .project-type { color: #f97316; }
+
+    .project-navn {
+      font-size: 18px;
+      font-weight: 600;
+      color: #e5e5e5;
+      margin-bottom: 6px;
+    }
+
+    .project-undertitel {
+      font-size: 13px;
+      color: #666;
+      min-height: 20px;
+      cursor: text;
+      border-radius: 4px;
+      padding: 2px 4px;
+      margin: -2px -4px;
+      transition: background 0.15s;
+    }
+
+    .project-undertitel:hover { background: #2a2a2a; }
+    .project-undertitel:empty::before { content: 'Klik for at tilføje undertitel'; color: #444; }
+
+    .project-undertitel-input {
+      font-size: 13px;
+      color: #e5e5e5;
+      background: #2a2a2a;
+      border: 1px solid #f97316;
+      border-radius: 4px;
+      padding: 2px 6px;
+      width: 100%;
+      outline: none;
+    }
+
+    .project-arrow {
+      position: absolute;
+      top: 24px;
+      right: 20px;
+      color: #333;
+      font-size: 18px;
+      transition: color 0.15s;
+    }
+
+    .project-card:hover .project-arrow { color: #f97316; }
+
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #333;
+      border-top-color: #f97316;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="loader"><div class="spinner"></div></div>
+
+  <header>
+    <div class="header-left">
+      <img src="logo.png" alt="DR">
+      <span>vMix Control</span>
+    </div>
+    <div class="header-right">
+      <span class="admin-badge" id="adminBadge">ADMIN</span>
+      <span class="user-email" id="userEmail"></span>
+      <button class="logout-btn" onclick="signOut()">Log ud</button>
+    </div>
+  </header>
+
+  <main>
+    <h1>Vælg projekt</h1>
+    <div class="project-grid" id="projectGrid"></div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    let currentUser = null;
+    let userIsAdmin = false;
+
+    async function init() {
+      const session = await requireAuth();
+      if (!session) return;
+
+      currentUser = session.user;
+      userIsAdmin = await isAdmin(currentUser.id);
+
+      document.getElementById('userEmail').textContent = currentUser.email;
+      if (userIsAdmin) document.getElementById('adminBadge').style.display = 'inline';
+
+      await loadProjects();
+      document.getElementById('loader').style.display = 'none';
+    }
+
+    async function loadProjects() {
+      const res = await fetch(SB_URL + '/rest/v1/projekter?select=*&order=created_at.asc', { headers: sbHeaders() });
+      const projekter = await res.json();
+      renderProjects(projekter);
+    }
+
+    function renderProjects(projekter) {
+      const grid = document.getElementById('projectGrid');
+      grid.innerHTML = '';
+
+      projekter.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'project-card' + (p.type === 'kampdag' ? ' kampdag' : '');
+        card.innerHTML = `
+          <div class="project-arrow">›</div>
+          <div class="project-type">${p.type === 'kampdag' ? 'Kampdag' : 'TV Produktion'}</div>
+          <div class="project-navn">${esc(p.navn)}</div>
+          <div class="project-undertitel" id="ut-${p.id}" data-id="${p.id}">${esc(p.undertitel || '')}</div>
+        `;
+
+        // Klik på kort → åbn projekt
+        card.addEventListener('click', e => {
+          if (e.target.classList.contains('project-undertitel') || e.target.classList.contains('project-undertitel-input')) return;
+          window.location.href = 'app.html?p=' + p.id;
+        });
+
+        // Klik på undertitel → rediger
+        const ut = card.querySelector('.project-undertitel');
+        ut.addEventListener('click', e => {
+          e.stopPropagation();
+          startEditUndertitel(p.id, p.undertitel || '');
+        });
+
+        grid.appendChild(card);
+      });
+    }
+
+    function startEditUndertitel(id, current) {
+      const el = document.getElementById('ut-' + id);
+      if (!el) return;
+      const input = document.createElement('input');
+      input.className = 'project-undertitel-input';
+      input.value = current;
+      el.replaceWith(input);
+      input.focus();
+      input.select();
+
+      async function save() {
+        const val = input.value.trim();
+        const newEl = document.createElement('div');
+        newEl.className = 'project-undertitel';
+        newEl.id = 'ut-' + id;
+        newEl.dataset.id = id;
+        newEl.textContent = val;
+        newEl.addEventListener('click', e => { e.stopPropagation(); startEditUndertitel(id, val); });
+        input.replaceWith(newEl);
+
+        try {
+          await fetch(SB_URL + '/rest/v1/projekter?id=eq.' + id, {
+            method: 'PATCH',
+            headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ undertitel: val })
+          });
+        } catch {}
+      }
+
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { input.value = current; input.blur(); }
+      });
+    }
+
+    function esc(s) {
+      return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    init();
+  </script>
+</body>
+</html>

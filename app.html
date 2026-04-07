@@ -1,0 +1,2113 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>vMix Live Control</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #111111;
+      --card:        #1c1c1c;
+      --card-border: #2a2a2a;
+      --text:        #ffffff;
+      --muted:       #777777;
+      --orange:      #f97316;
+      --red:         #ef4444;
+      --blue:        #3b82f6;
+      --green:       #22c55e;
+      --input-bg:    #0d0d0d;
+      --yellow:      #eab308;
+    }
+
+    body {
+      background: var(--bg);
+      background-image: radial-gradient(ellipse at 15% 0%, #1c1108 0%, transparent 55%),
+                        radial-gradient(ellipse at 85% 100%, #0a0a14 0%, transparent 55%);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* ── Header ───────────────────────────────────────────── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px clamp(8px, 22vw, 340px);
+      border-bottom: 1px solid #252525;
+      background: linear-gradient(180deg, #161616 0%, transparent 100%);
+      position: relative;
+    }
+    .header-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      line-height: 1.3;
+      display: flex;
+      flex-direction: column;
+    }
+    .header-title .control {
+      display: flex;
+      justify-content: space-between;
+      letter-spacing: normal;
+    }
+    .header-logo {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      height: 36px;
+    }
+    .clock {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      border: 1px solid #383838;
+      background: #0d0d0d;
+      padding: 5px 14px;
+      border-radius: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Tabs ─────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      padding: 12px clamp(8px, 22vw, 340px);
+      border-bottom: 1px solid #252525;
+    }
+    .tab-btn {
+      padding: 5px 16px;
+      border: 1px solid #333;
+      background: transparent;
+      color: #666;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover { color: #ccc; border-color: #555; }
+    .tab-btn.active {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 2px 14px rgba(249,115,22,0.4);
+    }
+
+    .tab-pane { display: none; padding: 20px clamp(8px, 22vw, 340px); }
+    .tab-pane.active { display: block; }
+    .coming-soon { padding: 60px; text-align: center; color: #333; font-size: 12px; letter-spacing: 3px; }
+
+    /* ── Kamp list ────────────────────────────────────────── */
+    .kamp-list { display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px; }
+
+    /* ── Kamp block ───────────────────────────────────────── */
+    .kamp-block {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+      transition: box-shadow 0.3s;
+    }
+    .kamp-block.on-air {
+      box-shadow: 0 0 0 1px rgba(239,68,68,0.2), 0 4px 28px rgba(239,68,68,0.15);
+    }
+    /* Red left border */
+    .kamp-block::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 6px;
+      background: transparent;
+      transition: background 0.2s;
+      z-index: 1;
+    }
+    .kamp-block.on-air::before { background: var(--red); }
+
+    /* ── Block header ─────────────────────────────────────── */
+    .kamp-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px 10px 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .kamp-header-left  { display: flex; align-items: center; gap: 12px; flex: 1; }
+    .kamp-header-center { flex: 1; text-align: center; }
+    .kamp-header-right { display: flex; align-items: center; gap: 4px; flex: 1; justify-content: flex-end; }
+
+    @keyframes pulse-red {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+      60%       { box-shadow: 0 0 0 5px rgba(239,68,68,0); }
+    }
+    .on-air-btn {
+      padding: 3px 11px;
+      border-radius: 20px;
+      border: 1px solid #444;
+      background: transparent;
+      color: #666;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .on-air-btn.active {
+      border-color: var(--red);
+      background: var(--red);
+      color: #fff;
+      animation: pulse-red 2s ease-in-out infinite;
+    }
+    .on-air-btn:disabled { opacity: 0.25; cursor: not-allowed; animation: none; }
+
+    .kamp-label {
+      font-size: 18px;
+      font-weight: 700;
+      color: #555;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      color: #555;
+      cursor: pointer;
+      padding: 5px 7px;
+      border-radius: 4px;
+      font-size: 14px;
+      line-height: 1;
+      transition: all 0.15s;
+    }
+    .icon-btn:hover { color: #ccc; background: #252525; }
+
+    .collapse-arrow { display: inline-block; transition: transform 0.2s; font-style: normal; }
+    .kamp-block.collapsed .collapse-arrow { transform: rotate(180deg); }
+
+    /* ── Block body ───────────────────────────────────────── */
+    .kamp-body { padding: 4px 14px 16px 18px; }
+    .kamp-block.collapsed .kamp-body { display: none; }
+
+    /* ── Normal mode ──────────────────────────────────────── */
+    .normal-view {
+      display: grid;
+      grid-template-columns: 200px 1fr 200px;
+      align-items: center;
+    }
+
+    .kamp-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .info-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #bbb;
+    }
+    .info-icon { color: #555; font-size: 13px; min-width: 16px; text-align: center; }
+    .info-link-text {
+      font-size: 12px;
+      color: #777;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 138px;
+    }
+    .copy-btn {
+      background: none;
+      border: none;
+      color: #555;
+      cursor: pointer;
+      padding: 2px 5px;
+      font-size: 14px;
+      border-radius: 3px;
+      transition: color 0.15s;
+      flex-shrink: 0;
+    }
+    .copy-btn:hover { color: #ccc; }
+
+    /* ── Score area ───────────────────────────────────────── */
+    .score-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .team-block { text-align: center; }
+    .team-name {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #fff;
+      min-height: 38px;
+      line-height: 1;
+    }
+    .score-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      justify-content: center;
+    }
+    .score-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid #2e2e2e;
+      background: #1a1a1a;
+      color: #888;
+      font-size: 26px;
+      line-height: 1;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .score-btn:hover { background: #252525; color: #fff; border-color: #444; }
+    .score-val {
+      font-size: 46px;
+      font-weight: 800;
+      color: var(--blue);
+      min-width: 52px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 0 24px rgba(59,130,246,0.35);
+    }
+    .vs-sep { font-size: 22px; color: #3a3a3a; font-weight: 700; padding: 0 14px; align-self: center; margin-top: 28px; letter-spacing: 2px; }
+
+    /* ── Edit mode ────────────────────────────────────────── */
+    .edit-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .span2 { grid-column: span 2; }
+
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-label {
+      font-size: 10px;
+      color: #555;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .form-input, .form-select {
+      background: var(--input-bg);
+      border: 1px solid #2e2e2e;
+      color: #fff;
+      padding: 7px 10px;
+      border-radius: 4px;
+      font-size: 13px;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+    .form-input:focus, .form-select:focus { outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px rgba(249,115,22,0.1); }
+    .form-select { cursor: pointer; }
+
+    .vmix-row { display: flex; gap: 6px; align-items: center; }
+    .vmix-row .form-input { flex: 1; }
+
+    .edit-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      align-items: center;
+    }
+    .btn {
+      padding: 7px 18px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      transition: all 0.15s;
+    }
+    .btn-save   { background: linear-gradient(135deg, #f97316, #ea580c); color: #fff; box-shadow: 0 2px 10px rgba(249,115,22,0.3); }
+    .btn-save:hover { filter: brightness(1.1); box-shadow: 0 2px 16px rgba(249,115,22,0.45); }
+    .btn-cancel { background: #222; color: #888; border: 1px solid #333; }
+    .btn-cancel:hover { color: #fff; }
+    .btn-reset  { background: transparent; color: #666; border: 1px solid #2e2e2e; margin-left: auto; }
+    .btn-reset:hover { color: var(--red); border-color: var(--red); }
+
+    /* ── Toast ────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      background: #1c1c1c;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 9px 18px;
+      font-size: 13px;
+      color: #ccc;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.2s;
+      pointer-events: none;
+      z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok  { border-color: var(--green); color: var(--green); }
+    .toast.err { border-color: var(--red);   color: var(--red); }
+
+    /* ── Loading ──────────────────────────────────────────── */
+    .loading { padding: 40px; text-align: center; color: #444; font-size: 13px; letter-spacing: 1px; }
+    .load-err { padding: 40px; text-align: center; color: var(--red); font-size: 13px; }
+
+    /* ── Subs ─────────────────────────────────────────────── */
+    .subs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .subs-section { margin-bottom: 28px; }
+    .subs-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #444;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #222;
+    }
+    .sub-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 12px 10px 16px;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-left: 3px solid var(--blue);
+      border-radius: 6px;
+      margin-bottom: 10px;
+      min-height: 77px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .sub-row.vmix-call-row {
+      border-left: 3px solid #a855f7;
+      min-height: 95px;
+      align-items: flex-start;
+      padding-top: 12px;
+      padding-bottom: 12px;
+    }
+    .sub-row.vmix-call-row.collapsed {
+      min-height: 0;
+      align-items: center;
+      padding-top: 6px;
+      padding-bottom: 6px;
+    }
+    .sub-row.grayed {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .sub-row.grayed .vmix-col-btn {
+      pointer-events: auto;
+    }
+    @keyframes flash-blue {
+      0%   { box-shadow: 0 0 0 0px rgba(59,130,246,0),   border-color: var(--card-border); }
+      35%  { box-shadow: 0 0 0 4px rgba(59,130,246,0.5); border-color: rgba(59,130,246,0.7); }
+      100% { box-shadow: 0 0 0 0px rgba(59,130,246,0),   border-color: var(--card-border); }
+    }
+    @keyframes flash-purple {
+      0%   { box-shadow: 0 0 0 0px rgba(168,85,247,0),   border-color: var(--card-border); }
+      35%  { box-shadow: 0 0 0 4px rgba(168,85,247,0.5); border-color: rgba(168,85,247,0.7); }
+      100% { box-shadow: 0 0 0 0px rgba(168,85,247,0),   border-color: var(--card-border); }
+    }
+    .sub-row.flash-saved            { animation: flash-blue   0.7s ease-out; }
+    .sub-row.vmix-call-row.flash-saved { animation: flash-purple 0.7s ease-out; }
+    .sub-num {
+      font-size: 11px;
+      font-weight: 700;
+      min-width: 22px;
+      text-align: right;
+      align-self: flex-start;
+      padding-top: 2px;
+      color: var(--blue);
+    }
+    .vmix-call-row .sub-num { color: #a855f7; }
+    .sub-text {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: hidden;
+    }
+    .sub-text.empty { color: #333; font-style: italic; }
+    .sub-navn  { font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sub-titel { font-size: 14px; font-weight: 400; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sub-link-row { display: flex; align-items: center; gap: 4px; }
+    .sub-link {
+      font-size: 13px;
+      color: #555;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+    .sub-uses-kamp {
+      flex: 1;
+      font-size: 11px;
+      color: #555;
+      letter-spacing: 1px;
+      font-weight: 700;
+    }
+    .sub-edit-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+    }
+    .sub-edit-fields .form-input { width: 100%; padding: 5px 8px; font-size: 13px; }
+    .sub-edit-fields .form-input.navn-input  { font-weight: 700; }
+    .sub-edit-fields .form-input.titel-input { color: #aaa; }
+    .sub-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .btn-sm {
+      padding: 4px 12px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      transition: all 0.15s;
+    }
+    .btn-sm.save   { background: var(--orange); color: #fff; }
+    .btn-sm.save:hover { filter: brightness(1.1); }
+    .btn-sm.cancel { background: #222; color: #666; border: 1px solid #333; }
+    .btn-sm.cancel:hover { color: #fff; }
+    .btn-sm.reset  { background: transparent; color: #555; border: 1px solid #2a2a2a; }
+    .btn-sm.reset:hover { color: var(--red); border-color: var(--red); }
+
+    /* ── Ticker ───────────────────────────────────────────── */
+    .ticker-list { display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px; }
+
+    .ticker-block {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      transition: border-color 0.2s;
+    }
+    .ticker-block.on-air { box-shadow: 0 0 0 1px rgba(239,68,68,0.15), 0 4px 24px rgba(239,68,68,0.12); }
+    .ticker-block.on-air-breaking { border-color: #eab308; box-shadow: 0 0 0 1px rgba(234,179,8,0.2), 0 4px 24px rgba(239,68,68,0.12); }
+    .ticker-block::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 6px;
+      background: transparent;
+      transition: background 0.2s;
+      z-index: 1;
+    }
+    .ticker-block.on-air::before         { background: var(--red); }
+    .ticker-block.on-air-breaking::before { background: var(--red); }
+
+    .ticker-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 16px 13px 20px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .ticker-header-left  { display: flex; align-items: center; gap: 10px; flex: 1; }
+    .ticker-header-center { flex: 1; text-align: center; }
+    .ticker-header-right { display: flex; align-items: center; gap: 4px; flex: 1; justify-content: flex-end; }
+
+    .ticker-num {
+      font-size: 18px;
+      font-weight: 700;
+      color: #555;
+      letter-spacing: 2px;
+    }
+
+    @keyframes pulse-yellow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(234,179,8,0.5); }
+      60%       { box-shadow: 0 0 0 5px rgba(234,179,8,0); }
+    }
+    .breaking-btn {
+      padding: 3px 11px;
+      border-radius: 20px;
+      border: 1px solid #444;
+      background: transparent;
+      color: #666;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .breaking-btn.active { border-color: #eab308; background: #eab308; color: #000; animation: pulse-yellow 2s ease-in-out infinite; }
+    .breaking-btn:disabled { opacity: 0.25; cursor: not-allowed; animation: none; }
+
+    .ticker-body { padding: 4px 18px 18px 22px; }
+    .ticker-block.collapsed .ticker-body { display: none; }
+
+    .ticker-normal { display: flex; flex-direction: row; align-items: baseline; gap: 14px; }
+    .ticker-overskrift { font-size: 15px; font-weight: 400; color: #fff; text-transform: uppercase; white-space: nowrap; }
+    .ticker-tekst { font-size: 15px; color: #888; }
+
+    /* ── Credits ──────────────────────────────────────────── */
+    .credits-speed-bar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 0 22px;
+      border-bottom: 1px solid #222;
+      margin-bottom: 24px;
+    }
+    .credits-speed-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #555;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    input[type=range].speed-slider {
+      flex: 1;
+      max-width: 200px;
+      accent-color: var(--orange);
+      cursor: pointer;
+    }
+    .credits-speed-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: #ccc;
+      min-width: 52px;
+    }
+    .credits-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      padding-bottom: 40px;
+    }
+    .credits-col-header {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #444;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #222;
+    }
+    .credit-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-left: 3px solid var(--yellow);
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .credit-card-header { display: flex; align-items: flex-start; gap: 8px; }
+    .credit-card-content { flex: 1; }
+    .credit-card-titel {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--yellow);
+      margin-bottom: 4px;
+    }
+    .credit-card-navne { font-size: 13px; color: #ccc; line-height: 1.5; }
+    .credit-card-actions { display: flex; gap: 2px; flex-shrink: 0; }
+    .credit-add-btn {
+      width: 100%;
+      padding: 9px;
+      background: transparent;
+      border: 1px dashed #2e2e2e;
+      border-radius: 6px;
+      color: #444;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+      margin-top: 4px;
+    }
+    .credit-add-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+    textarea.form-input { resize: vertical; min-height: 64px; font-family: inherit; line-height: 1.5; }
+    @media (max-width: 640px) { .credits-cols { grid-template-columns: 1fr; } }
+
+    .credit-card { cursor: grab; user-select: none; transition: opacity 0.15s, box-shadow 0.15s; }
+    .credit-card.dragging { opacity: 0.4; cursor: grabbing; }
+    .credit-card.drag-over { box-shadow: 0 -3px 0 0 var(--yellow); }
+    .credit-card.editMode-active { cursor: default; }
+
+    .preview-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .preview-modal-inner {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      aspect-ratio: 16/9;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 60px rgba(0,0,0,0.8);
+      border: 1px solid #333;
+    }
+    .preview-modal-inner iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .preview-close {
+      position: absolute;
+      top: -16px;
+      right: -16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #333;
+      border: 1px solid #555;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      transition: background 0.15s;
+      z-index: 1;
+    }
+    .preview-close:hover { background: var(--red); border-color: var(--red); }
+
+    /* ── Mobil ────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .header {
+        padding: 10px 14px;
+        gap: 8px;
+      }
+      .header-logo { height: 26px; }
+      .header-title { font-size: 12px; letter-spacing: 2px; }
+      .clock { font-size: 16px; letter-spacing: 2px; padding: 4px 8px; }
+
+      .tabs {
+        padding: 8px 10px;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .tab-btn { padding: 5px 10px; font-size: 11px; }
+
+      .tab-pane { padding: 12px 10px; }
+
+      .kamp-header { padding: 10px 10px 10px 14px; }
+
+      .normal-view {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .kamp-info { order: 2; }
+      .score-area { order: 1; }
+
+      .team-name { font-size: 22px; }
+      .score-val { font-size: 38px; min-width: 44px; }
+      .score-btn { width: 40px; height: 40px; font-size: 22px; }
+      .vs-sep { padding: 0 8px; font-size: 18px; }
+
+      .edit-grid { grid-template-columns: 1fr; }
+      .span2 { grid-column: span 1; }
+
+      .subs-grid { grid-template-columns: 1fr; }
+
+      .sub-row { min-height: 60px; }
+      .sub-row.vmix-call-row { min-height: 80px; }
+
+      .ticker-header { padding: 10px 12px 10px 14px; }
+      .ticker-body { padding: 4px 12px 14px 16px; }
+      .ticker-normal { flex-direction: column; gap: 4px; }
+      .ticker-overskrift, .ticker-tekst { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- PAGE LOADER -->
+<div id="pageLoader" style="position:fixed;inset:0;background:#111111;z-index:9999;display:flex;align-items:center;justify-content:center;transition:opacity 0.2s;">
+  <div style="color:#333;font-size:11px;letter-spacing:4px;font-family:'Segoe UI',system-ui,sans-serif;font-weight:700;">INDLÆSER</div>
+</div>
+
+<!-- HEADER -->
+<header class="header">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button class="icon-btn" id="backBtn" title="Alle projekter" style="font-size:18px;color:var(--muted);">‹</button>
+    <div class="header-title"><span>VMIX LIVE</span><span class="control">C O N T R O L</span></div>
+  </div>
+  <img class="header-logo" src="logo.png" alt="DR">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span id="projectUndertitel" style="font-size:12px;color:#555;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+    <button class="icon-btn" id="playBtn" title="Afspil sang" style="font-size:20px;color:var(--orange);">▶</button>
+    <div class="clock" id="clock">00.00.00</div>
+    <button class="icon-btn" id="logoutBtn" title="Log ud" style="font-size:14px;color:var(--muted);">⏏</button>
+  </div>
+</header>
+
+<!-- TABS -->
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="kampe">KAMPE</button>
+  <button class="tab-btn" data-tab="subs">SUBS</button>
+  <button class="tab-btn" data-tab="ticker">TICKER</button>
+  <button class="tab-btn" data-tab="credits">CREDITS</button>
+  <button class="tab-btn" data-tab="admin">ADMIN</button>
+</nav>
+
+<!-- TAB: KAMPE -->
+<div id="tab-kampe" class="tab-pane active">
+  <div class="kamp-list" id="kampList">
+    <div class="loading">Henter data…</div>
+  </div>
+</div>
+
+<!-- TAB: SUBS -->
+<div id="tab-subs" class="tab-pane">
+  <div id="subsList"><div class="loading">Henter data…</div></div>
+</div>
+
+<!-- TAB: ADMIN -->
+<div id="tab-admin" class="tab-pane">
+  <div class="coming-soon">KOMMER SNART</div>
+</div>
+
+<!-- TAB: TICKER -->
+<div id="tab-ticker" class="tab-pane">
+  <div id="tickerList"><div class="loading">Henter data…</div></div>
+</div>
+
+<!-- TAB: CREDITS -->
+<div id="tab-credits" class="tab-pane">
+  <div id="creditsList"><div class="loading">Henter data…</div></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CREDITS PREVIEW MODAL -->
+<div class="preview-modal" id="previewModal" style="display:none;">
+  <div class="preview-modal-inner">
+    <button class="preview-close" id="previewClose">✕</button>
+    <iframe id="previewFrame" src=""></iframe>
+  </div>
+</div>
+
+<script>
+// ── CONFIG — defineret i js/auth.js ───────────────────────────
+
+// ── STATE ─────────────────────────────────────────────────────
+let dropdowns = { holds: [], kommentatorer: [], lokationer: [] };
+
+const makeKamp = () => ({
+  hold1Lang: '', hold1Kort: '', hold1Score: 0,
+  hold2Score: 0, hold2Kort: '', hold2Lang: '',
+  kommentator: '', lokation: '', vmixcall: '', onAir: false,
+  // edit buffer
+  editMode: false, collapsed: false,
+  buf: { hold1Lang: '', hold2Lang: '', kommentator: '', lokation: '', vmixcall: '' }
+});
+
+let kampe = Array.from({ length: 6 }, makeKamp);
+
+// ── TICKER STATE ──────────────────────────────────────────────
+const makeTicker = () => ({
+  overskrift: '', tekst: '', onAir: false, breaking: false,
+  editMode: false, collapsed: false,
+  buf: { overskrift: '', tekst: '' }
+});
+let tickers = Array.from({ length: 20 }, makeTicker);
+
+// ── SUBS STATE ────────────────────────────────────────────────
+const makeSub      = () => ({ navn: '', titel: '', editMode: false, buf: { navn: '', titel: '' } });
+const makeVmixCall = () => ({ navn: '', titel: '', link: '', editMode: false, collapsed: false, buf: { navn: '', titel: '', link: '' } });
+let subs      = Array.from({ length: 15 }, makeSub);
+let vmixCalls = Array.from({ length: 8  }, makeVmixCall);
+
+// ── CLOCK ─────────────────────────────────────────────────────
+function tickClock() {
+  const d   = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('clock').textContent =
+    `${pad(d.getHours())}.${pad(d.getMinutes())}.${pad(d.getSeconds())}`;
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+// ── MUSIK ─────────────────────────────────────────────────────
+const sange = ['sang1.mp3', 'sang2.mp3', 'sang3.mp3', 'sang4.mp3'];
+const audio = new Audio();
+let spillerNu = false;
+
+function tilfældigSang() {
+  return sange[Math.floor(Math.random() * sange.length)];
+}
+
+document.getElementById('playBtn').addEventListener('click', () => {
+  if (spillerNu) {
+    audio.pause();
+    audio.currentTime = 0;
+    spillerNu = false;
+    document.getElementById('playBtn').textContent = '▶';
+  } else {
+    audio.src = tilfældigSang();
+    audio.play();
+    spillerNu = true;
+    document.getElementById('playBtn').textContent = '⏹';
+  }
+});
+
+audio.addEventListener('ended', () => {
+  spillerNu = false;
+  document.getElementById('playBtn').textContent = '▶';
+});
+
+// ── TABS ──────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── SUPABASE HELPERS ──────────────────────────────────────────
+// SB_HEADERS og sbHeaders() kommer fra js/auth.js
+const SB_HEADERS = sbHeaders();
+const SB_HEADERS_MINIMAL = { ...SB_HEADERS, 'Prefer': 'return=minimal' };
+
+async function sbGet(path) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, { headers: SB_HEADERS });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function sbPatch(path, body) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, {
+    method: 'PATCH', headers: SB_HEADERS_MINIMAL, body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+}
+
+async function sbPost(path, body) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, {
+    method: 'POST', headers: SB_HEADERS_MINIMAL, body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+}
+
+async function sbDelete(path) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, {
+    method: 'DELETE', headers: SB_HEADERS_MINIMAL
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+}
+
+// ── FETCH ALL DATA ────────────────────────────────────────────
+async function fetchAll() {
+  const [dropdownsRaw, kampeRaw, subsRaw, vmixCallsRaw, tickersRaw, settingsRaw, creditsRaw] =
+    await Promise.all([
+      sbGet('dropdowns?select=*&order=orden.asc'),
+      sbGet('kampe?select=*&order=id.asc'),
+      sbGet('subs?select=*&order=id.asc'),
+      sbGet('vmix_calls?select=*&order=id.asc'),
+      sbGet('tickers?select=*&order=id.asc'),
+      sbGet('settings?select=*'),
+      sbGet('credits?select=*')
+    ]);
+
+  const speedRow = settingsRaw.find(r => r.key === 'credits_speed');
+  const speed = speedRow ? parseFloat(speedRow.value) : 30;
+
+  return {
+    dropdowns: {
+      kommentatorer: dropdownsRaw.filter(r => r.type === 'kommentator').map(r => r.lang),
+      lokationer:    dropdownsRaw.filter(r => r.type === 'lokation').map(r => r.lang),
+      holds:         dropdownsRaw.filter(r => r.type === 'hold').map(r => ({ lang: r.lang, kort: r.kort }))
+    },
+    kampe: kampeRaw.map(r => ({
+      hold1Lang:   r.hold1_lang  || '',
+      hold1Kort:   r.hold1_kort  || '',
+      hold1Score:  r.hold1_score || 0,
+      hold2Score:  r.hold2_score || 0,
+      hold2Kort:   r.hold2_kort  || '',
+      hold2Lang:   r.hold2_lang  || '',
+      kommentator: r.kommentator || '',
+      lokation:    r.lokation    || '',
+      vmixcall:    r.vmixcall    || '',
+      onAir:       r.on_air      || false
+    })),
+    subs: {
+      subs:      subsRaw.map(r => ({ navn: r.navn || '', titel: r.titel || '' })),
+      vmixCalls: vmixCallsRaw.map(r => ({ navn: r.navn || '', titel: r.titel || '', link: r.link || '' }))
+    },
+    tickers: tickersRaw.map(r => ({
+      overskrift: r.overskrift || '',
+      tekst:      r.tekst      || '',
+      onAir:      r.on_air     || false,
+      breaking:   r.breaking   || false
+    })),
+    credits: {
+      items: creditsRaw.map(r => ({
+        row:    r.id,
+        side:   r.side,
+        orden:  r.orden,
+        titel:  r.titel || '',
+        navne:  r.navne || ''
+      })),
+      speed
+    }
+  };
+}
+
+// ── TOAST ─────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── CLIPBOARD ─────────────────────────────────────────────────
+async function copyText(text) {
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Kopieret!', 'ok');
+  } catch {
+    toast('Kopiering fejlede', 'err');
+  }
+}
+
+// ── TITLE CASE ────────────────────────────────────────────────
+function toTitleCase(str) {
+  return str.replace(/\b\w/g, c => c.toUpperCase());
+}
+function titleCaseInput(el, buf, key) {
+  el.addEventListener('blur', () => {
+    const val = toTitleCase(el.value);
+    el.value  = val;
+    buf[key]  = val;
+  });
+}
+
+// ── HTML ESCAPE ───────────────────────────────────────────────
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ── RENDER ────────────────────────────────────────────────────
+function renderAll() {
+  const list = document.getElementById('kampList');
+  list.innerHTML = '';
+  kampe.forEach((_, i) => list.appendChild(buildBlock(i)));
+}
+
+function rerender(i) {
+  const old = document.getElementById('kamp-' + i);
+  if (old) old.replaceWith(buildBlock(i));
+}
+
+function buildBlock(i) {
+  const k = kampe[i];
+  const block = document.createElement('div');
+  block.id        = 'kamp-' + i;
+  block.className = 'kamp-block'
+    + (k.onAir     ? ' on-air'    : '')
+    + (k.collapsed ? ' collapsed' : '');
+
+  // Header
+  block.innerHTML = `
+    <div class="kamp-header" id="kamp-hdr-${i}">
+      <div class="kamp-header-left">
+        <button class="on-air-btn ${k.onAir ? 'active' : ''}"
+                id="oabtn-${i}" ${!kampKlarTilOnAir(i) ? 'disabled' : ''}>ON AIR</button>
+      </div>
+      <div class="kamp-header-center">
+        <span class="kamp-label">KAMP ${i + 1}</span>
+      </div>
+      <div class="kamp-header-right">
+        ${!k.editMode
+          ? `<button class="icon-btn" id="editbtn-${i}" title="Rediger">✏️</button>`
+          : ''}
+        <button class="icon-btn" id="collbtn-${i}" title="Fold ind/ud">
+          <i class="collapse-arrow">▴</i>
+        </button>
+      </div>
+    </div>
+    <div class="kamp-body" id="kamp-body-${i}"></div>
+  `;
+
+  // Body content
+  const body = block.querySelector('#kamp-body-' + i);
+  body.appendChild(k.editMode ? buildEditView(i) : buildNormalView(i));
+
+  // Events — ON AIR
+  block.querySelector('#oabtn-' + i).addEventListener('click', e => {
+    e.stopPropagation();
+    toggleOnAir(i);
+  });
+
+  // Events — collapse (click header, but not buttons)
+  block.querySelector('#kamp-hdr-' + i).addEventListener('click', e => {
+    if (!e.target.closest('button')) toggleCollapse(i);
+  });
+  block.querySelector('#collbtn-' + i).addEventListener('click', e => {
+    e.stopPropagation();
+    toggleCollapse(i);
+  });
+
+  // Events — edit button (normal mode only)
+  const eb = block.querySelector('#editbtn-' + i);
+  if (eb) eb.addEventListener('click', e => { e.stopPropagation(); enterEdit(i); });
+
+  return block;
+}
+
+// ── NORMAL VIEW ───────────────────────────────────────────────
+function buildNormalView(i) {
+  const k   = kampe[i];
+  const div = document.createElement('div');
+  div.className = 'normal-view';
+
+  div.innerHTML = `
+    <div class="kamp-info">
+      <div class="info-row">
+        <span class="info-icon">🎙</span>
+        <span>${esc(k.kommentator) || '<span style="color:#444">—</span>'}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-icon">📍</span>
+        <span>${esc(k.lokation) || '<span style="color:#444">—</span>'}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-icon">🔗</span>
+        <span class="info-link-text" title="${esc(k.vmixcall)}">${esc(k.vmixcall) || '<span style="color:#444">—</span>'}</span>
+        <button class="copy-btn" id="cpnorm-${i}" title="Kopiér link">⎘</button>
+      </div>
+    </div>
+    <div class="score-area">
+      <div class="team-block">
+        <div class="team-name">${esc(k.hold1Kort) || '—'}</div>
+        <div class="score-row">
+          <button class="score-btn" id="s1m-${i}">−</button>
+          <div class="score-val" id="sv1-${i}">${k.hold1Score}</div>
+          <button class="score-btn" id="s1p-${i}">+</button>
+        </div>
+      </div>
+      <div class="vs-sep">VS</div>
+      <div class="team-block">
+        <div class="team-name">${esc(k.hold2Kort) || '—'}</div>
+        <div class="score-row">
+          <button class="score-btn" id="s2m-${i}">−</button>
+          <div class="score-val" id="sv2-${i}">${k.hold2Score}</div>
+          <button class="score-btn" id="s2p-${i}">+</button>
+        </div>
+      </div>
+    </div>
+    <div></div>
+  `;
+
+  div.querySelector('#cpnorm-' + i).addEventListener('click', () => copyText(k.vmixcall));
+  div.querySelector('#s1m-' + i).addEventListener('click', () => changeScore(i, 1, -1));
+  div.querySelector('#s1p-' + i).addEventListener('click', () => changeScore(i, 1, +1));
+  div.querySelector('#s2m-' + i).addEventListener('click', () => changeScore(i, 2, -1));
+  div.querySelector('#s2p-' + i).addEventListener('click', () => changeScore(i, 2, +1));
+
+  return div;
+}
+
+// ── EDIT VIEW ─────────────────────────────────────────────────
+function buildEditView(i) {
+  const k   = kampe[i];
+  const buf = k.buf;
+  const div = document.createElement('div');
+
+  const holdOpts = (selectedLang) => dropdowns.holds.map(h =>
+    `<option value="${esc(h.lang)}" ${buf[selectedLang] === h.lang ? 'selected' : ''}>${esc(h.lang)}</option>`
+  ).join('');
+
+  const kommOpts = dropdowns.kommentatorer.map(v =>
+    `<option value="${esc(v)}" ${buf.kommentator === v ? 'selected' : ''}>${esc(v)}</option>`
+  ).join('');
+
+  const lokOpts = dropdowns.lokationer.map(v =>
+    `<option value="${esc(v)}" ${buf.lokation === v ? 'selected' : ''}>${esc(v)}</option>`
+  ).join('');
+
+  div.innerHTML = `
+    <div class="edit-grid">
+      <div class="form-group">
+        <label class="form-label">Hold 1</label>
+        <select class="form-select" id="eh1-${i}">
+          <option value="">— Vælg hold —</option>
+          ${holdOpts('hold1Lang')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hold 2</label>
+        <select class="form-select" id="eh2-${i}">
+          <option value="">— Vælg hold —</option>
+          ${holdOpts('hold2Lang')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kommentator</label>
+        <select class="form-select" id="ek-${i}">
+          <option value="">— Vælg kommentator —</option>
+          ${kommOpts}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Lokation</label>
+        <select class="form-select" id="el-${i}">
+          <option value="">— Vælg lokation —</option>
+          ${lokOpts}
+        </select>
+      </div>
+      <div class="form-group span2">
+        <label class="form-label">vMix Call Link</label>
+        <div class="vmix-row">
+          <input class="form-input" type="text" id="ev-${i}"
+            value="${esc(buf.vmixcall)}" placeholder="https://…">
+          <button class="copy-btn icon-btn" id="cpedit-${i}" title="Kopiér link">⎘</button>
+        </div>
+      </div>
+    </div>
+    <div class="edit-actions">
+      <button class="btn btn-save"   id="gem-${i}">💾 GEM</button>
+      <button class="btn btn-cancel" id="ann-${i}">ANNULLER</button>
+      <button class="btn btn-reset"  id="nul-${i}">NULSTIL</button>
+    </div>
+  `;
+
+  // Live-update buffer on change
+  div.querySelector('#eh1-' + i).addEventListener('change', e => { buf.hold1Lang = e.target.value; });
+  div.querySelector('#eh2-' + i).addEventListener('change', e => { buf.hold2Lang = e.target.value; });
+  div.querySelector('#ek-'  + i).addEventListener('change', e => { buf.kommentator = e.target.value; });
+  div.querySelector('#el-'  + i).addEventListener('change', e => { buf.lokation = e.target.value; });
+  div.querySelector('#ev-'  + i).addEventListener('input',  e => { buf.vmixcall = e.target.value; });
+
+  div.querySelector('#cpedit-' + i).addEventListener('click', () =>
+    copyText(div.querySelector('#ev-' + i).value));
+
+  div.querySelector('#gem-' + i).addEventListener('click', () => saveKamp(i, div));
+  div.querySelector('#ann-' + i).addEventListener('click', () => cancelEdit(i));
+  div.querySelector('#nul-' + i).addEventListener('click', () => resetEdit(i, div));
+
+  return div;
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────
+
+function kampKlarTilOnAir(i) {
+  const k = kampe[i];
+  return k.hold1Lang && k.hold2Lang && k.kommentator;
+}
+
+function tickerKlarTilOnAir(i) {
+  const t = tickers[i];
+  return t.overskrift && t.tekst;
+}
+
+function toggleCollapse(i) {
+  kampe[i].collapsed = !kampe[i].collapsed;
+  rerender(i);
+}
+
+function toggleOnAir(i) {
+  if (!kampe[i].onAir && !kampKlarTilOnAir(i)) return;
+  kampe[i].onAir = !kampe[i].onAir;
+  kampe[i].onAirPending = true;
+  rerender(i);
+  sbPatch('kampe?id=eq.' + (i + 1), { on_air: kampe[i].onAir })
+    .then(() => { kampe[i].onAirPending = false; })
+    .catch(() => { kampe[i].onAirPending = false; toast('Fejl ved ON AIR opdatering', 'err'); });
+}
+
+function enterEdit(i) {
+  const k = kampe[i];
+  k.buf = {
+    hold1Lang:   k.hold1Lang,
+    hold2Lang:   k.hold2Lang,
+    kommentator: k.kommentator,
+    lokation:    k.lokation,
+    vmixcall:    k.vmixcall
+  };
+  k.editMode = true;
+  rerender(i);
+}
+
+function cancelEdit(i) {
+  kampe[i].editMode = false;
+  rerender(i);
+}
+
+function resetEdit(i, div) {
+  // Clear dropdowns and score — keep vmixcall
+  const k = kampe[i];
+  k.buf.hold1Lang   = '';
+  k.buf.hold2Lang   = '';
+  k.buf.kommentator = '';
+  k.buf.lokation    = '';
+  k.hold1Score      = 0;
+  k.hold2Score      = 0;
+
+  div.querySelector('#eh1-' + i).value = '';
+  div.querySelector('#eh2-' + i).value = '';
+  div.querySelector('#ek-'  + i).value = '';
+  div.querySelector('#el-'  + i).value = '';
+}
+
+async function saveKamp(i, div) {
+  const k   = kampe[i];
+  const buf = k.buf;
+
+  // Resolve short names
+  const h1 = dropdowns.holds.find(h => h.lang === buf.hold1Lang);
+  const h2 = dropdowns.holds.find(h => h.lang === buf.hold2Lang);
+
+  k.hold1Lang   = buf.hold1Lang;
+  k.hold1Kort   = h1 ? h1.kort : buf.hold1Lang;
+  k.hold2Lang   = buf.hold2Lang;
+  k.hold2Kort   = h2 ? h2.kort : buf.hold2Lang;
+  k.kommentator = buf.kommentator;
+  k.lokation    = buf.lokation;
+  k.vmixcall    = buf.vmixcall;
+  k.editMode    = false;
+
+  rerender(i);
+  if (i < 6) rerenderVmixCall(i); // Lås/frigiv sub slot øjeblikkeligt
+
+  kampe[i].savePending = true;
+  try {
+    await sbPatch('kampe?id=eq.' + (i + 1), {
+      hold1_lang:   k.hold1Lang,
+      hold1_kort:   k.hold1Kort,
+      hold1_score:  k.hold1Score,
+      hold2_score:  k.hold2Score,
+      hold2_kort:   k.hold2Kort,
+      hold2_lang:   k.hold2Lang,
+      kommentator:  k.kommentator,
+      lokation:     k.lokation,
+      vmixcall:     k.vmixcall,
+      on_air:       k.onAir
+    });
+    toast('Gemt ✓', 'ok');
+    // Synk link til vmix_calls slot
+    if (i < 6 && vmixCalls[i]) {
+      vmixCalls[i].link     = k.vmixcall;
+      vmixCalls[i].buf.link = k.vmixcall;
+      await sbPatch('vmix_calls?id=eq.' + (i + 1), { link: k.vmixcall });
+      rerenderVmixCall(i);
+    }
+  } catch {
+    toast('Fejl ved gem — prøv igen', 'err');
+  } finally {
+    kampe[i].savePending = false;
+  }
+}
+
+async function changeScore(i, team, delta) {
+  const k = kampe[i];
+  if (team === 1) {
+    k.hold1Score = Math.max(0, k.hold1Score + delta);
+    const el = document.getElementById('sv1-' + i);
+    if (el) el.textContent = k.hold1Score;
+  } else {
+    k.hold2Score = Math.max(0, k.hold2Score + delta);
+    const el = document.getElementById('sv2-' + i);
+    if (el) el.textContent = k.hold2Score;
+  }
+  try {
+    const body = team === 1
+      ? { hold1_score: kampe[i].hold1Score }
+      : { hold2_score: kampe[i].hold2Score };
+    await sbPatch('kampe?id=eq.' + (i + 1), body);
+  } catch {
+    toast('Fejl ved scoreopdatering', 'err');
+  }
+}
+
+// ── TICKER RENDER ─────────────────────────────────────────────
+function renderTickers() {
+  const list = document.getElementById('tickerList');
+  if (!list) return;
+  list.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'ticker-list';
+  tickers.forEach((_, i) => wrap.appendChild(buildTickerBlock(i)));
+  list.appendChild(wrap);
+}
+
+function rerenderTicker(i) {
+  const old = document.getElementById('ticker-' + i);
+  if (old) old.replaceWith(buildTickerBlock(i));
+}
+
+function buildTickerBlock(i) {
+  const t = tickers[i];
+  const block = document.createElement('div');
+  block.id = 'ticker-' + i;
+  block.className = 'ticker-block'
+    + (t.onAir && t.breaking ? ' on-air-breaking' : '')
+    + (t.onAir && !t.breaking ? ' on-air' : '')
+    + (t.collapsed ? ' collapsed' : '');
+
+  block.innerHTML = `
+    <div class="ticker-header" id="ticker-hdr-${i}">
+      <div class="ticker-header-left">
+        <button class="on-air-btn ${t.onAir ? 'active' : ''}" id="toa-${i}" ${!tickerKlarTilOnAir(i) ? 'disabled' : ''}>ON AIR</button>
+        <button class="breaking-btn ${t.breaking ? 'active' : ''}" id="tbr-${i}" ${!tickerKlarTilOnAir(i) ? 'disabled' : ''}>BREAKING</button>
+      </div>
+      <div class="ticker-header-center">
+        <span class="ticker-num">TICKER ${i + 1}</span>
+      </div>
+      <div class="ticker-header-right">
+        ${!t.editMode ? `<button class="icon-btn" id="teb-${i}" title="Rediger">✏️</button>` : ''}
+        <button class="icon-btn" id="tcol-${i}" title="Fold ind/ud">
+          <i class="collapse-arrow">▴</i>
+        </button>
+      </div>
+    </div>
+    <div class="ticker-body" id="ticker-body-${i}"></div>
+  `;
+
+  const body = block.querySelector('#ticker-body-' + i);
+  body.appendChild(t.editMode ? buildTickerEdit(i) : buildTickerNormal(i));
+
+  block.querySelector('#toa-' + i).addEventListener('click', e => { e.stopPropagation(); toggleTickerOnAir(i); });
+  block.querySelector('#tbr-' + i).addEventListener('click', e => { e.stopPropagation(); toggleTickerBreaking(i); });
+
+  block.querySelector('#ticker-hdr-' + i).addEventListener('click', e => {
+    if (!e.target.closest('button')) toggleTickerCollapse(i);
+  });
+  block.querySelector('#tcol-' + i).addEventListener('click', e => { e.stopPropagation(); toggleTickerCollapse(i); });
+
+  const eb = block.querySelector('#teb-' + i);
+  if (eb) eb.addEventListener('click', e => { e.stopPropagation(); enterTickerEdit(i); });
+
+  return block;
+}
+
+function buildTickerNormal(i) {
+  const t = tickers[i];
+  const div = document.createElement('div');
+  div.className = 'ticker-normal';
+  div.innerHTML = `
+    <div class="ticker-overskrift">${esc(t.overskrift) || '<span style="color:#333">—</span>'}</div>
+    <div class="ticker-tekst">${esc(t.tekst) || ''}</div>
+  `;
+  return div;
+}
+
+function buildTickerEdit(i) {
+  const t = tickers[i];
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <div class="edit-grid" style="margin-bottom:10px;">
+      <div class="form-group span2">
+        <label class="form-label">Overskrift</label>
+        <input class="form-input" id="tov-${i}" value="${esc(t.buf.overskrift)}" placeholder="Overskrift">
+      </div>
+      <div class="form-group span2">
+        <label class="form-label">Tekst</label>
+        <input class="form-input" id="ttx-${i}" value="${esc(t.buf.tekst)}" placeholder="Ticker tekst">
+      </div>
+    </div>
+    <div class="edit-actions">
+      <button class="btn btn-save"   id="tgem-${i}">💾 GEM</button>
+      <button class="btn btn-cancel" id="tann-${i}">ANNULLER</button>
+      <button class="btn btn-reset"  id="tnul-${i}">RYD</button>
+    </div>
+  `;
+
+  div.querySelector('#tov-' + i).addEventListener('input', e => { t.buf.overskrift = e.target.value; });
+  div.querySelector('#ttx-' + i).addEventListener('input', e => { t.buf.tekst      = e.target.value; });
+  div.querySelector('#tov-' + i).addEventListener('blur',  e => {
+    const val = e.target.value.toUpperCase();
+    e.target.value   = val;
+    t.buf.overskrift = val;
+  });
+
+  div.querySelector('#tgem-' + i).addEventListener('click', () => saveTickerRow(i));
+  div.querySelector('#tann-' + i).addEventListener('click', () => { t.editMode = false; rerenderTicker(i); });
+  div.querySelector('#tnul-' + i).addEventListener('click', () => {
+    t.buf.overskrift = ''; t.buf.tekst = '';
+    div.querySelector('#tov-' + i).value = '';
+    div.querySelector('#ttx-' + i).value = '';
+  });
+
+  return div;
+}
+
+function toggleTickerCollapse(i) { tickers[i].collapsed = !tickers[i].collapsed; rerenderTicker(i); }
+
+function toggleTickerOnAir(i) {
+  if (!tickers[i].onAir && !tickerKlarTilOnAir(i)) return;
+  tickers[i].onAir = !tickers[i].onAir;
+  tickers[i].onAirPending = true;
+  rerenderTicker(i);
+  sbPatch('tickers?id=eq.' + (i + 1), { on_air: tickers[i].onAir })
+    .then(() => { tickers[i].onAirPending = false; })
+    .catch(() => { tickers[i].onAirPending = false; toast('Fejl ved ON AIR', 'err'); });
+}
+
+function toggleTickerBreaking(i) {
+  if (!tickers[i].breaking && !tickerKlarTilOnAir(i)) return;
+  tickers[i].breaking = !tickers[i].breaking;
+  tickers[i].breakingPending = true;
+  rerenderTicker(i);
+  sbPatch('tickers?id=eq.' + (i + 1), { breaking: tickers[i].breaking })
+    .then(() => { tickers[i].breakingPending = false; })
+    .catch(() => { tickers[i].breakingPending = false; toast('Fejl ved BREAKING', 'err'); });
+}
+
+function enterTickerEdit(i) {
+  const t = tickers[i];
+  t.buf = { overskrift: t.overskrift, tekst: t.tekst };
+  t.editMode = true;
+  rerenderTicker(i);
+}
+
+async function saveTickerRow(i) {
+  const t = tickers[i];
+  t.overskrift = t.buf.overskrift.toUpperCase();
+  t.tekst      = t.buf.tekst;
+  t.editMode   = false;
+  t.savePending = true;
+  rerenderTicker(i);
+  try {
+    await sbPatch('tickers?id=eq.' + (i + 1), { overskrift: t.overskrift, tekst: t.tekst });
+    toast('Gemt ✓', 'ok');
+  } catch { toast('Fejl ved gem', 'err'); }
+  finally { t.savePending = false; }
+}
+
+// ── SUBS RENDER ───────────────────────────────────────────────
+function renderSubs() {
+  const container = document.getElementById('subsList');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const grid = document.createElement('div');
+  grid.className = 'subs-grid';
+
+  // Sektion: SUBS (venstre)
+  const sec1 = document.createElement('div');
+  sec1.className = 'subs-section';
+  sec1.innerHTML = '<div class="subs-section-title" style="color:var(--blue)">Subs</div>';
+  subs.forEach((_, i) => sec1.appendChild(buildSubRow(i)));
+  grid.appendChild(sec1);
+
+  // Sektion: VMIX CALLS (højre)
+  const sec2 = document.createElement('div');
+  sec2.className = 'subs-section';
+  sec2.innerHTML = '<div class="subs-section-title" style="color:#a855f7">vMix Calls</div>';
+  vmixCalls.forEach((_, i) => sec2.appendChild(buildVmixCallRow(i)));
+  grid.appendChild(sec2);
+
+  container.appendChild(grid);
+}
+
+function rerenderSub(i) {
+  const old = document.getElementById('sub-' + i);
+  if (old) old.replaceWith(buildSubRow(i));
+}
+
+function rerenderVmixCall(i) {
+  const old = document.getElementById('vcall-' + i);
+  if (old) old.replaceWith(buildVmixCallRow(i));
+}
+
+function buildSubRow(i) {
+  const s   = subs[i];
+  const row = document.createElement('div');
+  row.id        = 'sub-' + i;
+  row.className = 'sub-row';
+
+  if (s.editMode) {
+    row.innerHTML = `
+      <span class="sub-num">${i + 1}</span>
+      <div class="sub-edit-fields">
+        <input class="form-input navn-input"  id="sn-${i}" value="${esc(s.buf.navn)}"  placeholder="Navn">
+        <input class="form-input titel-input" id="st-${i}" value="${esc(s.buf.titel)}" placeholder="Titel">
+      </div>
+      <div class="sub-actions">
+        <button class="btn-sm save"   id="sg-${i}">GEM</button>
+        <button class="btn-sm cancel" id="sa-${i}">ANNULLER</button>
+        <button class="btn-sm reset"  id="sr-${i}">RYD</button>
+      </div>`;
+    row.querySelector('#sn-' + i).addEventListener('input',  e => { s.buf.navn  = e.target.value; });
+    row.querySelector('#st-' + i).addEventListener('input',  e => { s.buf.titel = e.target.value; });
+    titleCaseInput(row.querySelector('#sn-' + i), s.buf, 'navn');
+    titleCaseInput(row.querySelector('#st-' + i), s.buf, 'titel');
+    row.querySelector('#sg-' + i).addEventListener('click',  () => saveSubRow(i));
+    row.querySelector('#sa-' + i).addEventListener('click',  () => { s.editMode = false; rerenderSub(i); });
+    row.querySelector('#sr-' + i).addEventListener('click',  () => {
+      s.buf.navn = ''; s.buf.titel = '';
+      row.querySelector('#sn-' + i).value = '';
+      row.querySelector('#st-' + i).value = '';
+    });
+  } else {
+    const hasData = s.navn || s.titel;
+    row.innerHTML = `
+      <span class="sub-num">${i + 1}</span>
+      <span class="sub-text ${hasData ? '' : 'empty'}">${hasData
+        ? `<span class="sub-navn">${esc(s.navn)}</span><span class="sub-titel">${esc(s.titel)}</span>`
+        : '—'}</span>
+      <button class="icon-btn" id="seb-${i}" title="Rediger">✏️</button>`;
+    row.querySelector('#seb-' + i).addEventListener('click', () => {
+      s.buf = { navn: s.navn, titel: s.titel };
+      s.editMode = true;
+      rerenderSub(i);
+    });
+  }
+  return row;
+}
+
+function buildVmixCallRow(i) {
+  const c    = vmixCalls[i];
+  const row  = document.createElement('div');
+  row.id     = 'vcall-' + i;
+
+  // Tjek om kamp 1-6 bruger denne slot
+  const kampBruger = i < 6 && kampe[i] && kampe[i].hold1Lang;
+  row.className = 'sub-row vmix-call-row'
+    + (kampBruger && !c.editMode ? ' grayed' : '')
+    + (c.collapsed && !c.editMode ? ' collapsed' : '');
+
+  // Collapsed: vis kun nummer + navn som én linje
+  if (c.collapsed && !c.editMode) {
+    const hasData = c.navn || c.titel;
+    row.innerHTML = `
+      <span class="sub-num">${i + 1}</span>
+      <span class="sub-text" style="flex:1">${hasData
+        ? `<span class="sub-navn">${esc(c.navn)}</span>`
+        : '<span style="color:#333">—</span>'}</span>
+      <button class="icon-btn vmix-col-btn" id="vccol-${i}" title="Fold ud"><i class="collapse-arrow" style="transform:rotate(180deg)">▴</i></button>`;
+    row.querySelector('#vccol-' + i).addEventListener('click', () => {
+      c.collapsed = false; rerenderVmixCall(i);
+    });
+    return row;
+  }
+
+  if (c.editMode) {
+    row.innerHTML = `
+      <span class="sub-num">${i + 1}</span>
+      <div class="sub-edit-fields">
+        <input class="form-input navn-input"  id="vcn-${i}" value="${esc(c.buf.navn)}"  placeholder="Navn">
+        <input class="form-input titel-input" id="vct-${i}" value="${esc(c.buf.titel)}" placeholder="Titel">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input class="form-input" id="vcl-${i}" value="${esc(c.buf.link)}" placeholder="vMix Call Link" style="flex:1;">
+          <button class="copy-btn icon-btn" id="vccp-${i}" title="Kopiér link">⎘</button>
+        </div>
+      </div>
+      <div class="sub-actions">
+        <button class="btn-sm save"   id="vcg-${i}">GEM</button>
+        <button class="btn-sm cancel" id="vca-${i}">ANNULLER</button>
+        <button class="btn-sm reset"  id="vcr-${i}">RYD</button>
+      </div>`;
+    row.querySelector('#vcn-'  + i).addEventListener('input', e => { c.buf.navn  = e.target.value; });
+    row.querySelector('#vct-'  + i).addEventListener('input', e => { c.buf.titel = e.target.value; });
+    titleCaseInput(row.querySelector('#vcn-' + i), c.buf, 'navn');
+    titleCaseInput(row.querySelector('#vct-' + i), c.buf, 'titel');
+    row.querySelector('#vcl-'  + i).addEventListener('input', e => { c.buf.link  = e.target.value; });
+    row.querySelector('#vccp-' + i).addEventListener('click', () => copyText(row.querySelector('#vcl-' + i).value));
+    row.querySelector('#vcg-'  + i).addEventListener('click', () => saveVmixCallRow(i));
+    row.querySelector('#vca-'  + i).addEventListener('click', () => { c.editMode = false; rerenderVmixCall(i); });
+    row.querySelector('#vcr-'  + i).addEventListener('click', () => {
+      c.buf.navn = ''; c.buf.titel = ''; c.buf.link = '';
+      row.querySelector('#vcn-' + i).value = '';
+      row.querySelector('#vct-' + i).value = '';
+      row.querySelector('#vcl-' + i).value = '';
+    });
+  } else {
+    const hasData = c.navn || c.titel;
+    row.innerHTML = `
+      <span class="sub-num">${i + 1}</span>
+      ${kampBruger
+        ? `<span class="sub-uses-kamp">BRUGES AF KAMP ${i + 1}</span>`
+        : `<span class="sub-text ${hasData ? '' : 'empty'}">${hasData
+            ? `<span class="sub-navn">${esc(c.navn)}</span><span class="sub-titel">${esc(c.titel)}</span><span class="sub-link-row"><span class="sub-link" title="${esc(c.link)}">${esc(c.link) || ''}</span><button class="copy-btn icon-btn" id="vccp2-${i}" title="Kopiér link">⎘</button></span>`
+            : '—'}</span>`}
+      ${!kampBruger ? `<button class="icon-btn" id="vceb-${i}" title="Rediger">✏️</button>` : ''}
+      <button class="icon-btn vmix-col-btn" id="vccol-${i}" title="Fold ind"><i class="collapse-arrow">▴</i></button>`;
+    const colBtn = row.querySelector('#vccol-' + i);
+    if (colBtn) colBtn.addEventListener('click', () => { c.collapsed = true; rerenderVmixCall(i); });
+
+    if (!kampBruger) {
+      const cpBtn = row.querySelector('#vccp2-' + i);
+      if (cpBtn) cpBtn.addEventListener('click', () => copyText(c.link));
+      const ebBtn = row.querySelector('#vceb-' + i);
+      if (ebBtn) ebBtn.addEventListener('click', () => {
+        c.buf = { navn: c.navn, titel: c.titel, link: c.link };
+        c.editMode = true;
+        rerenderVmixCall(i);
+      });
+    }
+  }
+  return row;
+}
+
+async function saveSubRow(i) {
+  const s = subs[i];
+  s.navn  = s.buf.navn;
+  s.titel = s.buf.titel;
+  s.editMode = false;
+  s.savePending = true;
+  rerenderSub(i);
+  try {
+    await sbPatch('subs?id=eq.' + (i + 1), { navn: s.navn, titel: s.titel });
+    toast('Gemt ✓', 'ok');
+    const el = document.getElementById('sub-' + i);
+    if (el) { el.classList.add('flash-saved'); el.addEventListener('animationend', () => el.classList.remove('flash-saved'), { once: true }); }
+  } catch { toast('Fejl ved gem', 'err'); }
+  finally { s.savePending = false; }
+}
+
+async function saveVmixCallRow(i) {
+  const c = vmixCalls[i];
+  c.navn  = c.buf.navn;
+  c.titel = c.buf.titel;
+  c.link  = c.buf.link;
+  c.editMode = false;
+  c.savePending = true;
+  rerenderVmixCall(i);
+  try {
+    await sbPatch('vmix_calls?id=eq.' + (i + 1), { navn: c.navn, titel: c.titel, link: c.link });
+    toast('Gemt ✓', 'ok');
+    const el = document.getElementById('vcall-' + i);
+    if (el) { el.classList.add('flash-saved'); el.addEventListener('animationend', () => el.classList.remove('flash-saved'), { once: true }); }
+    // Synk link til kamp slot
+    if (i < 6 && kampe[i]) {
+      kampe[i].vmixcall     = c.link;
+      kampe[i].buf.vmixcall = c.link;
+      await sbPatch('kampe?id=eq.' + (i + 1), { vmixcall: c.link });
+      rerender(i);
+    }
+  } catch { toast('Fejl ved gem', 'err'); }
+  finally { c.savePending = false; }
+}
+
+// ── CREDITS STATE ─────────────────────────────────────────────
+let creditsData = { items: [], speed: 30 };
+let creditNewCounter = 0;
+
+function initCreditsFromData(data) {
+  creditsData.speed = data.speed || 30;
+  creditsData.items = (data.items || []).map(d => ({
+    ...d, editMode: false, isNew: false, buf: { titel: d.titel, navne: d.navne }
+  }));
+}
+
+async function refreshCredits() {
+  try {
+    const [creditsRaw, settingsRaw] = await Promise.all([
+      sbGet('credits?select=*'),
+      sbGet('settings?select=*')
+    ]);
+    const speedRow = settingsRaw.find(r => r.key === 'credits_speed');
+    const data = {
+      items: creditsRaw.map(r => ({ row: r.id, side: r.side, orden: r.orden, titel: r.titel || '', navne: r.navne || '' })),
+      speed: speedRow ? parseFloat(speedRow.value) : 30
+    };
+    initCreditsFromData(data);
+  } catch { /* stille */ }
+  renderCredits();
+}
+
+function renderCredits() {
+  const container = document.getElementById('creditsList');
+  if (!container) return;
+  container.innerHTML = '';
+
+  // Speed bar
+  const speedBar = document.createElement('div');
+  speedBar.className = 'credits-speed-bar';
+  speedBar.innerHTML = `
+    <span class="credits-speed-label">Hastighed</span>
+    <input type="range" class="speed-slider" id="speedSlider" min="10" max="30" step="1" value="${creditsData.speed}">
+    <span class="credits-speed-val" id="speedVal">${creditsData.speed} sek</span>
+    <button class="btn btn-save" id="saveSpeedBtn">GEM</button>
+    <button class="btn btn-cancel" id="previewBtn" style="margin-left:auto;">▶ PREVIEW</button>
+    <div style="display:flex;align-items:center;gap:6px;background:#0d0d0d;border:1px solid #2e2e2e;border-radius:6px;padding:5px 10px;max-width:320px;overflow:hidden;">
+      <span style="font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;" id="creditsUrlText">https://vmix-control.vercel.app/credits.html</span>
+      <button class="copy-btn icon-btn" id="creditsUrlCopy" title="Kopiér link">⎘</button>
+    </div>`;
+  container.appendChild(speedBar);
+  speedBar.querySelector('#speedSlider').addEventListener('input', e => {
+    creditsData.speed = parseInt(e.target.value);
+    document.getElementById('speedVal').textContent = creditsData.speed + ' sek';
+  });
+  speedBar.querySelector('#saveSpeedBtn').addEventListener('click', async () => {
+    try {
+      await sbPatch('settings?key=eq.credits_speed', { value: creditsData.speed.toString() });
+      toast('Hastighed gemt ✓', 'ok');
+    } catch { toast('Fejl ved gem', 'err'); }
+  });
+  speedBar.querySelector('#creditsUrlCopy').addEventListener('click', () => copyText('https://vmix-control.vercel.app/credits.html'));
+  speedBar.querySelector('#previewBtn').addEventListener('click', () => {
+    const modal = document.getElementById('previewModal');
+    const frame = document.getElementById('previewFrame');
+    frame.src = 'credits.html?preview=1&t=' + Date.now();
+    modal.style.display = 'flex';
+  });
+
+  // Two columns
+  const cols = document.createElement('div');
+  cols.className = 'credits-cols';
+
+  function buildCol(side, label) {
+    const items = creditsData.items.filter(i => i.side === side).sort((a, b) => a.orden - b.orden);
+    const col = document.createElement('div');
+    col.dataset.side = side;
+    col.innerHTML = `<div class="credits-col-header">${label}</div>`;
+    items.forEach(item => col.appendChild(buildCreditCard(item, side)));
+    const addBtn = document.createElement('button');
+    addBtn.className = 'credit-add-btn';
+    addBtn.textContent = '+ TILFØJ SEKTION';
+    addBtn.addEventListener('click', () => addCreditItem(side));
+    col.appendChild(addBtn);
+    return col;
+  }
+
+  cols.appendChild(buildCol('V', 'Venstre kolonne'));
+  cols.appendChild(buildCol('H', 'Højre kolonne'));
+  container.appendChild(cols);
+}
+
+let dragSrc = null;
+
+function buildCreditCard(item, side) {
+  const card = document.createElement('div');
+  card.className = 'credit-card';
+  card.id = 'credit-' + item.row;
+  card.draggable = true;
+  card.dataset.row = item.row;
+  card.dataset.side = side;
+
+  card.addEventListener('dragstart', e => {
+    dragSrc = item.row;
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  card.addEventListener('dragend', () => {
+    card.classList.remove('dragging');
+    document.querySelectorAll('.credit-card.drag-over').forEach(el => el.classList.remove('drag-over'));
+  });
+  card.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragSrc !== item.row) card.classList.add('drag-over');
+  });
+  card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+  card.addEventListener('drop', e => {
+    e.preventDefault();
+    card.classList.remove('drag-over');
+    if (dragSrc === item.row) return;
+    reorderCredits(dragSrc, item.row, side);
+  });
+  card.addEventListener('dragenter', e => { e.preventDefault(); });
+
+  // Touch support
+  let touchStartY = 0;
+  card.addEventListener('touchstart', e => {
+    touchStartY = e.touches[0].clientY;
+    dragSrc = item.row;
+    card.classList.add('dragging');
+  }, { passive: true });
+  card.addEventListener('touchmove', e => { e.preventDefault(); }, { passive: false });
+  card.addEventListener('touchend', e => {
+    card.classList.remove('dragging');
+    const touch = e.changedTouches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const target = el && el.closest('.credit-card');
+    if (target && target.dataset.row !== String(item.row)) {
+      reorderCredits(item.row, target.dataset.row, target.dataset.side || side);
+    }
+  });
+
+  if (item.editMode) {
+    card.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <input class="form-input" id="crt-${item.row}" value="${esc(item.buf.titel)}" placeholder="Titel (f.eks. VÆRTER)">
+        <textarea class="form-input" id="crn-${item.row}" placeholder="Ét navn per linje">${esc(item.buf.navne)}</textarea>
+        <div style="display:flex;gap:8px;margin-top:2px;">
+          <button class="btn btn-save" id="crg-${item.row}">GEM</button>
+          <button class="btn btn-cancel" id="cra-${item.row}">ANNULLER</button>
+        </div>
+      </div>`;
+    card.querySelector('#crt-' + item.row).addEventListener('input', e => { item.buf.titel = e.target.value; });
+    card.querySelector('#crn-' + item.row).addEventListener('input', e => { item.buf.navne = e.target.value; });
+    card.querySelector('#crg-' + item.row).addEventListener('click', () => saveCreditItem(item));
+    card.querySelector('#cra-' + item.row).addEventListener('click', () => {
+      if (item.isNew) creditsData.items = creditsData.items.filter(i => i !== item);
+      else item.editMode = false;
+      renderCredits();
+    });
+    setTimeout(() => { const el = card.querySelector('#crt-' + item.row); if (el) el.focus(); }, 30);
+  } else {
+    const navneLines = item.navne.split(/[\n,]/).map(n => n.trim()).filter(Boolean);
+    card.innerHTML = `
+      <div class="credit-card-header">
+        <div class="credit-card-content">
+          <div class="credit-card-titel">${esc(item.titel)}</div>
+          <div class="credit-card-navne">${navneLines.map(esc).join('<br>')}</div>
+        </div>
+        <div class="credit-card-actions">
+          <button class="icon-btn" id="creb-${item.row}" title="Rediger">✏️</button>
+          <button class="icon-btn" id="crdel-${item.row}" title="Slet">🗑</button>
+        </div>
+      </div>`;
+    card.querySelector('#creb-' + item.row).addEventListener('click', () => {
+      item.buf = { titel: item.titel, navne: item.navne };
+      item.editMode = true;
+      renderCredits();
+    });
+    card.querySelector('#crdel-' + item.row).addEventListener('click', () => deleteCreditItem(item));
+  }
+  return card;
+}
+
+async function reorderCredits(srcRow, targetRow, targetSide) {
+  const srcItem = creditsData.items.find(i => String(i.row) === String(srcRow));
+  if (!srcItem) return;
+
+  // Opdater side hvis kortet flyttes til anden kolonne
+  srcItem.side = targetSide;
+
+  // Genberegn orden i target-kolonnen
+  const targetItems = creditsData.items.filter(i => i.side === targetSide).sort((a, b) => a.orden - b.orden);
+  const srcIdx    = targetItems.findIndex(i => String(i.row) === String(srcRow));
+  const targetIdx = targetItems.findIndex(i => String(i.row) === String(targetRow));
+
+  if (srcIdx !== -1) targetItems.splice(srcIdx, 1);
+  const insertAt = targetItems.findIndex(i => String(i.row) === String(targetRow));
+  targetItems.splice(insertAt === -1 ? targetItems.length : insertAt, 0, srcItem);
+
+  const updates = targetItems.map((item, idx) => {
+    item.orden = idx + 1;
+    return sbPatch('credits?id=eq.' + item.row, { side: item.side, orden: item.orden });
+  });
+
+  // Genberegn orden i kilde-kolonnen hvis forskellig
+  if (srcItem.side !== targetSide) {
+    const srcSideItems = creditsData.items.filter(i => i.side !== targetSide).sort((a, b) => a.orden - b.orden);
+    srcSideItems.forEach((item, idx) => {
+      item.orden = idx + 1;
+      updates.push(sbPatch('credits?id=eq.' + item.row, { orden: item.orden }));
+    });
+  }
+
+  renderCredits();
+  try {
+    await Promise.all(updates);
+  } catch { toast('Fejl ved rækkefølge', 'err'); }
+}
+
+function addCreditItem(side) {
+  const sideItems = creditsData.items.filter(i => i.side === side);
+  const maxOrden = sideItems.length > 0 ? Math.max(...sideItems.map(i => i.orden)) : 0;
+  const tempRow = 'new' + (++creditNewCounter);
+  creditsData.items.push({
+    row: tempRow, isNew: true, side,
+    orden: maxOrden + 1,
+    titel: '', navne: '',
+    editMode: true, buf: { titel: '', navne: '' }
+  });
+  renderCredits();
+}
+
+async function saveCreditItem(item) {
+  item.titel = item.buf.titel;
+  item.navne = item.buf.navne;
+  try {
+    const creditBody = { side: item.side, orden: item.orden, titel: item.titel, navne: item.navne };
+    if (!item.row || String(item.row).startsWith('new')) {
+      await sbPost('credits', creditBody);
+    } else {
+      await sbPatch('credits?id=eq.' + item.row, creditBody);
+    }
+    toast('Gemt ✓', 'ok');
+    await refreshCredits();
+  } catch {
+    item.editMode = false;
+    toast('Fejl ved gem', 'err');
+    renderCredits();
+  }
+}
+
+async function deleteCreditItem(item) {
+  creditsData.items = creditsData.items.filter(i => i !== item);
+  renderCredits();
+  if (!item.isNew) {
+    try {
+      await sbDelete('credits?id=eq.' + item.row);
+      await refreshCredits();
+    } catch { toast('Fejl ved sletning', 'err'); }
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+async function init() {
+  const session = await requireAuth();
+  if (!session) return;
+
+  // Header-knapper
+  document.getElementById('backBtn').addEventListener('click', () => { window.location.href = 'projects.html'; });
+  document.getElementById('logoutBtn').addEventListener('click', () => signOut());
+
+  // Vis projekt-undertitel fra URL hvis tilgængeligt
+  const projektId = new URLSearchParams(window.location.search).get('p');
+  if (projektId) {
+    fetch(SB_URL + '/rest/v1/projekter?id=eq.' + projektId + '&select=undertitel', { headers: SB_HEADERS })
+      .then(r => r.json())
+      .then(rows => {
+        if (rows[0]?.undertitel) {
+          document.getElementById('projectUndertitel').textContent = rows[0].undertitel;
+        }
+      }).catch(() => {});
+  }
+
+  try {
+    const all = await fetchAll();
+
+    dropdowns = all.dropdowns;
+
+    all.kampe.forEach((data, i) => { kampe[i] = { ...kampe[i], ...data }; });
+
+    if (all.subs) {
+      all.subs.subs.forEach((data, i)      => { subs[i]      = { ...subs[i],      ...data }; });
+      all.subs.vmixCalls.forEach((data, i) => { vmixCalls[i] = { ...vmixCalls[i], ...data }; });
+    }
+
+    if (all.tickers) {
+      all.tickers.forEach((data, i) => { tickers[i] = { ...tickers[i], ...data }; });
+    }
+
+    if (all.credits) {
+      initCreditsFromData(all.credits);
+    }
+
+    document.getElementById('previewClose').addEventListener('click', () => {
+      document.getElementById('previewModal').style.display = 'none';
+      document.getElementById('previewFrame').src = '';
+    });
+    document.getElementById('previewModal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) {
+        e.currentTarget.style.display = 'none';
+        document.getElementById('previewFrame').src = '';
+      }
+    });
+
+    renderAll();
+    renderSubs();
+    renderTickers();
+    renderCredits();
+    const loader = document.getElementById('pageLoader');
+    loader.style.opacity = '0';
+    setTimeout(() => loader.style.display = 'none', 200);
+  } catch (err) {
+    document.getElementById('pageLoader').style.display = 'none';
+    document.getElementById('kampList').innerHTML =
+      `<div class="load-err">Fejl ved indlæsning.<br>Tjek Supabase forbindelsen.<br><small style="color:#555">${err.message}</small></div>`;
+  }
+}
+
+init();
+
+// ── REALTIME ──────────────────────────────────────────────────
+// sbClient defineret i js/auth.js
+
+function applyKampRow(row) {
+  const i = row.id - 1;
+  if (i < 0 || i > 5) return;
+  if (kampe[i].editMode || kampe[i].savePending) return;
+  const prev = kampe[i];
+  const data = {
+    hold1Lang: row.hold1_lang || '', hold1Kort: row.hold1_kort || '',
+    hold1Score: row.hold1_score || 0, hold2Score: row.hold2_score || 0,
+    hold2Kort: row.hold2_kort || '', hold2Lang: row.hold2_lang || '',
+    kommentator: row.kommentator || '', lokation: row.lokation || '',
+    vmixcall: row.vmixcall || '', onAir: row.on_air === true
+  };
+  const merged = { ...prev, ...data, editMode: false, collapsed: prev.collapsed, buf: prev.buf };
+  if (prev.onAirPending) merged.onAir = prev.onAir;
+  kampe[i] = merged;
+  rerender(i);
+}
+
+function applySubRow(row) {
+  const i = row.id - 1;
+  if (i < 0 || i > 14) return;
+  if (subs[i].editMode || subs[i].savePending) return;
+  subs[i] = { ...subs[i], navn: row.navn || '', titel: row.titel || '' };
+  rerenderSub(i);
+}
+
+function applyVmixCallRow(row) {
+  const i = row.id - 1;
+  if (i < 0 || i > 7) return;
+  if (vmixCalls[i].editMode || vmixCalls[i].savePending) return;
+  vmixCalls[i] = { ...vmixCalls[i], navn: row.navn || '', titel: row.titel || '', link: row.link || '' };
+  rerenderVmixCall(i);
+}
+
+function applyTickerRow(row) {
+  const i = row.id - 1;
+  if (i < 0 || i > 19) return;
+  if (tickers[i].editMode || tickers[i].savePending) return;
+  const prev = tickers[i];
+  const merged = { ...prev, overskrift: row.overskrift || '', tekst: row.tekst || '',
+    onAir: row.on_air === true, breaking: row.breaking === true };
+  if (prev.onAirPending)    merged.onAir    = prev.onAir;
+  if (prev.breakingPending) merged.breaking = prev.breaking;
+  tickers[i] = merged;
+  rerenderTicker(i);
+}
+
+sbClient.channel('db-changes')
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kampe' },
+      p => applyKampRow(p.new))
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'subs' },
+      p => applySubRow(p.new))
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'vmix_calls' },
+      p => applyVmixCallRow(p.new))
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickers' },
+      p => applyTickerRow(p.new))
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'credits' },
+      () => refreshCredits())
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings' },
+      () => refreshCredits())
+  .subscribe();
+</script>
+</body>
+</html>
