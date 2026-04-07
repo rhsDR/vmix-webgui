@@ -829,7 +829,7 @@ const makeKamp = () => ({
   kommentator: '', lokation: '', vmixcall: '', onAir: false,
   // edit buffer
   editMode: false, collapsed: false,
-  buf: { hold1Lang: '', hold2Lang: '', kommentator: '', lokation: '', vmixcall: '' }
+  buf: { hold1Lang: '', hold2Lang: '', kommentator: '', lokation: '', vmixcall: '', lokSomKomm: false }
 });
 
 let kampe = Array.from({ length: 6 }, makeKamp);
@@ -1162,7 +1162,7 @@ function buildEditView(i) {
   ).join('');
 
   const lokOpts = dropdowns.lokationer.map(v =>
-    `<option value="${esc(v)}" ${buf.lokation === v ? 'selected' : ''}>${esc(v)}</option>`
+    `<option value="${esc(v)}" ${!buf.lokSomKomm && buf.lokation === v ? 'selected' : ''}>${esc(v)}</option>`
   ).join('');
 
   div.innerHTML = `
@@ -1192,6 +1192,7 @@ function buildEditView(i) {
         <label class="form-label">Lokation</label>
         <select class="form-select" id="el-${i}">
           <option value="">— Vælg lokation —</option>
+          <option value="__kommentator__" ${buf.lokSomKomm ? 'selected' : ''}>Samme som kommentator</option>
           ${lokOpts}
         </select>
       </div>
@@ -1215,7 +1216,14 @@ function buildEditView(i) {
   div.querySelector('#eh1-' + i).addEventListener('change', e => { buf.hold1Lang = e.target.value; });
   div.querySelector('#eh2-' + i).addEventListener('change', e => { buf.hold2Lang = e.target.value; });
   div.querySelector('#ek-'  + i).addEventListener('change', e => { buf.kommentator = e.target.value; });
-  div.querySelector('#el-'  + i).addEventListener('change', e => { buf.lokation = e.target.value; });
+  div.querySelector('#el-'  + i).addEventListener('change', e => {
+    if (e.target.value === '__kommentator__') {
+      buf.lokSomKomm = true;
+    } else {
+      buf.lokSomKomm = false;
+      buf.lokation = e.target.value;
+    }
+  });
   div.querySelector('#ev-'  + i).addEventListener('input',  e => { buf.vmixcall = e.target.value; });
 
   div.querySelector('#cpedit-' + i).addEventListener('click', () =>
@@ -1262,7 +1270,8 @@ function enterEdit(i) {
     hold2Lang:   k.hold2Lang,
     kommentator: k.kommentator,
     lokation:    k.lokation,
-    vmixcall:    k.vmixcall
+    vmixcall:    k.vmixcall,
+    lokSomKomm:  false
   };
   k.editMode = true;
   rerender(i);
@@ -1280,6 +1289,7 @@ function resetEdit(i, div) {
   k.buf.hold2Lang   = '';
   k.buf.kommentator = '';
   k.buf.lokation    = '';
+  k.buf.lokSomKomm  = false;
   k.hold1Score      = 0;
   k.hold2Score      = 0;
 
@@ -1302,7 +1312,7 @@ async function saveKamp(i, div) {
   k.hold2Lang   = buf.hold2Lang;
   k.hold2Kort   = h2 ? h2.kort : buf.hold2Lang;
   k.kommentator = buf.kommentator;
-  k.lokation    = buf.lokation;
+  k.lokation    = buf.lokSomKomm ? buf.kommentator : buf.lokation;
   k.vmixcall    = buf.vmixcall;
   k.editMode    = false;
 
