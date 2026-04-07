@@ -15,7 +15,7 @@
 
     #clip {
       position: fixed;
-      left: 0; right: 0; bottom: 0;
+      left: 0; right: 0; bottom: -10vh;
       height: 40vh;
       background: linear-gradient(to top,
         rgba(0,0,75,0)    0%,
@@ -140,9 +140,11 @@
           }).join('');
         }
 
-        const grid = document.getElementById('creditsGrid');
-        grid.children[0].innerHTML = renderCol(left);
-        grid.children[1].innerHTML = renderCol(right);
+        if (items.length > 0) {
+          const grid = document.getElementById('creditsGrid');
+          grid.children[0].innerHTML = renderCol(left);
+          grid.children[1].innerHTML = renderCol(right);
+        }
 
       } catch (err) {
         console.error('Credits load fejl:', err);
