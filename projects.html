@@ -192,6 +192,7 @@
     <div class="header-right">
       <span class="admin-badge" id="adminBadge">ADMIN</span>
       <span class="user-email" id="userEmail"></span>
+      <button class="logout-btn" id="adminBtn" onclick="window.location.href='admin.html'" style="display:none;border-color:#f97316;color:#f97316;">Brugerstyring</button>
       <button class="logout-btn" onclick="signOut()">Log ud</button>
     </div>
   </header>
@@ -215,7 +216,10 @@
       userIsAdmin = await isAdmin(currentUser.id);
 
       document.getElementById('userEmail').textContent = currentUser.email;
-      if (userIsAdmin) document.getElementById('adminBadge').style.display = 'inline';
+      if (userIsAdmin) {
+        document.getElementById('adminBadge').style.display = 'inline';
+        document.getElementById('adminBtn').style.display = 'inline';
+      }
 
       await loadProjects();
       document.getElementById('loader').style.display = 'none';

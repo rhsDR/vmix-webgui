@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>vMix Control — Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111;
+      color: #e5e5e5;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1c1c1c;
+      border-bottom: 1px solid #2a2a2a;
+      padding: 0 clamp(16px, 4vw, 48px);
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-left img { height: 28px; }
+    .header-title { font-size: 16px; font-weight: 600; color: #f97316; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    .back-btn, .logout-btn {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #888;
+      padding: 5px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .back-btn:hover, .logout-btn:hover { border-color: #666; color: #ccc; }
+
+    main {
+      padding: clamp(24px, 4vw, 48px) clamp(16px, 4vw, 48px);
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .section { margin-bottom: 40px; }
+
+    /* Invite form */
+    .invite-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .invite-row input {
+      flex: 1;
+      background: #1c1c1c;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #e5e5e5;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .invite-row input:focus { border-color: #f97316; }
+
+    .btn-invite {
+      background: #f97316;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .btn-invite:hover { background: #ea6a0a; }
+    .btn-invite:disabled { background: #7c3c10; cursor: default; }
+
+    .invite-msg {
+      margin-top: 10px;
+      font-size: 13px;
+      min-height: 18px;
+    }
+    .invite-msg.ok  { color: #22c55e; }
+    .invite-msg.err { color: #f87171; }
+
+    /* User list */
+    .user-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .user-row {
+      background: #1c1c1c;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-email { flex: 1; font-size: 14px; color: #e5e5e5; }
+    .user-meta  { font-size: 12px; color: #555; }
+
+    .role-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .role-badge.admin { background: #f97316; color: #fff; }
+    .role-badge.user  { background: #2a2a2a; color: #666; }
+
+    .btn-role, .btn-del {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #888;
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-role:hover { border-color: #f97316; color: #f97316; }
+    .btn-del:hover  { border-color: #ef4444; color: #ef4444; }
+
+    .you-tag {
+      font-size: 11px;
+      color: #555;
+      padding: 3px 8px;
+      border: 1px solid #2a2a2a;
+      border-radius: 4px;
+    }
+
+    #loader {
+      position: fixed; inset: 0;
+      background: #111;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid #333;
+      border-top-color: #f97316;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #1c1c1c; border: 1px solid #333; border-radius: 8px;
+      padding: 10px 20px; font-size: 13px; color: #e5e5e5;
+      opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 200;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+    .toast.ok  { border-color: #22c55e; color: #22c55e; }
+    .toast.err { border-color: #ef4444; color: #ef4444; }
+  </style>
+</head>
+<body>
+  <div id="loader"><div class="spinner"></div></div>
+  <div class="toast" id="toast"></div>
+
+  <header>
+    <div class="header-left">
+      <img src="logo.png" alt="DR">
+      <span class="header-title">Admin</span>
+    </div>
+    <div class="header-right">
+      <span id="userEmail" style="font-size:13px;color:#555;"></span>
+      <button class="back-btn" onclick="window.location.href='projects.html'">← Projekter</button>
+      <button class="logout-btn" onclick="signOut()">Log ud</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="section">
+      <h2>Invitér bruger</h2>
+      <div class="invite-row">
+        <input type="email" id="inviteEmail" placeholder="email@dr.dk">
+        <button class="btn-invite" id="inviteBtn">Send invitation</button>
+      </div>
+      <div class="invite-msg" id="inviteMsg"></div>
+    </div>
+
+    <div class="section">
+      <h2>Brugere</h2>
+      <div class="user-list" id="userList"></div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    let currentUser = null;
+
+    function toast(msg, type = 'ok') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = 'toast show ' + type;
+      clearTimeout(el._t);
+      el._t = setTimeout(() => { el.className = 'toast'; }, 2800);
+    }
+
+    async function init() {
+      const session = await requireAuth();
+      if (!session) return;
+
+      currentUser = session.user;
+      const admin = await isAdmin(currentUser.id);
+      if (!admin) {
+        window.location.href = 'projects.html';
+        return;
+      }
+
+      document.getElementById('userEmail').textContent = currentUser.email;
+      await loadUsers();
+      document.getElementById('loader').style.display = 'none';
+
+      document.getElementById('inviteBtn').addEventListener('click', inviteUser);
+      document.getElementById('inviteEmail').addEventListener('keydown', e => {
+        if (e.key === 'Enter') inviteUser();
+      });
+    }
+
+    async function loadUsers() {
+      const res = await fetch('/api/list-users');
+      const data = await res.json();
+      if (data.error) { toast(data.error, 'err'); return; }
+      renderUsers(data.users);
+    }
+
+    function renderUsers(users) {
+      const list = document.getElementById('userList');
+      list.innerHTML = '';
+
+      users.sort((a, b) => a.email.localeCompare(b.email));
+
+      users.forEach(u => {
+        const isMe = u.id === currentUser.id;
+        const row = document.createElement('div');
+        row.className = 'user-row';
+        row.innerHTML = `
+          <div>
+            <div class="user-email">${esc(u.email)}</div>
+            <div class="user-meta">Oprettet ${formatDate(u.created_at)}${u.last_sign_in ? ' · Sidst set ' + formatDate(u.last_sign_in) : ''}</div>
+          </div>
+          <span class="role-badge ${u.role}">${u.role === 'admin' ? 'Admin' : 'Bruger'}</span>
+          ${isMe
+            ? '<span class="you-tag">dig</span>'
+            : `<button class="btn-role" data-id="${u.id}" data-role="${u.role}">${u.role === 'admin' ? 'Fjern admin' : 'Gør til admin'}</button>
+               <button class="btn-del" data-id="${u.id}" data-email="${esc(u.email)}">Fjern</button>`
+          }
+        `;
+
+        if (!isMe) {
+          row.querySelector('.btn-role').addEventListener('click', () => toggleRole(u.id, u.role));
+          row.querySelector('.btn-del').addEventListener('click', () => deleteUser(u.id, u.email));
+        }
+
+        list.appendChild(row);
+      });
+    }
+
+    async function inviteUser() {
+      const btn = document.getElementById('inviteBtn');
+      const msg = document.getElementById('inviteMsg');
+      const email = document.getElementById('inviteEmail').value.trim();
+      if (!email) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Sender…';
+      msg.className = 'invite-msg';
+      msg.textContent = '';
+
+      const res = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+
+      btn.disabled = false;
+      btn.textContent = 'Send invitation';
+
+      if (data.error) {
+        msg.className = 'invite-msg err';
+        msg.textContent = data.error;
+      } else {
+        msg.className = 'invite-msg ok';
+        msg.textContent = 'Invitation sendt til ' + email;
+        document.getElementById('inviteEmail').value = '';
+        await loadUsers();
+      }
+    }
+
+    async function toggleRole(userId, currentRole) {
+      const newRole = currentRole === 'admin' ? 'user' : 'admin';
+      try {
+        if (currentRole === 'admin') {
+          await fetch(SB_URL + '/rest/v1/user_roles?user_id=eq.' + userId, {
+            method: 'PATCH',
+            headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ role: 'user' })
+          });
+        } else {
+          await fetch(SB_URL + '/rest/v1/user_roles?user_id=eq.' + userId, {
+            method: 'POST',
+            headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+            body: JSON.stringify({ user_id: userId, role: 'admin' })
+          });
+        }
+        toast('Rolle opdateret ✓');
+        await loadUsers();
+      } catch { toast('Fejl ved rolleskift', 'err'); }
+    }
+
+    async function deleteUser(userId, email) {
+      if (!confirm('Fjern ' + email + '?')) return;
+      const res = await fetch('/api/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      const data = await res.json();
+      if (data.error) { toast(data.error, 'err'); return; }
+      toast('Bruger fjernet ✓');
+      await loadUsers();
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleDateString('da-DK', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function esc(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    init();
+  </script>
+</body>
+</html>
