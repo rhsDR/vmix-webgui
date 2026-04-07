@@ -163,6 +163,16 @@
       margin-left: auto;
     }
 
+    .api-url {
+      font-size: 12px;
+      color: #555;
+      font-family: monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
     #loader {
       position: fixed; inset: 0;
       background: #111;
@@ -213,6 +223,11 @@
     </div>
 
     <div class="section">
+      <h2>API URLs</h2>
+      <div id="apiList" class="user-list"></div>
+    </div>
+
+    <div class="section">
       <h2>Invitér bruger</h2>
       <div class="invite-row">
         <input type="email" id="inviteEmail" placeholder="email@dr.dk">
@@ -231,6 +246,10 @@
   <script src="js/auth.js"></script>
   <script>
     let currentUser = null;
+
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => toast('Kopieret ✓')).catch(() => toast('Fejl ved kopiering', 'err'));
+    }
 
     function toast(msg, type = 'ok') {
       const el = document.getElementById('toast');
@@ -255,6 +274,7 @@
       await loadUsers();
       document.getElementById('loader').style.display = 'none';
 
+      await loadApiUrls();
       startPresence();
 
       document.getElementById('inviteBtn').addEventListener('click', inviteUser);
@@ -295,6 +315,24 @@
       channel
         .on('presence', { event: 'sync' }, renderOnline)
         .subscribe();
+    }
+
+    async function loadApiUrls() {
+      const res = await fetch(SB_URL + '/rest/v1/projekter?select=id,navn&order=orden.asc', { headers: sbHeaders() });
+      const projekter = await res.json();
+      const list = document.getElementById('apiList');
+      list.innerHTML = '';
+      projekter.forEach(p => {
+        const url = 'https://vmix-control.vercel.app/api/vmix/' + p.id;
+        const row = document.createElement('div');
+        row.className = 'user-row';
+        row.innerHTML = `
+          <div class="user-email" style="min-width:90px;">${esc(p.navn)}</div>
+          <span class="api-url" title="${url}">${url}</span>
+          <button class="btn-role" onclick="copyText('${url}')">Kopiér</button>
+        `;
+        list.appendChild(row);
+      });
     }
 
     async function loadUsers() {
