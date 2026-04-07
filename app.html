@@ -281,6 +281,40 @@
     }
     .on-air-btn:disabled { opacity: 0.25; cursor: not-allowed; animation: none; }
 
+    .auto-mode-btn {
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      border: 1px solid #333;
+      background: transparent;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-left: 8px;
+    }
+    .auto-mode-btn.active {
+      border-color: var(--orange);
+      background: var(--orange);
+      color: #fff;
+    }
+
+    .fixture-result-item {
+      padding: 7px 10px;
+      border-radius: 5px;
+      border: 1px solid #2e2e2e;
+      background: #0d0d0d;
+      font-size: 12px;
+      color: #ccc;
+      cursor: pointer;
+      margin-bottom: 4px;
+      transition: border-color 0.15s;
+    }
+    .fixture-result-item:hover { border-color: var(--orange); color: #fff; }
+    .fixture-result-item .fix-teams { font-weight: 700; }
+    .fixture-result-item .fix-meta { color: #555; font-size: 11px; margin-top: 2px; }
+
     .kamp-label {
       font-size: 18px;
       font-weight: 700;
@@ -1008,6 +1042,7 @@ const makeKamp = () => ({
   hold1Lang: '', hold1Kort: '', hold1Score: 0,
   hold2Score: 0, hold2Kort: '', hold2Lang: '',
   kommentator: '', lokation: '', vmixcall: '', onAir: false,
+  fixtureId: null, autoMode: false,
   // edit buffer
   editMode: false, collapsed: false,
   buf: { hold1Lang: '', hold2Lang: '', kommentator: '', lokation: '', vmixcall: '', lokSomKomm: false }
@@ -1144,7 +1179,9 @@ async function fetchAll() {
       kommentator: r.kommentator || '',
       lokation:    r.lokation    || '',
       vmixcall:    r.vmixcall    || '',
-      onAir:       r.on_air      || false
+      onAir:       r.on_air      || false,
+      fixtureId:   r.fixture_id  || null,
+      autoMode:    r.auto_mode   || false
     })),
     subs: {
       subs:      subsRaw.map(r => ({ navn: r.navn || '', titel: r.titel || '' })),
@@ -1409,6 +1446,7 @@ function buildBlock(i) {
       </div>
       <div class="kamp-header-center">
         <span class="kamp-label">KAMP ${i + 1}</span>
+        ${i === 5 ? `<button class="auto-mode-btn ${k.autoMode ? 'active' : ''}" id="autobtn-${i}">${k.autoMode ? '⚡ AUTO' : 'MANUEL'}</button>` : ''}
       </div>
       <div class="kamp-header-right">
         ${!k.editMode
@@ -1444,6 +1482,10 @@ function buildBlock(i) {
   // Events — edit button (normal mode only)
   const eb = block.querySelector('#editbtn-' + i);
   if (eb) eb.addEventListener('click', e => { e.stopPropagation(); enterEdit(i); });
+
+  // Events — auto mode toggle (slot 6 only)
+  const ab = block.querySelector('#autobtn-' + i);
+  if (ab) ab.addEventListener('click', e => { e.stopPropagation(); toggleAutoMode(i); });
 
   return block;
 }
@@ -1519,8 +1561,16 @@ function buildEditView(i) {
     `<option value="${esc(v)}" ${!buf.lokSomKomm && buf.lokation === v ? 'selected' : ''}>${esc(v)}</option>`
   ).join('');
 
-  div.innerHTML = `
-    <div class="edit-grid">
+  const holdFields = i === 5 && k.autoMode ? `
+      <div class="form-group span2">
+        <label class="form-label">Kamp søgning</label>
+        <div class="vmix-row">
+          <input class="form-input" type="text" id="efixsearch-${i}" placeholder="Søg hold f.eks. FC København…" style="flex:1;">
+          <button class="btn btn-save" id="efixsearchbtn-${i}" style="white-space:nowrap;">SØG</button>
+        </div>
+        <div id="efixresults-${i}" style="margin-top:6px;"></div>
+        ${k.fixtureId ? `<div style="margin-top:4px;font-size:11px;color:#555;">Aktiv fixture ID: <span style="color:var(--orange)">${k.fixtureId}</span> · ${esc(k.hold1Lang)} vs ${esc(k.hold2Lang)}</div>` : ''}
+      </div>` : `
       <div class="form-group">
         <label class="form-label">Hold 1</label>
         <select class="form-select" id="eh1-${i}">
@@ -1534,7 +1584,11 @@ function buildEditView(i) {
           <option value="">— Vælg hold —</option>
           ${holdOpts('hold2Lang')}
         </select>
-      </div>
+      </div>`;
+
+  div.innerHTML = `
+    <div class="edit-grid">
+      ${holdFields}
       <div class="form-group">
         <label class="form-label">Kommentator</label>
         <select class="form-select" id="ek-${i}">
@@ -1567,8 +1621,13 @@ function buildEditView(i) {
   `;
 
   // Live-update buffer on change
-  div.querySelector('#eh1-' + i).addEventListener('change', e => { buf.hold1Lang = e.target.value; });
-  div.querySelector('#eh2-' + i).addEventListener('change', e => { buf.hold2Lang = e.target.value; });
+  if (!(i === 5 && k.autoMode)) {
+    div.querySelector('#eh1-' + i).addEventListener('change', e => { buf.hold1Lang = e.target.value; });
+    div.querySelector('#eh2-' + i).addEventListener('change', e => { buf.hold2Lang = e.target.value; });
+  } else {
+    div.querySelector('#efixsearchbtn-' + i).addEventListener('click', () => searchFixture(i, div));
+    div.querySelector('#efixsearch-' + i).addEventListener('keydown', e => { if (e.key === 'Enter') searchFixture(i, div); });
+  }
   div.querySelector('#ek-'  + i).addEventListener('change', e => { buf.kommentator = e.target.value; });
   div.querySelector('#el-'  + i).addEventListener('change', e => {
     if (e.target.value === '__kommentator__') {
@@ -1634,6 +1693,58 @@ function enterEdit(i) {
 function cancelEdit(i) {
   kampe[i].editMode = false;
   rerender(i);
+}
+
+async function toggleAutoMode(i) {
+  const k = kampe[i];
+  const newMode = !k.autoMode;
+  try {
+    await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { auto_mode: newMode });
+    k.autoMode = newMode;
+    rerender(i);
+  } catch { toast('Fejl ved skift af tilstand', 'err'); }
+}
+
+async function searchFixture(i, div) {
+  const query = div.querySelector('#efixsearch-' + i).value.trim();
+  if (!query) return;
+  const resultsEl = div.querySelector('#efixresults-' + i);
+  resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Søger…</span>';
+  try {
+    const res = await fetch('/api/fixture-search?q=' + encodeURIComponent(query));
+    const data = await res.json();
+    if (!data.fixtures || data.fixtures.length === 0) {
+      resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Ingen resultater</span>';
+      return;
+    }
+    resultsEl.innerHTML = '';
+    data.fixtures.forEach(f => {
+      const el = document.createElement('div');
+      el.className = 'fixture-result-item';
+      el.innerHTML = `
+        <div class="fix-teams">${esc(f.home)} vs ${esc(f.away)}</div>
+        <div class="fix-meta">${esc(f.league)} · ${esc(f.date)}</div>`;
+      el.addEventListener('click', async () => {
+        try {
+          await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), {
+            fixture_id: f.id,
+            hold1_lang: f.home,
+            hold1_kort: f.home_kort || f.home,
+            hold2_lang: f.away,
+            hold2_kort: f.away_kort || f.away
+          });
+          kampe[i].fixtureId = f.id;
+          kampe[i].hold1Lang = f.home;
+          kampe[i].hold1Kort = f.home_kort || f.home;
+          kampe[i].hold2Lang = f.away;
+          kampe[i].hold2Kort = f.away_kort || f.away;
+          toast('Kamp valgt: ' + f.home + ' vs ' + f.away, 'ok');
+          rerender(i);
+        } catch { toast('Fejl ved gem af fixture', 'err'); }
+      });
+      resultsEl.appendChild(el);
+    });
+  } catch { resultsEl.innerHTML = '<span style="color:var(--red);font-size:12px;">Søgning fejlede</span>'; }
 }
 
 function resetEdit(i, div) {
