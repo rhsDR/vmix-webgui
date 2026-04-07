@@ -1321,6 +1321,13 @@ async function saveKamp(i, div) {
       on_air:       k.onAir
     });
     toast('Gemt ✓', 'ok');
+    // Synk link til vmix_calls slot
+    if (i < 6 && vmixCalls[i]) {
+      vmixCalls[i].link     = k.vmixcall;
+      vmixCalls[i].buf.link = k.vmixcall;
+      await sbPatch('vmix_calls?id=eq.' + (i + 1), { link: k.vmixcall });
+      rerenderVmixCall(i);
+    }
   } catch {
     toast('Fejl ved gem — prøv igen', 'err');
   } finally {
@@ -1699,6 +1706,13 @@ async function saveVmixCallRow(i) {
     toast('Gemt ✓', 'ok');
     const el = document.getElementById('vcall-' + i);
     if (el) { el.classList.add('flash-saved'); el.addEventListener('animationend', () => el.classList.remove('flash-saved'), { once: true }); }
+    // Synk link til kamp slot
+    if (i < 6 && kampe[i]) {
+      kampe[i].vmixcall     = c.link;
+      kampe[i].buf.vmixcall = c.link;
+      await sbPatch('kampe?id=eq.' + (i + 1), { vmixcall: c.link });
+      rerender(i);
+    }
   } catch { toast('Fejl ved gem', 'err'); }
   finally { c.savePending = false; }
 }
