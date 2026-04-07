@@ -149,6 +149,20 @@
       border-radius: 4px;
     }
 
+    .online-dot {
+      width: 8px; height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: 0 0 6px #22c55e;
+    }
+
+    .online-side {
+      font-size: 11px;
+      color: #555;
+      margin-left: auto;
+    }
+
     #loader {
       position: fixed; inset: 0;
       background: #111;
@@ -194,6 +208,11 @@
 
   <main>
     <div class="section">
+      <h2>Online nu</h2>
+      <div class="user-list" id="onlineList"><span style="color:#444;font-size:13px;">Henter…</span></div>
+    </div>
+
+    <div class="section">
       <h2>Invitér bruger</h2>
       <div class="invite-row">
         <input type="email" id="inviteEmail" placeholder="email@dr.dk">
@@ -236,10 +255,46 @@
       await loadUsers();
       document.getElementById('loader').style.display = 'none';
 
+      startPresence();
+
       document.getElementById('inviteBtn').addEventListener('click', inviteUser);
       document.getElementById('inviteEmail').addEventListener('keydown', e => {
         if (e.key === 'Enter') inviteUser();
       });
+    }
+
+    function sideLabel(side) {
+      if (!side) return '';
+      if (side === 'projekter') return 'Projektvælger';
+      if (side.startsWith('app:')) return 'Workspace';
+      return side;
+    }
+
+    function startPresence() {
+      const channel = sbClient.channel('online-users');
+      const renderOnline = () => {
+        const state = channel.presenceState();
+        const all = Object.values(state).flat();
+        const list = document.getElementById('onlineList');
+        if (all.length === 0) {
+          list.innerHTML = '<span style="color:#444;font-size:13px;">Ingen online</span>';
+          return;
+        }
+        list.innerHTML = '';
+        all.forEach(u => {
+          const row = document.createElement('div');
+          row.className = 'user-row';
+          row.innerHTML = `
+            <div class="online-dot"></div>
+            <div class="user-email">${esc(u.email)}</div>
+            <span class="online-side">${sideLabel(u.side)}</span>
+          `;
+          list.appendChild(row);
+        });
+      };
+      channel
+        .on('presence', { event: 'sync' }, renderOnline)
+        .subscribe();
     }
 
     async function loadUsers() {

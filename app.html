@@ -1989,6 +1989,14 @@ async function init() {
   document.getElementById('backBtn').addEventListener('click', () => { window.location.href = 'projects.html'; });
   document.getElementById('logoutBtn').addEventListener('click', () => signOut());
 
+  // Presence — vis at brugeren er online
+  const _presenceSide = aktivProjektId ? 'app:' + aktivProjektId : 'app';
+  sbClient.channel('online-users').track({
+    user_id: session.user.id,
+    email:   session.user.email,
+    side:    _presenceSide
+  }).subscribe();
+
   // Vis projekt-undertitel fra URL hvis tilgængeligt
   if (aktivProjektId) {
     fetch(SB_URL + '/rest/v1/projekter?id=eq.' + aktivProjektId + '&select=undertitel,type', { headers: SB_HEADERS })
