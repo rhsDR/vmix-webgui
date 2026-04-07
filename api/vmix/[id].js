@@ -81,22 +81,20 @@ export default async function handler(req, res) {
       kampeRaw
         .filter(r => r.hold1_lang || r.hold2_lang)
         .forEach(r => {
-          const k = `kamp_${r.slot}`;
+          const s = r.slot;
           const h1 = r.hold1_kort || r.hold1_lang || '';
           const h2 = r.hold2_kort || r.hold2_lang || '';
-          json[k] = {
-            hold1_lang:    r.hold1_lang   || '',
-            hold1_kort:    r.hold1_kort   || '',
-            hold1_score:   r.hold1_score  || 0,
-            hold2_score:   r.hold2_score  || 0,
-            hold2_kort:    r.hold2_kort   || '',
-            hold2_lang:    r.hold2_lang   || '',
-            kommentator:   r.kommentator  || '',
-            lokation:      r.lokation     || '',
-            vmixcall:      r.vmixcall     || '',
-            on_air:        r.on_air       || false,
-            sammenfatning: h1 && h2 ? `${h1} ${r.hold1_score || 0} - ${r.hold2_score || 0} ${h2}` : ''
-          };
+          json[`K${s}_h1_L`]  = r.hold1_lang  || '';
+          json[`K${s}_h1_K`]  = r.hold1_kort  || '';
+          json[`K${s}_h1_S`]  = r.hold1_score || 0;
+          json[`K${s}_h2_S`]  = r.hold2_score || 0;
+          json[`K${s}_h2_K`]  = r.hold2_kort  || '';
+          json[`K${s}_h2_L`]  = r.hold2_lang  || '';
+          json[`K${s}_kom`]   = r.kommentator || '';
+          json[`K${s}_lok`]   = r.lokation    || '';
+          json[`K${s}_vmc`]   = r.vmixcall    || '';
+          json[`K${s}_oA`]    = r.on_air      || false;
+          json[`K${s}_samf`]  = h1 && h2 ? `${h1} ${r.hold1_score || 0} - ${r.hold2_score || 0} ${h2}` : '';
         });
     }
 
