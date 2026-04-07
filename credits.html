@@ -100,6 +100,8 @@
 
     const sbClient = window.supabase.createClient(SB_URL, SB_KEY);
 
+    const projektId = new URLSearchParams(window.location.search).get('p') || '';
+
     let animating = false;
     let creditsLoaded = false;
     let speed = 30;
@@ -113,9 +115,10 @@
 
     async function loadCredits() {
       try {
+        const pidFilter = projektId ? '&projekt_id=eq.' + projektId : '';
         const [creditsRaw, settingsRaw] = await Promise.all([
-          fetch(SB_URL + '/rest/v1/credits?select=*', { headers: SB_HEADERS }).then(r => r.json()),
-          fetch(SB_URL + '/rest/v1/settings?select=*', { headers: SB_HEADERS }).then(r => r.json())
+          fetch(SB_URL + '/rest/v1/credits?select=*' + pidFilter, { headers: SB_HEADERS }).then(r => r.json()),
+          fetch(SB_URL + '/rest/v1/settings?select=key,value' + pidFilter, { headers: SB_HEADERS }).then(r => r.json())
         ]);
 
         creditsLoaded = true;
@@ -170,7 +173,8 @@
 
     async function resetTrigger() {
       try {
-        await fetch(SB_URL + '/rest/v1/settings?key=eq.credits_trigger', {
+        const pidFilter = projektId ? '&projekt_id=eq.' + projektId : '';
+        await fetch(SB_URL + '/rest/v1/settings?key=eq.credits_trigger' + pidFilter, {
           method: 'PATCH',
           headers: SB_HEADERS,
           body: JSON.stringify({ value: 'out' })
@@ -263,13 +267,16 @@
       }
 
       // Lyt på credits_trigger via real-time
+      const rtFilter = projektId
+        ? `key=eq.credits_trigger&projekt_id=eq.${projektId}`
+        : 'key=eq.credits_trigger';
       sbClient
-        .channel('credits-trigger')
+        .channel('credits-trigger-' + (projektId || 'global'))
         .on('postgres_changes', {
           event: 'UPDATE',
           schema: 'public',
           table: 'settings',
-          filter: 'key=eq.credits_trigger'
+          filter: rtFilter
         }, payload => {
           if (payload.new.value === 'in') {
             playAnimation();
@@ -277,9 +284,10 @@
         })
         .subscribe();
 
-      // Tjek om trigger allerede er sat ved load (fx hvis siden reloadede mens trigger var aktiv)
+      // Tjek om trigger allerede er sat ved load
       try {
-        const rows = await fetch(SB_URL + '/rest/v1/settings?key=eq.credits_trigger&select=value', { headers: SB_HEADERS }).then(r => r.json());
+        const pidFilter = projektId ? '&projekt_id=eq.' + projektId : '';
+        const rows = await fetch(SB_URL + '/rest/v1/settings?key=eq.credits_trigger&select=value' + pidFilter, { headers: SB_HEADERS }).then(r => r.json());
         if (rows[0] && rows[0].value === 'in') {
           playAnimation();
         }
