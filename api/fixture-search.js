@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     const teamData = await teamRes.json();
     const teams = (teamData.response || []).map(t => t.team.id);
 
-    if (teams.length === 0) return res.status(200).json({ fixtures: [] });
+    if (teams.length === 0) return res.status(200).json({ fixtures: [], debug: { teamSearch: teamData } });
 
     // Hent kommende/live kampe for de fundne hold i Superligaen (league 120), sæson 2025
     const fixturePromises = teams.slice(0, 3).map(teamId =>
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
       });
     });
 
-    return res.status(200).json({ fixtures });
+    return res.status(200).json({ fixtures, debug: { teamIds: teams, fixtureCount: fixtures.length } });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
