@@ -40,10 +40,10 @@ export default async function handler(req, res) {
     if (matched.length === 0) return res.status(200).json({ fixtures: [] });
     const teams = matched.map(h => h.id);
 
-    // Hent kommende kampe for matchede hold i Superligaen (league 119, sæson 2025)
+    // Hent kommende kampe for matchede hold i Superligaen (league 119) — uden season parameter
     const fixturePromises = teams.slice(0, 3).map(teamId =>
       fetch(
-        `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=119&season=2025&next=5`,
+        `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=119&next=5`,
         { headers: { 'x-apisports-key': API_KEY } }
       ).then(r => r.json())
     );
