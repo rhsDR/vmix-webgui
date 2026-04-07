@@ -1991,11 +1991,12 @@ async function init() {
 
   // Presence — vis at brugeren er online
   const _presenceSide = aktivProjektId ? 'app:' + aktivProjektId : 'app';
-  sbClient.channel('online-users').track({
-    user_id: session.user.id,
-    email:   session.user.email,
-    side:    _presenceSide
-  }).subscribe();
+  const _presenceCh = sbClient.channel('online-users');
+  _presenceCh.subscribe(async status => {
+    if (status === 'SUBSCRIBED') {
+      await _presenceCh.track({ user_id: session.user.id, email: session.user.email, side: _presenceSide });
+    }
+  });
 
   // Vis projekt-undertitel fra URL hvis tilgængeligt
   if (aktivProjektId) {

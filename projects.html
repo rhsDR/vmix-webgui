@@ -225,11 +225,12 @@
       document.getElementById('loader').style.display = 'none';
 
       // Presence — vis at brugeren er online
-      sbClient.channel('online-users').track({
-        user_id: currentUser.id,
-        email:   currentUser.email,
-        side:    'projekter'
-      }).subscribe();
+      const _presenceCh = sbClient.channel('online-users');
+      _presenceCh.subscribe(async status => {
+        if (status === 'SUBSCRIBED') {
+          await _presenceCh.track({ user_id: currentUser.id, email: currentUser.email, side: 'projekter' });
+        }
+      });
     }
 
     async function loadProjects() {
