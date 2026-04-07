@@ -265,18 +265,16 @@
       }
 
       // Lyt på credits_trigger via real-time
-      const rtFilter = projektId
-        ? `key=eq.credits_trigger&projekt_id=eq.${projektId}`
-        : 'key=eq.credits_trigger';
       sbClient
         .channel('credits-trigger-' + (projektId || 'global'))
         .on('postgres_changes', {
           event: 'UPDATE',
           schema: 'public',
           table: 'settings',
-          filter: rtFilter
+          filter: 'key=eq.credits_trigger'
         }, payload => {
-          if (payload.new.value === 'in') {
+          const matchProjekt = !projektId || payload.new.projekt_id === projektId;
+          if (matchProjekt && payload.new.value === 'in') {
             playAnimation();
           }
         })
