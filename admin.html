@@ -267,6 +267,101 @@
       margin: 4px 0 0;
     }
 
+    /* Collapsible */
+    .collapse-item {
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .collapse-header {
+      width: 100%;
+      background: #1c1c1c;
+      border: none;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s;
+    }
+    .collapse-header:hover { background: #222; }
+
+    .collapse-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e5e5e5;
+      flex: 1;
+    }
+
+    .collapse-url {
+      font-size: 11px;
+      font-family: monospace;
+      color: #444;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 300px;
+    }
+
+    .collapse-type {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #2a2a2a;
+      color: #666;
+      flex-shrink: 0;
+    }
+    .collapse-type.kampdag { background: #7c2d0a; color: #f97316; }
+
+    .collapse-arrow {
+      font-size: 12px;
+      color: #444;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .collapse-item.open .collapse-arrow { transform: rotate(90deg); }
+
+    .collapse-body {
+      display: none;
+      padding: 0 16px 16px;
+      background: #161616;
+    }
+    .collapse-item.open .collapse-body { display: block; }
+
+    .collapse-url-box {
+      background: #1c1c1c;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #aaa;
+      word-break: break-all;
+      margin: 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .collapse-url-box span { flex: 1; }
+    .btn-copy-url {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 5px;
+      color: #888;
+      font-size: 11px;
+      padding: 3px 9px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn-copy-url:hover { border-color: #f97316; color: #f97316; }
+
     #loader {
       position: fixed; inset: 0;
       background: #111;
@@ -354,71 +449,8 @@
     <div class="tab-panel" id="tab-json">
       <div class="panel-inner">
         <div class="section">
-          <h2>JSON API Oversigt</h2>
-          <div style="margin-bottom:12px;">
-            <div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:12px;color:#aaa;word-break:break-all;">
-              https://vmix-control.vercel.app/api/vmix/<em style="color:#f97316;">PROJEKT-ID</em>
-            </div>
-          </div>
-
-          <div class="api-section-label">Projekt</div>
-          <table class="api-table">
-            <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
-            <tr><td>projekt.navn</td><td>Projektets navn</td><td>Kampdag</td></tr>
-            <tr><td>projekt.undertitel</td><td>Aktuel produktion</td><td>U21 EM playoff</td></tr>
-          </table>
-
-          <div class="api-section-label" style="background:#f97316;">Kampe — kun Kampdag · slot 1-6</div>
-          <table class="api-table">
-            <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
-            <tr><td>K1_h1_L</td><td>Hold 1 langt navn</td><td>FC Fredericia</td></tr>
-            <tr><td>K1_h1_K</td><td>Hold 1 kort navn</td><td>FCF</td></tr>
-            <tr><td>K1_h1_S</td><td>Hold 1 score</td><td>4</td></tr>
-            <tr><td>K1_h2_S</td><td>Hold 2 score</td><td>2</td></tr>
-            <tr><td>K1_h2_K</td><td>Hold 2 kort navn</td><td>BIF</td></tr>
-            <tr><td>K1_h2_L</td><td>Hold 2 langt navn</td><td>Brøndby</td></tr>
-            <tr><td>K1_kom</td><td>Kommentator</td><td>Frederik Lindved</td></tr>
-            <tr><td>K1_lok</td><td>Stadion / lokation</td><td>Ceres Park</td></tr>
-            <tr><td>K1_vmc</td><td>vMix Call link</td><td>dr.dk/tv</td></tr>
-            <tr><td>K1_oA</td><td>Er kampen ON AIR</td><td>true / false</td></tr>
-            <tr><td>K1_samf</td><td>Kort resultat-streng</td><td>FCF 4 - 2 BIF</td></tr>
-          </table>
-          <p class="api-note">Erstat 1 med 2-6 for de øvrige kampe</p>
-
-          <div class="api-section-label" style="background:#3b82f6;">Subs — slot 1-15</div>
-          <table class="api-table">
-            <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
-            <tr><td>S1_n</td><td>Navn</td><td>Lars Nielsen</td></tr>
-            <tr><td>S1_t</td><td>Titel</td><td>Reporter</td></tr>
-          </table>
-          <p class="api-note">Erstat 1 med 2-15 for de øvrige subs</p>
-
-          <div class="api-section-label" style="background:#8b5cf6;">vMix Calls — slot 1-8</div>
-          <table class="api-table">
-            <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
-            <tr><td>VMC1_n</td><td>Navn</td><td>Studiogæst</td></tr>
-            <tr><td>VMC1_t</td><td>Titel</td><td>Ekspert</td></tr>
-            <tr><td>VMC1_l</td><td>Link til vMix Call</td><td>https://...</td></tr>
-          </table>
-          <p class="api-note">Erstat 1 med 2-8 for de øvrige vMix Calls</p>
-
-          <div class="api-section-label" style="background:#22c55e;color:#111;">Tickers — slot 1-20</div>
-          <table class="api-table">
-            <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
-            <tr><td>T1_ov</td><td>Overskrift</td><td>BREAKING</td></tr>
-            <tr><td>T1_txt</td><td>Tekst</td><td>Danmark vinder...</td></tr>
-            <tr><td>T1_air</td><td>Er ON AIR</td><td>true / false</td></tr>
-            <tr><td>T1_brk</td><td>Er BREAKING</td><td>true / false</td></tr>
-          </table>
-          <p class="api-note">Erstat 1 med 2-20 for de øvrige tickers</p>
-
-          <div class="api-section-label" style="background:#eab308;color:#111;">Ticker strenge — kun ON AIR · HTML til GT Title</div>
-          <table class="api-table">
-            <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
-            <tr><td>ticker_normal</td><td>Alle normale ON AIR tickers</td><td>&lt;b&gt;SKRIV TIL OS&lt;/b&gt; Send SMS til 1212 &amp;bull; …</td></tr>
-            <tr><td>ticker_breaking</td><td>Alle BREAKING ON AIR tickers</td><td>&lt;b&gt;BREAKING&lt;/b&gt; Danmark vinder...</td></tr>
-          </table>
-          <p class="api-note">Separeret med &amp;bull; (•) · Overskrifter er &lt;b&gt;FED VERSALER&lt;/b&gt;</p>
+          <h2>JSON API Reference</h2>
+          <div id="jsonRefList"><span style="color:#444;font-size:13px;">Henter…</span></div>
         </div>
       </div>
     </div>
@@ -468,6 +500,7 @@
       document.getElementById('loader').style.display = 'none';
 
       await loadApiUrls();
+      await loadJsonRef();
       startPresence();
 
       document.getElementById('inviteBtn').addEventListener('click', inviteUser);
@@ -508,6 +541,108 @@
       channel
         .on('presence', { event: 'sync' }, renderOnline)
         .subscribe();
+    }
+
+    async function loadJsonRef() {
+      const res = await fetch(SB_URL + '/rest/v1/projekter?select=id,navn,type&order=orden.asc', { headers: sbHeaders() });
+      const projekter = await res.json();
+      const container = document.getElementById('jsonRefList');
+      container.innerHTML = '';
+
+      projekter.forEach(p => {
+        const url = 'https://vmix-control.vercel.app/api/vmix/' + p.id;
+        const isKampdag = p.type === 'kampdag';
+
+        const kampeBlock = isKampdag ? `
+          <div class="api-section-label" style="background:#f97316;">Kampe — slot 1-6</div>
+          <table class="api-table">
+            <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+            <tr><td>K1_h1_L</td><td>Hold 1 langt navn</td><td>FC Fredericia</td></tr>
+            <tr><td>K1_h1_K</td><td>Hold 1 kort navn</td><td>FCF</td></tr>
+            <tr><td>K1_h1_S</td><td>Hold 1 score</td><td>4</td></tr>
+            <tr><td>K1_h2_S</td><td>Hold 2 score</td><td>2</td></tr>
+            <tr><td>K1_h2_K</td><td>Hold 2 kort navn</td><td>BIF</td></tr>
+            <tr><td>K1_h2_L</td><td>Hold 2 langt navn</td><td>Brøndby</td></tr>
+            <tr><td>K1_kom</td><td>Kommentator</td><td>Frederik Lindved</td></tr>
+            <tr><td>K1_lok</td><td>Stadion / lokation</td><td>Ceres Park</td></tr>
+            <tr><td>K1_vmc</td><td>vMix Call link</td><td>dr.dk/tv</td></tr>
+            <tr><td>K1_oA</td><td>Er kampen ON AIR</td><td>true / false</td></tr>
+            <tr><td>K1_samf</td><td>Resultat-streng</td><td>FCF 4 - 2 BIF</td></tr>
+          </table>
+          <p class="api-note">Erstat 1 med 2-6 for de øvrige kampe</p>` : '';
+
+        const item = document.createElement('div');
+        item.className = 'collapse-item';
+        item.innerHTML = `
+          <button class="collapse-header">
+            <span class="collapse-name">${esc(p.navn)}</span>
+            <span class="collapse-url">${url}</span>
+            <span class="collapse-type${isKampdag ? ' kampdag' : ''}">${isKampdag ? 'Kampdag' : 'TV Prod.'}</span>
+            <span class="collapse-arrow">▶</span>
+          </button>
+          <div class="collapse-body">
+            <div class="collapse-url-box">
+              <span>${url}</span>
+              <button class="btn-copy-url">Kopiér</button>
+            </div>
+
+            <div class="api-section-label">Projekt</div>
+            <table class="api-table">
+              <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+              <tr><td>projekt.navn</td><td>Projektets navn</td><td>${esc(p.navn)}</td></tr>
+              <tr><td>projekt.undertitel</td><td>Aktuel produktion</td><td>U21 EM playoff</td></tr>
+            </table>
+
+            ${kampeBlock}
+
+            <div class="api-section-label" style="background:#3b82f6;">Subs — slot 1-15</div>
+            <table class="api-table">
+              <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+              <tr><td>S1_n</td><td>Navn</td><td>Lars Nielsen</td></tr>
+              <tr><td>S1_t</td><td>Titel</td><td>Reporter</td></tr>
+            </table>
+            <p class="api-note">Erstat 1 med 2-15 for de øvrige subs</p>
+
+            <div class="api-section-label" style="background:#8b5cf6;">vMix Calls — slot 1-8</div>
+            <table class="api-table">
+              <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+              <tr><td>VMC1_n</td><td>Navn</td><td>Studiogæst</td></tr>
+              <tr><td>VMC1_t</td><td>Titel</td><td>Ekspert</td></tr>
+              <tr><td>VMC1_l</td><td>Link til vMix Call</td><td>https://...</td></tr>
+            </table>
+            <p class="api-note">Erstat 1 med 2-8 for de øvrige vMix Calls</p>
+
+            <div class="api-section-label" style="background:#22c55e;color:#111;">Tickers — slot 1-20</div>
+            <table class="api-table">
+              <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+              <tr><td>T1_ov</td><td>Overskrift</td><td>BREAKING</td></tr>
+              <tr><td>T1_txt</td><td>Tekst</td><td>Danmark vinder...</td></tr>
+              <tr><td>T1_air</td><td>Er ON AIR</td><td>true / false</td></tr>
+              <tr><td>T1_brk</td><td>Er BREAKING</td><td>true / false</td></tr>
+            </table>
+            <p class="api-note">Erstat 1 med 2-20 for de øvrige tickers</p>
+
+            <div class="api-section-label" style="background:#eab308;color:#111;">Ticker strenge — kun ON AIR</div>
+            <table class="api-table">
+              <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+              <tr><td>ticker_normal</td><td>Alle normale ON AIR tickers</td><td>&lt;b&gt;SKRIV TIL OS&lt;/b&gt; Send SMS til 1212 &amp;bull; …</td></tr>
+              <tr><td>ticker_breaking</td><td>Alle BREAKING ON AIR tickers</td><td>&lt;b&gt;BREAKING&lt;/b&gt; Danmark vinder...</td></tr>
+            </table>
+            <p class="api-note">Separeret med &amp;bull; (•) · Overskrifter er &lt;b&gt;FED VERSALER&lt;/b&gt;</p>
+          </div>
+        `;
+
+        item.querySelector('.collapse-header').addEventListener('click', () => {
+          item.classList.toggle('open');
+        });
+
+        item.querySelector('.btn-copy-url').addEventListener('click', e => {
+          e.stopPropagation();
+          copyText(url);
+        });
+
+        container.appendChild(item);
+      });
     }
 
     async function loadApiUrls() {
