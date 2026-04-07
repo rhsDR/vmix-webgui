@@ -82,17 +82,20 @@ export default async function handler(req, res) {
         .filter(r => r.hold1_lang || r.hold2_lang)
         .forEach(r => {
           const k = `kamp_${r.slot}`;
+          const h1 = r.hold1_kort || r.hold1_lang || '';
+          const h2 = r.hold2_kort || r.hold2_lang || '';
           json[k] = {
-            hold1_lang:  r.hold1_lang   || '',
-            hold1_kort:  r.hold1_kort   || '',
-            hold1_score: r.hold1_score  || 0,
-            hold2_score: r.hold2_score  || 0,
-            hold2_kort:  r.hold2_kort   || '',
-            hold2_lang:  r.hold2_lang   || '',
-            kommentator: r.kommentator  || '',
-            lokation:    r.lokation     || '',
-            vmixcall:    r.vmixcall     || '',
-            on_air:      r.on_air       || false
+            hold1_lang:    r.hold1_lang   || '',
+            hold1_kort:    r.hold1_kort   || '',
+            hold1_score:   r.hold1_score  || 0,
+            hold2_score:   r.hold2_score  || 0,
+            hold2_kort:    r.hold2_kort   || '',
+            hold2_lang:    r.hold2_lang   || '',
+            kommentator:   r.kommentator  || '',
+            lokation:      r.lokation     || '',
+            vmixcall:      r.vmixcall     || '',
+            on_air:        r.on_air       || false,
+            sammenfatning: h1 && h2 ? `${h1} ${r.hold1_score || 0} - ${r.hold2_score || 0} ${h2}` : ''
           };
         });
     }
