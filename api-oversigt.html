@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <title>vMix Control — JSON API Oversigt</title>
+  <style>
+    @media print {
+      body { margin: 0; }
+      .no-print { display: none; }
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #fff;
+      color: #111;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 32px 60px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #f97316;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 32px;
+    }
+
+    h2 {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #fff;
+      background: #222;
+      padding: 6px 12px;
+      border-radius: 4px;
+      margin: 28px 0 0 0;
+    }
+
+    h2.kampdag { background: #f97316; }
+    h2.subs    { background: #3b82f6; }
+    h2.vmix    { background: #8b5cf6; }
+    h2.ticker  { background: #22c55e; color: #111; }
+    h2.strenge { background: #eab308; color: #111; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0;
+      font-size: 13px;
+    }
+
+    th {
+      background: #f5f5f5;
+      text-align: left;
+      padding: 7px 12px;
+      font-weight: 600;
+      border-bottom: 2px solid #ddd;
+    }
+
+    td {
+      padding: 6px 12px;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+    }
+
+    td:first-child {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #c0392b;
+      white-space: nowrap;
+      width: 220px;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    .note {
+      font-size: 12px;
+      color: #888;
+      font-style: italic;
+      margin: 6px 0 0 0;
+    }
+
+    .url-box {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #333;
+      margin: 8px 0 24px;
+      word-break: break-all;
+    }
+
+    .btn-print {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: #f97316;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-print:hover { background: #ea6a0a; }
+
+    .projekt-ids {
+      font-size: 12px;
+    }
+    .projekt-ids td:first-child {
+      color: #333;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-weight: 600;
+    }
+    .projekt-ids td:last-child {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+
+  <button class="btn-print no-print" onclick="window.print()">Gem som PDF</button>
+
+  <h1>vMix Control — JSON API Oversigt</h1>
+  <div class="subtitle">API leverer data per projekt · Opdateres live fra Supabase</div>
+
+  <strong>API URL:</strong>
+  <div class="url-box">https://vmix-control.vercel.app/api/vmix/<em>PROJEKT-ID</em></div>
+
+  <strong>Projekt ID'er:</strong>
+  <table class="projekt-ids" style="margin-top:6px;margin-bottom:8px;">
+    <tr><td>Kampdag</td><td>c2b06b16-6ede-4fa7-9f43-a9029f935157</td></tr>
+    <tr><td>Projekt 1</td><td>c2a462ab-a911-4044-92dd-90c1462c10ec</td></tr>
+    <tr><td>Projekt 2</td><td>b8c98a0b-97bb-4089-8c1a-19074b476a16</td></tr>
+    <tr><td>Projekt 3</td><td>f2e4937f-544e-4cc2-8df2-7853c36d849e</td></tr>
+    <tr><td>Projekt 4</td><td>3ae7eb3e-db19-4285-9964-6c8382ea471f</td></tr>
+  </table>
+
+  <!-- PROJEKT -->
+  <h2>Projekt</h2>
+  <table>
+    <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+    <tr><td>projekt.navn</td><td>Projektets navn</td><td>Kampdag</td></tr>
+    <tr><td>projekt.undertitel</td><td>Aktuel produktion</td><td>U21 EM playoff</td></tr>
+  </table>
+
+  <!-- KAMPE -->
+  <h2 class="kampdag">Kampe — kun Kampdag · slot 1-6 · kun udfyldte</h2>
+  <table>
+    <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+    <tr><td>kamp_1.hold1_lang</td><td>Hold 1 langt navn</td><td>FC Fredericia</td></tr>
+    <tr><td>kamp_1.hold1_kort</td><td>Hold 1 kort navn</td><td>FCF</td></tr>
+    <tr><td>kamp_1.hold1_score</td><td>Hold 1 score</td><td>4</td></tr>
+    <tr><td>kamp_1.hold2_score</td><td>Hold 2 score</td><td>2</td></tr>
+    <tr><td>kamp_1.hold2_kort</td><td>Hold 2 kort navn</td><td>BIF</td></tr>
+    <tr><td>kamp_1.hold2_lang</td><td>Hold 2 langt navn</td><td>Brøndby</td></tr>
+    <tr><td>kamp_1.kommentator</td><td>Kommentator</td><td>Frederik Lindved</td></tr>
+    <tr><td>kamp_1.lokation</td><td>Stadion / lokation</td><td>Ceres Park</td></tr>
+    <tr><td>kamp_1.vmixcall</td><td>vMix Call link</td><td>dr.dk/tv</td></tr>
+    <tr><td>kamp_1.on_air</td><td>Er kampen ON AIR</td><td>true / false</td></tr>
+    <tr><td>kamp_1.sammenfatning</td><td>Kort resultat-streng</td><td>FCF 4 - 2 BIF</td></tr>
+  </table>
+  <p class="note">Erstat 1 med 2-6 for de øvrige kampe</p>
+
+  <!-- SUBS -->
+  <h2 class="subs">Subs — slot 1-15</h2>
+  <table>
+    <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+    <tr><td>S1_n</td><td>Navn</td><td>Lars Nielsen</td></tr>
+    <tr><td>S1_t</td><td>Titel</td><td>Reporter</td></tr>
+  </table>
+  <p class="note">Erstat 1 med 2-15 for de øvrige subs</p>
+
+  <!-- VMIX CALLS -->
+  <h2 class="vmix">vMix Calls — slot 1-8</h2>
+  <table>
+    <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+    <tr><td>VMC1_n</td><td>Navn</td><td>Studiogæst</td></tr>
+    <tr><td>VMC1_t</td><td>Titel</td><td>Ekspert</td></tr>
+    <tr><td>VMC1_l</td><td>Link til vMix Call</td><td>https://...</td></tr>
+  </table>
+  <p class="note">Erstat 1 med 2-8 for de øvrige vMix Calls</p>
+
+  <!-- TICKERS -->
+  <h2 class="ticker">Tickers — slot 1-20 (alle, uanset ON AIR)</h2>
+  <table>
+    <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+    <tr><td>T1_ov</td><td>Overskrift</td><td>BREAKING</td></tr>
+    <tr><td>T1_txt</td><td>Tekst</td><td>Danmark vinder...</td></tr>
+    <tr><td>T1_air</td><td>Er ON AIR</td><td>true / false</td></tr>
+    <tr><td>T1_brk</td><td>Er BREAKING</td><td>true / false</td></tr>
+  </table>
+  <p class="note">Erstat 1 med 2-20 for de øvrige tickers</p>
+
+  <!-- TICKER STRENGE -->
+  <h2 class="strenge">Ticker strenge — kun ON AIR · HTML til GT Title</h2>
+  <table>
+    <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+    <tr><td>ticker_normal</td><td>Alle normale ON AIR tickers samlet</td><td>&lt;b&gt;SKRIV TIL OS&lt;/b&gt; Send SMS til 1212 &amp;bull; &lt;b&gt;NÆSTE KAMP&lt;/b&gt; kl. 20:00</td></tr>
+    <tr><td>ticker_breaking</td><td>Alle BREAKING ON AIR tickers samlet</td><td>&lt;b&gt;BREAKING&lt;/b&gt; Danmark vinder...</td></tr>
+  </table>
+  <p class="note">Separeret med &amp;bull; (•) · Overskrifter er &lt;b&gt;FED VERSALER&lt;/b&gt;</p>
+
+</body>
+</html>
