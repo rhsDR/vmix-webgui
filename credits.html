@@ -118,8 +118,12 @@
           fetch(SB_URL + '/rest/v1/settings?select=*', { headers: SB_HEADERS }).then(r => r.json())
         ]);
 
-        const speedRow = settingsRaw.find(r => r.key === 'credits_speed');
+        creditsLoaded = true;
+
+        const speedRow = Array.isArray(settingsRaw) ? settingsRaw.find(r => r.key === 'credits_speed') : null;
         speed = speedRow ? parseFloat(speedRow.value) : 30;
+
+        if (!Array.isArray(creditsRaw)) return;
 
         const items = creditsRaw.map(r => ({ row: r.id, side: r.side, orden: r.orden, titel: r.titel || '', navne: r.navne || '' }));
         const left  = items.filter(i => i.side === 'V').sort((a, b) => a.orden - b.orden);
@@ -140,9 +144,9 @@
         grid.children[0].innerHTML = renderCol(left);
         grid.children[1].innerHTML = renderCol(right);
 
-        creditsLoaded = true;
       } catch (err) {
         console.error('Credits load fejl:', err);
+        creditsLoaded = true;
       }
     }
 
