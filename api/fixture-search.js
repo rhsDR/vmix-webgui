@@ -3,6 +3,9 @@ export default async function handler(req, res) {
 
   const q = (req.query.q || '').trim();
   if (!q) return res.status(400).json({ error: 'Mangler søgeterm' });
+  // API-Football accepterer kun alphanumeriske tegn og mellemrum
+  const qClean = q.replace(/[^a-zA-Z0-9 ]/g, '').trim();
+  if (!qClean) return res.status(400).json({ error: 'Søgeterm indeholder kun specialtegn' });
 
   const API_KEY = process.env.API_FOOTBALL_KEY;
   if (!API_KEY) return res.status(503).json({ error: 'API-nøgle ikke konfigureret' });
@@ -10,7 +13,7 @@ export default async function handler(req, res) {
   try {
     // Søg hold der matcher søgetermen
     const teamRes = await fetch(
-      `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(q)}`,
+      `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(qClean)}`,
       { headers: { 'x-apisports-key': API_KEY } }
     );
     const teamData = await teamRes.json();
