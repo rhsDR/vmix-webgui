@@ -1070,13 +1070,6 @@ async function sbPost(path, body) {
   if (!res.ok) throw new Error('HTTP ' + res.status);
 }
 
-async function sbDelete(path) {
-  const res = await fetch(SB_URL + '/rest/v1/' + path, {
-    method: 'DELETE', headers: SB_HEADERS_MINIMAL
-  });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-}
-
 // ── FETCH ALL DATA ────────────────────────────────────────────
 async function fetchAll() {
   const pid = aktivProjektId;
@@ -2091,7 +2084,8 @@ function renderCredits() {
     <input type="range" class="speed-slider" id="speedSlider" min="10" max="30" step="1" value="${creditsData.speed}">
     <span class="credits-speed-val" id="speedVal">${creditsData.speed} sek</span>
     <button class="btn btn-save" id="saveSpeedBtn">GEM</button>
-    <button class="btn btn-cancel" id="previewBtn" style="margin-left:auto;">▶ PREVIEW</button>
+    <button class="btn btn-on-air" id="sendCreditsBtn" style="margin-left:auto;">▶ SEND</button>
+    <button class="btn btn-cancel" id="previewBtn">▶ PREVIEW</button>
     <div style="display:flex;align-items:center;gap:6px;background:#0d0d0d;border:1px solid #2e2e2e;border-radius:6px;padding:5px 10px;max-width:320px;overflow:hidden;">
       <span style="font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;" id="creditsUrlText">https://vmix-control.vercel.app/credits.html?p=${aktivProjektId}</span>
       <button class="copy-btn icon-btn" id="creditsUrlCopy" title="Kopiér link">⎘</button>
@@ -2106,6 +2100,17 @@ function renderCredits() {
       await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.credits_speed', { value: creditsData.speed.toString() });
       toast('Hastighed gemt ✓', 'ok');
     } catch { toast('Fejl ved gem', 'err'); }
+  });
+  speedBar.querySelector('#sendCreditsBtn').addEventListener('click', async () => {
+    const btn = speedBar.querySelector('#sendCreditsBtn');
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.credits_trigger', { value: 'in' });
+      toast('Credits sendt ✓', 'ok');
+    } catch { toast('Fejl ved send', 'err'); }
+    btn.disabled = false;
+    btn.textContent = '▶ SEND';
   });
   speedBar.querySelector('#creditsUrlCopy').addEventListener('click', () => copyText('https://vmix-control.vercel.app/credits.html?p=' + aktivProjektId));
   speedBar.querySelector('#previewBtn').addEventListener('click', () => {
