@@ -8,9 +8,9 @@ export default async function handler(req, res) {
   if (!API_KEY) return res.status(503).json({ error: 'API-nøgle ikke konfigureret' });
 
   try {
-    // Søg hold der matcher søgetermen
+    // Søg hold der matcher søgetermen (uden sæson/liga filter for bredere match)
     const teamRes = await fetch(
-      `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(q)}&league=120&season=2024`,
+      `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(q)}`,
       { headers: { 'x-apisports-key': API_KEY } }
     );
     const teamData = await teamRes.json();
@@ -18,10 +18,10 @@ export default async function handler(req, res) {
 
     if (teams.length === 0) return res.status(200).json({ fixtures: [] });
 
-    // Hent kommende/live kampe for de fundne hold i Superligaen (league 120)
+    // Hent kommende/live kampe for de fundne hold i Superligaen (league 120), sæson 2025
     const fixturePromises = teams.slice(0, 3).map(teamId =>
       fetch(
-        `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=120&season=2024&next=5`,
+        `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=120&season=2025&next=5`,
         { headers: { 'x-apisports-key': API_KEY } }
       ).then(r => r.json())
     );
