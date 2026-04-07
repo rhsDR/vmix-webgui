@@ -21,10 +21,10 @@ export default async function handler(req, res) {
 
     if (teams.length === 0) return res.status(200).json({ fixtures: [], debug: { teamSearch: teamData } });
 
-    // Hent kommende kampe for de fundne hold i Superligaen (league 119, sæson 2025)
-    const fixturePromises = teams.slice(0, 3).map(teamId =>
+    // Hent kommende kampe for første hold — uden liga-filter for at debugge
+    const fixturePromises = teams.slice(0, 1).map(teamId =>
       fetch(
-        `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=119&season=2025&next=5`,
+        `https://v3.football.api-sports.io/fixtures?team=${teamId}&season=2025&next=3`,
         { headers: { 'x-apisports-key': API_KEY } }
       ).then(r => r.json())
     );
