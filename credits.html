@@ -190,11 +190,20 @@
 
       video.src = 'DR_KREDITERINGSLOGO_INTERN_INGEN_TEKST_4SEK.webm';
 
-      // To frames så browseren når at beregne layout efter grid er fyldt
+      // Tving layout: flyt clip midlertidigt ind på skærmen usynligt,
+      // mål højder, træk tilbage — browseren beregner ikke layout off-screen
+      clip.style.visibility = 'hidden';
+      clip.style.transform  = 'translateY(0)';
+      void clip.offsetHeight; // force reflow
+
+      const clipH    = clip.offsetHeight;
+      const contentH = wrapper.offsetHeight;
+
+      clip.style.transform  = 'translateY(100%)';
+      clip.style.visibility = '';
+
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          const clipH    = clip.offsetHeight || 400;
-          const contentH = wrapper.scrollHeight || wrapper.offsetHeight || 600;
 
           // Fase 1: Blå boks glider op
           const slideMs = 800;
