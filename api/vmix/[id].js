@@ -29,38 +29,62 @@ export default async function handler(req, res) {
     if (!projektRaw[0]) return res.status(404).json({ error: 'Projekt ikke fundet' });
     const projekt = projektRaw[0];
 
+    // Byg ticker-strenge — kun ON AIR
+    const tickerSep = ' &bull; ';
+    const tickerBreaking = tickersRaw
+      .filter(r => r.on_air && r.breaking && (r.overskrift || r.tekst))
+      .map(r => r.overskrift ? `<b>${r.overskrift.toUpperCase()}</b> ${r.tekst}` : r.tekst)
+      .join(tickerSep);
+    const tickerNormal = tickersRaw
+      .filter(r => r.on_air && !r.breaking && (r.overskrift || r.tekst))
+      .map(r => r.overskrift ? `<b>${r.overskrift.toUpperCase()}</b> ${r.tekst}` : r.tekst)
+      .join(tickerSep);
+
+    // Byg subs som navngivne objekter S1_n, S1_t osv.
+    const subs = {};
+    subsRaw.forEach(r => {
+      subs[`S${r.slot}_n`] = r.navn  || '';
+      subs[`S${r.slot}_t`] = r.titel || '';
+    });
+
+    // Byg vmix calls som navngivne objekter VMC1_n osv.
+    const vmixCalls = {};
+    vmixCallsRaw.forEach(r => {
+      vmixCalls[`VMC${r.slot}_n`] = r.navn  || '';
+      vmixCalls[`VMC${r.slot}_t`] = r.titel || '';
+      vmixCalls[`VMC${r.slot}_l`] = r.link  || '';
+    });
+
     const json = {
       projekt: {
         navn:      projekt.navn,
         undertitel: projekt.undertitel || ''
       },
-      subs: subsRaw
-        .filter(r => r.navn || r.titel)
-        .map(r => ({ slot: r.slot, navn: r.navn || '', titel: r.titel || '' })),
-      vmix_calls: vmixCallsRaw
-        .filter(r => r.navn || r.titel || r.link)
-        .map(r => ({ slot: r.slot, navn: r.navn || '', titel: r.titel || '', link: r.link || '' })),
-      tickers: tickersRaw
-        .filter(r => r.overskrift || r.tekst)
-        .map(r => ({ slot: r.slot, overskrift: r.overskrift || '', tekst: r.tekst || '', on_air: r.on_air || false, breaking: r.breaking || false }))
+      ticker_breaking: tickerBreaking,
+      ticker_normal:   tickerNormal,
+      ...subs,
+      ...vmixCalls
     };
 
+    // Kampe — kun kampdag
     if (projekt.type === 'kampdag') {
-      json.kampe = kampeRaw
+      kampeRaw
         .filter(r => r.hold1_lang || r.hold2_lang)
-        .map(r => ({
-          slot:       r.slot,
-          hold1_lang: r.hold1_lang  || '',
-          hold1_kort: r.hold1_kort  || '',
-          hold1_score: r.hold1_score || 0,
-          hold2_score: r.hold2_score || 0,
-          hold2_kort: r.hold2_kort  || '',
-          hold2_lang: r.hold2_lang  || '',
-          kommentator: r.kommentator || '',
-          lokation:   r.lokation    || '',
-          vmixcall:   r.vmixcall    || '',
-          on_air:     r.on_air      || false
-        }));
+        .forEach(r => {
+          const k = `kamp_${r.slot}`;
+          json[k] = {
+            hold1_lang:  r.hold1_lang   || '',
+            hold1_kort:  r.hold1_kort   || '',
+            hold1_score: r.hold1_score  || 0,
+            hold2_score: r.hold2_score  || 0,
+            hold2_kort:  r.hold2_kort   || '',
+            hold2_lang:  r.hold2_lang   || '',
+            kommentator: r.kommentator  || '',
+            lokation:    r.lokation     || '',
+            vmixcall:    r.vmixcall     || '',
+            on_air:      r.on_air       || false
+          };
+        });
     }
 
     res.setHeader('Cache-Control', 'no-store');
