@@ -12,6 +12,8 @@
       color: #e5e5e5;
       font-family: 'Segoe UI', Arial, sans-serif;
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
     header {
@@ -22,6 +24,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-shrink: 0;
     }
 
     .header-left { display: flex; align-items: center; gap: 12px; }
@@ -41,64 +44,77 @@
     }
     .back-btn:hover, .logout-btn:hover { border-color: #666; color: #ccc; }
 
-    main {
-      padding: clamp(24px, 4vw, 48px) clamp(16px, 4vw, 48px);
-      max-width: 760px;
+    /* Tab bar */
+    .tab-bar {
+      background: #1c1c1c;
+      border-bottom: 1px solid #2a2a2a;
+      padding: 0 clamp(16px, 4vw, 48px);
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #666;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .tab-btn:hover { color: #aaa; }
+    .tab-btn.active { color: #f97316; border-bottom-color: #f97316; }
+
+    /* Tab panels */
+    .tab-panels {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .tab-panel {
+      display: none;
+      height: 100%;
+      overflow-y: auto;
+      padding: clamp(20px, 3vw, 40px) clamp(16px, 4vw, 48px);
+    }
+    .tab-panel.active { display: block; }
+
+    .panel-inner {
+      max-width: 720px;
       margin: 0 auto;
     }
 
     h2 {
-      font-size: 16px;
-      font-weight: 600;
-      color: #888;
+      font-size: 13px;
+      font-weight: 700;
+      color: #555;
       text-transform: uppercase;
       letter-spacing: 1px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
-    .section { margin-bottom: 40px; }
+    .section { margin-bottom: 32px; }
 
-    /* Invite form */
-    .invite-row {
-      display: flex;
-      gap: 10px;
+    /* Online dot */
+    .online-dot {
+      width: 8px; height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: 0 0 6px #22c55e;
     }
 
-    .invite-row input {
-      flex: 1;
-      background: #1c1c1c;
-      border: 1px solid #333;
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: #e5e5e5;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.15s;
+    .online-side {
+      font-size: 11px;
+      color: #555;
+      margin-left: auto;
     }
-    .invite-row input:focus { border-color: #f97316; }
-
-    .btn-invite {
-      background: #f97316;
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      padding: 10px 20px;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.15s;
-    }
-    .btn-invite:hover { background: #ea6a0a; }
-    .btn-invite:disabled { background: #7c3c10; cursor: default; }
-
-    .invite-msg {
-      margin-top: 10px;
-      font-size: 13px;
-      min-height: 18px;
-    }
-    .invite-msg.ok  { color: #22c55e; }
-    .invite-msg.err { color: #f87171; }
 
     /* User list */
     .user-list { display: flex; flex-direction: column; gap: 8px; }
@@ -107,7 +123,7 @@
       background: #1c1c1c;
       border: 1px solid #2a2a2a;
       border-radius: 10px;
-      padding: 14px 16px;
+      padding: 12px 14px;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -149,20 +165,57 @@
       border-radius: 4px;
     }
 
-    .online-dot {
-      width: 8px; height: 8px;
-      background: #22c55e;
-      border-radius: 50%;
-      flex-shrink: 0;
-      box-shadow: 0 0 6px #22c55e;
-    }
+    /* Invite form */
+    .invite-row { display: flex; gap: 10px; }
 
-    .online-side {
-      font-size: 11px;
+    .invite-row input {
+      flex: 1;
+      background: #1c1c1c;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #e5e5e5;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .invite-row input:focus { border-color: #f97316; }
+
+    .btn-invite {
+      background: #f97316;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .btn-invite:hover { background: #ea6a0a; }
+    .btn-invite:disabled { background: #7c3c10; cursor: default; }
+
+    .invite-msg {
+      margin-top: 8px;
+      font-size: 13px;
+      min-height: 18px;
+    }
+    .invite-msg.ok  { color: #22c55e; }
+    .invite-msg.err { color: #f87171; }
+
+    /* API URL */
+    .api-url {
+      font-size: 12px;
       color: #555;
-      margin-left: auto;
+      font-family: monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
     }
 
+    /* JSON reference */
     .api-section-label {
       font-size: 11px;
       font-weight: 700;
@@ -180,7 +233,6 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
-      margin-top: 0;
     }
 
     .api-table th {
@@ -212,17 +264,7 @@
       font-size: 11px;
       color: #444;
       font-style: italic;
-      margin: 4px 0 0 0;
-    }
-
-    .api-url {
-      font-size: 12px;
-      color: #555;
-      font-family: monospace;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      flex: 1;
+      margin: 4px 0 0;
     }
 
     #loader {
@@ -268,105 +310,135 @@
     </div>
   </header>
 
-  <main>
-    <div class="section">
-      <h2>Online nu</h2>
-      <div class="user-list" id="onlineList"><span style="color:#444;font-size:13px;">Henter…</span></div>
-    </div>
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="brugere">Brugere</button>
+    <button class="tab-btn" data-tab="api">API URLs</button>
+    <button class="tab-btn" data-tab="json">JSON Reference</button>
+  </nav>
 
-    <div class="section">
-      <h2>API URLs</h2>
-      <div id="apiList" class="user-list"></div>
-    </div>
+  <div class="tab-panels">
 
-    <div class="section">
-      <h2>Invitér bruger</h2>
-      <div class="invite-row">
-        <input type="email" id="inviteEmail" placeholder="email@dr.dk">
-        <button class="btn-invite" id="inviteBtn">Send invitation</button>
-      </div>
-      <div class="invite-msg" id="inviteMsg"></div>
-    </div>
-
-    <div class="section">
-      <h2>Brugere</h2>
-      <div class="user-list" id="userList"></div>
-    </div>
-
-    <div class="section">
-      <h2>JSON API Oversigt</h2>
-      <div style="margin-bottom:12px;">
-        <strong style="font-size:13px;color:#888;">API URL:</strong>
-        <div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:12px;color:#aaa;margin-top:6px;word-break:break-all;">
-          https://vmix-control.vercel.app/api/vmix/<em style="color:#f97316;">PROJEKT-ID</em>
+    <!-- TAB: Brugere -->
+    <div class="tab-panel active" id="tab-brugere">
+      <div class="panel-inner">
+        <div class="section">
+          <h2>Online nu</h2>
+          <div class="user-list" id="onlineList"><span style="color:#444;font-size:13px;">Henter…</span></div>
+        </div>
+        <div class="section">
+          <h2>Invitér bruger</h2>
+          <div class="invite-row">
+            <input type="email" id="inviteEmail" placeholder="email@dr.dk">
+            <button class="btn-invite" id="inviteBtn">Send invitation</button>
+          </div>
+          <div class="invite-msg" id="inviteMsg"></div>
+        </div>
+        <div class="section">
+          <h2>Brugere</h2>
+          <div class="user-list" id="userList"></div>
         </div>
       </div>
-
-      <div class="api-section-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#fff;background:#333;padding:4px 10px;border-radius:4px;margin:16px 0 0;">Projekt</div>
-      <table class="api-table">
-        <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
-        <tr><td>projekt.navn</td><td>Projektets navn</td><td>Kampdag</td></tr>
-        <tr><td>projekt.undertitel</td><td>Aktuel produktion</td><td>U21 EM playoff</td></tr>
-      </table>
-
-      <div class="api-section-label" style="background:#f97316;">Kampe — kun Kampdag · slot 1-6</div>
-      <table class="api-table">
-        <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
-        <tr><td>K1_h1_L</td><td>Hold 1 langt navn</td><td>FC Fredericia</td></tr>
-        <tr><td>K1_h1_K</td><td>Hold 1 kort navn</td><td>FCF</td></tr>
-        <tr><td>K1_h1_S</td><td>Hold 1 score</td><td>4</td></tr>
-        <tr><td>K1_h2_S</td><td>Hold 2 score</td><td>2</td></tr>
-        <tr><td>K1_h2_K</td><td>Hold 2 kort navn</td><td>BIF</td></tr>
-        <tr><td>K1_h2_L</td><td>Hold 2 langt navn</td><td>Brøndby</td></tr>
-        <tr><td>K1_kom</td><td>Kommentator</td><td>Frederik Lindved</td></tr>
-        <tr><td>K1_lok</td><td>Stadion / lokation</td><td>Ceres Park</td></tr>
-        <tr><td>K1_vmc</td><td>vMix Call link</td><td>dr.dk/tv</td></tr>
-        <tr><td>K1_oA</td><td>Er kampen ON AIR</td><td>true / false</td></tr>
-        <tr><td>K1_samf</td><td>Kort resultat-streng</td><td>FCF 4 - 2 BIF</td></tr>
-      </table>
-      <p class="api-note">Erstat 1 med 2-6 for de øvrige kampe</p>
-
-      <div class="api-section-label" style="background:#3b82f6;">Subs — slot 1-15</div>
-      <table class="api-table">
-        <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
-        <tr><td>S1_n</td><td>Navn</td><td>Lars Nielsen</td></tr>
-        <tr><td>S1_t</td><td>Titel</td><td>Reporter</td></tr>
-      </table>
-      <p class="api-note">Erstat 1 med 2-15 for de øvrige subs</p>
-
-      <div class="api-section-label" style="background:#8b5cf6;">vMix Calls — slot 1-8</div>
-      <table class="api-table">
-        <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
-        <tr><td>VMC1_n</td><td>Navn</td><td>Studiogæst</td></tr>
-        <tr><td>VMC1_t</td><td>Titel</td><td>Ekspert</td></tr>
-        <tr><td>VMC1_l</td><td>Link til vMix Call</td><td>https://...</td></tr>
-      </table>
-      <p class="api-note">Erstat 1 med 2-8 for de øvrige vMix Calls</p>
-
-      <div class="api-section-label" style="background:#22c55e;color:#111;">Tickers — slot 1-20</div>
-      <table class="api-table">
-        <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
-        <tr><td>T1_ov</td><td>Overskrift</td><td>BREAKING</td></tr>
-        <tr><td>T1_txt</td><td>Tekst</td><td>Danmark vinder...</td></tr>
-        <tr><td>T1_air</td><td>Er ON AIR</td><td>true / false</td></tr>
-        <tr><td>T1_brk</td><td>Er BREAKING</td><td>true / false</td></tr>
-      </table>
-      <p class="api-note">Erstat 1 med 2-20 for de øvrige tickers</p>
-
-      <div class="api-section-label" style="background:#eab308;color:#111;">Ticker strenge — kun ON AIR · HTML til GT Title</div>
-      <table class="api-table">
-        <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
-        <tr><td>ticker_normal</td><td>Alle normale ON AIR tickers</td><td>&lt;b&gt;SKRIV TIL OS&lt;/b&gt; Send SMS til 1212 &amp;bull; …</td></tr>
-        <tr><td>ticker_breaking</td><td>Alle BREAKING ON AIR tickers</td><td>&lt;b&gt;BREAKING&lt;/b&gt; Danmark vinder...</td></tr>
-      </table>
-      <p class="api-note">Separeret med &amp;bull; (•) · Overskrifter er &lt;b&gt;FED VERSALER&lt;/b&gt;</p>
     </div>
-  </main>
+
+    <!-- TAB: API URLs -->
+    <div class="tab-panel" id="tab-api">
+      <div class="panel-inner">
+        <div class="section">
+          <h2>API URLs</h2>
+          <div id="apiList" class="user-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: JSON Reference -->
+    <div class="tab-panel" id="tab-json">
+      <div class="panel-inner">
+        <div class="section">
+          <h2>JSON API Oversigt</h2>
+          <div style="margin-bottom:12px;">
+            <div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:12px;color:#aaa;word-break:break-all;">
+              https://vmix-control.vercel.app/api/vmix/<em style="color:#f97316;">PROJEKT-ID</em>
+            </div>
+          </div>
+
+          <div class="api-section-label">Projekt</div>
+          <table class="api-table">
+            <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+            <tr><td>projekt.navn</td><td>Projektets navn</td><td>Kampdag</td></tr>
+            <tr><td>projekt.undertitel</td><td>Aktuel produktion</td><td>U21 EM playoff</td></tr>
+          </table>
+
+          <div class="api-section-label" style="background:#f97316;">Kampe — kun Kampdag · slot 1-6</div>
+          <table class="api-table">
+            <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+            <tr><td>K1_h1_L</td><td>Hold 1 langt navn</td><td>FC Fredericia</td></tr>
+            <tr><td>K1_h1_K</td><td>Hold 1 kort navn</td><td>FCF</td></tr>
+            <tr><td>K1_h1_S</td><td>Hold 1 score</td><td>4</td></tr>
+            <tr><td>K1_h2_S</td><td>Hold 2 score</td><td>2</td></tr>
+            <tr><td>K1_h2_K</td><td>Hold 2 kort navn</td><td>BIF</td></tr>
+            <tr><td>K1_h2_L</td><td>Hold 2 langt navn</td><td>Brøndby</td></tr>
+            <tr><td>K1_kom</td><td>Kommentator</td><td>Frederik Lindved</td></tr>
+            <tr><td>K1_lok</td><td>Stadion / lokation</td><td>Ceres Park</td></tr>
+            <tr><td>K1_vmc</td><td>vMix Call link</td><td>dr.dk/tv</td></tr>
+            <tr><td>K1_oA</td><td>Er kampen ON AIR</td><td>true / false</td></tr>
+            <tr><td>K1_samf</td><td>Kort resultat-streng</td><td>FCF 4 - 2 BIF</td></tr>
+          </table>
+          <p class="api-note">Erstat 1 med 2-6 for de øvrige kampe</p>
+
+          <div class="api-section-label" style="background:#3b82f6;">Subs — slot 1-15</div>
+          <table class="api-table">
+            <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+            <tr><td>S1_n</td><td>Navn</td><td>Lars Nielsen</td></tr>
+            <tr><td>S1_t</td><td>Titel</td><td>Reporter</td></tr>
+          </table>
+          <p class="api-note">Erstat 1 med 2-15 for de øvrige subs</p>
+
+          <div class="api-section-label" style="background:#8b5cf6;">vMix Calls — slot 1-8</div>
+          <table class="api-table">
+            <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+            <tr><td>VMC1_n</td><td>Navn</td><td>Studiogæst</td></tr>
+            <tr><td>VMC1_t</td><td>Titel</td><td>Ekspert</td></tr>
+            <tr><td>VMC1_l</td><td>Link til vMix Call</td><td>https://...</td></tr>
+          </table>
+          <p class="api-note">Erstat 1 med 2-8 for de øvrige vMix Calls</p>
+
+          <div class="api-section-label" style="background:#22c55e;color:#111;">Tickers — slot 1-20</div>
+          <table class="api-table">
+            <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+            <tr><td>T1_ov</td><td>Overskrift</td><td>BREAKING</td></tr>
+            <tr><td>T1_txt</td><td>Tekst</td><td>Danmark vinder...</td></tr>
+            <tr><td>T1_air</td><td>Er ON AIR</td><td>true / false</td></tr>
+            <tr><td>T1_brk</td><td>Er BREAKING</td><td>true / false</td></tr>
+          </table>
+          <p class="api-note">Erstat 1 med 2-20 for de øvrige tickers</p>
+
+          <div class="api-section-label" style="background:#eab308;color:#111;">Ticker strenge — kun ON AIR · HTML til GT Title</div>
+          <table class="api-table">
+            <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+            <tr><td>ticker_normal</td><td>Alle normale ON AIR tickers</td><td>&lt;b&gt;SKRIV TIL OS&lt;/b&gt; Send SMS til 1212 &amp;bull; …</td></tr>
+            <tr><td>ticker_breaking</td><td>Alle BREAKING ON AIR tickers</td><td>&lt;b&gt;BREAKING&lt;/b&gt; Danmark vinder...</td></tr>
+          </table>
+          <p class="api-note">Separeret med &amp;bull; (•) · Overskrifter er &lt;b&gt;FED VERSALER&lt;/b&gt;</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/auth.js"></script>
   <script>
     let currentUser = null;
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
 
     function copyText(text) {
       navigator.clipboard.writeText(text).then(() => toast('Kopieret ✓')).catch(() => toast('Fejl ved kopiering', 'err'));
@@ -528,7 +600,6 @@
     }
 
     async function toggleRole(userId, currentRole) {
-      const newRole = currentRole === 'admin' ? 'user' : 'admin';
       try {
         if (currentRole === 'admin') {
           await fetch(SB_URL + '/rest/v1/user_roles?user_id=eq.' + userId, {
