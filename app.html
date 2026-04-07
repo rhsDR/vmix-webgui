@@ -703,6 +703,27 @@
       color: #ccc;
       min-width: 52px;
     }
+    @keyframes pulse-credits {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+      50%       { box-shadow: 0 0 0 9px rgba(239,68,68,0); }
+    }
+    .credits-live-badge {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--red);
+      text-transform: uppercase;
+    }
+    .credits-live-badge.visible { display: flex; }
+    .credits-live-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--red);
+      animation: pulse-credits 1.4s ease-in-out infinite;
+    }
     .credits-cols {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -2046,6 +2067,17 @@ async function saveVmixCallRow(i) {
 // ── CREDITS STATE ─────────────────────────────────────────────
 let creditsData = { items: [], speed: 30 };
 let creditNewCounter = 0;
+let creditsTriggerActive = false;
+
+function updateCreditsSendBtn() {
+  const badge = document.getElementById('creditsTriggerBadge');
+  if (!badge) return;
+  if (creditsTriggerActive) {
+    badge.classList.add('visible');
+  } else {
+    badge.classList.remove('visible');
+  }
+}
 
 function initCreditsFromData(data) {
   creditsData.speed = data.speed || 30;
@@ -2061,7 +2093,9 @@ async function refreshCredits() {
       sbGet('credits?select=*&projekt_id=eq.' + pid),
       sbGet('settings?select=*&projekt_id=eq.' + pid)
     ]);
-    const speedRow = settingsRaw.find(r => r.key === 'credits_speed');
+    const speedRow   = settingsRaw.find(r => r.key === 'credits_speed');
+    const triggerRow = settingsRaw.find(r => r.key === 'credits_trigger');
+    creditsTriggerActive = triggerRow ? triggerRow.value === 'in' : false;
     const data = {
       items: creditsRaw.map(r => ({ row: r.id, side: r.side, orden: r.orden, titel: r.titel || '', navne: r.navne || '' })),
       speed: speedRow ? parseFloat(speedRow.value) : 30
@@ -2084,13 +2118,14 @@ function renderCredits() {
     <input type="range" class="speed-slider" id="speedSlider" min="10" max="30" step="1" value="${creditsData.speed}">
     <span class="credits-speed-val" id="speedVal">${creditsData.speed} sek</span>
     <button class="btn btn-save" id="saveSpeedBtn">GEM</button>
-    <button class="btn btn-on-air" id="sendCreditsBtn" style="margin-left:auto;">▶ SEND</button>
+    <span class="credits-live-badge" id="creditsTriggerBadge" style="margin-left:auto;"><span class="credits-live-dot"></span>LIVE</span>
     <button class="btn btn-cancel" id="previewBtn">▶ PREVIEW</button>
     <div style="display:flex;align-items:center;gap:6px;background:#0d0d0d;border:1px solid #2e2e2e;border-radius:6px;padding:5px 10px;max-width:320px;overflow:hidden;">
       <span style="font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;" id="creditsUrlText">https://vmix-control.vercel.app/credits.html?p=${aktivProjektId}</span>
       <button class="copy-btn icon-btn" id="creditsUrlCopy" title="Kopiér link">⎘</button>
     </div>`;
   container.appendChild(speedBar);
+  updateCreditsSendBtn();
   speedBar.querySelector('#speedSlider').addEventListener('input', e => {
     creditsData.speed = parseInt(e.target.value);
     document.getElementById('speedVal').textContent = creditsData.speed + ' sek';
@@ -2100,17 +2135,6 @@ function renderCredits() {
       await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.credits_speed', { value: creditsData.speed.toString() });
       toast('Hastighed gemt ✓', 'ok');
     } catch { toast('Fejl ved gem', 'err'); }
-  });
-  speedBar.querySelector('#sendCreditsBtn').addEventListener('click', async () => {
-    const btn = speedBar.querySelector('#sendCreditsBtn');
-    btn.disabled = true;
-    btn.textContent = '…';
-    try {
-      await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.credits_trigger', { value: 'in' });
-      toast('Credits sendt ✓', 'ok');
-    } catch { toast('Fejl ved send', 'err'); }
-    btn.disabled = false;
-    btn.textContent = '▶ SEND';
   });
   speedBar.querySelector('#creditsUrlCopy').addEventListener('click', () => copyText('https://vmix-control.vercel.app/credits.html?p=' + aktivProjektId));
   speedBar.querySelector('#previewBtn').addEventListener('click', () => {
@@ -2474,7 +2498,14 @@ sbClient.channel('db-changes')
   .on('postgres_changes', { event: '*', schema: 'public', table: 'credits' },
       () => refreshCredits())
   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings' },
-      () => refreshCredits())
+      p => {
+        if (p.new.key === 'credits_trigger') {
+          creditsTriggerActive = p.new.value === 'in';
+          updateCreditsSendBtn();
+        } else {
+          refreshCredits();
+        }
+      })
   .subscribe();
 </script>
 </body>
