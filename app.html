@@ -1956,7 +1956,7 @@ function buildSubRow(i) {
     const hasData = s.navn || s.titel;
     const slot = i + 1;
     const isActive = activeSubSlot === slot;
-    const showOnBtn = projektType !== 'kampdag';
+    const showOnBtn = aktivProjektId === '3ae7eb3e-db19-4285-9964-6c8382ea471f';
     row.innerHTML = `
       <span class="sub-num">${slot}</span>
       <span class="sub-text ${hasData ? '' : 'empty'}">${hasData
