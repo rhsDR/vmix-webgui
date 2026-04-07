@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     // Hent kommende kampe for matchede hold i Superligaen (league 119) — uden season parameter
     const fixturePromises = teams.slice(0, 3).map(teamId =>
       fetch(
-        `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=119&next=5`,
+        `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=119&last=5`,
         { headers: { 'x-apisports-key': API_KEY } }
       ).then(r => r.json())
     );
