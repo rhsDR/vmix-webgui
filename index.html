@@ -1304,6 +1304,7 @@ async function saveKamp(i, div) {
   k.editMode    = false;
 
   rerender(i);
+  if (i < 6) rerenderVmixCall(i); // Lås/frigiv sub slot øjeblikkeligt
 
   kampe[i].savePending = true;
   try {
