@@ -163,6 +163,58 @@
       margin-left: auto;
     }
 
+    .api-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #fff;
+      background: #333;
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin: 16px 0 0;
+      display: block;
+    }
+
+    .api-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 0;
+    }
+
+    .api-table th {
+      background: #1c1c1c;
+      text-align: left;
+      padding: 6px 10px;
+      font-weight: 600;
+      color: #666;
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    .api-table td {
+      padding: 5px 10px;
+      border-bottom: 1px solid #1e1e1e;
+      color: #ccc;
+      vertical-align: top;
+    }
+
+    .api-table td:first-child {
+      font-family: 'Courier New', monospace;
+      color: #f97316;
+      white-space: nowrap;
+      width: 160px;
+    }
+
+    .api-table tr:last-child td { border-bottom: none; }
+
+    .api-note {
+      font-size: 11px;
+      color: #444;
+      font-style: italic;
+      margin: 4px 0 0 0;
+    }
+
     .api-url {
       font-size: 12px;
       color: #555;
@@ -239,6 +291,75 @@
     <div class="section">
       <h2>Brugere</h2>
       <div class="user-list" id="userList"></div>
+    </div>
+
+    <div class="section">
+      <h2>JSON API Oversigt</h2>
+      <div style="margin-bottom:12px;">
+        <strong style="font-size:13px;color:#888;">API URL:</strong>
+        <div style="background:#1c1c1c;border:1px solid #2a2a2a;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:12px;color:#aaa;margin-top:6px;word-break:break-all;">
+          https://vmix-control.vercel.app/api/vmix/<em style="color:#f97316;">PROJEKT-ID</em>
+        </div>
+      </div>
+
+      <div class="api-section-label" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#fff;background:#333;padding:4px 10px;border-radius:4px;margin:16px 0 0;">Projekt</div>
+      <table class="api-table">
+        <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+        <tr><td>projekt.navn</td><td>Projektets navn</td><td>Kampdag</td></tr>
+        <tr><td>projekt.undertitel</td><td>Aktuel produktion</td><td>U21 EM playoff</td></tr>
+      </table>
+
+      <div class="api-section-label" style="background:#f97316;">Kampe — kun Kampdag · slot 1-6</div>
+      <table class="api-table">
+        <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+        <tr><td>K1_h1_L</td><td>Hold 1 langt navn</td><td>FC Fredericia</td></tr>
+        <tr><td>K1_h1_K</td><td>Hold 1 kort navn</td><td>FCF</td></tr>
+        <tr><td>K1_h1_S</td><td>Hold 1 score</td><td>4</td></tr>
+        <tr><td>K1_h2_S</td><td>Hold 2 score</td><td>2</td></tr>
+        <tr><td>K1_h2_K</td><td>Hold 2 kort navn</td><td>BIF</td></tr>
+        <tr><td>K1_h2_L</td><td>Hold 2 langt navn</td><td>Brøndby</td></tr>
+        <tr><td>K1_kom</td><td>Kommentator</td><td>Frederik Lindved</td></tr>
+        <tr><td>K1_lok</td><td>Stadion / lokation</td><td>Ceres Park</td></tr>
+        <tr><td>K1_vmc</td><td>vMix Call link</td><td>dr.dk/tv</td></tr>
+        <tr><td>K1_oA</td><td>Er kampen ON AIR</td><td>true / false</td></tr>
+        <tr><td>K1_samf</td><td>Kort resultat-streng</td><td>FCF 4 - 2 BIF</td></tr>
+      </table>
+      <p class="api-note">Erstat 1 med 2-6 for de øvrige kampe</p>
+
+      <div class="api-section-label" style="background:#3b82f6;">Subs — slot 1-15</div>
+      <table class="api-table">
+        <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+        <tr><td>S1_n</td><td>Navn</td><td>Lars Nielsen</td></tr>
+        <tr><td>S1_t</td><td>Titel</td><td>Reporter</td></tr>
+      </table>
+      <p class="api-note">Erstat 1 med 2-15 for de øvrige subs</p>
+
+      <div class="api-section-label" style="background:#8b5cf6;">vMix Calls — slot 1-8</div>
+      <table class="api-table">
+        <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+        <tr><td>VMC1_n</td><td>Navn</td><td>Studiogæst</td></tr>
+        <tr><td>VMC1_t</td><td>Titel</td><td>Ekspert</td></tr>
+        <tr><td>VMC1_l</td><td>Link til vMix Call</td><td>https://...</td></tr>
+      </table>
+      <p class="api-note">Erstat 1 med 2-8 for de øvrige vMix Calls</p>
+
+      <div class="api-section-label" style="background:#22c55e;color:#111;">Tickers — slot 1-20</div>
+      <table class="api-table">
+        <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+        <tr><td>T1_ov</td><td>Overskrift</td><td>BREAKING</td></tr>
+        <tr><td>T1_txt</td><td>Tekst</td><td>Danmark vinder...</td></tr>
+        <tr><td>T1_air</td><td>Er ON AIR</td><td>true / false</td></tr>
+        <tr><td>T1_brk</td><td>Er BREAKING</td><td>true / false</td></tr>
+      </table>
+      <p class="api-note">Erstat 1 med 2-20 for de øvrige tickers</p>
+
+      <div class="api-section-label" style="background:#eab308;color:#111;">Ticker strenge — kun ON AIR · HTML til GT Title</div>
+      <table class="api-table">
+        <tr><th>Felt</th><th>Beskrivelse</th><th>Eksempel</th></tr>
+        <tr><td>ticker_normal</td><td>Alle normale ON AIR tickers</td><td>&lt;b&gt;SKRIV TIL OS&lt;/b&gt; Send SMS til 1212 &amp;bull; …</td></tr>
+        <tr><td>ticker_breaking</td><td>Alle BREAKING ON AIR tickers</td><td>&lt;b&gt;BREAKING&lt;/b&gt; Danmark vinder...</td></tr>
+      </table>
+      <p class="api-note">Separeret med &amp;bull; (•) · Overskrifter er &lt;b&gt;FED VERSALER&lt;/b&gt;</p>
     </div>
   </main>
 
