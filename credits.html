@@ -243,6 +243,12 @@
     async function init() {
       await loadCredits();
 
+      // Preview-tilstand: autostart uden trigger
+      if (new URLSearchParams(window.location.search).get('preview') === '1') {
+        playAnimation();
+        return;
+      }
+
       // Lyt på credits_trigger via real-time
       sbClient
         .channel('credits-trigger')
