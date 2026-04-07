@@ -106,6 +106,19 @@
     let creditsLoaded = false;
     let speed = 30;
 
+    async function pollTrigger() {
+      if (animating) return;
+      try {
+        const pidFilter = projektId ? '&projekt_id=eq.' + projektId : '';
+        const rows = await fetch(SB_URL + '/rest/v1/settings?key=eq.credits_trigger&select=value' + pidFilter, { headers: SB_HEADERS }).then(r => r.json());
+        if (rows[0] && rows[0].value === 'in') {
+          playAnimation();
+          return;
+        }
+      } catch {}
+      setTimeout(pollTrigger, 2000);
+    }
+
     function esc(s) {
       return String(s)
         .replace(/&/g, '&amp;')
@@ -244,6 +257,7 @@
                   video.onended = async () => {
                     await resetTrigger();
                     resetState();
+                    setTimeout(pollTrigger, 2000);
                   };
                 }, 500);
               }, 600);
@@ -264,30 +278,7 @@
         return;
       }
 
-      // Lyt på credits_trigger via real-time
-      sbClient
-        .channel('credits-trigger-' + (projektId || 'global'))
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'settings',
-          filter: 'key=eq.credits_trigger'
-        }, payload => {
-          const matchProjekt = !projektId || payload.new.projekt_id === projektId;
-          if (matchProjekt && payload.new.value === 'in') {
-            playAnimation();
-          }
-        })
-        .subscribe();
-
-      // Tjek om trigger allerede er sat ved load
-      try {
-        const pidFilter = projektId ? '&projekt_id=eq.' + projektId : '';
-        const rows = await fetch(SB_URL + '/rest/v1/settings?key=eq.credits_trigger&select=value' + pidFilter, { headers: SB_HEADERS }).then(r => r.json());
-        if (rows[0] && rows[0].value === 'in') {
-          playAnimation();
-        }
-      } catch {}
+      pollTrigger();
     }
 
     init();
