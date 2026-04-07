@@ -587,6 +587,24 @@
     .sub-edit-fields .form-input.navn-input  { font-weight: 700; }
     .sub-edit-fields .form-input.titel-input { color: #aaa; }
     .sub-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .sub-on-btn {
+      padding: 3px 11px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      border: 1px solid #333;
+      background: transparent;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .sub-on-btn.active {
+      border-color: var(--red);
+      background: var(--red);
+      color: #fff;
+      animation: pulse-red 2s ease-in-out infinite;
+    }
     .btn-sm {
       padding: 4px 12px;
       border-radius: 4px;
@@ -984,6 +1002,7 @@
 // ── STATE ─────────────────────────────────────────────────────
 let aktivProjektId = new URLSearchParams(window.location.search).get('p') || '';
 let projektType = 'kampdag'; // sættes ved load baseret på URL-parameter
+let activeSubSlot = 0; // slot nummer for aktiv sub (0 = ingen)
 let dropdowns = { holds: [], kommentatorer: [], lokationer: [] };
 
 const makeKamp = () => ({
@@ -1105,8 +1124,10 @@ async function fetchAll() {
       sbGet('credits?select=*&projekt_id=eq.' + pid)
     ]);
 
-  const speedRow = settingsRaw.find(r => r.key === 'credits_speed');
-  const speed = speedRow ? parseFloat(speedRow.value) : 30;
+  const speedRow     = settingsRaw.find(r => r.key === 'credits_speed');
+  const speed        = speedRow ? parseFloat(speedRow.value) : 30;
+  const activeSubRow = settingsRaw.find(r => r.key === 'active_sub');
+  activeSubSlot      = activeSubRow ? parseInt(activeSubRow.value) || 0 : 0;
 
   return {
     dropdowns: {
@@ -1884,6 +1905,15 @@ function renderSubs() {
   container.appendChild(grid);
 }
 
+async function toggleSubOnAir(slot) {
+  const newSlot = activeSubSlot === slot ? 0 : slot;
+  try {
+    await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.active_sub', { value: String(newSlot) });
+    activeSubSlot = newSlot;
+    subs.forEach((_, i) => rerenderSub(i));
+  } catch { toast('Fejl ved sub on air', 'err'); }
+}
+
 function rerenderSub(i) {
   const old = document.getElementById('sub-' + i);
   if (old) old.replaceWith(buildSubRow(i));
@@ -1925,12 +1955,19 @@ function buildSubRow(i) {
     });
   } else {
     const hasData = s.navn || s.titel;
+    const slot = i + 1;
+    const isActive = activeSubSlot === slot;
+    const showOnBtn = projektType !== 'kampdag';
     row.innerHTML = `
-      <span class="sub-num">${i + 1}</span>
+      <span class="sub-num">${slot}</span>
       <span class="sub-text ${hasData ? '' : 'empty'}">${hasData
         ? `<span class="sub-navn">${esc(s.navn)}</span><span class="sub-titel">${esc(s.titel)}</span>`
         : '—'}</span>
+      ${showOnBtn ? `<button class="sub-on-btn ${isActive ? 'active' : ''}" id="son-${i}">${isActive ? 'ON AIR' : 'ON'}</button>` : ''}
       <button class="icon-btn" id="seb-${i}" title="Rediger">✏️</button>`;
+    if (showOnBtn) {
+      row.querySelector('#son-' + i).addEventListener('click', () => toggleSubOnAir(slot));
+    }
     row.querySelector('#seb-' + i).addEventListener('click', () => {
       s.buf = { navn: s.navn, titel: s.titel };
       s.editMode = true;
@@ -2502,6 +2539,9 @@ sbClient.channel('db-changes')
         if (p.new.key === 'credits_trigger') {
           creditsTriggerActive = p.new.value === 'in';
           updateCreditsSendBtn();
+        } else if (p.new.key === 'active_sub') {
+          activeSubSlot = parseInt(p.new.value) || 0;
+          subs.forEach((_, i) => rerenderSub(i));
         } else {
           refreshCredits();
         }

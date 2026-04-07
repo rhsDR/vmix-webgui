@@ -18,12 +18,13 @@ export default async function handler(req, res) {
   try {
     const pid = encodeURIComponent(id);
 
-    const [projektRaw, kampeRaw, subsRaw, vmixCallsRaw, tickersRaw] = await Promise.all([
+    const [projektRaw, kampeRaw, subsRaw, vmixCallsRaw, tickersRaw, settingsRaw] = await Promise.all([
       sbGet('projekter?id=eq.' + pid + '&select=navn,type,undertitel&limit=1'),
       sbGet('kampe?projekt_id=eq.' + pid + '&select=slot,hold1_lang,hold1_kort,hold1_score,hold2_score,hold2_kort,hold2_lang,kommentator,lokation,vmixcall,on_air&order=slot.asc'),
       sbGet('subs?projekt_id=eq.' + pid + '&select=slot,navn,titel&order=slot.asc'),
       sbGet('vmix_calls?projekt_id=eq.' + pid + '&select=slot,navn,titel,link&order=slot.asc'),
-      sbGet('tickers?projekt_id=eq.' + pid + '&select=slot,overskrift,tekst,on_air,breaking&order=slot.asc')
+      sbGet('tickers?projekt_id=eq.' + pid + '&select=slot,overskrift,tekst,on_air,breaking&order=slot.asc'),
+      sbGet('settings?projekt_id=eq.' + pid + '&select=key,value')
     ]);
 
     if (!projektRaw[0]) return res.status(404).json({ error: 'Projekt ikke fundet' });
@@ -49,6 +50,11 @@ export default async function handler(req, res) {
       tickers[`T${r.slot}_brk`] = r.breaking   || false;
     });
 
+    // Aktiv sub
+    const activeSubRow = settingsRaw.find(r => r.key === 'active_sub');
+    const activeSubSlot = activeSubRow ? parseInt(activeSubRow.value) || 0 : 0;
+    const activeSubData = subsRaw.find(r => r.slot === activeSubSlot);
+
     // Byg subs som navngivne objekter S1_n, S1_t osv.
     const subs = {};
     subsRaw.forEach(r => {
@@ -71,6 +77,9 @@ export default async function handler(req, res) {
       },
       ticker_breaking: tickerBreaking,
       ticker_normal:   tickerNormal,
+      sub_aktiv_slot:  activeSubSlot,
+      sub_aktiv_n:     activeSubData ? (activeSubData.navn  || '') : '',
+      sub_aktiv_t:     activeSubData ? (activeSubData.titel || '') : '',
       ...subs,
       ...vmixCalls,
       ...tickers
