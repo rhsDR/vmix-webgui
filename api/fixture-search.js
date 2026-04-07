@@ -11,20 +11,39 @@ export default async function handler(req, res) {
   if (!API_KEY) return res.status(503).json({ error: 'API-nøgle ikke konfigureret' });
 
   try {
-    // Søg hold der matcher søgetermen
-    const teamRes = await fetch(
-      `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(qClean)}`,
-      { headers: { 'x-apisports-key': API_KEY } }
+    // Superliga hold — hard-coded ID'er
+    const SUPERLIGA_HOLD = [
+      { id: 395, navn: 'Vejle' },
+      { id: 396, navn: 'Sonderjyske' },
+      { id: 397, navn: 'FC Midtjylland' },
+      { id: 398, navn: 'FC Nordsjaelland' },
+      { id: 399, navn: 'Vendsyssel FF' },
+      { id: 400, navn: 'FC Copenhagen' },
+      { id: 401, navn: 'Randers FC' },
+      { id: 402, navn: 'Aalborg' },
+      { id: 403, navn: 'Esbjerg' },
+      { id: 404, navn: 'AC Horsens' },
+      { id: 405, navn: 'Odense' },
+      { id: 406, navn: 'Aarhus' },
+      { id: 407, navn: 'Brondby' },
+      { id: 408, navn: 'Hobro' },
+      { id: 625, navn: 'Lyngby' },
+      { id: 2060, navn: 'AB Copenhagen' },
+      { id: 2061, navn: 'FC Fredericia' },
+      { id: 2062, navn: 'FC Helsingor' },
+    ];
+
+    // Søg lokalt — find hold der matcher søgetermen
+    const matched = SUPERLIGA_HOLD.filter(h =>
+      h.navn.toLowerCase().includes(qClean.toLowerCase())
     );
-    const teamData = await teamRes.json();
-    const teams = (teamData.response || []).map(t => t.team.id);
+    if (matched.length === 0) return res.status(200).json({ fixtures: [] });
+    const teams = matched.map(h => h.id);
 
-    if (teams.length === 0) return res.status(200).json({ fixtures: [], debug: { teamSearch: teamData } });
-
-    // Hent kommende kampe for første hold — uden liga-filter for at debugge
-    const fixturePromises = teams.slice(0, 1).map(teamId =>
+    // Hent kommende kampe for matchede hold i Superligaen (league 119, sæson 2025)
+    const fixturePromises = teams.slice(0, 3).map(teamId =>
       fetch(
-        `https://v3.football.api-sports.io/fixtures?team=${teamId}&season=2025&next=3`,
+        `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=119&season=2025&next=5`,
         { headers: { 'x-apisports-key': API_KEY } }
       ).then(r => r.json())
     );
