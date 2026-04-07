@@ -190,17 +190,17 @@
 
       video.src = 'DR_KREDITERINGSLOGO_INTERN_INGEN_TEKST_4SEK.webm';
 
-      // Tving layout: flyt clip midlertidigt ind på skærmen usynligt,
-      // mål højder, træk tilbage — browseren beregner ikke layout off-screen
-      clip.style.visibility = 'hidden';
-      clip.style.transform  = 'translateY(0)';
-      void clip.offsetHeight; // force reflow
+      // Mål clip-højde (har eksplicit height: 40vh — virker altid)
+      const clipH = clip.offsetHeight || (window.innerHeight * 0.4);
 
-      const clipH    = clip.offsetHeight;
-      const contentH = wrapper.offsetHeight;
+      // Mål indhold via clone udenfor clip — garanteret korrekt layout
+      const clone = wrapper.cloneNode(true);
+      clone.style.cssText = 'position:fixed;top:-9999px;left:0;right:0;visibility:hidden;transform:none;pointer-events:none;';
+      document.body.appendChild(clone);
+      const contentH = clone.offsetHeight;
+      document.body.removeChild(clone);
 
-      clip.style.transform  = 'translateY(100%)';
-      clip.style.visibility = '';
+      console.log('[credits] clipH:', clipH, 'contentH:', contentH, 'speed:', speed);
 
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
