@@ -1988,11 +1988,22 @@ async function init() {
   // Vis projekt-undertitel fra URL hvis tilgængeligt
   const projektId = new URLSearchParams(window.location.search).get('p');
   if (projektId) {
-    fetch(SB_URL + '/rest/v1/projekter?id=eq.' + projektId + '&select=undertitel', { headers: SB_HEADERS })
+    fetch(SB_URL + '/rest/v1/projekter?id=eq.' + projektId + '&select=undertitel,type', { headers: SB_HEADERS })
       .then(r => r.json())
       .then(rows => {
-        if (rows[0]?.undertitel) {
+        if (!rows[0]) return;
+        if (rows[0].undertitel) {
           document.getElementById('projectUndertitel').textContent = rows[0].undertitel;
+        }
+        if (rows[0].type === 'tv') {
+          // Skjul KAMPE-fanen og aktiver SUBS som standard
+          const kampeBtn = document.querySelector('.tab-btn[data-tab="kampe"]');
+          const subsBtn  = document.querySelector('.tab-btn[data-tab="subs"]');
+          if (kampeBtn) kampeBtn.style.display = 'none';
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+          if (subsBtn) subsBtn.classList.add('active');
+          document.getElementById('tab-subs').classList.add('active');
         }
       }).catch(() => {});
   }
