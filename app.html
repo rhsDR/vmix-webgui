@@ -593,14 +593,13 @@
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 1px;
-      border: 1px solid #333;
+      border: 1px solid var(--red);
       background: transparent;
-      color: #555;
+      color: var(--red);
       cursor: pointer;
       transition: all 0.2s;
     }
     .sub-on-btn.active {
-      border-color: var(--red);
       background: var(--red);
       color: #fff;
       animation: pulse-red 2s ease-in-out infinite;
@@ -1963,7 +1962,7 @@ function buildSubRow(i) {
       <span class="sub-text ${hasData ? '' : 'empty'}">${hasData
         ? `<span class="sub-navn">${esc(s.navn)}</span><span class="sub-titel">${esc(s.titel)}</span>`
         : '—'}</span>
-      ${showOnBtn ? `<button class="sub-on-btn ${isActive ? 'active' : ''}" id="son-${i}">${isActive ? 'ON AIR' : 'ON'}</button>` : ''}
+      ${showOnBtn ? `<button class="sub-on-btn ${isActive ? 'active' : ''}" id="son-${i}">${isActive ? 'OFF AIR' : 'ON AIR'}</button>` : ''}
       <button class="icon-btn" id="seb-${i}" title="Rediger">✏️</button>`;
     if (showOnBtn) {
       row.querySelector('#son-' + i).addEventListener('click', () => toggleSubOnAir(slot));
