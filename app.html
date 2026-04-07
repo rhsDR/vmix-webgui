@@ -164,18 +164,20 @@
 
     .stamdata-section.hold { grid-column: span 2; }
 
-    .stamdata-del {
+    .stamdata-edit, .stamdata-del {
       background: none;
       border: none;
-      color: #444;
-      font-size: 16px;
+      font-size: 15px;
       cursor: pointer;
       padding: 0 2px;
       line-height: 1;
       transition: color 0.15s;
       flex-shrink: 0;
     }
-    .stamdata-del:hover { color: #ef4444; }
+    .stamdata-edit { color: #444; }
+    .stamdata-edit:hover { color: #f97316; }
+    .stamdata-del  { color: #444; }
+    .stamdata-del:hover  { color: #ef4444; }
 
     .stamdata-add-row {
       display: flex;
@@ -1193,16 +1195,70 @@ function renderStamdataSection(type, listId, mapper) {
   }
   list.innerHTML = '';
   items.forEach(item => {
-    const row = document.createElement('div');
-    row.className = 'stamdata-item';
+    list.appendChild(makeStamdataRow(item));
+  });
+}
+
+function makeStamdataRow(item) {
+  const hasKort = item.kort !== null;
+  const row = document.createElement('div');
+  row.className = 'stamdata-item';
+  row.dataset.id = item.id;
+
+  function showView() {
     row.innerHTML = `
       <span class="stamdata-item-name">${esc(item.label)}</span>
-      ${item.kort ? `<span class="stamdata-item-kort">${esc(item.kort)}</span>` : ''}
-      <button class="stamdata-del" title="Fjern">✕</button>
+      ${hasKort ? `<span class="stamdata-item-kort">${esc(item.kort)}</span>` : ''}
+      <button class="stamdata-edit" title="Redigér">✎</button>
+      <button class="stamdata-del"  title="Fjern">✕</button>
     `;
+    row.querySelector('.stamdata-edit').addEventListener('click', showEdit);
     row.querySelector('.stamdata-del').addEventListener('click', () => deleteStamdataItem(item.id));
-    list.appendChild(row);
-  });
+  }
+
+  function showEdit() {
+    row.innerHTML = `
+      <input class="stamdata-input sd-edit-lang" value="${esc(item.label)}" style="flex:2;">
+      ${hasKort ? `<input class="stamdata-input sd-edit-kort" value="${esc(item.kort)}" style="flex:1;max-width:80px;">` : ''}
+      <button class="stamdata-btn sd-save">Gem</button>
+      <button class="stamdata-del sd-cancel" title="Annuller">✕</button>
+    `;
+    const langInput = row.querySelector('.sd-edit-lang');
+    const kortInput = row.querySelector('.sd-edit-kort');
+    langInput.focus();
+
+    row.querySelector('.sd-save').addEventListener('click', async () => {
+      const newLang = langInput.value.trim();
+      const newKort = kortInput ? kortInput.value.trim() : null;
+      if (!newLang) return;
+      row.querySelector('.sd-save').disabled = true;
+      const body = { lang: newLang };
+      if (newKort !== null) body.kort = newKort;
+      await sbPatch('dropdowns?id=eq.' + item.id, body);
+      item.label = newLang;
+      if (newKort !== null) item.kort = newKort;
+      await refreshDropdowns();
+    });
+
+    row.querySelector('.sd-cancel').addEventListener('click', showView);
+
+    langInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        if (kortInput) kortInput.focus();
+        else row.querySelector('.sd-save').click();
+      }
+      if (e.key === 'Escape') showView();
+    });
+    if (kortInput) {
+      kortInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') row.querySelector('.sd-save').click();
+        if (e.key === 'Escape') showView();
+      });
+    }
+  }
+
+  showView();
+  return row;
 }
 
 async function deleteStamdataItem(id) {
