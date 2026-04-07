@@ -190,54 +190,58 @@
 
       video.src = 'DR_KREDITERINGSLOGO_INTERN_INGEN_TEKST_4SEK.webm';
 
-      // Mål højder: scrollHeight virker selv når elementet er off-screen
-      const clipH    = clip.scrollHeight  || clip.offsetHeight  || 400;
-      const contentH = wrapper.scrollHeight || wrapper.offsetHeight || 600;
+      // To frames så browseren når at beregne layout efter grid er fyldt
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const clipH    = clip.offsetHeight || 400;
+          const contentH = wrapper.scrollHeight || wrapper.offsetHeight || 600;
 
-      // Fase 1: Blå boks glider op
-      const slideMs = 800;
-      clip.style.transition = `transform ${slideMs}ms ease-out`;
-      clip.style.transform  = 'translateY(0)';
+          // Fase 1: Blå boks glider op
+          const slideMs = 800;
+          clip.style.transition = `transform ${slideMs}ms ease-out`;
+          clip.style.transform  = 'translateY(0)';
 
-      const startY   = clipH;
-      const endY     = -contentH;
-      const duration = speed * 1000;
-      let startTime  = null;
+          const startY   = clipH;
+          const endY     = -contentH;
+          const duration = speed * 1000;
+          let startTime  = null;
 
-      wrapper.style.transform = `translateY(${startY}px)`;
+          wrapper.style.transform = `translateY(${startY}px)`;
 
-      function animate(ts) {
-        if (!startTime) startTime = ts;
-        const progress = Math.min((ts - startTime) / duration, 1);
-        const y = startY + (endY - startY) * progress;
-        wrapper.style.transform = `translateY(${y}px)`;
+          function animate(ts) {
+            if (!startTime) startTime = ts;
+            const progress = Math.min((ts - startTime) / duration, 1);
+            const y = startY + (endY - startY) * progress;
+            wrapper.style.transform = `translateY(${y}px)`;
 
-        if (progress < 1) {
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            } else {
+              // Fase 3: Fade boks ud
+              clip.style.transition = 'opacity 0.6s ease-out';
+              clip.style.opacity = '0';
+              setTimeout(() => {
+                clip.style.display = 'none';
+                // Fase 4: Vent 0.5 sek, vis logo-video
+                setTimeout(() => {
+                  video.style.display = 'block';
+                  const playPromise = video.play();
+                  if (playPromise !== undefined) {
+                    playPromise.catch(err => console.error('Video play fejl:', err));
+                  }
+                  // Fase 5: Når video er færdig → reset og sæt trigger tilbage til 0
+                  video.onended = async () => {
+                    await resetTrigger();
+                    resetState();
+                  };
+                }, 500);
+              }, 600);
+            }
+          }
+
           requestAnimationFrame(animate);
-        } else {
-          // Fase 3: Fade boks ud
-          clip.style.transition = 'opacity 0.6s ease-out';
-          clip.style.opacity = '0';
-          setTimeout(() => {
-            clip.style.display = 'none';
-            // Fase 4: Vent 0.5 sek, vis logo-video
-            setTimeout(() => {
-              video.style.display = 'block';
-              const playPromise = video.play();
-              if (playPromise !== undefined) {
-                playPromise.catch(err => console.error('Video play fejl:', err));
-              }
-              // Fase 5: Når video er færdig → reset og sæt trigger tilbage til 0
-              video.onended = async () => {
-                await resetTrigger();
-                resetState();
-              };
-            }, 500);
-          }, 600);
-        }
-      }
-
-      requestAnimationFrame(animate);
+        });
+      });
     }
 
     async function init() {
