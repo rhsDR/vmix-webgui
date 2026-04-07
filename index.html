@@ -1744,7 +1744,7 @@ function renderCredits() {
     <button class="btn btn-save" id="saveSpeedBtn">GEM</button>
     <button class="btn btn-cancel" id="previewBtn" style="margin-left:auto;">▶ PREVIEW</button>
     <div style="display:flex;align-items:center;gap:6px;background:#0d0d0d;border:1px solid #2e2e2e;border-radius:6px;padding:5px 10px;max-width:320px;overflow:hidden;">
-      <span style="font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;" id="creditsUrlText">https://rhsdr.github.io/vmix-webgui//credits.html</span>
+      <span style="font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;" id="creditsUrlText">https://vmix-control.vercel.app/credits.html</span>
       <button class="copy-btn icon-btn" id="creditsUrlCopy" title="Kopiér link">⎘</button>
     </div>`;
   container.appendChild(speedBar);
@@ -1758,7 +1758,7 @@ function renderCredits() {
       toast('Hastighed gemt ✓', 'ok');
     } catch { toast('Fejl ved gem', 'err'); }
   });
-  speedBar.querySelector('#creditsUrlCopy').addEventListener('click', () => copyText('https://rhsdr.github.io/vmix-webgui//credits.html'));
+  speedBar.querySelector('#creditsUrlCopy').addEventListener('click', () => copyText('https://vmix-control.vercel.app/credits.html'));
   speedBar.querySelector('#previewBtn').addEventListener('click', () => {
     const modal = document.getElementById('previewModal');
     const frame = document.getElementById('previewFrame');
