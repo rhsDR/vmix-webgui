@@ -233,7 +233,7 @@
     }
 
     async function loadProjects() {
-      const res = await fetch(SB_URL + '/rest/v1/projekter?select=*&order=created_at.asc', { headers: sbHeaders() });
+      const res = await fetch(SB_URL + '/rest/v1/projekter?select=*&order=orden.asc', { headers: sbHeaders() });
       const projekter = await res.json();
       renderProjects(projekter);
     }
