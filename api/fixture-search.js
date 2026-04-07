@@ -68,7 +68,7 @@ export default async function handler(req, res) {
       });
     });
 
-    return res.status(200).json({ fixtures, debug: { teamIds: teams, fixtureCount: fixtures.length, rawFixtures: fixtureResults.map(f => f.response?.slice(0,2)) } });
+    return res.status(200).json({ fixtures, debug: { teamIds: teams, fixtureCount: fixtures.length, rawFixtures: fixtureResults } });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
