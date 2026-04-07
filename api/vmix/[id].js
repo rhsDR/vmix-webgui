@@ -40,6 +40,15 @@ export default async function handler(req, res) {
       .map(r => r.overskrift ? `<b>${r.overskrift.toUpperCase()}</b> ${r.tekst}` : r.tekst)
       .join(tickerSep);
 
+    // Individuelle ticker-felter (til Sheets)
+    const tickers = {};
+    tickersRaw.forEach(r => {
+      tickers[`T${r.slot}_ov`]  = r.overskrift || '';
+      tickers[`T${r.slot}_txt`] = r.tekst      || '';
+      tickers[`T${r.slot}_air`] = r.on_air     || false;
+      tickers[`T${r.slot}_brk`] = r.breaking   || false;
+    });
+
     // Byg subs som navngivne objekter S1_n, S1_t osv.
     const subs = {};
     subsRaw.forEach(r => {
@@ -63,7 +72,8 @@ export default async function handler(req, res) {
       ticker_breaking: tickerBreaking,
       ticker_normal:   tickerNormal,
       ...subs,
-      ...vmixCalls
+      ...vmixCalls,
+      ...tickers
     };
 
     // Kampe — kun kampdag
