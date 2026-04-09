@@ -2280,6 +2280,7 @@ function buildVmixCallRow(i) {
   // Tjek om kamp 1-6 bruger denne slot (kun relevant i kampdag-projekter)
   const kampBruger = projektType === 'kampdag' && i < 6 && kampe[i] && kampe[i].hold1Lang;
   row.className = 'sub-row vmix-call-row'
+    + (kampBruger && !c.editMode ? ' grayed' : '')
     + (!kampBruger && !c.editMode && !c.navn && !c.titel ? ' no-data' : '')
     + (c.collapsed && !c.editMode ? ' collapsed' : '');
 
