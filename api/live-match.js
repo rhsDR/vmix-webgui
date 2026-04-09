@@ -1,4 +1,20 @@
+import fs   from 'fs';
+import path from 'path';
+
 const API_BASE = 'https://v3.football.api-sports.io';
+
+function loadAllCached() {
+  const files = ['sl2024.json', 'pk2024.json'];
+  const all   = [];
+  for (const f of files) {
+    try {
+      const fp   = path.join(process.cwd(), 'api', 'data', f);
+      const data = JSON.parse(fs.readFileSync(fp, 'utf8'));
+      if (Array.isArray(data.response)) all.push(...data.response);
+    } catch { /* skip */ }
+  }
+  return all;
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -6,16 +22,21 @@ export default async function handler(req, res) {
   const API_KEY = process.env.API_FOOTBALL_KEY;
   if (!API_KEY) return res.status(503).json({ error: 'API-nøgle ikke konfigureret' });
 
-  const ids = (req.query.ids || '').split(',').map(s => parseInt(s)).filter(Boolean);
+  const ids     = (req.query.ids || '').split(',').map(s => parseInt(s)).filter(Boolean);
   if (!ids.length) return res.status(400).json({ error: 'Mangler ids parameter' });
 
+  const cached  = loadAllCached();
   const headers = { 'x-apisports-key': API_KEY };
 
   try {
-    // Hent fixture + events per kamp (individuelle kald — mere robust)
     const results = await Promise.all(ids.map(async id => {
+      // Slå op i cache først
+      const cached_f = cached.find(f => f.fixture.id === id);
+
       const [fixtureRes, eventsRes] = await Promise.all([
-        fetch(`${API_BASE}/fixtures?id=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] })),
+        cached_f
+          ? Promise.resolve({ response: [cached_f] })
+          : fetch(`${API_BASE}/fixtures?id=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] })),
         fetch(`${API_BASE}/fixtures/events?fixture=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] }))
       ]);
 
