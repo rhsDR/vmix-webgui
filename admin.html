@@ -143,7 +143,7 @@
     .role-badge.admin { background: #f97316; color: #fff; }
     .role-badge.user  { background: #2a2a2a; color: #666; }
 
-    .btn-role, .btn-del {
+    .btn-role, .btn-pw, .btn-del {
       background: none;
       border: 1px solid #333;
       border-radius: 6px;
@@ -155,6 +155,7 @@
       white-space: nowrap;
     }
     .btn-role:hover { border-color: #f97316; color: #f97316; }
+    .btn-pw:hover   { border-color: #3b82f6; color: #3b82f6; }
     .btn-del:hover  { border-color: #ef4444; color: #ef4444; }
 
     .you-tag {
@@ -689,12 +690,14 @@
           ${isMe
             ? '<span class="you-tag">dig</span>'
             : `<button class="btn-role" data-id="${u.id}" data-role="${u.role}">${u.role === 'admin' ? 'Fjern admin' : 'Gør til admin'}</button>
+               <button class="btn-pw" data-id="${u.id}">Nulstil kode</button>
                <button class="btn-del" data-id="${u.id}" data-email="${esc(u.email)}">Fjern</button>`
           }
         `;
 
         if (!isMe) {
           row.querySelector('.btn-role').addEventListener('click', () => toggleRole(u.id, u.role));
+          row.querySelector('.btn-pw').addEventListener('click', () => resetPassword(u.id, u.email));
           row.querySelector('.btn-del').addEventListener('click', () => deleteUser(u.id, u.email));
         }
 
@@ -752,6 +755,18 @@
         toast('Rolle opdateret ✓');
         await loadUsers();
       } catch { toast('Fejl ved rolleskift', 'err'); }
+    }
+
+    async function resetPassword(userId, email) {
+      if (!confirm('Nulstil kode for ' + email + ' til DR35203040?')) return;
+      const res = await fetch('/api/set-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      const data = await res.json();
+      if (data.error) { toast(data.error, 'err'); return; }
+      toast('Kode nulstillet ✓');
     }
 
     async function deleteUser(userId, email) {
