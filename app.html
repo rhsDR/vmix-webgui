@@ -1873,7 +1873,7 @@ async function searchFixtureByDate(i, div, date) {
     const res = await fetch('/api/fixture-search?date=' + encodeURIComponent(date));
     const data = await res.json();
     if (!data.fixtures || data.fixtures.length === 0) {
-      resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Ingen Superliga-kampe den dag</span>';
+      resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Ingen kampe den dag</span>';
       return;
     }
     resultsEl.innerHTML = '';
