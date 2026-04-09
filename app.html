@@ -1474,9 +1474,9 @@ function buildBlock(i) {
       </div>
       <div class="kamp-header-center">
         <span class="kamp-label">KAMP ${i + 1}</span>
-        ${i === 5 ? `<button class="auto-mode-btn ${k.autoMode ? 'active' : ''}" id="autobtn-${i}">${k.autoMode ? '⚡ AUTO' : 'MANUEL'}</button>` : ''}
       </div>
       <div class="kamp-header-right">
+        ${i === 5 ? `<button class="auto-mode-btn ${k.autoMode ? 'active' : ''}" id="autobtn-${i}">${k.autoMode ? '⚡ AUTO' : 'MANUEL'}</button>` : ''}
         ${!k.editMode
           ? `<button class="icon-btn" id="editbtn-${i}" title="Rediger">✏️</button>`
           : ''}
@@ -1592,8 +1592,8 @@ function buildEditView(i) {
   const holdFields = i === 5 && k.autoMode ? `
       <div class="form-group span2">
         <label class="form-label">Vælg kampdag</label>
-        <div class="vmix-row" style="margin-bottom:8px;">
-          <input class="form-input" type="date" id="efixdate-${i}" style="flex:1;color-scheme:dark;" value="${new Date().toISOString().split('T')[0]}">
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:8px;">
+          <input class="form-input" type="date" id="efixdate-${i}" style="width:160px;color-scheme:dark;" value="${new Date().toISOString().split('T')[0]}">
           <button class="btn btn-save" id="efixdatebtn-${i}" style="white-space:nowrap;">VIS KAMPE</button>
         </div>
         <div id="efixresults-${i}"></div>
