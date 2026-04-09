@@ -2741,7 +2741,7 @@ let liveTimer = null;
 
 function startLivePolling() {
   fetchLiveMatches();
-  liveTimer = setInterval(fetchLiveMatches, 10000);
+  liveTimer = setInterval(fetchLiveMatches, 60000);
 }
 
 function stopLivePolling() {

@@ -12,47 +12,41 @@ export default async function handler(req, res) {
   const headers = { 'x-apisports-key': API_KEY };
 
   try {
-    // Hent fixture-info + events parallelt
-    const [fixturesRes, ...eventsRes] = await Promise.all([
-      fetch(`${API_BASE}/fixtures?ids=${ids.join('-')}`, { headers }).then(r => r.json()),
-      ...ids.map(id =>
-        fetch(`${API_BASE}/fixtures/events?fixture=${id}`, { headers })
-          .then(r => r.json())
-          .catch(() => ({ response: [] }))
-      )
-    ]);
+    // Hent fixture + events per kamp (individuelle kald — mere robust)
+    const results = await Promise.all(ids.map(async id => {
+      const [fixtureRes, eventsRes] = await Promise.all([
+        fetch(`${API_BASE}/fixtures?id=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] })),
+        fetch(`${API_BASE}/fixtures/events?fixture=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] }))
+      ]);
 
-    const fixtures = fixturesRes.response || [];
-
-    const matches = ids.map((id, idx) => {
-      const f = fixtures.find(f => f.fixture.id === id);
-      const events = eventsRes[idx]?.response || [];
+      const f      = fixtureRes.response?.[0];
+      const events = eventsRes.response || [];
 
       if (!f) return { id, error: 'Ikke fundet' };
 
       return {
         id,
-        home:    f.teams.home.name,
-        away:    f.teams.away.name,
+        home:      f.teams.home.name,
+        away:      f.teams.away.name,
         homeGoals: f.goals.home ?? 0,
         awayGoals: f.goals.away ?? 0,
         status: {
           short:   f.fixture.status.short,
           elapsed: f.fixture.status.elapsed
         },
-        league:  f.league.name,
+        league: f.league.name,
         events: events.map(e => ({
-          minute:  e.time.elapsed + (e.time.extra ? '+' + e.time.extra : ''),
-          team:    e.team.name,
-          player:  e.player.name,
-          assist:  e.assist?.name || null,
-          type:    e.type,
-          detail:  e.detail
+          minute: e.time.elapsed + (e.time.extra ? '+' + e.time.extra : ''),
+          team:   e.team.name,
+          player: e.player.name,
+          assist: e.assist?.name || null,
+          type:   e.type,
+          detail: e.detail
         }))
       };
-    });
+    }));
 
-    return res.status(200).json({ matches });
+    return res.status(200).json({ matches: results });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
