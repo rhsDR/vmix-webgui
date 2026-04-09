@@ -742,6 +742,14 @@
       text-transform: uppercase;
       white-space: nowrap;
     }
+    input[type=date].form-input {
+      color-scheme: dark;
+    }
+    input[type=date].form-input::-webkit-calendar-picker-indicator {
+      filter: invert(0.6);
+      cursor: pointer;
+    }
+
     input[type=range].speed-slider {
       flex: 1;
       max-width: 200px;
@@ -1579,7 +1587,7 @@ function buildEditView(i) {
       <div class="form-group span2">
         <label class="form-label">Vælg kampdag</label>
         <div class="vmix-row" style="margin-bottom:8px;">
-          <input class="form-input" type="date" id="efixdate-${i}" style="flex:1;" value="${new Date().toISOString().split('T')[0]}">
+          <input class="form-input" type="date" id="efixdate-${i}" style="flex:1;color-scheme:dark;" value="${new Date().toISOString().split('T')[0]}">
           <button class="btn btn-save" id="efixdatebtn-${i}" style="white-space:nowrap;">VIS KAMPE</button>
         </div>
         <div id="efixresults-${i}"></div>
