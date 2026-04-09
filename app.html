@@ -1769,14 +1769,15 @@ async function saveKamp(i, div) {
   const k   = kampe[i];
   const buf = k.buf;
 
-  // Resolve short names
-  const h1 = dropdowns.holds.find(h => h.lang === buf.hold1Lang);
-  const h2 = dropdowns.holds.find(h => h.lang === buf.hold2Lang);
-
-  k.hold1Lang   = buf.hold1Lang;
-  k.hold1Kort   = h1 ? h1.kort : buf.hold1Lang;
-  k.hold2Lang   = buf.hold2Lang;
-  k.hold2Kort   = h2 ? h2.kort : buf.hold2Lang;
+  // Resolve short names — spring over i AUTO mode (holdnavne sættes via fixture-søgning)
+  if (!k.autoMode) {
+    const h1 = dropdowns.holds.find(h => h.lang === buf.hold1Lang);
+    const h2 = dropdowns.holds.find(h => h.lang === buf.hold2Lang);
+    k.hold1Lang = buf.hold1Lang;
+    k.hold1Kort = h1 ? h1.kort : buf.hold1Lang;
+    k.hold2Lang = buf.hold2Lang;
+    k.hold2Kort = h2 ? h2.kort : buf.hold2Lang;
+  }
   k.kommentator = buf.kommentator;
   k.lokation    = buf.lokSomKomm ? buf.kommentator : buf.lokation;
   k.vmixcall    = buf.vmixcall;
