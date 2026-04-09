@@ -34,9 +34,12 @@ export default async function handler(req, res) {
     }
   }
 
-  // Holdnavn-søgning — hent alle Superliga kampe og filtrer
-  const q = (req.query.q || '').trim().toLowerCase();
-  if (!q) return res.status(400).json({ error: 'Mangler id eller q parameter' });
+  // Ugedag-søgning — hent alle Superliga kampe og filtrer på ugedag
+  // day: 0=søndag, 1=mandag, 2=tirsdag, 3=onsdag, 4=torsdag, 5=fredag, 6=lørdag
+  const day = req.query.day !== undefined ? parseInt(req.query.day) : -1;
+  const q   = (req.query.q || '').trim().toLowerCase();
+
+  if (day === -1 && !q) return res.status(400).json({ error: 'Mangler id, day eller q parameter' });
 
   try {
     const fd = await fetch(
@@ -45,13 +48,21 @@ export default async function handler(req, res) {
     ).then(r => r.json());
 
     const now = Date.now() / 1000;
-    const fixtures = (fd.response || [])
-      .filter(f =>
+    let fixtures = fd.response || [];
+
+    if (day !== -1) {
+      fixtures = fixtures.filter(f => new Date(f.fixture.date).getDay() === day);
+    }
+    if (q) {
+      fixtures = fixtures.filter(f =>
         f.teams.home.name.toLowerCase().includes(q) ||
         f.teams.away.name.toLowerCase().includes(q)
-      )
+      );
+    }
+
+    fixtures = fixtures
       .sort((a, b) => Math.abs(a.fixture.timestamp - now) - Math.abs(b.fixture.timestamp - now))
-      .slice(0, 8)
+      .slice(0, 10)
       .map(formatFixture);
 
     return res.status(200).json({ fixtures });
