@@ -277,19 +277,26 @@
     }
 
     .stamdata-section.hold { grid-column: span 2; }
+    .stamdata-section.hold .stamdata-item,
+    .stamdata-section.hold .stamdata-add-row { padding-left: 14px; padding-right: 14px; gap: 6px; }
     .stamdata-section.hold .stamdata-item-name {
+      flex: 2;
       white-space: nowrap;
-      width: 180px;
-      flex: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .stamdata-section.hold .stamdata-item-kort {
-      width: 52px;
-      flex: none;
+      flex: 1;
+      max-width: 80px;
+      text-align: left;
     }
     .stamdata-section.hold .stamdata-item-alias {
-      flex: 1;
+      flex: 2;
       font-size: 11px;
       color: #555;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .stamdata-edit, .stamdata-del {
