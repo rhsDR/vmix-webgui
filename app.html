@@ -104,6 +104,118 @@
     .tab-pane.active { display: block; }
     .coming-soon { padding: 60px; text-align: center; color: #333; font-size: 12px; letter-spacing: 3px; }
 
+    /* ── Live Dashboard ───────────────────────────────────── */
+    .live-grid {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .live-card {
+      flex: 1 1 280px;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .live-card-header {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid #252525;
+      background: #161616;
+    }
+    .live-score-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .live-team {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 700;
+      color: #e5e5e5;
+    }
+    .live-team.away { text-align: right; }
+    .live-score {
+      font-size: 26px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 4px;
+      color: #fff;
+      min-width: 64px;
+      text-align: center;
+    }
+    .live-status {
+      text-align: center;
+      margin-top: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .live-status.playing { color: var(--green); }
+    .live-status.ht      { color: var(--yellow); }
+    .live-status.ft      { color: var(--muted); }
+    .live-status.ns      { color: #555; }
+    .live-league {
+      text-align: center;
+      font-size: 10px;
+      color: #444;
+      letter-spacing: 1px;
+      margin-top: 3px;
+      text-transform: uppercase;
+    }
+    .live-events {
+      padding: 8px 0;
+      min-height: 40px;
+    }
+    .live-event {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 16px;
+      font-size: 12px;
+      color: #bbb;
+      border-bottom: 1px solid #1e1e1e;
+    }
+    .live-event:last-child { border-bottom: none; }
+    .live-event-min {
+      font-size: 11px;
+      font-weight: 700;
+      color: #555;
+      min-width: 28px;
+      font-variant-numeric: tabular-nums;
+    }
+    .live-event-icon {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .live-event-icon.goal  { background: var(--green); border-radius: 50%; }
+    .live-event-icon.og    { background: var(--red);   border-radius: 50%; }
+    .live-event-icon.pen   { background: var(--blue);  border-radius: 50%; }
+    .live-event-icon.yc    { background: var(--yellow); }
+    .live-event-icon.rc    { background: var(--red); }
+    .live-event-icon.yr    { background: linear-gradient(135deg, var(--yellow) 50%, var(--red) 50%); }
+    .live-event-icon.sub   { background: transparent; border: 1px solid #555; border-radius: 50%; position: relative; }
+    .live-event-icon.sub::after { content: '↕'; font-size: 9px; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #aaa; }
+    .live-event-name { flex: 1; }
+    .live-event-assist { color: #555; font-size: 11px; }
+    .live-no-fixtures {
+      padding: 60px;
+      text-align: center;
+      color: #333;
+      font-size: 12px;
+      letter-spacing: 2px;
+    }
+    .live-updated {
+      font-size: 10px;
+      color: #333;
+      text-align: right;
+      margin-top: 12px;
+      letter-spacing: 1px;
+    }
+
     /* ── Stamdata ─────────────────────────────────────────── */
     .stamdata-grid {
       display: grid;
@@ -967,6 +1079,7 @@
   <button class="tab-btn" data-tab="ticker">TICKER</button>
   <button class="tab-btn" data-tab="credits">CREDITS</button>
   <button class="tab-btn" data-tab="admin">STAMDATA</button>
+  <button class="tab-btn" data-tab="live">LIVE</button>
 </nav>
 
 <!-- TAB: KAMPE -->
@@ -1025,6 +1138,12 @@
 <!-- TAB: CREDITS -->
 <div id="tab-credits" class="tab-pane">
   <div id="creditsList"><div class="loading">Henter data…</div></div>
+</div>
+
+<!-- TAB: LIVE -->
+<div id="tab-live" class="tab-pane">
+  <div id="liveGrid" class="live-grid"><div class="live-no-fixtures">INGEN KAMPE VALGT</div></div>
+  <div class="live-updated" id="liveUpdated"></div>
 </div>
 
 <!-- TOAST -->
@@ -1118,6 +1237,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'live') startLivePolling();
+    else stopLivePolling();
   });
 });
 
@@ -2614,6 +2735,108 @@ async function init() {
 }
 
 init();
+
+// ── LIVE DASHBOARD ────────────────────────────────────────────
+let liveTimer = null;
+
+function startLivePolling() {
+  fetchLiveMatches();
+  liveTimer = setInterval(fetchLiveMatches, 10000);
+}
+
+function stopLivePolling() {
+  clearInterval(liveTimer);
+  liveTimer = null;
+}
+
+async function fetchLiveMatches() {
+  const ids = kampe.filter(k => k.fixtureId).map(k => k.fixtureId);
+  const grid = document.getElementById('liveGrid');
+  const upd  = document.getElementById('liveUpdated');
+  if (!grid) return;
+
+  if (!ids.length) {
+    grid.innerHTML = '<div class="live-no-fixtures">INGEN KAMPE VALGT</div>';
+    upd.textContent = '';
+    return;
+  }
+
+  try {
+    const data = await fetch('/api/live-match?ids=' + ids.join(',')).then(r => r.json());
+    if (data.error) { upd.textContent = 'Fejl: ' + data.error; return; }
+    grid.innerHTML = data.matches.map(renderLiveCard).join('');
+    upd.textContent = 'Sidst opdateret ' + new Date().toLocaleTimeString('da-DK');
+  } catch { upd.textContent = 'Netværksfejl'; }
+}
+
+function liveStatusClass(short) {
+  if (['1H','2H','ET','P','LIVE'].includes(short)) return 'playing';
+  if (short === 'HT') return 'ht';
+  if (short === 'FT' || short === 'AET' || short === 'PEN') return 'ft';
+  return 'ns';
+}
+
+function liveStatusLabel(status) {
+  if (status.short === 'NS')  return 'IKKE STARTET';
+  if (status.short === 'HT')  return 'PAUSE';
+  if (status.short === 'FT')  return 'SLUTFLØJT';
+  if (status.short === 'AET') return 'EFTER FORLÆNGING';
+  if (status.short === 'PEN') return 'EFTER STRAFFE';
+  if (status.elapsed != null) return status.elapsed + "'";
+  return status.short;
+}
+
+function liveEventIcon(type, detail) {
+  if (type === 'Goal') {
+    if (detail === 'Own Goal')   return 'og';
+    if (detail === 'Penalty')    return 'pen';
+    return 'goal';
+  }
+  if (type === 'Card') {
+    if (detail === 'Yellow Card')            return 'yc';
+    if (detail === 'Red Card')               return 'rc';
+    if (detail === 'Yellow Red Card')        return 'yr';
+  }
+  if (type === 'subst') return 'sub';
+  return 'sub';
+}
+
+function renderLiveCard(m) {
+  if (m.error) return `<div class="live-card"><div class="live-card-header"><div class="live-league">${m.id}</div><div class="live-no-fixtures" style="padding:20px">${m.error}</div></div></div>`;
+
+  const statusCls   = liveStatusClass(m.status.short);
+  const statusLabel = liveStatusLabel(m.status);
+
+  const eventsHtml = m.events.length
+    ? m.events.map(e => {
+        const iconCls = liveEventIcon(e.type, e.detail);
+        const isAway  = e.team === m.away;
+        const assist  = e.assist ? ` <span class="live-event-assist">(${e.assist})</span>` : '';
+        const subInfo = e.type === 'subst'
+          ? `<span class="live-event-name">${e.player} <span class="live-event-assist">↑ ind</span></span>`
+          : `<span class="live-event-name">${e.player}${assist}</span>`;
+        return `<div class="live-event${isAway ? ' away' : ''}">
+          <span class="live-event-min">${e.minute}'</span>
+          <span class="live-event-icon ${iconCls}"></span>
+          ${subInfo}
+        </div>`;
+      }).join('')
+    : '<div class="live-event" style="color:#333;justify-content:center">ingen hændelser endnu</div>';
+
+  return `
+    <div class="live-card">
+      <div class="live-card-header">
+        <div class="live-score-row">
+          <span class="live-team">${m.home}</span>
+          <span class="live-score">${m.homeGoals} – ${m.awayGoals}</span>
+          <span class="live-team away">${m.away}</span>
+        </div>
+        <div class="live-status ${statusCls}">${statusLabel}</div>
+        <div class="live-league">${m.league}</div>
+      </div>
+      <div class="live-events">${eventsHtml}</div>
+    </div>`;
+}
 
 // ── REALTIME ──────────────────────────────────────────────────
 // sbClient defineret i js/auth.js
