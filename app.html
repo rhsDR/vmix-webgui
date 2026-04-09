@@ -1563,10 +1563,10 @@ function buildEditView(i) {
 
   const holdFields = i === 5 && k.autoMode ? `
       <div class="form-group span2">
-        <label class="form-label">Fixture ID <span style="color:#555;font-weight:400;text-transform:none;letter-spacing:0">(find på api-football.com)</span></label>
+        <label class="form-label">Kamp søgning <span style="color:#555;font-weight:400;text-transform:none;letter-spacing:0">(holdnavn eller fixture ID)</span></label>
         <div class="vmix-row">
-          <input class="form-input" type="number" id="efixsearch-${i}" placeholder="f.eks. 1285445" style="flex:1;" value="${k.fixtureId || ''}">
-          <button class="btn btn-save" id="efixsearchbtn-${i}" style="white-space:nowrap;">HENT</button>
+          <input class="form-input" type="text" id="efixsearch-${i}" placeholder="f.eks. Brondby eller 1205424" style="flex:1;" value="${k.fixtureId || ''}">
+          <button class="btn btn-save" id="efixsearchbtn-${i}" style="white-space:nowrap;">SØG</button>
         </div>
         <div id="efixresults-${i}" style="margin-top:6px;"></div>
         ${k.fixtureId ? `<div style="margin-top:4px;font-size:11px;color:#555;">Aktiv: <span style="color:var(--orange)">${esc(k.hold1Lang)} vs ${esc(k.hold2Lang)}</span></div>` : ''}
@@ -1711,14 +1711,15 @@ async function searchFixture(i, div) {
   const resultsEl = div.querySelector('#efixresults-' + i);
   resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Henter…</span>';
   try {
-    const res = await fetch('/api/fixture-search?id=' + encodeURIComponent(fixtureId));
+    const isId = /^\d+$/.test(fixtureId);
+  const res = await fetch('/api/fixture-search?' + (isId ? 'id=' : 'q=') + encodeURIComponent(fixtureId));
     const data = await res.json();
-    if (!data.fixture) {
-      resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Ingen kamp fundet</span>';
+    if (!data.fixtures || data.fixtures.length === 0) {
+      resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Ingen kampe fundet</span>';
       return;
     }
-    const f = data.fixture;
     resultsEl.innerHTML = '';
+    data.fixtures.forEach(f => {
     const el = document.createElement('div');
     el.className = 'fixture-result-item';
     el.innerHTML = `
@@ -1743,6 +1744,7 @@ async function searchFixture(i, div) {
       } catch { toast('Fejl ved gem af fixture', 'err'); }
     });
     resultsEl.appendChild(el);
+    }); // forEach
   } catch { resultsEl.innerHTML = '<span style="color:var(--red);font-size:12px;">Hentning fejlede</span>'; }
 }
 
