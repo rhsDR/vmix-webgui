@@ -277,7 +277,20 @@
     }
 
     .stamdata-section.hold { grid-column: span 2; }
-    .stamdata-section.hold .stamdata-item-name { white-space: nowrap; }
+    .stamdata-section.hold .stamdata-item-name {
+      white-space: nowrap;
+      width: 180px;
+      flex: none;
+    }
+    .stamdata-section.hold .stamdata-item-kort {
+      width: 52px;
+      flex: none;
+    }
+    .stamdata-section.hold .stamdata-item-alias {
+      flex: 1;
+      font-size: 11px;
+      color: #555;
+    }
 
     .stamdata-edit, .stamdata-del {
       background: none;
@@ -1414,7 +1427,7 @@ function makeStamdataRow(item) {
     row.innerHTML = `
       <span class="stamdata-item-name">${esc(item.label)}</span>
       ${hasKort ? `<span class="stamdata-item-kort">${esc(item.kort)}</span>` : ''}
-      ${hasApiNavn ? `<span style="font-size:11px;color:#555;margin-left:4px;" title="API-Football navn">${item.apiNavn ? esc(item.apiNavn) : '<span style="color:#333">ingen alias</span>'}</span>` : ''}
+      ${hasApiNavn ? `<span class="stamdata-item-alias" title="API-Football navn">${item.apiNavn ? esc(item.apiNavn) : '<span style="color:#333">ingen alias</span>'}</span>` : ''}
       <button class="stamdata-edit" title="Redigér">✎</button>
       <button class="stamdata-del"  title="Fjern">✕</button>
     `;
