@@ -1000,6 +1000,7 @@
       <div class="stamdata-add-row">
         <input class="stamdata-input" id="sdHoldLangInput" type="text" placeholder="Fuldt navn…" style="flex:2;">
         <input class="stamdata-input" id="sdHoldKortInput" type="text" placeholder="Kort…" style="flex:1;max-width:80px;">
+        <input class="stamdata-input" id="sdHoldApiInput" type="text" placeholder="API alias…" style="flex:2;">
         <button class="stamdata-btn" id="sdHoldBtn">Tilføj</button>
       </div>
     </div>
@@ -1254,13 +1255,13 @@ async function loadStamdata() {
   const rows = await sbGet('dropdowns?select=*&order=orden.asc');
   stamdataRaw = rows;
   renderStamdataSection('kommentator', 'sdKommList', r => ({
-    label: r.lang, kort: null, id: r.id
+    label: r.lang, kort: null, apiNavn: null, id: r.id
   }));
   renderStamdataSection('hold', 'sdHoldList', r => ({
     label: r.lang, kort: r.kort, apiNavn: r.api_navn || '', id: r.id
   }));
   renderStamdataSection('lokation', 'sdLokList', r => ({
-    label: r.lang, kort: null, id: r.id
+    label: r.lang, kort: null, apiNavn: null, id: r.id
   }));
 }
 
@@ -1359,11 +1360,12 @@ async function deleteStamdataItem(id) {
   await refreshDropdowns();
 }
 
-async function addStamdataItem(type, lang, kort) {
+async function addStamdataItem(type, lang, kort, apiNavn = null) {
   if (!lang.trim()) return;
   const orden = stamdataRaw.filter(r => r.type === type).length + 1;
   const body = { type, lang: lang.trim(), orden };
   if (kort !== null) body.kort = kort.trim();
+  if (apiNavn) body.api_navn = apiNavn;
   await fetch(SB_URL + '/rest/v1/dropdowns', {
     method: 'POST',
     headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
@@ -1405,10 +1407,11 @@ function initStamdata() {
   sdHoldBtn.addEventListener('click', async () => {
     const lang = document.getElementById('sdHoldLangInput');
     const kort = document.getElementById('sdHoldKortInput');
+    const api  = document.getElementById('sdHoldApiInput');
     if (!lang.value.trim()) return;
     sdHoldBtn.disabled = true;
-    await addStamdataItem('hold', lang.value, kort.value);
-    lang.value = ''; kort.value = '';
+    await addStamdataItem('hold', lang.value, kort.value, api.value.trim() || null);
+    lang.value = ''; kort.value = ''; api.value = '';
     sdHoldBtn.disabled = false;
     lang.focus();
   });
@@ -1416,6 +1419,9 @@ function initStamdata() {
     if (e.key === 'Enter') document.getElementById('sdHoldKortInput').focus();
   });
   document.getElementById('sdHoldKortInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('sdHoldApiInput').focus();
+  });
+  document.getElementById('sdHoldApiInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') sdHoldBtn.click();
   });
 
@@ -2594,9 +2600,9 @@ async function init() {
     renderTickers();
     renderCredits();
     stamdataRaw = await sbGet('dropdowns?select=*&order=orden.asc');
-    renderStamdataSection('kommentator', 'sdKommList', r => ({ label: r.lang, kort: null, id: r.id }));
-    renderStamdataSection('hold',        'sdHoldList', r => ({ label: r.lang, kort: r.kort, id: r.id }));
-    renderStamdataSection('lokation',    'sdLokList',  r => ({ label: r.lang, kort: null, id: r.id }));
+    renderStamdataSection('kommentator', 'sdKommList', r => ({ label: r.lang, kort: null, apiNavn: null, id: r.id }));
+    renderStamdataSection('hold',        'sdHoldList', r => ({ label: r.lang, kort: r.kort, apiNavn: r.api_navn || '', id: r.id }));
+    renderStamdataSection('lokation',    'sdLokList',  r => ({ label: r.lang, kort: null, apiNavn: null, id: r.id }));
     initStamdata();
     const loader = document.getElementById('pageLoader');
     loader.style.opacity = '0';
