@@ -43,7 +43,7 @@ function formatFixture(f, holdMap) {
 
 function loadCache(filename) {
   try {
-    const fp   = path.join(path.dirname(new URL(import.meta.url).pathname), 'data', filename);
+    const fp   = path.join(process.cwd(), 'api', 'data', filename);
     const data = JSON.parse(fs.readFileSync(fp, 'utf8'));
     return Array.isArray(data.response) ? data : null;
   } catch { return null; }
