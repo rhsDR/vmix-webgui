@@ -1318,9 +1318,9 @@ async function fetchAll() {
 
   return {
     dropdowns: {
-      kommentatorer: dropdownsRaw.filter(r => r.type === 'kommentator').map(r => r.lang),
-      lokationer:    dropdownsRaw.filter(r => r.type === 'lokation').map(r => r.lang),
-      holds:         dropdownsRaw.filter(r => r.type === 'hold').map(r => ({ lang: r.lang, kort: r.kort }))
+      kommentatorer: dropdownsRaw.filter(r => r.type === 'kommentator').map(r => r.lang).sort((a, b) => a.localeCompare(b, 'da')),
+      lokationer:    dropdownsRaw.filter(r => r.type === 'lokation').map(r => r.lang).sort((a, b) => a.localeCompare(b, 'da')),
+      holds:         dropdownsRaw.filter(r => r.type === 'hold').map(r => ({ lang: r.lang, kort: r.kort })).sort((a, b) => a.lang.localeCompare(b.lang, 'da'))
     },
     kampe: kampeRaw.map(r => ({
       hold1Lang:   r.hold1_lang  || '',
@@ -1522,9 +1522,9 @@ async function refreshDropdowns() {
   const rows = await sbGet('dropdowns?select=*&order=orden.asc');
   stamdataRaw = rows;
   dropdowns = {
-    kommentatorer: rows.filter(r => r.type === 'kommentator').map(r => r.lang),
-    lokationer:    rows.filter(r => r.type === 'lokation').map(r => r.lang),
-    holds:         rows.filter(r => r.type === 'hold').map(r => ({ lang: r.lang, kort: r.kort }))
+    kommentatorer: rows.filter(r => r.type === 'kommentator').map(r => r.lang).sort((a, b) => a.localeCompare(b, 'da')),
+    lokationer:    rows.filter(r => r.type === 'lokation').map(r => r.lang).sort((a, b) => a.localeCompare(b, 'da')),
+    holds:         rows.filter(r => r.type === 'hold').map(r => ({ lang: r.lang, kort: r.kort })).sort((a, b) => a.lang.localeCompare(b.lang, 'da'))
   };
   renderStamdataSection('kommentator', 'sdKommList', r => ({ label: r.lang, kort: null, apiNavn: null, id: r.id }));
   renderStamdataSection('hold',        'sdHoldList', r => ({ label: r.lang, kort: r.kort, apiNavn: r.api_navn || '', id: r.id }));
