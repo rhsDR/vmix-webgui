@@ -3,16 +3,18 @@ const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 const SB_HEADERS = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON };
 
 async function getHoldMap() {
-  const res = await fetch(
-    SB_URL + '/rest/v1/dropdowns?type=eq.hold&select=lang,kort,api_navn&not.api_navn=is.null',
-    { headers: SB_HEADERS }
-  );
-  const rows = await res.json();
-  const map = {};
-  (rows || []).forEach(r => {
-    if (r.api_navn) map[r.api_navn] = { lang: r.lang, kort: r.kort };
-  });
-  return map;
+  try {
+    const res = await fetch(
+      SB_URL + '/rest/v1/dropdowns?type=eq.hold&select=lang,kort,api_navn',
+      { headers: SB_HEADERS }
+    );
+    const rows = await res.json();
+    const map = {};
+    (rows || []).forEach(r => {
+      if (r.api_navn) map[r.api_navn] = { lang: r.lang, kort: r.kort };
+    });
+    return map;
+  } catch { return {}; }
 }
 
 function mapHold(apiName, holdMap) {
@@ -65,12 +67,14 @@ export default async function handler(req, res) {
   if (!date) return res.status(400).json({ error: 'Mangler id eller date parameter' });
 
   try {
-    const fd = await fetch(
-      `https://v3.football.api-sports.io/fixtures?league=119&season=2024`,
-      { headers: { 'x-apisports-key': API_KEY } }
-    ).then(r => r.json());
+    // Prøv begge sæsoner — gratis plan blokerer 2025 men vi prøver begge
+    const [fd24, fd25] = await Promise.all([
+      fetch(`https://v3.football.api-sports.io/fixtures?league=119&season=2024`, { headers: { 'x-apisports-key': API_KEY } }).then(r => r.json()),
+      fetch(`https://v3.football.api-sports.io/fixtures?league=119&season=2025`, { headers: { 'x-apisports-key': API_KEY } }).then(r => r.json())
+    ]);
 
-    const fixtures = (fd.response || [])
+    const all = [...(fd24.response || []), ...(fd25.response || [])];
+    const fixtures = all
       .filter(f => f.fixture.date.startsWith(date))
       .sort((a, b) => a.fixture.timestamp - b.fixture.timestamp)
       .map(f => formatFixture(f, holdMap));
