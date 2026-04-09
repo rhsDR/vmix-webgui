@@ -462,6 +462,7 @@
   <script src="js/auth.js"></script>
   <script>
     let currentUser = null;
+    let projektNavne = {}; // id → navn + undertitel
 
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -513,7 +514,12 @@
     function sideLabel(side) {
       if (!side) return '';
       if (side === 'projekter') return 'Projektvælger';
-      if (side.startsWith('app:')) return side.slice(4) || 'Workspace';
+      if (side.startsWith('app:')) {
+        const id = side.slice(4);
+        const p  = projektNavne[id];
+        if (p) return p.navn + (p.undertitel ? ' · ' + p.undertitel : '');
+        return id || 'Workspace';
+      }
       return side;
     }
 
@@ -647,8 +653,9 @@
     }
 
     async function loadApiUrls() {
-      const res = await fetch(SB_URL + '/rest/v1/projekter?select=id,navn&order=orden.asc', { headers: sbHeaders() });
+      const res = await fetch(SB_URL + '/rest/v1/projekter?select=id,navn,undertitel&order=orden.asc', { headers: sbHeaders() });
       const projekter = await res.json();
+      projekter.forEach(p => { projektNavne[p.id] = { navn: p.navn, undertitel: p.undertitel }; });
       const list = document.getElementById('apiList');
       list.innerHTML = '';
       projekter.forEach(p => {
