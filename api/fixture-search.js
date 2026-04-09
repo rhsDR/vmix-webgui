@@ -67,18 +67,15 @@ export default async function handler(req, res) {
   if (!date) return res.status(400).json({ error: 'Mangler id eller date parameter' });
 
   try {
-    // Hent alle kampe på datoen — filtrer på league 119 i responset
-    const fd = await fetch(
-      `https://v3.football.api-sports.io/fixtures?date=${date}`,
-      { headers: { 'x-apisports-key': API_KEY } }
-    ).then(r => r.json());
+    // Hent alle liga 119 kampe fra begge sæsoner og filtrer på dato lokalt
+    const [fd24, fd25] = await Promise.all([
+      fetch(`https://v3.football.api-sports.io/fixtures?league=119&season=2024`, { headers: { 'x-apisports-key': API_KEY } }).then(r => r.json()).catch(() => ({ response: [] })),
+      fetch(`https://v3.football.api-sports.io/fixtures?league=119&season=2025`, { headers: { 'x-apisports-key': API_KEY } }).then(r => r.json()).catch(() => ({ response: [] }))
+    ]);
 
-    if (fd.errors && Object.keys(fd.errors).length > 0) {
-      return res.status(200).json({ fixtures: [], error: Object.values(fd.errors)[0] });
-    }
-
-    const fixtures = (fd.response || [])
-      .filter(f => f.league.id === 119)
+    const all = [...(fd24.response || []), ...(fd25.response || [])];
+    const fixtures = all
+      .filter(f => f.fixture.date.startsWith(date))
       .sort((a, b) => a.fixture.timestamp - b.fixture.timestamp)
       .map(f => formatFixture(f, holdMap));
 
