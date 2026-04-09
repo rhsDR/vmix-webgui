@@ -43,9 +43,9 @@ function formatFixture(f, holdMap) {
 
 function loadCache(filename) {
   try {
-    const fp   = path.join(process.cwd(), 'api', 'data', filename);
+    const fp   = path.join(path.dirname(new URL(import.meta.url).pathname), 'data', filename);
     const data = JSON.parse(fs.readFileSync(fp, 'utf8'));
-    return Array.isArray(data.response) && data.response.length > 0 ? data : null;
+    return Array.isArray(data.response) ? data : null;
   } catch { return null; }
 }
 
@@ -78,22 +78,14 @@ export default async function handler(req, res) {
   if (!date) return res.status(400).json({ error: 'Mangler id eller date parameter' });
 
   try {
-    // Brug cachede filer hvis de findes — ellers kald API'et
-    const slCache = loadCache('sl2024.json');
-    const pkCache = loadCache('pk2024.json');
+    // Brug cachede filer hvis de findes — kald API per liga hvis ikke
+    const AF = 'https://v3.football.api-sports.io';
+    const afHeaders = { 'x-apisports-key': API_KEY };
 
-    let slData, pkData;
-    if (slCache && pkCache) {
-      slData = slCache;
-      pkData = pkCache;
-    } else {
-      const AF = 'https://v3.football.api-sports.io';
-      const afHeaders = { 'x-apisports-key': API_KEY };
-      [slData, pkData] = await Promise.all([
-        fetch(`${AF}/fixtures?league=119&season=2024`, { headers: afHeaders }).then(r => r.json()).catch(() => ({ response: [] })),
-        fetch(`${AF}/fixtures?league=121&season=2024`, { headers: afHeaders }).then(r => r.json()).catch(() => ({ response: [] }))
-      ]);
-    }
+    const [slData, pkData] = await Promise.all([
+      (async () => loadCache('sl2024.json') || await fetch(`${AF}/fixtures?league=119&season=2024`, { headers: afHeaders }).then(r => r.json()).catch(() => ({ response: [] })))(),
+      (async () => loadCache('pk2024.json') || await fetch(`${AF}/fixtures?league=121&season=2024`, { headers: afHeaders }).then(r => r.json()).catch(() => ({ response: [] })))()
+    ]);
 
     const all = [...(slData.response || []), ...(pkData.response || [])];
     const fixtures = all
