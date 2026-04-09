@@ -1,34 +1,29 @@
-// Mapping fra API-Football navne → danske navne og forkortelser
-const HOLD_MAP = {
-  'Brondby':              { lang: 'Brøndby',              kort: 'BIF' },
-  'FC Copenhagen':        { lang: 'FC København',          kort: 'FCK' },
-  'FC Midtjylland':       { lang: 'FC Midtjylland',        kort: 'FCM' },
-  'FC Nordsjaelland':     { lang: 'FC Nordsjælland',       kort: 'FCN' },
-  'Aarhus':               { lang: 'AGF',                   kort: 'AGF' },
-  'Randers FC':           { lang: 'Randers FC',            kort: 'RFC' },
-  'Aalborg':              { lang: 'AAB',                   kort: 'AAB' },
-  'Vejle':                { lang: 'Vejle Boldklub',        kort: 'VB'  },
-  'Odense':               { lang: 'Odense Boldklub',       kort: 'OB'  },
-  'Sonderjyske':          { lang: 'Sønderjyske Fodbold',   kort: 'SJF' },
-  'Silkeborg':            { lang: 'Silkeborg',             kort: 'SIF' },
-  'Viborg':               { lang: 'Viborg FC',             kort: 'VFF' },
-  'FC Fredericia':        { lang: 'FC Fredericia',         kort: 'FCF' },
-  'Lyngby':               { lang: 'Lyngby',                kort: 'LBK' },
-  'AB Copenhagen':        { lang: 'AB',                    kort: 'AB'  },
-  'AC Horsens':           { lang: 'AC Horsens',            kort: 'ACH' },
-  'Hobro':                { lang: 'Hobro',                 kort: 'HIF' },
-  'Vendsyssel FF':        { lang: 'Vendsyssel FF',         kort: 'VFF' },
-};
+const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
+const SB_HEADERS = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON };
 
-function mapHold(apiName) {
-  const m = HOLD_MAP[apiName];
+async function getHoldMap() {
+  const res = await fetch(
+    SB_URL + '/rest/v1/dropdowns?type=eq.hold&select=lang,kort,api_navn&not.api_navn=is.null',
+    { headers: SB_HEADERS }
+  );
+  const rows = await res.json();
+  const map = {};
+  (rows || []).forEach(r => {
+    if (r.api_navn) map[r.api_navn] = { lang: r.lang, kort: r.kort };
+  });
+  return map;
+}
+
+function mapHold(apiName, holdMap) {
+  const m = holdMap[apiName];
   return m ? { lang: m.lang, kort: m.kort } : { lang: apiName, kort: apiName.substring(0, 3).toUpperCase() };
 }
 
-function formatFixture(f) {
+function formatFixture(f, holdMap) {
   const d    = new Date(f.fixture.date);
-  const home = mapHold(f.teams.home.name);
-  const away = mapHold(f.teams.away.name);
+  const home = mapHold(f.teams.home.name, holdMap);
+  const away = mapHold(f.teams.away.name, holdMap);
   return {
     id:        f.fixture.id,
     home:      home.lang,
@@ -47,6 +42,8 @@ export default async function handler(req, res) {
   const API_KEY = process.env.API_FOOTBALL_KEY;
   if (!API_KEY) return res.status(503).json({ error: 'API-nøgle ikke konfigureret' });
 
+  const holdMap = await getHoldMap();
+
   // Direkte ID-opslag
   const id = parseInt(req.query.id || '');
   if (id) {
@@ -57,7 +54,7 @@ export default async function handler(req, res) {
       ).then(r => r.json());
       const f = fd.response?.[0];
       if (!f) return res.status(200).json({ fixtures: [] });
-      return res.status(200).json({ fixtures: [formatFixture(f)] });
+      return res.status(200).json({ fixtures: [formatFixture(f, holdMap)] });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -76,7 +73,7 @@ export default async function handler(req, res) {
     const fixtures = (fd.response || [])
       .filter(f => f.fixture.date.startsWith(date))
       .sort((a, b) => a.fixture.timestamp - b.fixture.timestamp)
-      .map(formatFixture);
+      .map(f => formatFixture(f, holdMap));
 
     return res.status(200).json({ fixtures });
   } catch (err) {

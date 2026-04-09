@@ -1249,7 +1249,7 @@ async function loadStamdata() {
     label: r.lang, kort: null, id: r.id
   }));
   renderStamdataSection('hold', 'sdHoldList', r => ({
-    label: r.lang, kort: r.kort, id: r.id
+    label: r.lang, kort: r.kort, apiNavn: r.api_navn || '', id: r.id
   }));
   renderStamdataSection('lokation', 'sdLokList', r => ({
     label: r.lang, kort: null, id: r.id
@@ -1271,7 +1271,8 @@ function renderStamdataSection(type, listId, mapper) {
 }
 
 function makeStamdataRow(item) {
-  const hasKort = item.kort !== null;
+  const hasKort    = item.kort !== null;
+  const hasApiNavn = item.apiNavn !== null;
   const row = document.createElement('div');
   row.className = 'stamdata-item';
   row.dataset.id = item.id;
@@ -1280,6 +1281,7 @@ function makeStamdataRow(item) {
     row.innerHTML = `
       <span class="stamdata-item-name">${esc(item.label)}</span>
       ${hasKort ? `<span class="stamdata-item-kort">${esc(item.kort)}</span>` : ''}
+      ${hasApiNavn ? `<span style="font-size:11px;color:#555;margin-left:4px;" title="API-Football navn">${item.apiNavn ? esc(item.apiNavn) : '<span style="color:#333">ingen alias</span>'}</span>` : ''}
       <button class="stamdata-edit" title="Redigér">✎</button>
       <button class="stamdata-del"  title="Fjern">✕</button>
     `;
@@ -1289,25 +1291,30 @@ function makeStamdataRow(item) {
 
   function showEdit() {
     row.innerHTML = `
-      <input class="stamdata-input sd-edit-lang" value="${esc(item.label)}" style="flex:2;">
-      ${hasKort ? `<input class="stamdata-input sd-edit-kort" value="${esc(item.kort)}" style="flex:1;max-width:80px;">` : ''}
+      <input class="stamdata-input sd-edit-lang" value="${esc(item.label)}" placeholder="Dansk navn" style="flex:2;">
+      ${hasKort ? `<input class="stamdata-input sd-edit-kort" value="${esc(item.kort)}" placeholder="Kort" style="flex:1;max-width:80px;">` : ''}
+      ${hasApiNavn ? `<input class="stamdata-input sd-edit-api" value="${esc(item.apiNavn)}" placeholder="API-Football navn" style="flex:2;">` : ''}
       <button class="stamdata-btn sd-save">Gem</button>
       <button class="stamdata-del sd-cancel" title="Annuller">✕</button>
     `;
     const langInput = row.querySelector('.sd-edit-lang');
     const kortInput = row.querySelector('.sd-edit-kort');
+    const apiInput  = row.querySelector('.sd-edit-api');
     langInput.focus();
 
     row.querySelector('.sd-save').addEventListener('click', async () => {
-      const newLang = langInput.value.trim();
-      const newKort = kortInput ? kortInput.value.trim() : null;
+      const newLang    = langInput.value.trim();
+      const newKort    = kortInput ? kortInput.value.trim() : null;
+      const newApiNavn = apiInput  ? apiInput.value.trim()  : null;
       if (!newLang) return;
       row.querySelector('.sd-save').disabled = true;
       const body = { lang: newLang };
-      if (newKort !== null) body.kort = newKort;
+      if (newKort    !== null) body.kort     = newKort;
+      if (newApiNavn !== null) body.api_navn = newApiNavn || null;
       await sbPatch('dropdowns?id=eq.' + item.id, body);
-      item.label = newLang;
-      if (newKort !== null) item.kort = newKort;
+      item.label   = newLang;
+      if (newKort    !== null) item.kort    = newKort;
+      if (newApiNavn !== null) item.apiNavn = newApiNavn;
       await refreshDropdowns();
     });
 
@@ -1316,12 +1323,19 @@ function makeStamdataRow(item) {
     langInput.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         if (kortInput) kortInput.focus();
+        else if (apiInput) apiInput.focus();
         else row.querySelector('.sd-save').click();
       }
       if (e.key === 'Escape') showView();
     });
     if (kortInput) {
       kortInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') apiInput ? apiInput.focus() : row.querySelector('.sd-save').click();
+        if (e.key === 'Escape') showView();
+      });
+    }
+    if (apiInput) {
+      apiInput.addEventListener('keydown', e => {
         if (e.key === 'Enter') row.querySelector('.sd-save').click();
         if (e.key === 'Escape') showView();
       });
@@ -1358,9 +1372,9 @@ async function refreshDropdowns() {
     lokationer:    rows.filter(r => r.type === 'lokation').map(r => r.lang),
     holds:         rows.filter(r => r.type === 'hold').map(r => ({ lang: r.lang, kort: r.kort }))
   };
-  renderStamdataSection('kommentator', 'sdKommList', r => ({ label: r.lang, kort: null, id: r.id }));
-  renderStamdataSection('hold',        'sdHoldList', r => ({ label: r.lang, kort: r.kort, id: r.id }));
-  renderStamdataSection('lokation',    'sdLokList',  r => ({ label: r.lang, kort: null, id: r.id }));
+  renderStamdataSection('kommentator', 'sdKommList', r => ({ label: r.lang, kort: null, apiNavn: null, id: r.id }));
+  renderStamdataSection('hold',        'sdHoldList', r => ({ label: r.lang, kort: r.kort, apiNavn: r.api_navn || '', id: r.id }));
+  renderStamdataSection('lokation',    'sdLokList',  r => ({ label: r.lang, kort: null, apiNavn: null, id: r.id }));
 }
 
 function initStamdata() {
