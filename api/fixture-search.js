@@ -67,13 +67,15 @@ export default async function handler(req, res) {
   if (!date) return res.status(400).json({ error: 'Mangler id eller date parameter' });
 
   try {
-    // Hent alle liga 119 kampe fra begge sæsoner og filtrer på dato lokalt
-    const [fd24, fd25] = await Promise.all([
+    // Hent alle Superliga (119) + Pokal (121) kampe fra begge sæsoner og filtrer på dato lokalt
+    const [sl24, sl25, pk24, pk25] = await Promise.all([
       fetch(`https://v3.football.api-sports.io/fixtures?league=119&season=2024`, { headers: { 'x-apisports-key': API_KEY } }).then(r => r.json()).catch(() => ({ response: [] })),
-      fetch(`https://v3.football.api-sports.io/fixtures?league=119&season=2025`, { headers: { 'x-apisports-key': API_KEY } }).then(r => r.json()).catch(() => ({ response: [] }))
+      fetch(`https://v3.football.api-sports.io/fixtures?league=119&season=2025`, { headers: { 'x-apisports-key': API_KEY } }).then(r => r.json()).catch(() => ({ response: [] })),
+      fetch(`https://v3.football.api-sports.io/fixtures?league=121&season=2024`, { headers: { 'x-apisports-key': API_KEY } }).then(r => r.json()).catch(() => ({ response: [] })),
+      fetch(`https://v3.football.api-sports.io/fixtures?league=121&season=2025`, { headers: { 'x-apisports-key': API_KEY } }).then(r => r.json()).catch(() => ({ response: [] }))
     ]);
 
-    const all = [...(fd24.response || []), ...(fd25.response || [])];
+    const all = [...(sl24.response || []), ...(sl25.response || []), ...(pk24.response || []), ...(pk25.response || [])];
     const fixtures = all
       .filter(f => f.fixture.date.startsWith(date))
       .sort((a, b) => a.fixture.timestamp - b.fixture.timestamp)
