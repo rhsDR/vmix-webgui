@@ -1687,7 +1687,8 @@ function buildEditView(i) {
 
 function kampKlarTilOnAir(i) {
   const k = kampe[i];
-  return k.hold1Lang && k.hold2Lang && k.kommentator;
+  if (k.autoMode) return !!(k.hold1Lang && k.hold2Lang);
+  return !!(k.hold1Lang && k.hold2Lang && k.kommentator);
 }
 
 function tickerKlarTilOnAir(i) {
