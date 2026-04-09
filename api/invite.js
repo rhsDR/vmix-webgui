@@ -10,22 +10,33 @@ export default async function handler(req, res) {
   const supabaseUrl = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
 
   try {
-    // Opret bruger med default kode — ingen invitation-mail nødvendig
-    const response = await fetch(supabaseUrl + '/auth/v1/admin/users', {
+    // Send invitation-mail
+    const response = await fetch(supabaseUrl + '/auth/v1/invite', {
       method: 'POST',
       headers: {
         'apikey': serviceKey,
         'Authorization': 'Bearer ' + serviceKey,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ email, password: 'DR35203040', email_confirm: true })
+      body: JSON.stringify({ email })
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      return res.status(400).json({ error: data.message || data.msg || 'Fejl ved oprettelse' });
+      return res.status(400).json({ error: data.message || data.msg || 'Fejl ved invitation' });
     }
+
+    // Sæt default kode så brugeren kan logge ind med det samme
+    await fetch(`${supabaseUrl}/auth/v1/admin/users/${data.id}`, {
+      method: 'PUT',
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': 'Bearer ' + serviceKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password: 'DR35203040' })
+    });
 
     return res.status(200).json({ id: data.id, email: data.email });
   } catch (err) {
