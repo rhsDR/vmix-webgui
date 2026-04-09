@@ -513,7 +513,7 @@
     function sideLabel(side) {
       if (!side) return '';
       if (side === 'projekter') return 'Projektvælger';
-      if (side.startsWith('app:')) return 'Workspace';
+      if (side.startsWith('app:')) return side.slice(4) || 'Workspace';
       return side;
     }
 
