@@ -300,21 +300,6 @@
       color: #fff;
     }
 
-    .fixture-day-btn {
-      padding: 5px 12px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      border: 1px solid #333;
-      background: transparent;
-      color: #666;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .fixture-day-btn:hover { border-color: var(--orange); color: var(--orange); }
-    .fixture-day-btn.active { border-color: var(--orange); background: var(--orange); color: #fff; }
-
     .fixture-result-item {
       padding: 7px 10px;
       border-radius: 5px;
@@ -1579,10 +1564,9 @@ function buildEditView(i) {
   const holdFields = i === 5 && k.autoMode ? `
       <div class="form-group span2">
         <label class="form-label">Vælg kampdag</label>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-          ${['Søn','Man','Tir','Ons','Tor','Fre','Lør'].map((d, idx) =>
-            `<button class="fixture-day-btn" data-day="${idx}">${d}</button>`
-          ).join('')}
+        <div class="vmix-row" style="margin-bottom:8px;">
+          <input class="form-input" type="date" id="efixdate-${i}" style="flex:1;" value="${new Date().toISOString().split('T')[0]}">
+          <button class="btn btn-save" id="efixdatebtn-${i}" style="white-space:nowrap;">VIS KAMPE</button>
         </div>
         <div id="efixresults-${i}"></div>
         ${k.fixtureId ? `<div style="margin-top:4px;font-size:11px;color:#555;">Aktiv: <span style="color:var(--orange)">${esc(k.hold1Lang)} vs ${esc(k.hold2Lang)}</span></div>` : ''}
@@ -1641,12 +1625,13 @@ function buildEditView(i) {
     div.querySelector('#eh1-' + i).addEventListener('change', e => { buf.hold1Lang = e.target.value; });
     div.querySelector('#eh2-' + i).addEventListener('change', e => { buf.hold2Lang = e.target.value; });
   } else {
-    div.querySelectorAll('.fixture-day-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        div.querySelectorAll('.fixture-day-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        searchFixtureByDay(i, div, parseInt(btn.dataset.day));
-      });
+    const datebtn = div.querySelector('#efixdatebtn-' + i);
+    datebtn.addEventListener('click', () => {
+      const date = div.querySelector('#efixdate-' + i).value;
+      if (date) searchFixtureByDate(i, div, date);
+    });
+    div.querySelector('#efixdate-' + i).addEventListener('keydown', e => {
+      if (e.key === 'Enter') datebtn.click();
     });
   }
   div.querySelector('#ek-'  + i).addEventListener('change', e => { buf.kommentator = e.target.value; });
@@ -1730,14 +1715,14 @@ async function toggleAutoMode(i) {
   } catch { toast('Fejl ved skift af tilstand', 'err'); }
 }
 
-async function searchFixtureByDay(i, div, day) {
+async function searchFixtureByDate(i, div, date) {
   const resultsEl = div.querySelector('#efixresults-' + i);
   resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Henter kampe…</span>';
   try {
-    const res = await fetch('/api/fixture-search?day=' + day);
+    const res = await fetch('/api/fixture-search?date=' + encodeURIComponent(date));
     const data = await res.json();
     if (!data.fixtures || data.fixtures.length === 0) {
-      resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Ingen kampe fundet den dag</span>';
+      resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Ingen Superliga-kampe den dag</span>';
       return;
     }
     resultsEl.innerHTML = '';
