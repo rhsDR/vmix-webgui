@@ -18,7 +18,7 @@ export default async function handler(req, res) {
         'Authorization': 'Bearer ' + SERVICE_KEY,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ password: DEFAULT_PASSWORD })
+      body: JSON.stringify({ password: DEFAULT_PASSWORD, email_confirm: true })
     });
     const data = await r.json();
     if (!r.ok) return res.status(r.status).json({ error: data.message || 'Fejl' });
