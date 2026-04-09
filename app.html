@@ -728,6 +728,8 @@
       overflow: hidden;
     }
     .sub-text.empty { color: #333; font-style: italic; }
+    .sub-row.no-data .sub-num { color: #2a2a2a; }
+    .sub-row.no-data .icon-btn { color: #2a2a2a; }
     .sub-navn  { font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sub-titel { font-size: 14px; font-weight: 400; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sub-link-row { display: flex; align-items: center; gap: 4px; }
@@ -2245,6 +2247,7 @@ function buildSubRow(i) {
     });
   } else {
     const hasData = s.navn || s.titel;
+    if (!hasData) row.classList.add('no-data');
     const slot = i + 1;
     const isActive = activeSubSlot === slot;
     const showOnBtn = aktivProjektId === '3ae7eb3e-db19-4285-9964-6c8382ea471f';
