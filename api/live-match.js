@@ -16,6 +16,14 @@ function loadAllCached() {
   return all;
 }
 
+function loadCachedEvents(id) {
+  try {
+    const fp   = path.join(process.cwd(), 'api', 'data', `events_${id}.json`);
+    const data = JSON.parse(fs.readFileSync(fp, 'utf8'));
+    return Array.isArray(data.response) ? data : null;
+  } catch { return null; }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
@@ -33,11 +41,14 @@ export default async function handler(req, res) {
       // Slå op i cache først
       const cached_f = cached.find(f => f.fixture.id === id);
 
+      const cachedEvents = loadCachedEvents(id);
       const [fixtureRes, eventsRes] = await Promise.all([
         cached_f
           ? Promise.resolve({ response: [cached_f] })
           : fetch(`${API_BASE}/fixtures?id=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] })),
-        fetch(`${API_BASE}/fixtures/events?fixture=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] }))
+        cachedEvents
+          ? Promise.resolve(cachedEvents)
+          : fetch(`${API_BASE}/fixtures/events?fixture=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] }))
       ]);
 
       const f      = fixtureRes.response?.[0];
