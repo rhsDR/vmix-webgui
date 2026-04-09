@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
 const SB_HEADERS = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON };
@@ -38,6 +41,14 @@ function formatFixture(f, holdMap) {
   };
 }
 
+function loadCache(filename) {
+  try {
+    const fp   = path.join(process.cwd(), 'api', 'data', filename);
+    const data = JSON.parse(fs.readFileSync(fp, 'utf8'));
+    return Array.isArray(data.response) && data.response.length > 0 ? data : null;
+  } catch { return null; }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
@@ -62,20 +73,29 @@ export default async function handler(req, res) {
     }
   }
 
-  // Dato-søgning — hent alle Superliga kampe og filtrer på dato (YYYY-MM-DD)
+  // Dato-søgning
   const date = (req.query.date || '').trim();
   if (!date) return res.status(400).json({ error: 'Mangler id eller date parameter' });
 
   try {
-    // Hent alle Superliga (119) + Pokal (121) fra sæson 2024 (gratis plan dækker kun 2022-2024)
-    const AF = 'https://v3.football.api-sports.io';
-    const afHeaders = { 'x-apisports-key': API_KEY };
-    const [sl24, pk24] = await Promise.all([
-      fetch(`${AF}/fixtures?league=119&season=2024`, { headers: afHeaders }).then(r => r.json()).catch(() => ({ response: [] })),
-      fetch(`${AF}/fixtures?league=121&season=2024`, { headers: afHeaders }).then(r => r.json()).catch(() => ({ response: [] }))
-    ]);
+    // Brug cachede filer hvis de findes — ellers kald API'et
+    const slCache = loadCache('sl2024.json');
+    const pkCache = loadCache('pk2024.json');
 
-    const all = [...(sl24.response || []), ...(pk24.response || [])];
+    let slData, pkData;
+    if (slCache && pkCache) {
+      slData = slCache;
+      pkData = pkCache;
+    } else {
+      const AF = 'https://v3.football.api-sports.io';
+      const afHeaders = { 'x-apisports-key': API_KEY };
+      [slData, pkData] = await Promise.all([
+        fetch(`${AF}/fixtures?league=119&season=2024`, { headers: afHeaders }).then(r => r.json()).catch(() => ({ response: [] })),
+        fetch(`${AF}/fixtures?league=121&season=2024`, { headers: afHeaders }).then(r => r.json()).catch(() => ({ response: [] }))
+      ]);
+    }
+
+    const all = [...(slData.response || []), ...(pkData.response || [])];
     const fixtures = all
       .filter(f => f.fixture.date.startsWith(date))
       .sort((a, b) => a.fixture.timestamp - b.fixture.timestamp)
