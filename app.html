@@ -2703,10 +2703,17 @@ async function init() {
         }
         projektType = rows[0].type;
         if (rows[0].type === 'tv') {
-          // Skjul KAMPE-fanen og aktiver SUBS som standard
-          const kampeBtn = document.querySelector('.tab-btn[data-tab="kampe"]');
-          const subsBtn  = document.querySelector('.tab-btn[data-tab="subs"]');
-          if (kampeBtn) kampeBtn.style.display = 'none';
+          // Skjul KAMPE, STAMDATA og DASHBOARD — aktiver SUBS som standard
+          const kampeBtn     = document.querySelector('.tab-btn[data-tab="kampe"]');
+          const stamdataBtn  = document.querySelector('.tab-btn[data-tab="admin"]');
+          const dashboardBtn = document.querySelector('.tab-btn[data-tab="live"]');
+          const subsBtn      = document.querySelector('.tab-btn[data-tab="subs"]');
+          if (kampeBtn)     kampeBtn.style.display     = 'none';
+          if (stamdataBtn)  stamdataBtn.style.display  = 'none';
+          if (dashboardBtn) dashboardBtn.style.display = 'none';
+          // Skjul også STAMDATA-knappen i headeren
+          const headerStamdataBtn = document.querySelector('header .tab-btn[data-tab="admin"]');
+          if (headerStamdataBtn) headerStamdataBtn.style.display = 'none';
           document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
           document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
           if (subsBtn) subsBtn.classList.add('active');
