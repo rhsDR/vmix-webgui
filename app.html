@@ -2837,7 +2837,8 @@ async function init() {
 init();
 
 // ── LIVE DASHBOARD ────────────────────────────────────────────
-let liveTimer = null;
+let liveTimer    = null;
+let lastCardSeen = {}; // fixtureId → sidste sete korttype+minut+spiller
 
 function startLivePolling() {
   fetchLiveMatches();
@@ -2866,6 +2867,38 @@ async function fetchLiveMatches() {
     if (data.error) { upd.textContent = 'Fejl: ' + data.error; return; }
     grid.innerHTML = data.matches.map(renderLiveCard).join('');
     upd.textContent = 'Sidst opdateret ' + new Date().toLocaleTimeString('da-DK');
+
+    // Tjek for nye kort og skriv til Supabase
+    for (const m of data.matches) {
+      if (m.error) continue;
+      const cards = m.events.filter(e => e.type === 'Card');
+      if (!cards.length) continue;
+      const latest = cards[cards.length - 1];
+      const key    = `${latest.type}_${latest.detail}_${latest.minute}_${latest.player}`;
+      if (lastCardSeen[m.id] === key) continue;
+      lastCardSeen[m.id] = key;
+
+      // Find kamp-slot
+      const kampIdx = kampe.findIndex(k => k.fixtureId === m.id);
+      if (kampIdx === -1) continue;
+      const slot = kampIdx + 1;
+
+      const cardType = latest.detail === 'Red Card' ? 'red'
+                     : latest.detail === 'Yellow Red Card' ? 'yr'
+                     : 'yellow';
+
+      // Find holdforkortelse
+      const teamKort = latest.team === m.away_api
+        ? (m.away_kort || m.away)
+        : (m.home_kort || m.home);
+
+      await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + slot, {
+        last_card_type:      cardType,
+        last_card_player:    latest.player,
+        last_card_min:       String(latest.minute),
+        last_card_team_kort: teamKort
+      }).catch(() => {});
+    }
   } catch { upd.textContent = 'Netværksfejl'; }
 }
 
