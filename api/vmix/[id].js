@@ -6,10 +6,7 @@ const HEADERS = {
 };
 
 function dkEncode(str) {
-  return (str || '')
-    .replace(/æ/g, '&aelig;').replace(/Æ/g, '&AElig;')
-    .replace(/ø/g, '&oslash;').replace(/Ø/g, '&Oslash;')
-    .replace(/å/g, '&aring;').replace(/Å/g, '&Aring;');
+  return str || '';
 }
 
 async function sbGet(path) {
