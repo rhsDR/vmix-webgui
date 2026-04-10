@@ -9,6 +9,10 @@ function dkEncode(str) {
   return str || '';
 }
 
+function escapeNonAscii(str) {
+  return str.replace(/[^\x00-\x7F]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+}
+
 async function sbGet(path) {
   const res = await fetch(SB_URL + '/rest/v1/' + path, { headers: HEADERS });
   if (!res.ok) throw new Error('Supabase fejl: ' + res.status);
@@ -121,7 +125,7 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    return res.status(200).end(JSON.stringify([json]));
+    return res.status(200).end(escapeNonAscii(JSON.stringify([json])));
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
