@@ -2900,6 +2900,18 @@ async function fetchLiveMatches() {
         last_card_team_kort: teamKort
       }).catch(() => {});
     }
+
+    // Skriv status tilbage til Supabase for hvert fixture
+    for (const m of data.matches) {
+      if (m.error) continue;
+      const kampIdx = kampe.findIndex(k => k.fixtureId === m.id);
+      if (kampIdx === -1) continue;
+      const slot = kampIdx + 1;
+      await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + slot, {
+        status_short:   m.status.short   || null,
+        status_elapsed: m.status.elapsed ?? null
+      }).catch(() => {});
+    }
   } catch { upd.textContent = 'Netværksfejl'; }
 }
 

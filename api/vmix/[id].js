@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 
     const [projektRaw, kampeRaw, subsRaw, vmixCallsRaw, tickersRaw, settingsRaw] = await Promise.all([
       sbGet('projekter?id=eq.' + pid + '&select=navn,type,undertitel&limit=1'),
-      sbGet('kampe?projekt_id=eq.' + pid + '&select=slot,hold1_lang,hold1_kort,hold1_score,hold2_score,hold2_kort,hold2_lang,kommentator,lokation,vmixcall,on_air,last_card_type,last_card_player,last_card_min,last_card_team_kort&order=slot.asc'),
+      sbGet('kampe?projekt_id=eq.' + pid + '&select=slot,hold1_lang,hold1_kort,hold1_score,hold2_score,hold2_kort,hold2_lang,kommentator,lokation,vmixcall,on_air,last_card_type,last_card_player,last_card_min,last_card_team_kort,status_short,status_elapsed&order=slot.asc'),
       sbGet('subs?projekt_id=eq.' + pid + '&select=slot,navn,titel&order=slot.asc'),
       sbGet('vmix_calls?projekt_id=eq.' + pid + '&select=slot,navn,titel,link&order=slot.asc'),
       sbGet('tickers?projekt_id=eq.' + pid + '&select=slot,overskrift,tekst,on_air,breaking&order=slot.asc'),
@@ -116,6 +116,8 @@ export default async function handler(req, res) {
           json[`K${s}_card_p`]   = r.last_card_player     || '';
           json[`K${s}_card_min`] = r.last_card_min        || '';
           json[`K${s}_card_tm`]  = r.last_card_team_kort  || '';
+          json[`K${s}_status`]   = r.status_short         || '';
+          json[`K${s}_elapsed`]  = r.status_elapsed       ?? 0;
         });
     }
 
