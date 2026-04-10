@@ -38,7 +38,8 @@ export default async function handler(req, res) {
     const projekt = projektRaw[0];
 
     // Byg ticker-strenge — kun ON AIR
-    const tickerSep = ' &nbsp; &bull; &nbsp; ';
+    const tickerSep  = ' &nbsp; &bull; &nbsp; ';
+    const tickerTail = ' &nbsp; &bull; &nbsp; ';
     const tickerBreaking = tickersRaw
       .filter(r => r.on_air && r.breaking && (r.overskrift || r.tekst))
       .map(r => r.overskrift ? `<b>${dkEncode(r.overskrift.toUpperCase())}</b> &nbsp; ${dkEncode(r.tekst)}` : dkEncode(r.tekst))
@@ -47,6 +48,8 @@ export default async function handler(req, res) {
       .filter(r => r.on_air && !r.breaking && (r.overskrift || r.tekst))
       .map(r => r.overskrift ? `<b>${dkEncode(r.overskrift.toUpperCase())}</b> &nbsp; ${dkEncode(r.tekst)}` : dkEncode(r.tekst))
       .join(tickerSep);
+
+    const addTail = s => s ? s + tickerTail : s;
 
     // Individuelle ticker-felter (til Sheets)
     const tickers = {};
@@ -82,8 +85,8 @@ export default async function handler(req, res) {
         navn:      projekt.navn,
         undertitel: projekt.undertitel || ''
       },
-      ticker_breaking: tickerBreaking,
-      ticker_normal:   tickerNormal,
+      ticker_breaking: addTail(tickerBreaking),
+      ticker_normal:   addTail(tickerNormal),
       sub_aktiv_slot:  activeSubSlot,
       sub_aktiv_n:     activeSubData ? (activeSubData.navn  || '') : '',
       sub_aktiv_t:     activeSubData ? (activeSubData.titel || '') : '',
