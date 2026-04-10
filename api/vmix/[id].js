@@ -120,7 +120,8 @@ export default async function handler(req, res) {
 
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    return res.status(200).json([json]);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    return res.status(200).end(JSON.stringify([json]));
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
