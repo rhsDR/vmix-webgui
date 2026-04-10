@@ -2864,7 +2864,7 @@ function renderLiveCard(m) {
   const eventsHtml = m.events.length
     ? m.events.map(e => {
         const iconCls = liveEventIcon(e.type, e.detail);
-        const isAway  = e.team === m.away || e.team === m.away_api || (e.team !== m.home && e.team !== m.home_api);
+        const isAway  = e.team === m.away_api || e.team === m.away;
         const assist  = e.assist ? ` <span class="live-event-assist">(${e.assist})</span>` : '';
         const subInfo = e.type === 'subst'
           ? `<span class="live-event-name"><span style="color:var(--green)">▲</span> ${e.player}${e.assist ? ` <span style="color:var(--red)">▼</span> ${e.assist}` : ''}</span>`
