@@ -83,6 +83,7 @@ export default async function handler(req, res) {
         home_kort: home.kort,
         away:      away.lang,
         away_kort: away.kort,
+        home_api:  f.teams.home.name,
         away_api:  f.teams.away.name,
         homeGoals: f.goals.home ?? 0,
         awayGoals: f.goals.away ?? 0,
