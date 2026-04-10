@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     const projekt = projektRaw[0];
 
     // Byg ticker-strenge — kun ON AIR
-    const tickerSep = ' &bull; ';
+    const tickerSep = ' &nbsp; &bull; &nbsp; ';
     const tickerBreaking = tickersRaw
       .filter(r => r.on_air && r.breaking && (r.overskrift || r.tekst))
       .map(r => r.overskrift ? `<b>${r.overskrift.toUpperCase()}</b> ${r.tekst}` : r.tekst)
