@@ -41,6 +41,27 @@ function loadCachedEvents(id) {
   } catch { return null; }
 }
 
+function loadCachedStats(id) {
+  try {
+    const fp   = path.join(process.cwd(), 'api', 'data', `stats_${id}.json`);
+    const data = JSON.parse(fs.readFileSync(fp, 'utf8'));
+    return Array.isArray(data.response) ? data : null;
+  } catch { return null; }
+}
+
+function extractStats(statsData) {
+  if (!statsData) return null;
+  const KEYS = ['Ball Possession', 'Shots on Goal', 'Total Shots', 'Corner Kicks', 'Fouls', 'Passes %'];
+  return statsData.response.map(team => ({
+    team: team.team.name,
+    stats: Object.fromEntries(
+      team.statistics
+        .filter(s => KEYS.includes(s.type) && s.value !== null)
+        .map(s => [s.type, s.value])
+    )
+  }));
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
@@ -60,13 +81,17 @@ export default async function handler(req, res) {
       const cached_f = cached.find(f => f.fixture.id === id);
 
       const cachedEvents = loadCachedEvents(id);
-      const [fixtureRes, eventsRes] = await Promise.all([
+      const cachedStats  = loadCachedStats(id);
+      const [fixtureRes, eventsRes, statsRes] = await Promise.all([
         cached_f
           ? Promise.resolve({ response: [cached_f] })
           : fetch(`${API_BASE}/fixtures?id=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] })),
         cachedEvents
           ? Promise.resolve(cachedEvents)
-          : fetch(`${API_BASE}/fixtures/events?fixture=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] }))
+          : fetch(`${API_BASE}/fixtures/events?fixture=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] })),
+        cachedStats
+          ? Promise.resolve(cachedStats)
+          : fetch(`${API_BASE}/fixtures/statistics?fixture=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] }))
       ]);
 
       const f      = fixtureRes.response?.[0];
@@ -85,6 +110,7 @@ export default async function handler(req, res) {
         away_kort: away.kort,
         home_api:  f.teams.home.name,
         away_api:  f.teams.away.name,
+        stats:     extractStats(statsRes),
         homeGoals: f.goals.home ?? 0,
         awayGoals: f.goals.away ?? 0,
         status: {
