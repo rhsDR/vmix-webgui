@@ -5,6 +5,13 @@ const HEADERS = {
   'Authorization': 'Bearer ' + SB_ANON
 };
 
+function dkEncode(str) {
+  return (str || '')
+    .replace(/æ/g, '&aelig;').replace(/Æ/g, '&AElig;')
+    .replace(/ø/g, '&oslash;').replace(/Ø/g, '&Oslash;')
+    .replace(/å/g, '&aring;').replace(/Å/g, '&Aring;');
+}
+
 async function sbGet(path) {
   const res = await fetch(SB_URL + '/rest/v1/' + path, { headers: HEADERS });
   if (!res.ok) throw new Error('Supabase fejl: ' + res.status);
@@ -34,11 +41,11 @@ export default async function handler(req, res) {
     const tickerSep = ' &nbsp; &bull; &nbsp; ';
     const tickerBreaking = tickersRaw
       .filter(r => r.on_air && r.breaking && (r.overskrift || r.tekst))
-      .map(r => r.overskrift ? `<b>${r.overskrift.toUpperCase()}</b> &nbsp; ${r.tekst}` : r.tekst)
+      .map(r => r.overskrift ? `<b>${dkEncode(r.overskrift.toUpperCase())}</b> &nbsp; ${dkEncode(r.tekst)}` : dkEncode(r.tekst))
       .join(tickerSep);
     const tickerNormal = tickersRaw
       .filter(r => r.on_air && !r.breaking && (r.overskrift || r.tekst))
-      .map(r => r.overskrift ? `<b>${r.overskrift.toUpperCase()}</b> &nbsp; ${r.tekst}` : r.tekst)
+      .map(r => r.overskrift ? `<b>${dkEncode(r.overskrift.toUpperCase())}</b> &nbsp; ${dkEncode(r.tekst)}` : dkEncode(r.tekst))
       .join(tickerSep);
 
     // Individuelle ticker-felter (til Sheets)
