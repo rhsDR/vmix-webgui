@@ -2854,7 +2854,7 @@ function renderLiveCard(m) {
         const isAway  = e.team === m.away;
         const assist  = e.assist ? ` <span class="live-event-assist">(${e.assist})</span>` : '';
         const subInfo = e.type === 'subst'
-          ? `<span class="live-event-name">↑ ${e.player}${e.assist ? ` <span class="live-event-assist">↓ ${e.assist}</span>` : ''}</span>`
+          ? `<span class="live-event-name"><span style="color:var(--green)">▲</span> ${e.player}${e.assist ? ` <span class="live-event-assist"><span style="color:var(--red)">▼</span> ${e.assist}</span>` : ''}</span>`
           : `<span class="live-event-name">${e.player}${assist}</span>`;
         return `<div class="live-event${isAway ? ' away' : ''}">
           <span class="live-event-min">${e.minute}'</span>
