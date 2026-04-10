@@ -202,8 +202,8 @@
     .live-event-icon.yr    { background: linear-gradient(135deg, var(--yellow) 50%, var(--red) 50%); }
     .live-event-icon.sub   { background: transparent; border: 1px solid #555; border-radius: 50%; position: relative; }
     .live-event-icon.sub::after { content: '↕'; font-size: 9px; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #aaa; }
-    .live-event-name { flex: 1; }
-    .live-event-assist { color: #555; font-size: 11px; }
+    .live-event-name { flex: 1; white-space: normal; word-break: break-word; }
+    .live-event-assist { color: #555; font-size: 13px; }
     .live-event.away { flex-direction: row-reverse; }
     .live-event.away .live-event-name { text-align: right; }
     .live-no-fixtures {
@@ -2854,7 +2854,7 @@ function renderLiveCard(m) {
         const isAway  = e.team === m.away;
         const assist  = e.assist ? ` <span class="live-event-assist">(${e.assist})</span>` : '';
         const subInfo = e.type === 'subst'
-          ? `<span class="live-event-name"><span style="color:var(--green)">▲</span> ${e.player}${e.assist ? ` <span class="live-event-assist"><span style="color:var(--red)">▼</span> ${e.assist}</span>` : ''}</span>`
+          ? `<span class="live-event-name"><span style="color:var(--green)">▲</span> ${e.player}${e.assist ? ` <span style="color:var(--red)">▼</span> ${e.assist}` : ''}</span>`
           : `<span class="live-event-name">${e.player}${assist}</span>`;
         return `<div class="live-event${isAway ? ' away' : ''}">
           <span class="live-event-min">${e.minute}'</span>
