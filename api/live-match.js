@@ -2,6 +2,23 @@ import fs   from 'fs';
 import path from 'path';
 
 const API_BASE = 'https://v3.football.api-sports.io';
+const SB_URL   = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
+const SB_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
+
+async function getHoldMap() {
+  try {
+    const res  = await fetch(`${SB_URL}/rest/v1/dropdowns?type=eq.hold&select=lang,kort,api_navn`, { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON } });
+    const rows = await res.json();
+    const map  = {};
+    (rows || []).forEach(r => { if (r.api_navn) map[r.api_navn] = { lang: r.lang, kort: r.kort }; });
+    return map;
+  } catch { return {}; }
+}
+
+function mapHold(apiName, holdMap) {
+  const m = holdMap[apiName];
+  return m ? { lang: m.lang, kort: m.kort } : { lang: apiName, kort: null };
+}
 
 function loadAllCached() {
   const files = ['sl2024.json', 'pk2024.json'];
@@ -34,6 +51,7 @@ export default async function handler(req, res) {
   if (!ids.length) return res.status(400).json({ error: 'Mangler ids parameter' });
 
   const cached  = loadAllCached();
+  const holdMap = await getHoldMap();
   const headers = { 'x-apisports-key': API_KEY };
 
   try {
@@ -56,10 +74,15 @@ export default async function handler(req, res) {
 
       if (!f) return { id, error: 'Ikke fundet' };
 
+      const home = mapHold(f.teams.home.name, holdMap);
+      const away = mapHold(f.teams.away.name, holdMap);
+
       return {
         id,
-        home:      f.teams.home.name,
-        away:      f.teams.away.name,
+        home:      home.lang,
+        home_kort: home.kort,
+        away:      away.lang,
+        away_kort: away.kort,
         homeGoals: f.goals.home ?? 0,
         awayGoals: f.goals.away ?? 0,
         status: {

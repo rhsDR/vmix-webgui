@@ -134,11 +134,23 @@
     }
     .live-team {
       flex: 1;
-      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .live-team-name {
+      font-size: 16px;
       font-weight: 700;
       color: #e5e5e5;
     }
-    .live-team.away { text-align: right; }
+    .live-team-kort {
+      font-size: 11px;
+      font-weight: 600;
+      color: #555;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .live-team.away { text-align: right; align-items: flex-end; }
     .live-score {
       font-size: 26px;
       font-weight: 700;
@@ -2869,9 +2881,15 @@ function renderLiveCard(m) {
     <div class="live-card">
       <div class="live-card-header">
         <div class="live-score-row">
-          <span class="live-team">${m.home}</span>
+          <span class="live-team">
+            <span class="live-team-name">${m.home}</span>
+            ${m.home_kort ? `<span class="live-team-kort">${m.home_kort}</span>` : ''}
+          </span>
           <span class="live-score">${m.homeGoals} – ${m.awayGoals}</span>
-          <span class="live-team away">${m.away}</span>
+          <span class="live-team away">
+            <span class="live-team-name">${m.away}</span>
+            ${m.away_kort ? `<span class="live-team-kort">${m.away_kort}</span>` : ''}
+          </span>
         </div>
         <div class="live-status ${statusCls}">${statusLabel}</div>
         <div class="live-league">${m.league}</div>
