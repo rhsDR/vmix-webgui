@@ -808,11 +808,11 @@ function setExportMode(m){exportMode=m;document.getElementById('mode-css').class
 function exportSPX(){if(!elements.length){toast('Ingen elementer');return;}if(exportMode==='gsap')exportSPX_GSAP();else exportSPX_CSS();}
 
 function exportSPX_CSS(){
-  const spxEls=elements.filter(e=>e.type==='text'&&e.spxField);
-  const fieldDefs=spxEls.map((e,i)=>`    {"field":"f${i}","title":"${e.fieldLabel}","value":"${e.text.replace(/"/g,'\\"')}","type":"text"}`).join(',\n');
+  const spxEls=elements.filter(e=>(e.type==='text'||e.type==='ticker')&&e.spxField);
+  const fieldDefs=spxEls.map((e,i)=>`    {"field":"f${i}","ftype":"${e.type==='ticker'?'textarea':'textfield'}","title":"${e.fieldLabel}","value":"${e.text.replace(/"/g,'\\"')}"}`).join(',\n');
   const fonts=[...new Set(elements.map(e=>e.fontFamily||'DM Sans'))];
   const fontUrl=`https://fonts.googleapis.com/css2?${fonts.map(f=>`family=${f.replace(/ /g,'+')}`).join('&')}&display=swap`;
-  let css='',playLines=[],stopLines=[],updateLines=[],htmlLines=[];let fIdx=0;
+  let css='',playLines=[],stopLines=[],updateLines=[],htmlLines=[],hiddenDivLines=[];let fIdx=0;
   elements.forEach(el=>{
     const id='el'+el.id;const a=el.animation,dur=el.animDuration,delay=el.animDelay;
     let outState='',inState='';
@@ -835,9 +835,9 @@ function exportSPX_CSS(){
     if(ao!=='none')css+=`#${id}.out{transition:opacity ${outDur}s ease-in ${outDelay}s,transform ${outDur}s ease-in ${outDelay}s;${outTo}}\n`;
     if(el.type==='ticker'){
       const sep=el.tickerSep||'  •  ';
-      if(el.spxField){htmlLines.push(`  <div id="${id}"><div id="${id}-inner" class="ticker-inner"></div></div>`);updateLines.push(`  if(data&&data.f${fIdx}!==undefined){var items=data.f${fIdx}.split('|').map(s=>s.trim()).filter(Boolean);var txt=items.join('${sep}');document.getElementById('${id}-inner').textContent=txt+'${sep}'+'${sep}'+txt;}`);fIdx++;}
+      if(el.spxField){htmlLines.push(`  <div id="${id}"><div id="${id}-inner" class="ticker-inner"></div></div>`);updateLines.push(`  (function(){var t=document.getElementById('f${fIdx}').innerText;var items=t.split('|').map(s=>s.trim()).filter(Boolean);var txt=items.join('${sep}');document.getElementById('${id}-inner').textContent=txt+'${sep}'+txt;})();`);hiddenDivLines.push(`  <div id="f${fIdx}"></div>`);fIdx++;}
       else{htmlLines.push(`  <div id="${id}"><div id="${id}-inner" class="ticker-inner">${el.text}${sep}${el.text}</div></div>`);}
-    }else if(el.type==='text'&&el.spxField){htmlLines.push(`  <div id="${id}" data-spx="f${fIdx}">${el.text}</div>`);updateLines.push(`  if(data&&data.f${fIdx}!==undefined)document.getElementById('${id}').innerHTML=data.f${fIdx};`);fIdx++;}
+    }else if(el.type==='text'&&el.spxField){htmlLines.push(`  <div id="${id}">${el.text}</div>`);updateLines.push(`  document.getElementById('${id}').innerHTML=document.getElementById('f${fIdx}').innerText;`);hiddenDivLines.push(`  <div id="f${fIdx}"></div>`);fIdx++;}
     else{htmlLines.push(`  <div id="${id}">${el.type==='text'?el.text:''}</div>`);}
     if(a!=='none'&&el.type!=='ticker'){playLines.push(`  document.getElementById('${id}').classList.remove('out');document.getElementById('${id}').classList.add('in');`);stopLines.push(`  document.getElementById('${id}').classList.remove('in');document.getElementById('${id}').classList.add('out');`);}
   });
@@ -850,19 +850,20 @@ function exportSPX_CSS(){
   });
   const extraJS=tickerInitJS?`\ndocument.addEventListener('DOMContentLoaded',function(){\n${tickerInitJS}});`:'';
   _downloadHTML(_buildHTML(fontUrl,css+tickerCSS,htmlLines,fieldDefs,tname,
-    `function play(data){\n  update(data);\n${playLines.join('\n')}\n}`,
-    `function stop(){\n${stopLines.join('\n')}\n}`,
-    `function update(data){\n${updateLines.join('\n')}\n}`+extraJS
+    `function runTemplateUpdate(){\n${updateLines.join('\n')}\n  setTimeout(runAnimationIN,50);\n}${extraJS}`,
+    `function runAnimationIN(){\n${playLines.join('\n')}\n}`,
+    `function runAnimationOUT(){\n${stopLines.join('\n')}\n}`,
+    hiddenDivLines.join('\n')
   ),document.getElementById('ttype').value+'.html');
   toast('CSS template downloadet!','ok');
 }
 
 function exportSPX_GSAP(){
-  const spxEls=elements.filter(e=>e.type==='text'&&e.spxField);
-  const fieldDefs=spxEls.map((e,i)=>`    {"field":"f${i}","title":"${e.fieldLabel}","value":"${e.text.replace(/"/g,'\\"')}","type":"text"}`).join(',\n');
+  const spxEls=elements.filter(e=>(e.type==='text'||e.type==='ticker')&&e.spxField);
+  const fieldDefs=spxEls.map((e,i)=>`    {"field":"f${i}","ftype":"${e.type==='ticker'?'textarea':'textfield'}","title":"${e.fieldLabel}","value":"${e.text.replace(/"/g,'\\"')}"}`).join(',\n');
   const fonts=[...new Set(elements.map(e=>e.fontFamily||'DM Sans'))];
   const fontUrl=`https://fonts.googleapis.com/css2?${fonts.map(f=>`family=${f.replace(/ /g,'+')}`).join('&')}&display=swap`;
-  let css='',htmlLines=[],updateLines=[];let fIdx=0;
+  let css='',htmlLines=[],updateLines=[],hiddenDivLines=[];let fIdx=0;
   elements.forEach(el=>{
     const id='el'+el.id;
     css+=`#${id}{position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;`;
@@ -870,10 +871,10 @@ function exportSPX_GSAP(){
     if(el.type==='rect')css+=`background:${el.bgColor};border-radius:${el.borderRadius}px;`;
     if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
     css+='}\n';
-    if(el.type==='ticker'){const sep=el.tickerSep||'  •  ';
-      if(el.spxField){htmlLines.push(`  <div id="${id}"><div id="${id}-inner"></div></div>`);updateLines.push(`  if(data&&data.f${fIdx}!==undefined){var items=data.f${fIdx}.split('|').map(s=>s.trim()).filter(Boolean);var txt=items.join('${sep}');document.getElementById('${id}-inner').textContent=txt+'${sep}'+txt;}`);fIdx++;}
+    if(el.type==='ticker'){const sep=el.tickerSep||'  \u2022  ';
+      if(el.spxField){htmlLines.push(`  <div id="${id}"><div id="${id}-inner"></div></div>`);updateLines.push(`  (function(){var t=document.getElementById('f${fIdx}').innerText;var items=t.split('|').map(s=>s.trim()).filter(Boolean);var txt=items.join('${sep}');document.getElementById('${id}-inner').textContent=txt+'${sep}'+txt;})();`);hiddenDivLines.push(`  <div id="f${fIdx}"></div>`);fIdx++;}
       else{htmlLines.push(`  <div id="${id}"><div id="${id}-inner">${el.text}${sep}${el.text}</div></div>`);}
-    }else if(el.type==='text'&&el.spxField){htmlLines.push(`  <div id="${id}" data-spx="f${fIdx}">${el.text}</div>`);updateLines.push(`  if(data&&data.f${fIdx}!==undefined)document.getElementById('${id}').innerHTML=data.f${fIdx};`);fIdx++;}
+    }else if(el.type==='text'&&el.spxField){htmlLines.push(`  <div id="${id}">${el.text}</div>`);updateLines.push(`  document.getElementById('${id}').innerHTML=document.getElementById('f${fIdx}').innerText;`);hiddenDivLines.push(`  <div id="f${fIdx}"></div>`);fIdx++;}
     else{htmlLines.push(`  <div id="${id}">${el.type==='text'?el.text:''}</div>`);}
   });
   const tname=document.getElementById('ttype').options[document.getElementById('ttype').selectedIndex].text;
@@ -886,9 +887,10 @@ function exportSPX_GSAP(){
   const gExtraJS=gTickerInitJS?`\ndocument.addEventListener('DOMContentLoaded',function(){\n${gTickerInitJS}});`:'';
   const gsapTag='<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>';
   _downloadHTML(_buildHTML(fontUrl,css+gTickerCSS,htmlLines,fieldDefs,tname,
-    `function play(data){\n  update(data);\n${_buildGSAPPlay(elements)}\n}`,
-    `function stop(){\n${_buildGSAPStop(elements)}\n}`,
-    `function update(data){\n${updateLines.join('\n')}\n}`+gExtraJS,
+    `function runTemplateUpdate(){\n${updateLines.join('\n')}\n  setTimeout(runAnimationIN,50);\n}${gExtraJS}`,
+    `function runAnimationIN(){\n${_buildGSAPPlay(elements)}\n}`,
+    `function runAnimationOUT(){\n${_buildGSAPStop(elements)}\n}`,
+    hiddenDivLines.join('\n'),
     gsapTag
   ),document.getElementById('ttype').value+'_gsap.html');
   toast('GSAP template downloadet!','ok');
@@ -940,8 +942,39 @@ function _buildGSAPStop(els){
   return lines.join('\n');
 }
 
-function _buildHTML(fontUrl,css,htmlLines,fieldDefs,tname,playFn,stopFn,updateFn,extraHead=''){
-  return `<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<link href="${fontUrl}" rel="stylesheet">\n${extraHead}\n<style>\n*{margin:0;padding:0;box-sizing:border-box;}\nbody{width:1920px;height:1080px;overflow:hidden;background:transparent;}\n${css}\n</style>\n</head>\n<body>\n${htmlLines.join('\n')}\n\n<script type="text/spx-data">\n{\n  "description": "${tname}",\n  "fields": [\n${fieldDefs}\n  ]\n}\n<\/script>\n<script>\n${playFn}\n${stopFn}\n${updateFn}\n<\/script>\n</body>\n</html>`;
+function _buildHTML(fontUrl,css,htmlLines,fieldDefs,tname,updateFn,animInFn,animOutFn,hiddenDivs='',extraHead=''){
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="${fontUrl}" rel="stylesheet">
+${extraHead}
+<script src="/templates/softpix/Template_Pack_1.3/js/spx_interface.js"><\/script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
+#hiddenSpxData{display:none;}
+${css}
+</style>
+</head>
+<body>
+${htmlLines.join('\n')}
+<div id="hiddenSpxData">
+${hiddenDivs}
+</div>
+<script>
+${updateFn}
+${animInFn}
+${animOutFn}
+window.SPXGCTemplateDefinition = {
+  "description": "${tname}",
+  "DataFields": [
+${fieldDefs}
+  ]
+};
+<\/script>
+</body>
+</html>`;
 }
 
 function _downloadHTML(html,filename){
