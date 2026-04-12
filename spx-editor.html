@@ -326,7 +326,7 @@ let dragging=false,dragOff=[],resizing=false,resEl=null,resHandle='',resStart={}
 let boxSel=false,boxStart={};
 let undoStack=[],redoStack=[];
 let showGrid=false,snapOn=true,gridSz=20;
-let bgColor='#1a1a1a';
+let bgColor='transparent';
 let currentTab='props';
 let exportMode='css';
 let tlZoom=3;
@@ -711,15 +711,15 @@ function renderPropsTab(){
     <div class="psec"><div class="psec-title">Ticker indstillinger</div>
       <div class="prow"><span class="plbl">Hastighed (px/s)</span><input class="pi sm" type="number" id="p-ticker-speed" value="${el.tickerSpeed??120}" min="20" max="600" step="10"></div>
       <div class="prow"><span class="plbl">Separator</span><input class="pi" id="p-ticker-sep" value="${el.tickerSep??'  •  '}"></div>
-    </div>
+    </div>`:''}
     <div class="psec"><div class="psec-title">Live API (valgfrit)</div>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.7">Hent tekst fra kampdag ticker automatisk.<br>Skabelon til ticker-siden:<br><span style="font-family:var(--mono);color:var(--accent)">{ticker_normal}</span><br>eller BREAKING:<br><span style="font-family:var(--mono);color:var(--accent)">{ticker_breaking}</span></div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.7">${el.type==='ticker'?'Brug <span style="font-family:var(--mono);color:var(--accent)">{ticker_normal}</span> eller <span style="font-family:var(--mono);color:var(--accent)">{ticker_breaking}</span> for kampdag tickers.<br>':''}Brug <span style="font-family:var(--mono);color:var(--accent)">{feltnavn}</span> til at indsætte værdier fra JSON.</div>
       <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">URL</label>
       <input class="pi" id="p-api-url" value="${el.apiUrl||''}" placeholder="https://vmix-control.vercel.app/api/vmix/PROJEKT-ID" style="margin-bottom:7px">
       <div class="pg2"><div><label>Interval (s)</label><input class="pi" type="number" id="p-api-ivl" value="${el.apiInterval??30}" min="5" max="300" step="5"></div></div>
       <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">Skabelon</label>
-      <input class="pi" id="p-api-tpl" value="${el.apiTemplate||''}" placeholder="{ticker_normal}">
-    </div>`:''}
+      <input class="pi" id="p-api-tpl" value="${el.apiTemplate||''}" placeholder="${el.type==='ticker'?'{ticker_normal}':'{K1_n} {K1_score}'}">
+    </div>
     <div class="psec"><div class="psec-title">Navn</div><input class="pi" id="p-name" value="${el.name}"></div>
     <div class="psec"><div class="psec-title">Position & størrelse</div>
       <div class="pg2">
@@ -814,7 +814,7 @@ function saveProject(){
 function loadProject(ev){
   const file=ev.target.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=e=>{try{const d=JSON.parse(e.target.result);elements=d.elements||[];bgColor=d.bgColor||'#1a1a1a';elCtr=d.elCtr||elements.length;canvas.style.background=bgColor;selIds=[];saveState();render();renderPanel();renderTimeline();toast('Projekt indlæst','ok');}catch{toast('Ugyldig projektfil');}};
+  reader.onload=e=>{try{const d=JSON.parse(e.target.result);elements=d.elements||[];bgColor=d.bgColor||'transparent';elCtr=d.elCtr||elements.length;canvas.style.background=bgColor;selIds=[];saveState();render();renderPanel();renderTimeline();toast('Projekt indlæst','ok');}catch{toast('Ugyldig projektfil');}};
   reader.readAsText(file);ev.target.value='';
 }
 
@@ -863,7 +863,9 @@ function exportSPX_CSS(){
     tickerInitJS+=`(function(){var wrap=document.getElementById('${id}');var inner=document.getElementById('${id}-inner');if(!inner||!wrap)return;var speed=${speed};var pos=wrap.offsetWidth;var pending=null;var last=null;wrap._tickerUpdate=function(t){if(t!==inner.textContent)pending=t;};function step(ts){if(last===null){last=ts;requestAnimationFrame(step);return;}var dt=(ts-last)/1000;last=ts;pos-=speed*dt;var half=inner.scrollWidth/2;if(half>0&&pos<-half){if(pending!==null){inner.textContent=pending;pending=null;}pos=wrap.offsetWidth;}inner.style.transform='translateX('+Math.round(pos)+'px)';requestAnimationFrame(step);}requestAnimationFrame(step);})();\n`;
     if(el.apiUrl){const apiSep=el.tickerSep||'  \u2022  ';const apiIvl=Math.max(5,el.apiInterval||30);tickerInitJS+=`(function(){var url=${JSON.stringify(el.apiUrl)};var tpl=${JSON.stringify(el.apiTemplate||'')};var sep=${JSON.stringify(apiSep)};function stripHtml(s){return s.replace(/<[^>]*>/g,'').replace(/&bull;/g,'|').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');}function fetchAndUpdate(){fetch(url).then(function(r){return r.json();}).then(function(data){var obj=Array.isArray(data)?data[0]:data;var text=tpl.replace(/\\{(\\w+)\\}/g,function(_,k){return obj[k]!==undefined?stripHtml(String(obj[k])):'';});var parts=text.split('|').map(function(s){return s.trim();}).filter(Boolean);if(!parts.length)return;var full=parts.join(sep)+sep+parts.join(sep);var w=document.getElementById('${id}');if(w&&w._tickerUpdate)w._tickerUpdate(full);}).catch(function(){});}fetchAndUpdate();setInterval(fetchAndUpdate,${apiIvl}*1000);})();\n`;}
   });
-  const extraJS=tickerInitJS?`\ndocument.addEventListener('DOMContentLoaded',function(){\n${tickerInitJS}});`:'';
+  let textApiJS='';
+  elements.filter(e=>e.type==='text'&&e.apiUrl).forEach(el=>{const id='el'+el.id;const apiIvl=Math.max(5,el.apiInterval||30);textApiJS+=`(function(){var url=${JSON.stringify(el.apiUrl)};var tpl=${JSON.stringify(el.apiTemplate||'')};var ivl=${apiIvl};function stripHtml(s){return s.replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');}function fetchAndUpdate(){fetch(url).then(function(r){return r.json();}).then(function(data){var obj=Array.isArray(data)?data[0]:data;var text=tpl.replace(/\\{(\\w+)\\}/g,function(_,k){return obj[k]!==undefined?stripHtml(String(obj[k])):'';});var el=document.getElementById('${id}');if(el)el.textContent=text;}).catch(function(){});}fetchAndUpdate();setInterval(fetchAndUpdate,ivl*1000);})();\n`;});
+  const extraJS=(tickerInitJS+textApiJS)?`\ndocument.addEventListener('DOMContentLoaded',function(){\n${tickerInitJS+textApiJS}});`:'';
   _downloadHTML(_buildHTML(fontUrl,css+tickerCSS,htmlLines,fieldDefs,tname,
     `function runTemplateUpdate(){\n${updateLines.join('\n')}\n  setTimeout(runAnimationIN,50);\n}${extraJS}`,
     `function runAnimationIN(){\n${playLines.join('\n')}\n}`,
@@ -907,7 +909,9 @@ function exportSPX_GSAP(){
     gTickerInitJS+=`(function(){var wrap=document.getElementById('${id}');var inner=document.getElementById('${id}-inner');if(!inner||!wrap)return;var speed=${speed};var pos=wrap.offsetWidth;var pending=null;var last=null;wrap._tickerUpdate=function(t){if(t!==inner.textContent)pending=t;};function step(ts){if(last===null){last=ts;requestAnimationFrame(step);return;}var dt=(ts-last)/1000;last=ts;pos-=speed*dt;var half=inner.scrollWidth/2;if(half>0&&pos<-half){if(pending!==null){inner.textContent=pending;pending=null;}pos=wrap.offsetWidth;}inner.style.transform='translateX('+Math.round(pos)+'px)';requestAnimationFrame(step);}requestAnimationFrame(step);})();\n`;
     if(el.apiUrl){const apiSep=el.tickerSep||'  \u2022  ';const apiIvl=Math.max(5,el.apiInterval||30);gTickerInitJS+=`(function(){var url=${JSON.stringify(el.apiUrl)};var tpl=${JSON.stringify(el.apiTemplate||'')};var sep=${JSON.stringify(apiSep)};function stripHtml(s){return s.replace(/<[^>]*>/g,'').replace(/&bull;/g,'|').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');}function fetchAndUpdate(){fetch(url).then(function(r){return r.json();}).then(function(data){var obj=Array.isArray(data)?data[0]:data;var text=tpl.replace(/\\{(\\w+)\\}/g,function(_,k){return obj[k]!==undefined?stripHtml(String(obj[k])):'';});var parts=text.split('|').map(function(s){return s.trim();}).filter(Boolean);if(!parts.length)return;var full=parts.join(sep)+sep+parts.join(sep);var w=document.getElementById('${id}');if(w&&w._tickerUpdate)w._tickerUpdate(full);}).catch(function(){});}fetchAndUpdate();setInterval(fetchAndUpdate,${apiIvl}*1000);})();\n`;}
   });
-  const gExtraJS=gTickerInitJS?`\ndocument.addEventListener('DOMContentLoaded',function(){\n${gTickerInitJS}});`:'';
+  let gTextApiJS='';
+  elements.filter(e=>e.type==='text'&&e.apiUrl).forEach(el=>{const id='el'+el.id;const apiIvl=Math.max(5,el.apiInterval||30);gTextApiJS+=`(function(){var url=${JSON.stringify(el.apiUrl)};var tpl=${JSON.stringify(el.apiTemplate||'')};var ivl=${apiIvl};function stripHtml(s){return s.replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');}function fetchAndUpdate(){fetch(url).then(function(r){return r.json();}).then(function(data){var obj=Array.isArray(data)?data[0]:data;var text=tpl.replace(/\\{(\\w+)\\}/g,function(_,k){return obj[k]!==undefined?stripHtml(String(obj[k])):'';});var el=document.getElementById('${id}');if(el)el.textContent=text;}).catch(function(){});}fetchAndUpdate();setInterval(fetchAndUpdate,ivl*1000);})();\n`;});
+  const gExtraJS=(gTickerInitJS+gTextApiJS)?`\ndocument.addEventListener('DOMContentLoaded',function(){\n${gTickerInitJS+gTextApiJS}});`:'';
   const gsapTag='<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>';
   _downloadHTML(_buildHTML(fontUrl,css+gTickerCSS,htmlLines,fieldDefs,tname,
     `function runTemplateUpdate(){\n${updateLines.join('\n')}\n  setTimeout(runAnimationIN,50);\n}${gExtraJS}`,
@@ -1067,7 +1071,7 @@ function loadPreset(){
   else if(t==='ticker'){elements=[mkEl('rect',{x:0,y:1022,w:1920,h:58,bgColor:'rgba(10,10,12,0.9)',animation:'slide-up',animDelay:0,name:'Ticker baggrund',spxField:false}),mkEl('rect',{x:0,y:1022,w:218,h:58,bgColor:'#e8593c',animation:'slide-up',animDelay:0,name:'Label baggrund',spxField:false}),mkEl('text',{x:14,y:1030,w:190,h:42,text:'NYHEDER',fontSize:19,fontWeight:'700',fontFamily:'Oswald',animation:'fade',animDelay:0.2,spxField:true,fieldLabel:'Label',name:'Label'}),mkEl('ticker',{x:238,y:1022,w:1660,h:58,text:'Første nyhed  •  Anden nyhed  •  Tredje nyhed',fontSize:23,fontWeight:'400',color:'#ffffff',bgColor:'transparent',animation:'fade',animDelay:0.3,spxField:true,fieldLabel:'Ticker tekst (adskil med |)',name:'Ticker tekst',tickerSpeed:120})];}
   else if(t==='credit'){elements=[mkEl('text',{x:760,y:490,w:400,h:36,text:'En produktion af',fontSize:22,fontWeight:'300',color:'rgba(255,255,255,0.5)',animation:'fade',animDelay:0,spxField:false,name:'Undertitel'}),mkEl('rect',{x:760,y:532,w:400,h:3,bgColor:'#e8593c',animation:'wipe',animDelay:0.12,name:'Linje',spxField:false}),mkEl('text',{x:720,y:544,w:480,h:72,text:'Studio Navn',fontSize:54,fontWeight:'700',animation:'slide-up',animDelay:0.22,spxField:true,fieldLabel:'Firma / navn',name:'Hovednavn'})];}
   else{elements=[mkEl('text',{x:120,y:398,w:1680,h:130,text:'STOR OVERSKRIFT',fontSize:100,fontWeight:'700',fontFamily:'Oswald',animation:'slide-up',animDelay:0,spxField:true,fieldLabel:'Overskrift',name:'Overskrift'}),mkEl('rect',{x:120,y:548,w:180,h:6,bgColor:'#e8593c',animation:'wipe',animDelay:0.18,name:'Accent linje',spxField:false}),mkEl('text',{x:120,y:564,w:1300,h:56,text:'Underoverskrift eller ingress',fontSize:36,fontWeight:'300',color:'rgba(255,255,255,0.65)',animation:'fade',animDelay:0.32,spxField:true,fieldLabel:'Undertekst',name:'Undertekst'})];}
-  selIds=[];canvas.style.background=bgColor;render();renderPanel();renderTimeline();toast('Preset indlæst');
+  bgColor='transparent';selIds=[];canvas.style.background=bgColor;render();renderPanel();renderTimeline();toast('Preset indlæst');
 }
 
 function toast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type==='ok'?' ok':'');clearTimeout(t._t);t._t=setTimeout(()=>t.className='',2600);}
@@ -1126,7 +1130,7 @@ function showImportModal(imported,importedBg,filename,warnings,spxCount){
 function applyImport(els,bg){saveState();elements=els;bgColor=bg;canvas.style.background=bgColor;selIds=[];document.getElementById('import-modal').classList.remove('open');render();renderPanel();renderTimeline();toast(`${els.length} elementer indlæst`,'ok');}
 document.getElementById('import-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 
-calcScale();loadPreset();updUndoBtns();
+calcScale();canvas.style.background=bgColor;render();renderPanel();renderTimeline();updUndoBtns();
 new ResizeObserver(()=>renderTimeline()).observe(document.getElementById('tl-track'));
 </script>
 </body>
