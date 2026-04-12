@@ -208,6 +208,7 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
   <select id="ttype">
     <option value="lower_third">Lower Third</option>
     <option value="ticker">Ticker / Crawl</option>
+    <option value="smart_ticker">⚡ Smart Ticker</option>
     <option value="credit">Credit</option>
     <option value="fullscreen">Fullscreen Title</option>
   </select>
@@ -332,6 +333,12 @@ let currentTab='props';
 let exportMode='css';
 let tlZoom=3;
 let scrubTime=null,isScrubbing=false;
+let transitionOnUpdate=true;
+let smartTickerSettings={
+  normalBg:'rgba(10,10,12,0.92)',normalLabelBg:'#e8593c',normalLabelText:'NYHEDER',normalTextColor:'#ffffff',
+  breakingBg:'#eab308',breakingLabelBg:'#dc2626',breakingLabelText:'BREAKING',breakingTextColor:'#111111',
+  apiUrl:'',apiInterval:15
+};
 
 const FONTS=['DM Sans','Oswald','Bebas Neue','Playfair Display','Montserrat','Raleway','Anton','Roboto Condensed','Georgia','Courier New'];
 const ANIMS=['fade','slide-left','slide-right','slide-up','slide-down','wipe','scale','none'];
@@ -368,23 +375,23 @@ function toggleSnap(){snapOn=!snapOn;document.getElementById('snap-btn').style.c
 function snap(v){return snapOn?Math.round(v/gridSz)*gridSz:Math.round(v);}
 
 function saveState(){
-  undoStack.push(JSON.stringify({elements,bgColor,elCtr}));
+  undoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate}));
   if(undoStack.length>60)undoStack.shift();
   redoStack=[];updUndoBtns();
 }
 function undo(){
   if(!undoStack.length)return;
-  redoStack.push(JSON.stringify({elements,bgColor,elCtr}));
+  redoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate}));
   const s=JSON.parse(undoStack.pop());
-  elements=s.elements;bgColor=s.bgColor;elCtr=s.elCtr;
+  elements=s.elements;bgColor=s.bgColor;elCtr=s.elCtr;transitionOnUpdate=s.transitionOnUpdate??true;
   canvas.style.background=bgColor;selIds=[];
   render();renderPanel();updUndoBtns();
 }
 function redo(){
   if(!redoStack.length)return;
-  undoStack.push(JSON.stringify({elements,bgColor,elCtr}));
+  undoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate}));
   const s=JSON.parse(redoStack.pop());
-  elements=s.elements;bgColor=s.bgColor;elCtr=s.elCtr;
+  elements=s.elements;bgColor=s.bgColor;elCtr=s.elCtr;transitionOnUpdate=s.transitionOnUpdate??true;
   canvas.style.background=bgColor;selIds=[];
   render();renderPanel();updUndoBtns();
 }
@@ -502,26 +509,63 @@ function render(){
   applyScrubState();
 }
 
+function _scrubEaseIn(p,a){
+  if(a==='wipe')return p<0.5?2*p*p:1-Math.pow(-2*p+2,2)/2; // power2.inOut
+  if(a==='scale'){const c=2.5942;let v=p<0.5?(Math.pow(2*p,2)*((c+1)*2*p-c))/2:(Math.pow(2*p-2,2)*((c+1)*(2*p-2)+c)+2)/2;return Math.min(1.05,v);} // back.out
+  return 1-Math.pow(1-p,3); // power3.out
+}
+function _applyInState(div,a,p,el){
+  const op=el.opacity;
+  if(a==='fade'){div.style.opacity=p*op;div.style.transform='none';div.style.transformOrigin='';}
+  else if(a==='slide-left'){div.style.opacity=p*op;div.style.transform=`translateX(${(1-p)*-60*scale}px)`;div.style.transformOrigin='';}
+  else if(a==='slide-right'){div.style.opacity=p*op;div.style.transform=`translateX(${(1-p)*60*scale}px)`;div.style.transformOrigin='';}
+  else if(a==='slide-up'){div.style.opacity=p*op;div.style.transform=`translateY(${(1-p)*50*scale}px)`;div.style.transformOrigin='';}
+  else if(a==='slide-down'){div.style.opacity=p*op;div.style.transform=`translateY(${(1-p)*-50*scale}px)`;div.style.transformOrigin='';}
+  else if(a==='wipe'){div.style.transform=`scaleX(${p})`;div.style.transformOrigin='left center';div.style.opacity=el.opacity;}
+  else if(a==='scale'){div.style.opacity=p*op;div.style.transform=`scale(${0.75+0.25*p})`;div.style.transformOrigin='';}
+}
+function _applyOutState(div,ao,p,el){
+  // p=0 → fully visible, p=1 → fully out
+  const op=el.opacity;
+  if(ao==='fade'){div.style.opacity=(1-p)*op;div.style.transform='none';div.style.transformOrigin='';}
+  else if(ao==='slide-left'){div.style.opacity=(1-p)*op;div.style.transform=`translateX(${p*-40*scale}px)`;div.style.transformOrigin='';}
+  else if(ao==='slide-right'){div.style.opacity=(1-p)*op;div.style.transform=`translateX(${p*40*scale}px)`;div.style.transformOrigin='';}
+  else if(ao==='slide-up'){div.style.opacity=(1-p)*op;div.style.transform=`translateY(${p*-30*scale}px)`;div.style.transformOrigin='';}
+  else if(ao==='slide-down'){div.style.opacity=(1-p)*op;div.style.transform=`translateY(${p*30*scale}px)`;div.style.transformOrigin='';}
+  else if(ao==='wipe'){div.style.transform=`scaleX(${1-p})`;div.style.transformOrigin='right center';div.style.opacity=op;}
+  else if(ao==='scale'){div.style.opacity=(1-p)*op;div.style.transform=`scale(${1-0.15*p})`;div.style.transformOrigin='';}
+}
 function applyScrubState(){
   if(scrubTime===null)return;
+  const t=scrubTime;
   elements.forEach(el=>{
     const div=canvas.querySelector(`[data-id="${el.id}"]`);
     if(!div)return;
     const a=el.animation;if(a==='none')return;
-    const delay=el.animDelay||0,dur=Math.max(el.animDuration||0.5,0.001);
-    const raw=Math.min(1,Math.max(0,(scrubTime-delay)/dur));
-    let p;
-    if(a==='wipe'){p=raw<0.5?2*raw*raw:1-Math.pow(-2*raw+2,2)/2;}
-    else if(a==='scale'){const c=2.5942;p=raw<0.5?(Math.pow(2*raw,2)*((c+1)*2*raw-c))/2:(Math.pow(2*raw-2,2)*((c+1)*(2*raw-2)+c)+2)/2;p=Math.min(1.05,p);}
-    else{p=1-Math.pow(1-raw,3);}
-    const op=el.opacity;
-    if(a==='fade'){div.style.opacity=p*op;div.style.transform='';}
-    else if(a==='slide-left'){div.style.opacity=p*op;div.style.transform=`translateX(${(1-p)*-60*scale}px)`;}
-    else if(a==='slide-right'){div.style.opacity=p*op;div.style.transform=`translateX(${(1-p)*60*scale}px)`;}
-    else if(a==='slide-up'){div.style.opacity=p*op;div.style.transform=`translateY(${(1-p)*50*scale}px)`;}
-    else if(a==='slide-down'){div.style.opacity=p*op;div.style.transform=`translateY(${(1-p)*-50*scale}px)`;}
-    else if(a==='wipe'){div.style.transform=`scaleX(${p})`;div.style.transformOrigin='left center';}
-    else if(a==='scale'){div.style.opacity=p*op;div.style.transform=`scale(${0.75+0.25*p})`;}
+    const ao=resolveAnimOut(el);
+    const inDelay=el.animDelay||0,inDur=Math.max(el.animDuration||0.5,0.001);
+    const outDur=Math.max(el.animOutDuration??0.3,0.001);
+    const outDelay=el.animOutDelay??0;
+    const outStart=outDelay>0?outDelay:(inDelay+inDur);
+
+    if(t<=inDelay){
+      // Før IN: fuldt skjult
+      _applyInState(div,a,0,el);
+    }else if(t<=inDelay+inDur){
+      // Under IN
+      const raw=(t-inDelay)/inDur;
+      _applyInState(div,a,_scrubEaseIn(raw,a),el);
+    }else if(ao==='none'||t<=outStart){
+      // Fuldt synlig
+      _applyInState(div,a,1,el);
+    }else if(t<=outStart+outDur){
+      // Under OUT — ease-in (power2)
+      const raw=(t-outStart)/outDur;
+      _applyOutState(div,ao,raw*raw,el);
+    }else{
+      // Efter OUT: fuldt skjult
+      _applyOutState(div,ao,1,el);
+    }
   });
 }
 
@@ -683,10 +727,54 @@ function renderCanvasTab(){
       <label class="pchk"><input type="checkbox" ${showGrid?'checked':''} onchange="toggleGrid()">Vis grid</label>
       <label class="pchk"><input type="checkbox" ${snapOn?'checked':''} onchange="toggleSnap()">Snap til grid (${gridSz}px)</label>
     </div>
+    ${document.getElementById('ttype').value==='smart_ticker'?`
+    <div class="psec" style="border-color:var(--accent)"><div class="psec-title" style="color:var(--accent)">⚡ Smart Ticker</div>
+      <div class="psec-title" style="margin-top:8px">Normal tilstand</div>
+      <div class="prow"><span class="plbl">Baggrund</span><input type="color" class="pc" id="st-nbg" value="${_rgba2hex(smartTickerSettings.normalBg)}"><input class="pi" id="st-nbg-t" value="${smartTickerSettings.normalBg}"></div>
+      <div class="prow"><span class="plbl">Label farve</span><input type="color" class="pc" id="st-nlb" value="${smartTickerSettings.normalLabelBg}"><input class="pi" id="st-nlb-t" value="${smartTickerSettings.normalLabelBg}"></div>
+      <div class="prow"><span class="plbl">Label tekst</span><input class="pi" id="st-nlt" value="${smartTickerSettings.normalLabelText}"></div>
+      <div class="prow"><span class="plbl">Tekstfarve</span><input type="color" class="pc" id="st-ntc" value="${smartTickerSettings.normalTextColor}"><input class="pi" id="st-ntc-t" value="${smartTickerSettings.normalTextColor}"></div>
+      <div class="psec-title" style="margin-top:10px">Breaking tilstand</div>
+      <div class="prow"><span class="plbl">Baggrund</span><input type="color" class="pc" id="st-bbg" value="${smartTickerSettings.breakingBg}"><input class="pi" id="st-bbg-t" value="${smartTickerSettings.breakingBg}"></div>
+      <div class="prow"><span class="plbl">Label farve</span><input type="color" class="pc" id="st-blb" value="${smartTickerSettings.breakingLabelBg}"><input class="pi" id="st-blb-t" value="${smartTickerSettings.breakingLabelBg}"></div>
+      <div class="prow"><span class="plbl">Label tekst</span><input class="pi" id="st-blt" value="${smartTickerSettings.breakingLabelText}"></div>
+      <div class="prow"><span class="plbl">Tekstfarve</span><input type="color" class="pc" id="st-btc" value="${smartTickerSettings.breakingTextColor}"><input class="pi" id="st-btc-t" value="${smartTickerSettings.breakingTextColor}"></div>
+      <div class="psec-title" style="margin-top:10px">API</div>
+      <input class="pi" id="st-url" value="${smartTickerSettings.apiUrl}" placeholder="https://vmix-control.vercel.app/api/vmix/PROJEKT-ID" style="margin-bottom:7px">
+      <div class="prow"><span class="plbl">Interval (s)</span><input class="pi sm" type="number" id="st-ivl" value="${smartTickerSettings.apiInterval}" min="5" max="300" step="5"></div>
+      <button class="tb-btn primary" style="width:100%;justify-content:center;margin-top:8px" onclick="exportSmartTicker()">&#11014; Eksportér Smart Ticker</button>
+    </div>`:''}
+    <div class="psec"><div class="psec-title">Overgang ved opdatering</div>
+      <label class="pchk"><input type="checkbox" id="cv-tou" ${transitionOnUpdate?'checked':''} onchange="transitionOnUpdate=this.checked">OUT → opdater → IN ved tekstskift</label>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.6">Når SPX sender ny tekst mens grafikken vises, spilles OUT-animationen først, derefter opdateres teksten og IN spilles igen.</div>
+    </div>
     <div class="psec"><div class="psec-title">Opløsning</div>
       <div style="font-size:11px;color:var(--text3)">1920 × 1080 px (HD 1080)</div>
     </div>`;
+  // Smart Ticker bindings
+  function stBind(id,key,isColor,elIdx,elProp){
+    const el=document.getElementById(id);if(!el)return;
+    el.addEventListener('input',e=>{
+      smartTickerSettings[key]=e.target.value;
+      if(isColor){const hex=document.getElementById(id+'-t');if(hex)hex.value=e.target.value;}
+      if(elIdx!==undefined&&elements[elIdx]){elements[elIdx][elProp]=e.target.value;render();}
+    });
+    const txt=document.getElementById(id+'-t');
+    if(txt)txt.addEventListener('input',e=>{smartTickerSettings[key]=e.target.value;elements[elIdx][elProp]=e.target.value;render();});
+  }
+  stBind('st-nbg','normalBg',true,0,'bgColor');
+  stBind('st-nlb','normalLabelBg',true,1,'bgColor');
+  const nlt=document.getElementById('st-nlt');if(nlt)nlt.addEventListener('input',e=>{smartTickerSettings.normalLabelText=e.target.value;if(elements[2])elements[2].text=e.target.value;render();});
+  stBind('st-ntc','normalTextColor',true,2,'color');
+  stBind('st-bbg','breakingBg',true);
+  stBind('st-blb','breakingLabelBg',true);
+  const blt=document.getElementById('st-blt');if(blt)blt.addEventListener('input',e=>{smartTickerSettings.breakingLabelText=e.target.value;});
+  stBind('st-btc','breakingTextColor',true);
+  const url=document.getElementById('st-url');if(url)url.addEventListener('input',e=>{smartTickerSettings.apiUrl=e.target.value;});
+  const ivl=document.getElementById('st-ivl');if(ivl)ivl.addEventListener('input',e=>{smartTickerSettings.apiInterval=parseFloat(e.target.value)||15;});
 }
+
+function _rgba2hex(c){try{const d=document.createElement('div');d.style.color=c;document.body.appendChild(d);const rgb=getComputedStyle(d).color;document.body.removeChild(d);const m=rgb.match(/\d+/g);if(!m||m.length<3)return'#000000';return'#'+[m[0],m[1],m[2]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('');}catch{return'#000000';}}
 
 function renderLayersTab(){document.getElementById('pbody').innerHTML='<div id="layers-list"></div>';updLayersList();}
 function updLayersList(){
@@ -846,14 +934,14 @@ function previewSelAnim(){
 }
 
 function saveProject(){
-  const data=JSON.stringify({version:3,elements,bgColor,elCtr},null,2);
+  const data=JSON.stringify({version:3,elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings},null,2);
   try{const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(document.getElementById('ttype').value||'project')+'_spx.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},200);toast('Projekt gemt','ok');}
   catch(err){const uri='data:application/json;charset=utf-8,'+encodeURIComponent(data);const a=document.createElement('a');a.href=uri;a.download=(document.getElementById('ttype').value||'project')+'_spx.json';document.body.appendChild(a);a.click();setTimeout(()=>document.body.removeChild(a),200);toast('Projekt gemt','ok');}
 }
 function loadProject(ev){
   const file=ev.target.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=e=>{try{const d=JSON.parse(e.target.result);elements=d.elements||[];bgColor=d.bgColor||'transparent';elCtr=d.elCtr||elements.length;canvas.style.background=bgColor;selIds=[];saveState();render();renderPanel();renderTimeline();toast('Projekt indlæst','ok');}catch{toast('Ugyldig projektfil');}};
+  reader.onload=e=>{try{const d=JSON.parse(e.target.result);elements=d.elements||[];bgColor=d.bgColor||'transparent';elCtr=d.elCtr||elements.length;transitionOnUpdate=d.transitionOnUpdate??true;if(d.smartTickerSettings)Object.assign(smartTickerSettings,d.smartTickerSettings);canvas.style.background=bgColor;selIds=[];saveState();render();renderPanel();renderTimeline();toast('Projekt indlæst','ok');}catch{toast('Ugyldig projektfil');}};
   reader.readAsText(file);ev.target.value='';
 }
 
@@ -905,10 +993,14 @@ function exportSPX_CSS(){
   let textApiJS='';
   elements.filter(e=>e.type==='text'&&e.apiUrl).forEach(el=>{const id='el'+el.id;const apiIvl=Math.max(5,el.apiInterval||30);textApiJS+=`(function(){var url=${JSON.stringify(el.apiUrl)};var tpl=${JSON.stringify(el.apiTemplate||'')};var ivl=${apiIvl};function stripHtml(s){return s.replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');}function fetchAndUpdate(){fetch(url).then(function(r){return r.json();}).then(function(data){var obj=Array.isArray(data)?data[0]:data;var text=tpl.replace(/\\{(\\w+)\\}/g,function(_,k){return obj[k]!==undefined?stripHtml(String(obj[k])):'';});var el=document.getElementById('${id}');if(el)el.textContent=text;}).catch(function(){});}fetchAndUpdate();setInterval(fetchAndUpdate,ivl*1000);})();\n`;});
   const extraJS=(tickerInitJS+textApiJS)?`\ndocument.addEventListener('DOMContentLoaded',function(){\n${tickerInitJS+textApiJS}});`:'';
+  const _maxOutMs=Math.round((elements.reduce((m,el)=>{const od=el.animOutDelay??0;const dur=el.animOutDuration??0.3;return Math.max(m,od+dur);},0)+0.1)*1000);
+  const _updateFn=transitionOnUpdate
+    ?`var _spxVisible=false;\nfunction runTemplateUpdate(){function _apply(){\n${updateLines.join('\n')}\n  setTimeout(runAnimationIN,50);}if(_spxVisible){runAnimationOUT();setTimeout(_apply,${_maxOutMs});}else{_apply();}}${extraJS}`
+    :`function runTemplateUpdate(){\n${updateLines.join('\n')}\n  setTimeout(runAnimationIN,50);\n}${extraJS}`;
   _downloadHTML(_buildHTML(fontUrl,css+tickerCSS,htmlLines,fieldDefs,tname,
-    `function runTemplateUpdate(){\n${updateLines.join('\n')}\n  setTimeout(runAnimationIN,50);\n}${extraJS}`,
-    `function runAnimationIN(){\n${playLines.join('\n')}\n}`,
-    `function runAnimationOUT(){\n${stopLines.join('\n')}\n}`,
+    _updateFn,
+    `function runAnimationIN(){_spxVisible=true;\n${playLines.join('\n')}\n}`,
+    `function runAnimationOUT(){_spxVisible=false;\n${stopLines.join('\n')}\n}`,
     hiddenDivLines.join('\n')
   ),document.getElementById('ttype').value+'.html');
   toast('CSS template downloadet!','ok');
@@ -952,10 +1044,14 @@ function exportSPX_GSAP(){
   elements.filter(e=>e.type==='text'&&e.apiUrl).forEach(el=>{const id='el'+el.id;const apiIvl=Math.max(5,el.apiInterval||30);gTextApiJS+=`(function(){var url=${JSON.stringify(el.apiUrl)};var tpl=${JSON.stringify(el.apiTemplate||'')};var ivl=${apiIvl};function stripHtml(s){return s.replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');}function fetchAndUpdate(){fetch(url).then(function(r){return r.json();}).then(function(data){var obj=Array.isArray(data)?data[0]:data;var text=tpl.replace(/\\{(\\w+)\\}/g,function(_,k){return obj[k]!==undefined?stripHtml(String(obj[k])):'';});var el=document.getElementById('${id}');if(el)el.textContent=text;}).catch(function(){});}fetchAndUpdate();setInterval(fetchAndUpdate,ivl*1000);})();\n`;});
   const gExtraJS=(gTickerInitJS+gTextApiJS)?`\ndocument.addEventListener('DOMContentLoaded',function(){\n${gTickerInitJS+gTextApiJS}});`:'';
   const gsapTag='<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>';
+  const _gMaxOutMs=Math.round((elements.reduce((m,el)=>{const od=el.animOutDelay??0;const dur=el.animOutDuration??0.3;return Math.max(m,od+dur);},0)+0.1)*1000);
+  const _gUpdateFn=transitionOnUpdate
+    ?`var _spxVisible=false;\nfunction runTemplateUpdate(){function _apply(){\n${updateLines.join('\n')}\n  setTimeout(runAnimationIN,50);}if(_spxVisible){runAnimationOUT();setTimeout(_apply,${_gMaxOutMs});}else{_apply();}}${gExtraJS}`
+    :`function runTemplateUpdate(){\n${updateLines.join('\n')}\n  setTimeout(runAnimationIN,50);\n}${gExtraJS}`;
   _downloadHTML(_buildHTML(fontUrl,css+gTickerCSS,htmlLines,fieldDefs,tname,
-    `function runTemplateUpdate(){\n${updateLines.join('\n')}\n  setTimeout(runAnimationIN,50);\n}${gExtraJS}`,
-    `function runAnimationIN(){\n${_buildGSAPPlay(elements)}\n}`,
-    `function runAnimationOUT(){\n${_buildGSAPStop(elements)}\n}`,
+    _gUpdateFn,
+    `function runAnimationIN(){_spxVisible=true;\n${_buildGSAPPlay(elements)}\n}`,
+    `function runAnimationOUT(){_spxVisible=false;\n${_buildGSAPStop(elements)}\n}`,
     hiddenDivLines.join('\n'),
     gsapTag
   ),document.getElementById('ttype').value+'_gsap.html');
@@ -1109,9 +1205,72 @@ function loadPreset(){
   saveState();elements=[];const t=document.getElementById('ttype').value;
   if(t==='lower_third'){elements=[mkEl('rect',{x:60,y:876,w:8,h:86,bgColor:'#e8593c',animation:'slide-up',animDelay:0,name:'Accent bar'}),mkEl('rect',{x:60,y:876,w:680,h:86,bgColor:'rgba(10,10,12,0.82)',borderRadius:4,animation:'wipe',animDelay:0.05,name:'Baggrund',spxField:false}),mkEl('text',{x:84,y:890,w:620,h:50,text:'Anders Andersen',fontSize:43,fontWeight:'700',animation:'slide-left',animDelay:0.18,spxField:true,fieldLabel:'Navn',name:'Navn'}),mkEl('text',{x:84,y:934,w:620,h:28,text:'Vært',fontSize:24,fontWeight:'300',color:'rgba(255,255,255,0.72)',animation:'slide-left',animDelay:0.28,spxField:true,fieldLabel:'Titel',name:'Titel'})];}
   else if(t==='ticker'){elements=[mkEl('rect',{x:0,y:1022,w:1920,h:58,bgColor:'rgba(10,10,12,0.9)',animation:'slide-up',animDelay:0,name:'Ticker baggrund',spxField:false}),mkEl('rect',{x:0,y:1022,w:218,h:58,bgColor:'#e8593c',animation:'slide-up',animDelay:0,name:'Label baggrund',spxField:false}),mkEl('text',{x:14,y:1030,w:190,h:42,text:'NYHEDER',fontSize:19,fontWeight:'700',fontFamily:'Oswald',animation:'fade',animDelay:0.2,spxField:true,fieldLabel:'Label',name:'Label'}),mkEl('ticker',{x:238,y:1022,w:1660,h:58,text:'Første nyhed  •  Anden nyhed  •  Tredje nyhed',fontSize:23,fontWeight:'400',color:'#ffffff',bgColor:'transparent',animation:'fade',animDelay:0.3,spxField:true,fieldLabel:'Ticker tekst (adskil med |)',name:'Ticker tekst',tickerSpeed:120})];}
+  else if(t==='smart_ticker'){const s=smartTickerSettings;elements=[mkEl('rect',{x:0,y:1022,w:1920,h:58,bgColor:s.normalBg,animation:'none',name:'Ticker bar',spxField:false}),mkEl('rect',{x:0,y:1022,w:218,h:58,bgColor:s.normalLabelBg,animation:'none',name:'Label baggrund',spxField:false}),mkEl('text',{x:14,y:1030,w:190,h:42,text:s.normalLabelText,fontSize:19,fontWeight:'700',fontFamily:'Oswald',color:s.normalTextColor,animation:'none',spxField:false,name:'Label tekst'}),mkEl('ticker',{x:238,y:1022,w:1660,h:58,text:'Første nyhed  •  Anden nyhed  •  Tredje nyhed',fontSize:23,fontWeight:'400',color:s.normalTextColor,bgColor:'transparent',animation:'none',spxField:false,name:'Ticker tekst',tickerSpeed:120,tickerSep:'  •  '})];}
   else if(t==='credit'){elements=[mkEl('text',{x:760,y:490,w:400,h:36,text:'En produktion af',fontSize:22,fontWeight:'300',color:'rgba(255,255,255,0.5)',animation:'fade',animDelay:0,spxField:false,name:'Undertitel'}),mkEl('rect',{x:760,y:532,w:400,h:3,bgColor:'#e8593c',animation:'wipe',animDelay:0.12,name:'Linje',spxField:false}),mkEl('text',{x:720,y:544,w:480,h:72,text:'Studio Navn',fontSize:54,fontWeight:'700',animation:'slide-up',animDelay:0.22,spxField:true,fieldLabel:'Firma / navn',name:'Hovednavn'})];}
   else{elements=[mkEl('text',{x:120,y:398,w:1680,h:130,text:'STOR OVERSKRIFT',fontSize:100,fontWeight:'700',fontFamily:'Oswald',animation:'slide-up',animDelay:0,spxField:true,fieldLabel:'Overskrift',name:'Overskrift'}),mkEl('rect',{x:120,y:548,w:180,h:6,bgColor:'#e8593c',animation:'wipe',animDelay:0.18,name:'Accent linje',spxField:false}),mkEl('text',{x:120,y:564,w:1300,h:56,text:'Underoverskrift eller ingress',fontSize:36,fontWeight:'300',color:'rgba(255,255,255,0.65)',animation:'fade',animDelay:0.32,spxField:true,fieldLabel:'Undertekst',name:'Undertekst'})];}
   bgColor='transparent';selIds=[];canvas.style.background=bgColor;render();renderPanel();renderTimeline();toast('Preset indlæst');
+}
+
+function exportSmartTicker(){
+  if(elements.length<4){toast('Indlæs Smart Ticker preset først');return;}
+  const [bar,labelBg,labelEl,tickerEl]=elements;
+  const s=smartTickerSettings;
+  const ff=[...new Set([labelEl.fontFamily,tickerEl.fontFamily])].map(f=>encodeURIComponent(f)+':wght@300;400;500;600;700').join('&family=');
+  const fontUrl=`https://fonts.googleapis.com/css2?family=${ff}&display=swap`;
+  const sep=JSON.stringify(tickerEl.tickerSep||'  \u2022  ');
+  const html=`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="${fontUrl}" rel="stylesheet">
+<script src="/templates/softpix/Template_Pack_1.3/js/spx_interface.js"><\/script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
+#st-cont{position:absolute;left:0;top:${bar.y}px;width:1920px;height:${bar.h}px;transform:translateY(110%);opacity:0;}
+#st-bar{position:absolute;left:${bar.x}px;top:0;width:${bar.w}px;height:${bar.h}px;background:${s.normalBg};transition:background-color 0.55s ease;}
+#st-lbg{position:absolute;left:${labelBg.x-bar.x}px;top:0;width:${labelBg.w}px;height:100%;background:${s.normalLabelBg};transition:background-color 0.55s ease;}
+#st-lbl{position:absolute;left:${labelEl.x-bar.x}px;top:50%;transform:translateY(-50%);font-size:${labelEl.fontSize}px;font-weight:${labelEl.fontWeight};font-family:'${labelEl.fontFamily}',sans-serif;color:${s.normalTextColor};white-space:nowrap;transition:color 0.3s ease;}
+#st-wrap{position:absolute;left:${tickerEl.x-bar.x}px;top:0;width:${tickerEl.w}px;height:100%;overflow:hidden;display:flex;align-items:center;}
+#st-inner{white-space:nowrap;display:inline-block;font-size:${tickerEl.fontSize}px;font-weight:${tickerEl.fontWeight};font-family:'${tickerEl.fontFamily}',sans-serif;color:${s.normalTextColor};transition:color 0.35s ease;}
+#hiddenSpxData{display:none;}
+</style>
+</head>
+<body>
+<div id="st-cont">
+  <div id="st-bar"></div>
+  <div id="st-lbg"></div>
+  <div id="st-lbl">${s.normalLabelText}</div>
+  <div id="st-wrap"><div id="st-inner"></div></div>
+</div>
+<div id="hiddenSpxData"><div id="f0"></div></div>
+<script>
+window.SPXGCTemplateDefinition={"description":"Smart Ticker","DataFields":[{"field":"f0","ftype":"textarea","title":"Manuel ticker tekst (adskil med |)","value":""}]};
+var NBG=${JSON.stringify(s.normalBg)},NLBG=${JSON.stringify(s.normalLabelBg)},NLTX=${JSON.stringify(s.normalLabelText)},NCOL=${JSON.stringify(s.normalTextColor)};
+var BBG=${JSON.stringify(s.breakingBg)},BLBG=${JSON.stringify(s.breakingLabelBg)},BLTX=${JSON.stringify(s.breakingLabelText)},BCOL=${JSON.stringify(s.breakingTextColor)};
+var APIURL=${JSON.stringify(s.apiUrl)},APIIVL=${Math.max(5,s.apiInterval||15)},SPD=${tickerEl.tickerSpeed||120},SEP=${sep};
+var _br=false,_tr=false,_vis=false,_nt='',_bt='';
+var _cont=document.getElementById('st-cont'),_bar=document.getElementById('st-bar'),_lbg=document.getElementById('st-lbg'),_lbl=document.getElementById('st-lbl'),_wrap=document.getElementById('st-wrap'),_inn=document.getElementById('st-inner');
+var _pos=1920,_pend=null,_last=null;
+_wrap._tickerUpdate=function(t){if(t!==_inn.textContent)_pend=t;};
+function _tick(ts){if(_last===null){_last=ts;requestAnimationFrame(_tick);return;}var dt=(ts-_last)/1000;_last=ts;_pos-=SPD*dt;var h=_inn.scrollWidth/2;if(h>0&&_pos<-h){if(_pend!==null){_inn.textContent=_pend;_pend=null;}_pos=_wrap.offsetWidth;}_inn.style.transform='translateX('+Math.round(_pos)+'px)';requestAnimationFrame(_tick);}
+function _in(cb){_cont.style.transition='transform 0.52s cubic-bezier(0.22,1,0.36,1),opacity 0.4s ease';_cont.style.transform='translateY(0)';_cont.style.opacity='1';setTimeout(cb||function(){},540);}
+function _out(cb){_cont.style.transition='transform 0.38s cubic-bezier(0.55,0,1,0.45),opacity 0.3s ease';_cont.style.transform='translateY(110%)';_cont.style.opacity='0';setTimeout(cb||function(){},400);}
+function _cols(br){_bar.style.backgroundColor=br?BBG:NBG;_lbg.style.backgroundColor=br?BLBG:NLBG;_lbl.textContent=br?BLTX:NLTX;_lbl.style.color=br?BCOL:NCOL;_inn.style.color=br?BCOL:NCOL;}
+function _mk(raw){var p=raw.split('|').map(function(s){return s.trim();}).filter(Boolean);if(!p.length)return'';return p.join(SEP)+SEP+p.join(SEP);}
+function _toB(){if(_tr)return;_tr=true;function go(){_cols(true);var t=_mk(_bt);_inn.textContent=t;_pos=_wrap.offsetWidth;_br=true;_in(function(){_tr=false;});}if(_vis){_out(go);}else{_cols(true);_br=true;_tr=false;}}
+function _toN(){if(_tr)return;_tr=true;function go(){_cols(false);var t=_mk(_nt);if(t){_inn.textContent=t;_pos=_wrap.offsetWidth;}_br=false;_in(function(){_tr=false;});}if(_vis){_out(go);}else{_cols(false);_br=false;_tr=false;}}
+function _strip(s){return s.replace(/<[^>]*>/g,'').replace(/&bull;/g,'|').replace(/&amp;/g,'&').replace(/&nbsp;/g,' ');}
+function _poll(){if(!APIURL)return;fetch(APIURL).then(function(r){return r.json();}).then(function(d){var o=Array.isArray(d)?d[0]:d;var n=_strip(String(o.ticker_normal||''));var b=_strip(String(o.ticker_breaking||''));if(!_tr){if(!_br&&b){_bt=b;_nt=n;_toB();}else if(_br&&!b){_bt='';_nt=n;_toN();}else if(_br&&b!==_bt){_bt=b;_wrap._tickerUpdate(_mk(b));}else if(!_br&&n!==_nt){_nt=n;_wrap._tickerUpdate(_mk(n));}}}).catch(function(){});}
+function runTemplateUpdate(){var m=document.getElementById('f0').innerText.trim();if(m)_wrap._tickerUpdate(_mk(m));}
+function runAnimationIN(){_vis=true;_cols(_br);var t=_br?_mk(_bt):_mk(_nt);if(t){_inn.textContent=t;_pos=_wrap.offsetWidth;}if(_last===null)requestAnimationFrame(_tick);_in(null);}
+function runAnimationOUT(){_vis=false;_out(null);}
+document.addEventListener('DOMContentLoaded',function(){_cols(false);if(APIURL){_poll();setInterval(_poll,APIIVL*1000);}});
+<\/script>
+</body>
+</html>`;
+  _downloadHTML(html,'smart_ticker.html');
+  toast('Smart Ticker eksporteret!','ok');
 }
 
 function toast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type==='ok'?' ok':'');clearTimeout(t._t);t._t=setTimeout(()=>t.className='',2600);}
