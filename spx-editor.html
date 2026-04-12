@@ -409,6 +409,9 @@ function mkEl(type,p={}){
     fieldLabel:p.fieldLabel??('Felt '+elCtr),
     tickerSpeed:p.tickerSpeed??120,
     tickerSep:p.tickerSep??'  •  ',
+    apiUrl:p.apiUrl??'',
+    apiInterval:p.apiInterval??30,
+    apiTemplate:p.apiTemplate??'',
     animation:p.animation??'fade',
     animDelay:p.animDelay??0,
     animDuration:p.animDuration??0.45,
@@ -708,6 +711,14 @@ function renderPropsTab(){
     <div class="psec"><div class="psec-title">Ticker indstillinger</div>
       <div class="prow"><span class="plbl">Hastighed (px/s)</span><input class="pi sm" type="number" id="p-ticker-speed" value="${el.tickerSpeed??120}" min="20" max="600" step="10"></div>
       <div class="prow"><span class="plbl">Separator</span><input class="pi" id="p-ticker-sep" value="${el.tickerSep??'  •  '}"></div>
+    </div>
+    <div class="psec"><div class="psec-title">Live API (valgfrit)</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.7">Hent tekst fra API automatisk.<br>Brug {feltnavn} i skabelon, fx:<br><span style="font-family:var(--mono);color:var(--accent)">{K1_n} {K1_score} | {K2_n}</span></div>
+      <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">URL</label>
+      <input class="pi" id="p-api-url" value="${el.apiUrl||''}" placeholder="https://vmix-control.vercel.app/api/vmix/..." style="margin-bottom:7px">
+      <div class="pg2"><div><label>Interval (s)</label><input class="pi" type="number" id="p-api-ivl" value="${el.apiInterval??30}" min="5" max="300" step="5"></div></div>
+      <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">Skabelon</label>
+      <input class="pi" id="p-api-tpl" value="${el.apiTemplate||''}" placeholder="{K1_n} {K1_score} | {K2_n} {K2_score}">
     </div>`:''}
     <div class="psec"><div class="psec-title">Navn</div><input class="pi" id="p-name" value="${el.name}"></div>
     <div class="psec"><div class="psec-title">Position & størrelse</div>
@@ -757,6 +768,9 @@ function renderPropsTab(){
   const ttt=document.getElementById('p-ticker-txt');if(ttt)ttt.addEventListener('input',e=>{el.text=e.target.value;render();});
   const tsp=document.getElementById('p-ticker-speed');if(tsp)tsp.addEventListener('input',e=>{el.tickerSpeed=parseFloat(e.target.value)||120;const kf=document.getElementById('ticker-kf-'+el.id);if(kf)kf.remove();render();});
   const tsep=document.getElementById('p-ticker-sep');if(tsep)tsep.addEventListener('input',e=>{el.tickerSep=e.target.value;render();});
+  const tapiUrl=document.getElementById('p-api-url');if(tapiUrl)tapiUrl.addEventListener('input',e=>{el.apiUrl=e.target.value;});
+  const tapiIvl=document.getElementById('p-api-ivl');if(tapiIvl)tapiIvl.addEventListener('input',e=>{el.apiInterval=parseFloat(e.target.value)||30;});
+  const tapiTpl=document.getElementById('p-api-tpl');if(tapiTpl)tapiTpl.addEventListener('input',e=>{el.apiTemplate=e.target.value;});
   const spx=document.getElementById('p-spx');if(spx)spx.addEventListener('change',e=>{el.spxField=e.target.checked;document.getElementById('p-spx-extra').style.display=e.target.checked?'':'none';});
 }
 
@@ -847,6 +861,7 @@ function exportSPX_CSS(){
   tickerEls.forEach(el=>{const id='el'+el.id;const speed=el.tickerSpeed||120;
     tickerCSS+=`#${id}{overflow:hidden;display:flex;align-items:center;}\n#${id}-inner{white-space:nowrap;display:inline-block;font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;color:${el.color};}\n`;
     tickerInitJS+=`(function(){var wrap=document.getElementById('${id}');var inner=document.getElementById('${id}-inner');if(!inner||!wrap)return;var speed=${speed};var pos=wrap.offsetWidth;var pending=null;var last=null;wrap._tickerUpdate=function(t){if(t!==inner.textContent)pending=t;};function step(ts){if(last===null){last=ts;requestAnimationFrame(step);return;}var dt=(ts-last)/1000;last=ts;pos-=speed*dt;var half=inner.scrollWidth/2;if(half>0&&pos<-half){if(pending!==null){inner.textContent=pending;pending=null;}pos=wrap.offsetWidth;}inner.style.transform='translateX('+Math.round(pos)+'px)';requestAnimationFrame(step);}requestAnimationFrame(step);})();\n`;
+    if(el.apiUrl){const apiSep=el.tickerSep||'  \u2022  ';const apiIvl=Math.max(5,el.apiInterval||30);tickerInitJS+=`(function(){var url=${JSON.stringify(el.apiUrl)};var tpl=${JSON.stringify(el.apiTemplate||'')};var sep=${JSON.stringify(apiSep)};function fetchAndUpdate(){fetch(url).then(function(r){return r.json();}).then(function(data){var obj=Array.isArray(data)?data[0]:data;var text=tpl.replace(/\\{(\\w+)\\}/g,function(_,k){return obj[k]!==undefined?String(obj[k]):'';});var parts=text.split('|').map(function(s){return s.trim();}).filter(Boolean);if(!parts.length)return;var full=parts.join(sep)+sep+parts.join(sep);var w=document.getElementById('${id}');if(w&&w._tickerUpdate)w._tickerUpdate(full);}).catch(function(){});}fetchAndUpdate();setInterval(fetchAndUpdate,${apiIvl}*1000);})();\n`;}
   });
   const extraJS=tickerInitJS?`\ndocument.addEventListener('DOMContentLoaded',function(){\n${tickerInitJS}});`:'';
   _downloadHTML(_buildHTML(fontUrl,css+tickerCSS,htmlLines,fieldDefs,tname,
@@ -890,6 +905,7 @@ function exportSPX_GSAP(){
   gTickerEls.forEach(el=>{const id='el'+el.id;const speed=el.tickerSpeed||120;
     gTickerCSS+=`#${id}{overflow:hidden;display:flex;align-items:center;}\n#${id}-inner{white-space:nowrap;display:inline-block;font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;color:${el.color};}\n`;
     gTickerInitJS+=`(function(){var wrap=document.getElementById('${id}');var inner=document.getElementById('${id}-inner');if(!inner||!wrap)return;var speed=${speed};var pos=wrap.offsetWidth;var pending=null;var last=null;wrap._tickerUpdate=function(t){if(t!==inner.textContent)pending=t;};function step(ts){if(last===null){last=ts;requestAnimationFrame(step);return;}var dt=(ts-last)/1000;last=ts;pos-=speed*dt;var half=inner.scrollWidth/2;if(half>0&&pos<-half){if(pending!==null){inner.textContent=pending;pending=null;}pos=wrap.offsetWidth;}inner.style.transform='translateX('+Math.round(pos)+'px)';requestAnimationFrame(step);}requestAnimationFrame(step);})();\n`;
+    if(el.apiUrl){const apiSep=el.tickerSep||'  \u2022  ';const apiIvl=Math.max(5,el.apiInterval||30);gTickerInitJS+=`(function(){var url=${JSON.stringify(el.apiUrl)};var tpl=${JSON.stringify(el.apiTemplate||'')};var sep=${JSON.stringify(apiSep)};function fetchAndUpdate(){fetch(url).then(function(r){return r.json();}).then(function(data){var obj=Array.isArray(data)?data[0]:data;var text=tpl.replace(/\\{(\\w+)\\}/g,function(_,k){return obj[k]!==undefined?String(obj[k]):'';});var parts=text.split('|').map(function(s){return s.trim();}).filter(Boolean);if(!parts.length)return;var full=parts.join(sep)+sep+parts.join(sep);var w=document.getElementById('${id}');if(w&&w._tickerUpdate)w._tickerUpdate(full);}).catch(function(){});}fetchAndUpdate();setInterval(fetchAndUpdate,${apiIvl}*1000);})();\n`;}
   });
   const gExtraJS=gTickerInitJS?`\ndocument.addEventListener('DOMContentLoaded',function(){\n${gTickerInitJS}});`:'';
   const gsapTag='<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>';
