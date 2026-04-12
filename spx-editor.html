@@ -870,6 +870,13 @@ function exportSPX_GSAP(){
     if(el.type==='text')css+=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;white-space:nowrap;display:flex;align-items:center;`;
     if(el.type==='rect')css+=`background:${el.bgColor};border-radius:${el.borderRadius}px;`;
     if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
+    if(el.animation==='fade')css+='opacity:0;';
+    else if(el.animation==='slide-left')css+='opacity:0;transform:translateX(-60px);';
+    else if(el.animation==='slide-right')css+='opacity:0;transform:translateX(60px);';
+    else if(el.animation==='slide-up')css+='opacity:0;transform:translateY(50px);';
+    else if(el.animation==='slide-down')css+='opacity:0;transform:translateY(-50px);';
+    else if(el.animation==='wipe')css+='transform:scaleX(0);transform-origin:left center;';
+    else if(el.animation==='scale')css+='opacity:0;transform:scale(0.75);';
     css+='}\n';
     if(el.type==='ticker'){const sep=el.tickerSep||'  \u2022  ';
       if(el.spxField){htmlLines.push(`  <div id="${id}"><div id="${id}-inner"></div></div>`);updateLines.push(`  (function(){var t=document.getElementById('f${fIdx}').innerText;var items=t.split('|').map(s=>s.trim()).filter(Boolean);var txt=items.join('${sep}');document.getElementById('${id}-inner').textContent=txt+'${sep}'+txt;})();`);hiddenDivLines.push(`  <div id="f${fIdx}"></div>`);fIdx++;}
