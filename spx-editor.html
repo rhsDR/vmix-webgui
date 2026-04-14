@@ -468,6 +468,7 @@ function mkEl(type,p={}){
     color:p.color??'#ffffff',
     bgColor:p.bgColor??(type==='rect'?'#e8593c':'transparent'),
     gradientDir:p.gradientDir??null,
+    gradientStop:p.gradientStop??0,
     opacity:p.opacity??1,borderRadius:p.borderRadius??0,
     locked:false,visible:true,
     spxField:p.spxField??(type==='text'),
@@ -857,10 +858,32 @@ function setGradientDir(dir){
   const el=elements.find(x=>x.id===selIds[0]);if(!el)return;
   saveState();el.gradientDir=dir;render();renderPanel();
 }
+function bindGradientStop(){
+  const sl=document.getElementById('p-gstop');if(!sl)return;
+  sl.addEventListener('input',e=>{
+    const el=elements.find(x=>x.id===selIds[0]);if(!el)return;
+    el.gradientStop=parseInt(e.target.value);
+    document.getElementById('p-gstop-lbl').textContent=el.gradientStop+'%';
+    render();
+  });
+  sl.addEventListener('change',()=>saveState());
+}
 function _bgCss(el){
   if(!el.gradientDir)return el.bgColor;
+  const c=el.bgColor,s=el.gradientStop??0;
   const map={'→':'to right','←':'to left','↓':'to bottom','↑':'to top'};
-  return`linear-gradient(${map[el.gradientDir]||'to right'},${el.bgColor},transparent)`;
+  if(el.gradientDir==='↔'){
+    const m=Math.max(1,Math.round(s)),m2=100-m;
+    return`linear-gradient(to right,transparent,${c} ${m}%,${c} ${m2}%,transparent)`;
+  }
+  if(el.gradientDir==='↕'){
+    const m=Math.max(1,Math.round(s)),m2=100-m;
+    return`linear-gradient(to bottom,transparent,${c} ${m}%,${c} ${m2}%,transparent)`;
+  }
+  const dir=map[el.gradientDir]||'to right';
+  return s>0
+    ?`linear-gradient(${dir},${c} ${s}%,transparent)`
+    :`linear-gradient(${dir},${c},transparent)`;
 }
 function _rgba2hex(c){try{const d=document.createElement('div');d.style.color=c;document.body.appendChild(d);const rgb=getComputedStyle(d).color;document.body.removeChild(d);const m=rgb.match(/\d+/g);if(!m||m.length<3)return'#000000';return'#'+[m[0],m[1],m[2]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('');}catch{return'#000000';}}
 
@@ -912,10 +935,15 @@ function renderPropsTab(){
       <div class="prow"><span class="plbl">Farve</span><input type="color" class="pc" id="p-bgc" value="${el.bgColor==='transparent'?'#000000':el.bgColor}"><input class="pi" id="p-bgc-hex" value="${el.bgColor}"></div>
       ${el.type==='rect'?`<div class="prow"><span class="plbl">Afrunding</span><input class="pi sm" type="number" id="p-br" value="${el.borderRadius}" min="0"></div>
       <div class="prow"><span class="plbl">Gradient</span>
-        <div style="display:flex;gap:4px">
-          ${[null,'→','←','↓','↑'].map(d=>`<button class="achip${(el.gradientDir??null)===d?' active':''}" style="padding:4px 7px;font-size:13px" onclick="setGradientDir(${d===null?'null':JSON.stringify(d)})">${d===null?'●':d}</button>`).join('')}
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          ${[null,'→','←','↓','↑','↔','↕'].map(d=>`<button class="achip${(el.gradientDir??null)===d?' active':''}" style="padding:4px 7px;font-size:13px" onclick="setGradientDir(${d===null?'null':JSON.stringify(d)})">${d===null?'●':d}</button>`).join('')}
         </div>
+      </div>
+      ${el.gradientDir?`<div class="prow"><span class="plbl">${el.gradientDir==='↔'||el.gradientDir==='↕'?'Solid zone':'Fade fra'}</span>
+        <input type="range" id="p-gstop" min="0" max="90" step="5" value="${el.gradientStop??0}" style="flex:1;accent-color:var(--accent)">
+        <span style="font-size:11px;color:var(--text2);min-width:28px;text-align:right" id="p-gstop-lbl">${el.gradientStop??0}%</span>
       </div>`:''}
+      `:''}
     </div>`:''}
     ${el.type==='ticker'?`<div class="psec"><div class="psec-title">Ticker tekst</div>
       <div style="margin-bottom:7px"><textarea class="pi" id="p-ticker-txt" rows="3" style="resize:vertical">${el.text}</textarea></div>
@@ -988,6 +1016,7 @@ function renderPropsTab(){
   const ttt=document.getElementById('p-ticker-txt');if(ttt)ttt.addEventListener('input',e=>{el.text=e.target.value;render();});
   const tsp=document.getElementById('p-ticker-speed');if(tsp)tsp.addEventListener('input',e=>{el.tickerSpeed=parseFloat(e.target.value)||120;const kf=document.getElementById('ticker-kf-'+el.id);if(kf)kf.remove();render();});
   const tsep=document.getElementById('p-ticker-sep');if(tsep)tsep.addEventListener('input',e=>{el.tickerSep=e.target.value;render();});
+  bindGradientStop();
   const tapiUrl=document.getElementById('p-api-url');if(tapiUrl)tapiUrl.addEventListener('input',e=>{el.apiUrl=e.target.value;});
   const tapiIvl=document.getElementById('p-api-ivl');if(tapiIvl)tapiIvl.addEventListener('input',e=>{el.apiInterval=parseFloat(e.target.value)||30;});
   const tapiTpl=document.getElementById('p-api-tpl');if(tapiTpl)tapiTpl.addEventListener('input',e=>{el.apiTemplate=e.target.value;});
