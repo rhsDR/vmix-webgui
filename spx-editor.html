@@ -467,6 +467,7 @@ function mkEl(type,p={}){
     fontFamily:p.fontFamily??'DM Sans',
     color:p.color??'#ffffff',
     bgColor:p.bgColor??(type==='rect'?'#e8593c':'transparent'),
+    gradientDir:p.gradientDir??null,
     opacity:p.opacity??1,borderRadius:p.borderRadius??0,
     locked:false,visible:true,
     spxField:p.spxField??(type==='text'),
@@ -515,7 +516,7 @@ function render(){
       div.style.whiteSpace='nowrap';div.style.pointerEvents='all';
       div.textContent=_stColor(el,'text');
     }else if(el.type==='rect'){
-      div.style.background=_stColor(el,'bgColor');
+      div.style.background=el.gradientDir?_bgCss(el):_stColor(el,'bgColor');
       div.style.borderRadius=(el.borderRadius*scale)+'px';
     }else if(el.type==='line'){
       div.style.background=el.bgColor==='transparent'?el.color:el.bgColor;
@@ -852,6 +853,15 @@ function renderCanvasTab(){
   const ivl=document.getElementById('st-ivl');if(ivl)ivl.addEventListener('input',e=>{smartTickerSettings.apiInterval=parseFloat(e.target.value)||15;});
 }
 
+function setGradientDir(dir){
+  const el=elements.find(x=>x.id===selIds[0]);if(!el)return;
+  saveState();el.gradientDir=dir;render();renderPanel();
+}
+function _bgCss(el){
+  if(!el.gradientDir)return el.bgColor;
+  const map={'→':'to right','←':'to left','↓':'to bottom','↑':'to top'};
+  return`linear-gradient(${map[el.gradientDir]||'to right'},${el.bgColor},transparent)`;
+}
 function _rgba2hex(c){try{const d=document.createElement('div');d.style.color=c;document.body.appendChild(d);const rgb=getComputedStyle(d).color;document.body.removeChild(d);const m=rgb.match(/\d+/g);if(!m||m.length<3)return'#000000';return'#'+[m[0],m[1],m[2]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('');}catch{return'#000000';}}
 
 function renderLayersTab(){document.getElementById('pbody').innerHTML='<div id="layers-list"></div>';updLayersList();}
@@ -900,7 +910,12 @@ function renderPropsTab(){
     </div>`:''}
     ${el.type==='rect'||el.type==='line'?`<div class="psec"><div class="psec-title">Udseende</div>
       <div class="prow"><span class="plbl">Farve</span><input type="color" class="pc" id="p-bgc" value="${el.bgColor==='transparent'?'#000000':el.bgColor}"><input class="pi" id="p-bgc-hex" value="${el.bgColor}"></div>
-      ${el.type==='rect'?`<div class="prow"><span class="plbl">Afrunding</span><input class="pi sm" type="number" id="p-br" value="${el.borderRadius}" min="0"></div>`:''}
+      ${el.type==='rect'?`<div class="prow"><span class="plbl">Afrunding</span><input class="pi sm" type="number" id="p-br" value="${el.borderRadius}" min="0"></div>
+      <div class="prow"><span class="plbl">Gradient</span>
+        <div style="display:flex;gap:4px">
+          ${[null,'→','←','↓','↑'].map(d=>`<button class="achip${(el.gradientDir??null)===d?' active':''}" style="padding:4px 7px;font-size:13px" onclick="setGradientDir(${d===null?'null':JSON.stringify(d)})">${d===null?'●':d}</button>`).join('')}
+        </div>
+      </div>`:''}
     </div>`:''}
     ${el.type==='ticker'?`<div class="psec"><div class="psec-title">Ticker tekst</div>
       <div style="margin-bottom:7px"><textarea class="pi" id="p-ticker-txt" rows="3" style="resize:vertical">${el.text}</textarea></div>
@@ -1062,7 +1077,7 @@ function exportSPX_CSS(){
     else{outState=`opacity:${el.opacity};`;inState=`opacity:${el.opacity};transform:none;`;}
     css+=`#${id}{position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;opacity:${el.opacity};`;
     if(el.type==='text')css+=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;white-space:nowrap;display:flex;align-items:center;`;
-    if(el.type==='rect')css+=`background:${el.bgColor};border-radius:${el.borderRadius}px;`;
+    if(el.type==='rect')css+=`background:${_bgCss(el)};border-radius:${el.borderRadius}px;`;
     if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
     if(a!=='none')css+=outState;css+='}\n';
     const ao=resolveAnimOut(el);const outDur=el.animOutDuration??0.3;const outDelay=el.animOutDelay??0;
@@ -1119,7 +1134,7 @@ function exportSPX_GSAP(){
     const id='el'+el.id;
     css+=`#${id}{position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;`;
     if(el.type==='text')css+=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;white-space:nowrap;display:flex;align-items:center;`;
-    if(el.type==='rect')css+=`background:${el.bgColor};border-radius:${el.borderRadius}px;`;
+    if(el.type==='rect')css+=`background:${_bgCss(el)};border-radius:${el.borderRadius}px;`;
     if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
     if(el.animation==='fade')css+='opacity:0;';
     else if(el.animation==='slide-left')css+='opacity:0;transform:translateX(-60px);';
