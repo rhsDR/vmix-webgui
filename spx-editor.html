@@ -32,6 +32,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .tb-btn.back:hover{background:rgba(249,115,22,.1);color:#f97316;}
 .tb-btn.active{background:var(--accent);border-color:transparent;color:#fff;}
 #ttype{height:28px;padding:0 8px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:12px;cursor:pointer;flex-shrink:0;}
+#project-name{height:28px;padding:0 8px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:12px;width:160px;outline:none;}
+#project-name:focus{border-color:var(--accent);}
+#project-name::placeholder{color:var(--text3);}
 .tb-spacer{flex:1;}
 #undo-info{font-size:10px;color:var(--text3);font-family:var(--mono);min-width:24px;}
 
@@ -224,6 +227,7 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
   <button class="tb-btn icon" id="btn-redo" onclick="redo()" title="Gentag (Ctrl+Y)">&#8618;</button>
   <span id="undo-info"></span>
   <div class="tb-sep"></div>
+  <input type="text" id="project-name" placeholder="Projektnavn..." title="Projektnavn (bruges som filnavn ved eksport)">
   <button class="tb-btn icon" title="Gem projekt (Ctrl+S)" onclick="saveProject()">&#128190;</button>
   <button class="tb-btn icon" title="Åbn projekt (.json)" onclick="document.getElementById('load-inp').click()">&#128193;</button>
   <input type="file" id="load-inp" accept=".json" style="display:none" onchange="loadProject(event)">
@@ -334,7 +338,7 @@ const CW=1920,CH=1080;
 let scale=1,tool='select',elements=[],selIds=[],elCtr=0;
 let dragging=false,dragOff=[],resizing=false,resEl=null,resHandle='',resStart={};
 let boxSel=false,boxStart={};
-let undoStack=[],redoStack=[];
+let undoStack=[],redoStack=[],clipboard=[];
 let showGrid=false,snapOn=true,gridSz=20;
 let bgColor='transparent';
 let currentTab='props';
@@ -647,6 +651,8 @@ canvas.addEventListener('mousedown',e=>{
 function showCtx(e,el){
   const ctx=document.getElementById('ctx');
   ctx.innerHTML=`
+    <div class="ctx-item" onclick="clipboard=[JSON.parse(JSON.stringify(el))];toast('1 kopieret');hideCtx()">Kopier <span class="ctx-kbd">Ctrl+C</span></div>
+    <div class="ctx-item" onclick="pasteSel();hideCtx()">Indsæt <span class="ctx-kbd">Ctrl+V</span></div>
     <div class="ctx-item" onclick="duplicateSel();hideCtx()">Dupliker <span class="ctx-kbd">Ctrl+D</span></div>
     <div class="ctx-item" onclick="moveLayer(${el.id},'up');hideCtx()">Flyt op i lag</div>
     <div class="ctx-item" onclick="moveLayer(${el.id},'down');hideCtx()">Flyt ned i lag</div>
@@ -666,11 +672,13 @@ document.addEventListener('contextmenu',e=>{if(e.target===canvas||e.target===doc
 document.addEventListener('keydown',e=>{
   const tag=document.activeElement.tagName;
   if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
-  if(e.key==='v'||e.key==='V'){setTool('select');return;}
-  if(e.key==='t'||e.key==='T'){setTool('text');return;}
-  if(e.key==='r'||e.key==='R'){setTool('rect');return;}
-  if(e.key==='l'||e.key==='L'){setTool('line');return;}
-  if(e.key==='k'||e.key==='K'){setTool('ticker');return;}
+  if(!e.ctrlKey&&!e.metaKey){
+    if(e.key==='v'||e.key==='V'){setTool('select');return;}
+    if(e.key==='t'||e.key==='T'){setTool('text');return;}
+    if(e.key==='r'||e.key==='R'){setTool('rect');return;}
+    if(e.key==='l'||e.key==='L'){setTool('line');return;}
+    if(e.key==='k'||e.key==='K'){setTool('ticker');return;}
+  }
   if(e.key==='g'||e.key==='G'){toggleGrid();return;}
   if((e.key==='Delete'||e.key==='Backspace')&&selIds.length){
     saveState();elements=elements.filter(x=>!selIds.includes(x.id));selIds=[];render();renderPanel();return;
@@ -681,6 +689,8 @@ document.addEventListener('keydown',e=>{
     if(e.key==='d'){e.preventDefault();duplicateSel();return;}
     if(e.key==='s'){e.preventDefault();saveProject();return;}
     if(e.key==='a'){e.preventDefault();selIds=elements.map(x=>x.id);render();renderPanel();return;}
+    if(e.key==='c'&&selIds.length){e.preventDefault();clipboard=selIds.map(id=>JSON.parse(JSON.stringify(elements.find(x=>x.id===id)))).filter(Boolean);toast(clipboard.length+' kopieret');return;}
+    if(e.key==='v'&&clipboard.length){e.preventDefault();pasteSel();return;}
   }
   if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)&&selIds.length){
     e.preventDefault();const step=e.shiftKey?10:1;
@@ -703,6 +713,11 @@ function duplicateSel(){
   if(!selIds.length)return;saveState();const newIds=[];
   selIds.forEach(id=>{const el=elements.find(x=>x.id===id);if(!el)return;const c=JSON.parse(JSON.stringify(el));c.id=++elCtr;c.x+=20;c.y+=20;c.name+=' kopi';elements.push(c);newIds.push(c.id);});
   selIds=newIds;render();renderPanel();toast('Kopieret');
+}
+function pasteSel(){
+  if(!clipboard.length)return;saveState();const newIds=[];
+  clipboard.forEach(el=>{const c=JSON.parse(JSON.stringify(el));c.id=++elCtr;c.x+=20;c.y+=20;elements.push(c);newIds.push(c.id);});
+  selIds=newIds;render();renderPanel();toast(newIds.length+' indsat');
 }
 
 function alignSel(dir){
@@ -954,15 +969,16 @@ function previewSelAnim(){
   setTimeout(()=>{div.style.transition=`opacity ${el.animDuration}s ease,transform ${el.animDuration}s cubic-bezier(0.22,1,0.36,1)`;div.style.opacity=el.opacity;div.style.transform='none';if(el.animation==='wipe'){div.style.transform='scaleX(1)';div.style.transformOrigin='left';}},80);
 }
 
+function _projFilename(ext){const n=document.getElementById('project-name').value.trim().replace(/[^\wæøåÆØÅ\-]/g,'_');return(n||document.getElementById('ttype').value||'project')+ext;}
 function saveProject(){
-  const data=JSON.stringify({version:3,elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings},null,2);
-  try{const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(document.getElementById('ttype').value||'project')+'_spx.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},200);toast('Projekt gemt','ok');}
-  catch(err){const uri='data:application/json;charset=utf-8,'+encodeURIComponent(data);const a=document.createElement('a');a.href=uri;a.download=(document.getElementById('ttype').value||'project')+'_spx.json';document.body.appendChild(a);a.click();setTimeout(()=>document.body.removeChild(a),200);toast('Projekt gemt','ok');}
+  const data=JSON.stringify({version:3,elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,projectName:document.getElementById('project-name').value.trim()},null,2);
+  try{const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},200);toast('Projekt gemt','ok');}
+  catch(err){const uri='data:application/json;charset=utf-8,'+encodeURIComponent(data);const a=document.createElement('a');a.href=uri;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>document.body.removeChild(a),200);toast('Projekt gemt','ok');}
 }
 function loadProject(ev){
   const file=ev.target.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=e=>{try{const d=JSON.parse(e.target.result);elements=d.elements||[];bgColor=d.bgColor||'transparent';elCtr=d.elCtr||elements.length;transitionOnUpdate=d.transitionOnUpdate??true;if(d.smartTickerSettings)Object.assign(smartTickerSettings,d.smartTickerSettings);canvas.style.background=bgColor;selIds=[];saveState();render();renderPanel();renderTimeline();toast('Projekt indlæst','ok');}catch{toast('Ugyldig projektfil');}};
+  reader.onload=e=>{try{const d=JSON.parse(e.target.result);elements=d.elements||[];bgColor=d.bgColor||'transparent';elCtr=d.elCtr||elements.length;transitionOnUpdate=d.transitionOnUpdate??true;if(d.smartTickerSettings)Object.assign(smartTickerSettings,d.smartTickerSettings);if(d.projectName)document.getElementById('project-name').value=d.projectName;canvas.style.background=bgColor;selIds=[];saveState();render();renderPanel();renderTimeline();toast('Projekt indlæst','ok');}catch{toast('Ugyldig projektfil');}};
   reader.readAsText(file);ev.target.value='';
 }
 
@@ -1047,7 +1063,7 @@ function exportSPX_CSS(){
     `function runAnimationIN(){_spxVisible=true;\n${playLines.join('\n')}\n}`,
     `function runAnimationOUT(){_spxVisible=false;\n${stopLines.join('\n')}\n}`,
     hiddenDivLines.join('\n')
-  ),_ttype+'.html');
+  ),_projFilename('.html'));
   toast('CSS template downloadet!','ok');
 }
 
@@ -1099,7 +1115,7 @@ function exportSPX_GSAP(){
     `function runAnimationOUT(){_spxVisible=false;\n${_buildGSAPStop(elements)}\n}`,
     hiddenDivLines.join('\n'),
     gsapTag
-  ),document.getElementById('ttype').value+'_gsap.html');
+  ),_projFilename('_gsap.html'));
   toast('GSAP template downloadet!','ok');
 }
 
@@ -1314,7 +1330,7 @@ document.addEventListener('DOMContentLoaded',function(){_cols(false);if(APIURL){
 <\/script>
 </body>
 </html>`;
-  _downloadHTML(html,'smart_ticker.html');
+  _downloadHTML(html,_projFilename('.html'));
   toast('Smart Ticker eksporteret!','ok');
 }
 
