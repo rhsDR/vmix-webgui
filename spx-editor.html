@@ -30,6 +30,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .tb-btn.primary:hover{background:var(--accent2);}
 .tb-btn.back{border-color:#f97316;color:#f97316;}
 .tb-btn.back:hover{background:rgba(249,115,22,.1);color:#f97316;}
+.tb-btn.active{background:var(--accent);border-color:transparent;color:#fff;}
 #ttype{height:28px;padding:0 8px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:12px;cursor:pointer;flex-shrink:0;}
 .tb-spacer{flex:1;}
 #undo-info{font-size:10px;color:var(--text3);font-family:var(--mono);min-width:24px;}
@@ -205,7 +206,7 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
   <div class="tb-sep"></div>
   <button class="tb-btn back" onclick="window.location.href='projects.html'">&#8592; Projekter</button>
   <div class="tb-sep"></div>
-  <select id="ttype">
+  <select id="ttype" onchange="updSmartTickerUI()">
     <option value="lower_third">Lower Third</option>
     <option value="ticker">Ticker / Crawl</option>
     <option value="smart_ticker">⚡ Smart Ticker</option>
@@ -234,8 +235,10 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
       <div class="mode-opt" id="mode-gsap" onclick="setExportMode('gsap')">GSAP</div>
     </div>
   </div>
+  <button class="tb-btn" id="btn-breaking-preview" style="display:none" onclick="toggleBreakingPreview()">&#9889; Breaking</button>
   <button class="tb-btn" onclick="previewAnim()">&#9654; Preview</button>
-  <button class="tb-btn primary" onclick="exportSPX()">&#11014; Eksportér SPX .html</button>
+  <button class="tb-btn primary" id="btn-st-export" style="display:none" onclick="exportSmartTicker()">&#11014; Eksportér Smart Ticker</button>
+  <button class="tb-btn primary" id="btn-spx-export" onclick="exportSPX()">&#11014; Eksportér SPX .html</button>
 </div>
 
 <div id="app">
@@ -334,6 +337,7 @@ let exportMode='css';
 let tlZoom=3;
 let scrubTime=null,isScrubbing=false;
 let transitionOnUpdate=true;
+let previewBreaking=false;
 let smartTickerSettings={
   normalBg:'rgba(10,10,12,0.92)',normalLabelBg:'#e8593c',normalLabelText:'NYHEDER',normalTextColor:'#ffffff',
   breakingBg:'#eab308',breakingLabelBg:'#dc2626',breakingLabelText:'BREAKING',breakingTextColor:'#111111',
@@ -434,6 +438,17 @@ function mkEl(type,p={}){
 function render(){
   [...canvas.querySelectorAll('.el')].forEach(e=>e.remove());
   const isSel=id=>selIds.includes(id);
+  const stIdx=previewBreaking&&document.getElementById('ttype').value==='smart_ticker'?elements.map(e=>e.id):[null,null,null,null];
+  const stS=smartTickerSettings;
+  function _stColor(el,prop){
+    const i=stIdx.indexOf(el.id);
+    if(i===0&&prop==='bgColor')return stS.breakingBg;
+    if(i===1&&prop==='bgColor')return stS.breakingLabelBg;
+    if(i===2&&prop==='color')return stS.breakingTextColor;
+    if(i===2&&prop==='text')return stS.breakingLabelText;
+    if(i===3&&prop==='color')return stS.breakingTextColor;
+    return el[prop];
+  }
   elements.forEach(el=>{
     if(!el.visible)return;
     const div=document.createElement('div');
@@ -442,25 +457,25 @@ function render(){
     div.style.cssText=`left:${el.x*scale}px;top:${el.y*scale}px;width:${el.w*scale}px;height:${el.h*scale}px;opacity:${el.opacity};`;
     if(el.type==='text'){
       div.style.display='flex';div.style.alignItems='center';
-      div.style.color=el.color;
+      div.style.color=_stColor(el,'color');
       div.style.fontSize=(el.fontSize*scale)+'px';
       div.style.fontWeight=el.fontWeight;
       div.style.fontFamily=`'${el.fontFamily}',sans-serif`;
       div.style.whiteSpace='nowrap';div.style.pointerEvents='all';
-      div.textContent=el.text;
+      div.textContent=_stColor(el,'text');
     }else if(el.type==='rect'){
-      div.style.background=el.bgColor;
+      div.style.background=_stColor(el,'bgColor');
       div.style.borderRadius=(el.borderRadius*scale)+'px';
     }else if(el.type==='line'){
       div.style.background=el.bgColor==='transparent'?el.color:el.bgColor;
       div.style.borderRadius='2px';
     }else if(el.type==='ticker'){
-      div.style.background=el.bgColor;
+      div.style.background=_stColor(el,'bgColor');
       div.style.overflow='hidden';
       div.style.display='flex';
       div.style.alignItems='center';
       const inner=document.createElement('div');
-      inner.style.cssText=`white-space:nowrap;position:absolute;font-size:${el.fontSize*scale}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;color:${el.color};animation:ticker-scroll-${el.id} ${Math.round(el.w*2/el.tickerSpeed*10)/10}s linear infinite;`;
+      inner.style.cssText=`white-space:nowrap;position:absolute;font-size:${el.fontSize*scale}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;color:${_stColor(el,'color')};animation:ticker-scroll-${el.id} ${Math.round(el.w*2/el.tickerSpeed*10)/10}s linear infinite;`;
       inner.textContent=el.text+'    '+el.text;
       div.appendChild(inner);
       const animId='ticker-kf-'+el.id;
@@ -742,7 +757,6 @@ function renderCanvasTab(){
       <div class="psec-title" style="margin-top:10px">API</div>
       <input class="pi" id="st-url" value="${smartTickerSettings.apiUrl}" placeholder="https://vmix-control.vercel.app/api/vmix/PROJEKT-ID" style="margin-bottom:7px">
       <div class="prow"><span class="plbl">Interval (s)</span><input class="pi sm" type="number" id="st-ivl" value="${smartTickerSettings.apiInterval}" min="5" max="300" step="5"></div>
-      <button class="tb-btn primary" style="width:100%;justify-content:center;margin-top:8px" onclick="exportSmartTicker()">&#11014; Eksportér Smart Ticker</button>
     </div>`:''}
     <div class="psec"><div class="psec-title">Overgang ved opdatering</div>
       <label class="pchk"><input type="checkbox" id="cv-tou" ${transitionOnUpdate?'checked':''} onchange="transitionOnUpdate=this.checked">OUT → opdater → IN ved tekstskift</label>
@@ -945,6 +959,18 @@ function loadProject(ev){
   reader.readAsText(file);ev.target.value='';
 }
 
+function updSmartTickerUI(){
+  const isST=document.getElementById('ttype').value==='smart_ticker';
+  document.getElementById('btn-st-export').style.display=isST?'':'none';
+  document.getElementById('btn-spx-export').style.display=isST?'none':'';
+  document.getElementById('btn-breaking-preview').style.display=isST?'':'none';
+  if(!isST&&previewBreaking){previewBreaking=false;document.getElementById('btn-breaking-preview').classList.remove('active');render();}
+}
+function toggleBreakingPreview(){
+  previewBreaking=!previewBreaking;
+  document.getElementById('btn-breaking-preview').classList.toggle('active',previewBreaking);
+  render();
+}
 function setExportMode(m){exportMode=m;document.getElementById('mode-css').classList.toggle('active',m==='css');document.getElementById('mode-gsap').classList.toggle('active',m==='gsap');toast(m==='gsap'?'GSAP eksport':'CSS eksport');}
 function exportSPX(){if(!elements.length){toast('Ingen elementer');return;}if(exportMode==='gsap')exportSPX_GSAP();else exportSPX_CSS();}
 
@@ -1208,7 +1234,7 @@ function loadPreset(){
   else if(t==='smart_ticker'){const s=smartTickerSettings;elements=[mkEl('rect',{x:0,y:1022,w:1920,h:58,bgColor:s.normalBg,animation:'none',name:'Ticker bar',spxField:false}),mkEl('rect',{x:0,y:1022,w:218,h:58,bgColor:s.normalLabelBg,animation:'none',name:'Label baggrund',spxField:false}),mkEl('text',{x:14,y:1030,w:190,h:42,text:s.normalLabelText,fontSize:19,fontWeight:'700',fontFamily:'Oswald',color:s.normalTextColor,animation:'none',spxField:false,name:'Label tekst'}),mkEl('ticker',{x:238,y:1022,w:1660,h:58,text:'Første nyhed  •  Anden nyhed  •  Tredje nyhed',fontSize:23,fontWeight:'400',color:s.normalTextColor,bgColor:'transparent',animation:'none',spxField:false,name:'Ticker tekst',tickerSpeed:120,tickerSep:'  •  '})];}
   else if(t==='credit'){elements=[mkEl('text',{x:760,y:490,w:400,h:36,text:'En produktion af',fontSize:22,fontWeight:'300',color:'rgba(255,255,255,0.5)',animation:'fade',animDelay:0,spxField:false,name:'Undertitel'}),mkEl('rect',{x:760,y:532,w:400,h:3,bgColor:'#e8593c',animation:'wipe',animDelay:0.12,name:'Linje',spxField:false}),mkEl('text',{x:720,y:544,w:480,h:72,text:'Studio Navn',fontSize:54,fontWeight:'700',animation:'slide-up',animDelay:0.22,spxField:true,fieldLabel:'Firma / navn',name:'Hovednavn'})];}
   else{elements=[mkEl('text',{x:120,y:398,w:1680,h:130,text:'STOR OVERSKRIFT',fontSize:100,fontWeight:'700',fontFamily:'Oswald',animation:'slide-up',animDelay:0,spxField:true,fieldLabel:'Overskrift',name:'Overskrift'}),mkEl('rect',{x:120,y:548,w:180,h:6,bgColor:'#e8593c',animation:'wipe',animDelay:0.18,name:'Accent linje',spxField:false}),mkEl('text',{x:120,y:564,w:1300,h:56,text:'Underoverskrift eller ingress',fontSize:36,fontWeight:'300',color:'rgba(255,255,255,0.65)',animation:'fade',animDelay:0.32,spxField:true,fieldLabel:'Undertekst',name:'Undertekst'})];}
-  bgColor='transparent';selIds=[];canvas.style.background=bgColor;render();renderPanel();renderTimeline();toast('Preset indlæst');
+  bgColor='transparent';selIds=[];canvas.style.background=bgColor;previewBreaking=false;render();renderPanel();renderTimeline();updSmartTickerUI();toast('Preset indlæst');
 }
 
 function exportSmartTicker(){
