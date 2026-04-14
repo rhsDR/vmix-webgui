@@ -1576,10 +1576,14 @@ function parseHTMLTemplate(src,filename){
     }return val;
   }
   // Sum top/left of ALL ancestors (for nested/flex layouts)
+  // Handles both top: and bottom: positioning
   function getChainPos(el){
     let x=0,y=0,cur=el.parentElement;
     while(cur&&cur!==doc.body){
-      const pcss=getDivCSS(cur);x+=parseFloat(pcss.left)||0;y+=parseFloat(pcss.top)||0;
+      const pcss=getDivCSS(cur);
+      x+=parseFloat(pcss.left)||0;
+      if(pcss.top)y+=parseFloat(pcss.top);
+      else if(pcss.bottom)y+=Math.max(0,1080-parseFloat(pcss.bottom));
       cur=cur.parentElement;
     }return{x,y};
   }
@@ -1657,7 +1661,7 @@ function parseHTMLTemplate(src,filename){
     const id=div.id;const css=getDivCSS(div);
     const chain=deepScan?getChainPos(div):{x:0,y:0};
     const x=(parseFloat(css.left)||0)+chain.x;
-    const y=(parseFloat(css.top)||0)+chain.y;
+    const y=(css.top?parseFloat(css.top):(css.bottom?Math.max(0,1080-parseFloat(css.bottom)):0))+chain.y;
     const w=parseFloat(css.width)||parseFloat(css.minWidth)||200;
     const h=parseFloat(css.height)||50;
 
@@ -1680,7 +1684,8 @@ function parseHTMLTemplate(src,filename){
       else if(outTransform.includes('scale('))animation='scale';
       else if(String(css.opacity)==='0')animation='fade';
     }
-    const opacity=(animation!=='none'&&animation!=='wipe')?1:(css.opacity!==undefined?parseFloat(css.opacity):1);
+    // In deep scan mode, CSS opacity is typically an animation start state (opacity:0) — always use 1
+    const opacity=deepScan?1:((animation!=='none'&&animation!=='wipe')?1:(css.opacity!==undefined?parseFloat(css.opacity):1));
 
     // Timing from .in / .out rules
     let animDelay=0,animDuration=0.45,animOutDuration=0.3,animOutDelay=0;
