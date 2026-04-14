@@ -1342,15 +1342,16 @@ function _buildGSAPPlay(els){
 
 function _buildGSAPStop(els){
   const lines=['  var tl=gsap.timeline();'];
-  els.forEach(el=>{const id='#el'+el.id;const a=el.animation;const dur=(el.animDuration*0.6).toFixed(2);
-    if(a==='none')return;
-    if(a==='fade')lines.push(`  tl.to('${id}',{opacity:0,duration:${dur},ease:'power2.in'},0);`);
-    else if(a==='slide-left')lines.push(`  tl.to('${id}',{opacity:0,x:-30,duration:${dur},ease:'power2.in'},0);`);
-    else if(a==='slide-right')lines.push(`  tl.to('${id}',{opacity:0,x:30,duration:${dur},ease:'power2.in'},0);`);
-    else if(a==='slide-up')lines.push(`  tl.to('${id}',{opacity:0,y:-30,duration:${dur},ease:'power2.in'},0);`);
-    else if(a==='slide-down')lines.push(`  tl.to('${id}',{opacity:0,y:30,duration:${dur},ease:'power2.in'},0);`);
-    else if(a==='wipe')lines.push(`  tl.to('${id}',{scaleX:0,transformOrigin:'right center',duration:${dur},ease:'power2.in'},0);`);
-    else if(a==='scale')lines.push(`  tl.to('${id}',{opacity:0,scale:0.85,duration:${dur},ease:'power2.in'},0);`);
+  els.forEach(el=>{const id='#el'+el.id;
+    const ao=resolveAnimOut(el);if(ao==='none')return;
+    const dur=(el.animOutDuration??0.3).toFixed(2);const delay=el.animOutDelay??0;
+    if(ao==='fade')lines.push(`  tl.to('${id}',{opacity:0,duration:${dur},ease:'power2.in'},${delay});`);
+    else if(ao==='slide-left')lines.push(`  tl.to('${id}',{opacity:0,x:-30,duration:${dur},ease:'power2.in'},${delay});`);
+    else if(ao==='slide-right')lines.push(`  tl.to('${id}',{opacity:0,x:30,duration:${dur},ease:'power2.in'},${delay});`);
+    else if(ao==='slide-up')lines.push(`  tl.to('${id}',{opacity:0,y:-30,duration:${dur},ease:'power2.in'},${delay});`);
+    else if(ao==='slide-down')lines.push(`  tl.to('${id}',{opacity:0,y:30,duration:${dur},ease:'power2.in'},${delay});`);
+    else if(ao==='wipe')lines.push(`  tl.to('${id}',{scaleX:0,transformOrigin:'right center',duration:${dur},ease:'power2.in'},${delay});`);
+    else if(ao==='scale')lines.push(`  tl.to('${id}',{opacity:0,scale:0.85,duration:${dur},ease:'power2.in'},${delay});`);
   });
   return lines.join('\n');
 }
@@ -1542,21 +1543,25 @@ function parseHTMLTemplate(src,filename){
   const bgMatch=bodyStyle.match(/background(?:-color)?\s*:\s*([^;]+)/i);
   const importedBg=bgMatch?bgMatch[1].trim():'transparent';
 
-  // CSS parser — handles #id and #id.class selectors (needed for .in/.out rules)
-  const cssMap={};
+  // CSS parser — handles #id, #id.class, and standalone .class selectors
+  const cssMap={};const classMap={};
+  const _parsePairs=block=>{const r={};block.split(';').forEach(pair=>{const c=pair.indexOf(':');if(c<0)return;const prop=pair.slice(0,c).trim().replace(/-([a-z])/g,(_,l)=>l.toUpperCase());const val=pair.slice(c+1).trim();if(prop&&val)r[prop]=val;});return r;};
   [...doc.querySelectorAll('style')].forEach(s=>{
-    const text=s.textContent||'';const ruleRx=/#([\w-.]+)\s*\{([^}]*)\}/g;let m;
-    while((m=ruleRx.exec(text))!==null){
-      const key=m[1],block=m[2];if(!cssMap[key])cssMap[key]={};
-      block.split(';').forEach(pair=>{const c=pair.indexOf(':');if(c<0)return;
-        const prop=pair.slice(0,c).trim().replace(/-([a-z])/g,(_,l)=>l.toUpperCase());
-        const val=pair.slice(c+1).trim();if(prop&&val)cssMap[key][prop]=val;});
-    }
+    const text=s.textContent||'';let m;
+    // #id and #id.class rules
+    const idRx=/#([\w-.]+)\s*\{([^}]*)\}/g;
+    while((m=idRx.exec(text))!==null){const key=m[1],props=_parsePairs(m[2]);if(!cssMap[key])cssMap[key]={};Object.assign(cssMap[key],props);}
+    // Standalone .class rules (preceded by start-of-text or closing brace)
+    const clsRx=/(?:^|\})\s*\.([\w-]+)\s*\{([^}]*)\}/g;
+    while((m=clsRx.exec(text))!==null){const key=m[1],props=_parsePairs(m[2]);if(!classMap[key])classMap[key]={};Object.assign(classMap[key],props);}
   });
 
   // Helpers
   function getDivCSS(div){
-    const css={...cssMap[div.id]||{}};
+    const css={};
+    // Priority: inline > #id > .class (lowest)
+    (div.className||'').split(/\s+/).filter(Boolean).forEach(cls=>{if(classMap[cls])Object.assign(css,classMap[cls]);});
+    if(div.id&&cssMap[div.id])Object.assign(css,cssMap[div.id]);
     (div.getAttribute('style')||'').split(';').forEach(pair=>{
       const c=pair.indexOf(':');if(c<0)return;
       const prop=pair.slice(0,c).trim().replace(/-([a-z])/g,(_,l)=>l.toUpperCase());
@@ -1574,7 +1579,7 @@ function parseHTMLTemplate(src,filename){
   function getChainPos(el){
     let x=0,y=0,cur=el.parentElement;
     while(cur&&cur!==doc.body){
-      if(cur.id&&cssMap[cur.id]){x+=parseFloat(cssMap[cur.id].left)||0;y+=parseFloat(cssMap[cur.id].top)||0;}
+      const pcss=getDivCSS(cur);x+=parseFloat(pcss.left)||0;y+=parseFloat(pcss.top)||0;
       cur=cur.parentElement;
     }return{x,y};
   }
@@ -1626,7 +1631,7 @@ function parseHTMLTemplate(src,filename){
     }else bodyDivs.push(div);
   });
   const positionedDivs=bodyDivs.filter(div=>{
-    const css=cssMap[div.id]||{};return(css.left||css.top)&&(css.width||css.height);
+    const css=getDivCSS(div);return(css.left||css.top)&&(css.width||css.height);
   });
 
   if(positionedDivs.length>0){
@@ -1638,7 +1643,7 @@ function parseHTMLTemplate(src,filename){
     doc.querySelectorAll('div[id]').forEach(div=>{
       const id=div.id;
       if(skipIds.has(id)||skipRe.test(id)||processed.has(id)||isHidden(div))return;
-      const css=cssMap[id]||{};
+      const css=getDivCSS(div);
       const hasText=!!(css.fontSize||css.fontFamily);
       const hasBg=!!(css.background||css.backgroundColor);
       const hasSize=!!(css.width||css.height||css.minWidth);
