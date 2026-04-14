@@ -521,6 +521,7 @@ function render(){
       div.style.fontWeight=el.fontWeight;
       div.style.fontFamily=`'${el.fontFamily}',sans-serif`;
       div.style.whiteSpace='nowrap';div.style.pointerEvents='all';
+      if(el.bgColor&&el.bgColor!=='transparent'){div.style.background=el.bgColor;div.style.borderRadius=(el.borderRadius||0)*scale+'px';div.style.padding='0 '+Math.round(8*scale)+'px';}
       div.textContent=_stColor(el,'text');
     }else if(el.type==='rect'){
       div.style.background=_bgCss(el,_stColor(el,'bgColor'));
@@ -1193,7 +1194,7 @@ function exportSPX_CSS(){
     else if(a==='scale'){outState='opacity:0;transform:scale(0.8);';inState=`opacity:${el.opacity};transform:none;`;}
     else{outState=`opacity:${el.opacity};`;inState=`opacity:${el.opacity};transform:none;`;}
     css+=`#${id}{position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;opacity:${el.opacity};`;
-    if(el.type==='text')css+=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;white-space:nowrap;display:flex;align-items:center;`;
+    if(el.type==='text'){css+=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;white-space:nowrap;display:flex;align-items:center;`;if(el.bgColor&&el.bgColor!=='transparent')css+=`background:${el.bgColor};border-radius:${el.borderRadius||0}px;padding:0 8px;`;}
     if(el.type==='rect')css+=`background:${_bgCss(el)};border-radius:${el.borderRadius}px;`;
     if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
     if(el.type==='image')css+=`overflow:hidden;`;
@@ -1256,7 +1257,7 @@ function exportSPX_GSAP(){
   elements.forEach(el=>{
     const id='el'+el.id;
     css+=`#${id}{position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;`;
-    if(el.type==='text')css+=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;white-space:nowrap;display:flex;align-items:center;`;
+    if(el.type==='text'){css+=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;white-space:nowrap;display:flex;align-items:center;`;if(el.bgColor&&el.bgColor!=='transparent')css+=`background:${el.bgColor};border-radius:${el.borderRadius||0}px;padding:0 8px;`;}
     if(el.type==='rect')css+=`background:${_bgCss(el)};border-radius:${el.borderRadius}px;`;
     if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
     if(el.type==='image')css+=`overflow:hidden;`;
@@ -1599,6 +1600,14 @@ function _parseFromIframe(iframe,filename){
     }
   });
 
+  // Detect non-CSS animation libraries
+  const scriptSrc=[...idoc.querySelectorAll('script[src]')].map(s=>s.src||s.getAttribute('src')).join(' ');
+  const scriptText=[...idoc.querySelectorAll('script:not([src])')].map(s=>s.textContent).join(' ');
+  const usesAnimeJS=scriptSrc.includes('anime')||scriptText.includes('anime.timeline')||scriptText.includes('anime({');
+  const usesGSAP=scriptSrc.includes('gsap')||scriptText.includes('gsap.timeline')||scriptText.includes('TweenMax');
+  if((usesAnimeJS||usesGSAP)&&!Object.keys(cssTimingMap).length)
+    warnings.push(`Animationer bruger ${usesAnimeJS?'anime.js':'GSAP'} — sæt dem manuelt i editoren`);
+
   const skipIds=new Set(['hiddenSpxData','sel-box','res-label']);
   const skipRe=/^f\d+$/;
 
@@ -1686,7 +1695,7 @@ function _parseFromIframe(iframe,filename){
       elObj.text=spxInfo?.value||directText||'Tekst';
       elObj.fontSize=Math.round(parseFloat(cs.fontSize))||32;elObj.fontWeight=cs.fontWeight||'400';
       elObj.fontFamily=(cs.fontFamily||'DM Sans').replace(/['"]/g,'').split(',')[0].trim();
-      elObj.color=_toHex(cs.color)||'#ffffff';elObj.bgColor='transparent';elObj.borderRadius=0;
+      elObj.color=_toHex(cs.color)||'#ffffff';elObj.bgColor=hasBg?bgHex:'transparent';elObj.borderRadius=hasBg?Math.round(parseFloat(cs.borderRadius))||0:0;
     }else if(type==='rect'){
       elObj.text='';elObj.fontSize=32;elObj.fontWeight='400';elObj.fontFamily='DM Sans';elObj.color='#ffffff';
       elObj.bgColor=bgHex||'#444444';elObj.borderRadius=Math.round(parseFloat(cs.borderRadius))||0;
