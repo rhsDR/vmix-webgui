@@ -1535,203 +1535,169 @@ function toast(msg,type){const t=document.getElementById('toast');t.textContent=
 function importHTML(ev){const file=ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=e=>parseHTMLTemplate(e.target.result,file.name);reader.readAsText(file);ev.target.value='';}
 
 function parseHTMLTemplate(src,filename){
-  const parser=new DOMParser();const doc=parser.parseFromString(src,'text/html');
+  // Render in a hidden iframe to get exact positions via getBoundingClientRect()
+  const iframe=document.createElement('iframe');
+  iframe.style.cssText='position:fixed;left:0;top:0;width:1920px;height:1080px;border:none;opacity:0;pointer-events:none;z-index:-9999;';
+  document.body.appendChild(iframe);
+  const cleanup=()=>{try{document.body.removeChild(iframe);}catch(e){}};
+  iframe.addEventListener('load',()=>{
+    try{_parseFromIframe(iframe,filename);}
+    catch(err){cleanup();toast('Import fejlede: '+err.message);console.error(err);}
+  });
+  const blob=new Blob([src],{type:'text/html'});
+  const blobUrl=URL.createObjectURL(blob);
+  iframe.src=blobUrl;
+  setTimeout(()=>URL.revokeObjectURL(blobUrl),10000);
+}
+
+function _parseFromIframe(iframe,filename){
+  const idoc=iframe.contentDocument;const iwin=iframe.contentWindow;
+  const cleanup=()=>{try{document.body.removeChild(iframe);}catch(e){}};
   const imported=[];const warnings=[];
 
   // Background
-  const bodyStyle=doc.body?.getAttribute('style')||'';
-  const bgMatch=bodyStyle.match(/background(?:-color)?\s*:\s*([^;]+)/i);
-  const importedBg=bgMatch?bgMatch[1].trim():'transparent';
+  const bodyBg=iwin.getComputedStyle(idoc.body).backgroundColor;
+  const importedBg=(bodyBg==='rgba(0, 0, 0, 0)'||!bodyBg)?'transparent':bodyBg;
 
-  // CSS parser — handles #id, #id.class, and standalone .class selectors
-  const cssMap={};const classMap={};
-  const _parsePairs=block=>{const r={};block.split(';').forEach(pair=>{const c=pair.indexOf(':');if(c<0)return;const prop=pair.slice(0,c).trim().replace(/-([a-z])/g,(_,l)=>l.toUpperCase());const val=pair.slice(c+1).trim();if(prop&&val)r[prop]=val;});return r;};
-  [...doc.querySelectorAll('style')].forEach(s=>{
-    const text=s.textContent||'';let m;
-    // #id and #id.class rules
-    const idRx=/#([\w-.]+)\s*\{([^}]*)\}/g;
-    while((m=idRx.exec(text))!==null){const key=m[1],props=_parsePairs(m[2]);if(!cssMap[key])cssMap[key]={};Object.assign(cssMap[key],props);}
-    // Standalone .class rules (preceded by start-of-text or closing brace)
-    const clsRx=/(?:^|\})\s*\.([\w-]+)\s*\{([^}]*)\}/g;
-    while((m=clsRx.exec(text))!==null){const key=m[1],props=_parsePairs(m[2]);if(!classMap[key])classMap[key]={};Object.assign(classMap[key],props);}
-  });
-
-  // Helpers
-  function getDivCSS(div){
-    const css={};
-    // Priority: inline > #id > .class (lowest)
-    (div.className||'').split(/\s+/).filter(Boolean).forEach(cls=>{if(classMap[cls])Object.assign(css,classMap[cls]);});
-    if(div.id&&cssMap[div.id])Object.assign(css,cssMap[div.id]);
-    (div.getAttribute('style')||'').split(';').forEach(pair=>{
-      const c=pair.indexOf(':');if(c<0)return;
-      const prop=pair.slice(0,c).trim().replace(/-([a-z])/g,(_,l)=>l.toUpperCase());
-      const val=pair.slice(c+1).trim();if(prop&&val)css[prop]=val;
-    });return css;
-  }
-  function extractColor(val){
-    if(!val||val==='transparent')return'transparent';
-    if(val.includes('linear-gradient')){
-      const hex=val.match(/#[0-9a-fA-F]{3,6}/);if(hex)return hex[0];
-      const rgb=val.match(/rgba?\([^)]+\)/);if(rgb)return rgb[0];return'#000000';
-    }return val;
-  }
-  // Sum top/left of ALL ancestors (for nested/flex layouts)
-  // Handles both top: and bottom: positioning
-  function getChainPos(el){
-    let x=0,y=0,cur=el.parentElement;
-    while(cur&&cur!==doc.body){
-      const pcss=getDivCSS(cur);
-      x+=parseFloat(pcss.left)||0;
-      if(pcss.top)y+=parseFloat(pcss.top);
-      else if(pcss.bottom)y+=Math.max(0,1080-parseFloat(pcss.bottom));
-      cur=cur.parentElement;
-    }return{x,y};
-  }
-
-  // SPX field definitions from window.SPXGCTemplateDefinition
+  // SPX field definitions — prefer live window object (inline scripts ran in iframe)
   let spxFields=[];
-  const allScripts=[...doc.querySelectorAll('script:not([src])')];
-  allScripts.forEach(sc=>{
-    const st=sc.textContent||'';
-    const m=st.match(/SPXGCTemplateDefinition\s*=\s*(\{[\s\S]*?\})\s*;/);
-    if(m){try{const d=JSON.parse(m[1]);spxFields=d.DataFields||[];}catch(e){}}
-  });
-  const spxMap={};spxFields.forEach((f,i)=>spxMap['f'+i]=f);
+  if(iwin.SPXGCTemplateDefinition?.DataFields){
+    spxFields=iwin.SPXGCTemplateDefinition.DataFields.filter(f=>f.field&&f.field!=='comment'&&/^f\d+$/.test(f.field));
+  }else{
+    [...idoc.querySelectorAll('script:not([src])')].forEach(sc=>{
+      const m=(sc.textContent||'').match(/SPXGCTemplateDefinition\s*=\s*(\{[\s\S]*?\})\s*;/);
+      if(m){try{const d=JSON.parse(m[1]);spxFields=(d.DataFields||[]).filter(f=>f.field&&f.field!=='comment'&&/^f\d+$/.test(f.field));}catch(e){}}
+    });
+  }
+  const spxMap={};spxFields.forEach((f,i)=>{spxMap[f.field]=f;spxMap['f'+i]=spxMap[f.field];});
 
-  // Build updateFieldMap — two strategies:
-  // 1. Direct:   getElementById('el1')...data.f0
-  // 2. Indirect: let n = data?.f0; getElementById('name')...clean(n)
+  // Build updateFieldMap: which element ID maps to which SPX field
+  // Pattern A: getElementById('el').innerHTML = clean(data?.f0)
+  // Pattern B: const nVal = getElementById('f0').innerText; getElementById('name').innerText = nVal
   const updateFieldMap={};
-  allScripts.forEach(sc=>{
+  [...idoc.querySelectorAll('script:not([src])')].forEach(sc=>{
     const st=sc.textContent||'';
-    // Direct
-    {const rx=/getElementById\(['"]([^'"]+)['"]\)[^;]*?data\.(f\d+)/g;let m;
+    {const rx=/getElementById\(['"]([^'"]+)['"]\)[^;]*?(?:data\??\.)(f\d+)/g;let m;
     while((m=rx.exec(st))!==null)if(!updateFieldMap[m[1]])updateFieldMap[m[1]]=m[2];}
-    // Indirect: build var→field map first
     const varMap={};
-    {const rx=/(?:let|var|const)\s+(\w+)\s*=\s*data\??\.(\w+)/g;let m;
-    while((m=rx.exec(st))!==null)varMap[m[1]]=m[2];}
+    {const rx=/(?:let|var|const)\s+(\w+)\s*=\s*(?:document\.getElementById\(['"](\w+)['"]\)\.(?:innerText|innerHTML|textContent)|data\??\.(\w+))/g;let m;
+    while((m=rx.exec(st))!==null){if(m[3])varMap[m[1]]=m[3];else if(m[2]&&/^f\d+$/.test(m[2]))varMap[m[1]]=m[2];}}
     if(Object.keys(varMap).length){
-      const rx=/getElementById\(['"]([^'"]+)['"]\)[^=]*=\s*(?:clean\()?(\w+)\)?/g;let m;
+      const rx=/getElementById\(['"]([^'"]+)['"]\)[^=\n]{0,40}=\s*(?:clean\()?(\w+)/g;let m;
       while((m=rx.exec(st))!==null){const v=m[2];if(varMap[v]&&!updateFieldMap[m[1]])updateFieldMap[m[1]]=varMap[v];}
     }
   });
 
-  // --- Collect divs to process ---
-  const skipIds=new Set(['hiddenSpxData','sel-box','res-label']);
-  const skipRe=/^f\d+$/; // Skip SPX hidden data divs (f0, f1, ...)
-  const isHidden=div=>/display\s*:\s*none/i.test(div.getAttribute('style')||'');
-  const divsToProcess=[];
-  let deepScan=false;
-
-  // Standard mode: body-level positioned elements (our own exported format + lt-wrap)
-  const bodyDivs=[];
-  [...doc.body.querySelectorAll(':scope > div')].forEach(div=>{
-    if(!div.id||skipIds.has(div.id)||skipRe.test(div.id)||isHidden(div))return;
-    if(div.id==='lt-wrap'){
-      [...div.querySelectorAll(':scope > div')].forEach(child=>{
-        if(child.id&&!skipIds.has(child.id)&&!isHidden(child))bodyDivs.push(child);
-      });
-    }else bodyDivs.push(div);
-  });
-  const positionedDivs=bodyDivs.filter(div=>{
-    const css=getDivCSS(div);return(css.left||css.top)&&(css.width||css.height);
-  });
-
-  if(positionedDivs.length>0){
-    divsToProcess.push(...positionedDivs);
-  }else{
-    // Deep scan: find ALL styled divs regardless of nesting (for flex/nested external templates)
-    deepScan=true;
-    const processed=new Set();
-    doc.querySelectorAll('div[id]').forEach(div=>{
-      const id=div.id;
-      if(skipIds.has(id)||skipRe.test(id)||processed.has(id)||isHidden(div))return;
-      const css=getDivCSS(div);
-      const hasText=!!(css.fontSize||css.fontFamily);
-      const hasBg=!!(css.background||css.backgroundColor);
-      const hasSize=!!(css.width||css.height||css.minWidth);
-      if(hasText||(hasBg&&hasSize)){processed.add(id);divsToProcess.push(div);}
-    });
-    if(divsToProcess.length)warnings.push('Flex/nested layout — positioner er estimerede, juster dem i editoren');
-  }
-
-  // --- Process each div ---
-  divsToProcess.forEach(div=>{
-    const id=div.id;const css=getDivCSS(div);
-    const chain=deepScan?getChainPos(div):{x:0,y:0};
-    const x=(parseFloat(css.left)||0)+chain.x;
-    const y=(css.top?parseFloat(css.top):(css.bottom?Math.max(0,1080-parseFloat(css.bottom)):0))+chain.y;
-    const w=parseFloat(css.width)||parseFloat(css.minWidth)||200;
-    const h=parseFloat(css.height)||50;
-
-    // Type detection
-    const innerEl=div.querySelector(`#${id}-inner,.ticker-inner`);
-    const hasTextProps=!!(css.fontSize||css.fontFamily||css.fontWeight);
-    const isLine=h<=8&&!hasTextProps&&!innerEl;
-    let type='rect';
-    if(innerEl)type='ticker';else if(hasTextProps)type='text';else if(isLine)type='line';
-
-    // Animation (only reliable in standard mode)
-    const outTransform=css.transform||'';
-    let animation='none';
-    if(!deepScan){
-      if(outTransform.includes('translateX(-'))animation='slide-left';
-      else if(outTransform.includes('translateX('))animation='slide-right';
-      else if(outTransform.includes('translateY(')&&!outTransform.includes('-'))animation='slide-up';
-      else if(outTransform.includes('translateY(-'))animation='slide-down';
-      else if(outTransform.includes('scaleX('))animation='wipe';
-      else if(outTransform.includes('scale('))animation='scale';
-      else if(String(css.opacity)==='0')animation='fade';
+  // Also parse #id.in/.out CSS timing rules (only in our own exported format)
+  const cssTimingMap={};
+  [...idoc.querySelectorAll('style')].forEach(s=>{
+    const text=s.textContent||'';const rx=/#([\w-]+)\.(in|out)\s*\{([^}]*)\}/g;let m;
+    while((m=rx.exec(text))!==null){
+      if(!cssTimingMap[m[1]])cssTimingMap[m[1]]={};
+      cssTimingMap[m[1]][m[2]]={};
+      m[3].split(';').forEach(p=>{const c=p.indexOf(':');if(c<0)return;cssTimingMap[m[1]][m[2]][p.slice(0,c).trim()]=p.slice(c+1).trim();});
     }
-    // In deep scan mode, CSS opacity is typically an animation start state (opacity:0) — always use 1
-    const opacity=deepScan?1:((animation!=='none'&&animation!=='wipe')?1:(css.opacity!==undefined?parseFloat(css.opacity):1));
+  });
 
-    // Timing from .in / .out rules
-    let animDelay=0,animDuration=0.45,animOutDuration=0.3,animOutDelay=0;
-    const inRule=cssMap[id+'.in']||{};const trans=inRule.transition||'';
-    if(trans){const durM=trans.match(/(\d+\.?\d*)s\s+(?:ease|cubic)/);if(durM)animDuration=parseFloat(durM[1]);
-      trans.split(',').forEach(tp=>{const p=tp.trim().split(/\s+/);if(p.length>=4){const d=parseFloat(p[3]);if(!isNaN(d)&&d>0)animDelay=Math.max(animDelay,d);}});}
-    const outRule=cssMap[id+'.out']||{};const outTrans=outRule.transition||'';
-    if(outTrans){const odurM=outTrans.match(/(\d+\.?\d*)s\s+ease-in/);if(odurM)animOutDuration=parseFloat(odurM[1]);
-      outTrans.split(',').forEach(tp=>{const p=tp.trim().split(/\s+/);if(p.length>=4){const d=parseFloat(p[3]);if(!isNaN(d)&&d>0)animOutDelay=Math.max(animOutDelay,d);}});}
+  const skipIds=new Set(['hiddenSpxData','sel-box','res-label']);
+  const skipRe=/^f\d+$/;
+
+  // Helper: rgb(a) string to hex
+  const _toHex=c=>{
+    if(!c||c==='transparent'||c==='rgba(0, 0, 0, 0)')return'transparent';
+    if(c.startsWith('#'))return c;
+    const m=c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+    if(!m)return c;
+    if(m[4]!==undefined&&parseFloat(m[4])<0.05)return'transparent';
+    return'#'+[m[1],m[2],m[3]].map(v=>parseInt(v).toString(16).padStart(2,'0')).join('');
+  };
+
+  idoc.querySelectorAll('[id]').forEach(el=>{
+    const id=el.id;
+    if(skipIds.has(id)||skipRe.test(id))return;
+    const cs=iwin.getComputedStyle(el);
+    if(cs.display==='none'||cs.visibility==='hidden')return;
+    const rect=el.getBoundingClientRect();
+    if(rect.width<5||rect.height<5)return;
+    if(rect.left>1920||rect.top>1080||rect.right<0||rect.bottom<0)return;
+
+    const x=Math.round(Math.max(0,rect.left));
+    const y=Math.round(Math.max(0,rect.top));
+    const w=Math.round(Math.min(rect.width,1920-x));
+    const h=Math.round(Math.min(rect.height,1080-y));
+
+    // Type detection based on computed styles and content
+    const innerEl=el.querySelector(`#${id}-inner,.ticker-inner`);
+    const directText=[...el.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent.trim()).join('').trim();
+    const fontSize=parseFloat(cs.fontSize)||0;
+    const bgHex=_toHex(cs.backgroundColor);
+    const hasBg=bgHex!=='transparent';
+
+    let type=null;
+    if(innerEl)type='ticker';
+    else if(directText&&fontSize>10)type='text';
+    else if(hasBg&&w>30&&h>10)type='rect';
+    else if(hasBg&&h<=8)type='line';
+    if(!type)return; // Skip transparent wrappers/containers
+
+    // Animation timing from .in/.out CSS rules (our own exported format)
+    let animation='none',animDelay=0,animDuration=0.45,animOutDuration=0.3,animOutDelay=0;
+    const inRule=cssTimingMap[id]?.in||{};const outRule=cssTimingMap[id]?.out||{};
+    const inTrans=inRule.transition||'';const outTrans=outRule.transition||'';
+    if(inTrans){
+      // Detect animation type from initial CSS transform/opacity on element
+      const initCs=idoc.getElementById(id);
+      const initStyle=iwin.getComputedStyle(initCs);
+      const t=initStyle.transform||'';const op=parseFloat(initStyle.opacity);
+      if(op<0.1)animation='fade';
+      else if(t.includes('scaleX(0)'))animation='wipe';
+      else if(t.match(/translateX\(-/))animation='slide-left';
+      else if(t.match(/translateX\(\d/))animation='slide-right';
+      else if(t.match(/translateY\(\d/))animation='slide-up';
+      else if(t.match(/translateY\(-/))animation='slide-down';
+      else if(t.includes('scale('))animation='scale';
+      const durM=inTrans.match(/(\d+\.?\d*)s\s+(?:ease|cubic)/);if(durM)animDuration=parseFloat(durM[1]);
+      inTrans.split(',').forEach(tp=>{const p=tp.trim().split(/\s+/);if(p.length>=4){const d=parseFloat(p[3]);if(!isNaN(d)&&d>0)animDelay=Math.max(animDelay,d);}});
+    }
+    if(outTrans){
+      const odurM=outTrans.match(/(\d+\.?\d*)s\s+ease-in/);if(odurM)animOutDuration=parseFloat(odurM[1]);
+      outTrans.split(',').forEach(tp=>{const p=tp.trim().split(/\s+/);if(p.length>=4){const d=parseFloat(p[3]);if(!isNaN(d)&&d>0)animOutDelay=Math.max(animOutDelay,d);}});
+    }
 
     const fieldKey=updateFieldMap[id];
-    const spxInfo=fieldKey?spxMap[fieldKey]:null;
+    const spxInfo=fieldKey?(spxMap[fieldKey]||null):null;
     const isSpxField=!!fieldKey;
-    const textContent=div.textContent.trim().replace(/\s+/g,' ').slice(0,30);
-    const defaultName=type==='text'?(textContent||id):type==='ticker'?'Ticker':type==='line'?'Linje':'Rektangel';
+    const defaultName=type==='text'?(directText.slice(0,30)||id):type==='ticker'?'Ticker':type==='line'?'Linje':'Rektangel';
 
-    const el={id:++elCtr,type,x,y,w,h,opacity,locked:false,visible:true,
+    const elObj={id:++elCtr,type,x,y,w,h,opacity:1,locked:false,visible:true,
       animation,animDelay,animDuration,animOut:'auto',animOutDelay,animOutDuration,
       spxField:isSpxField,fieldLabel:spxInfo?.title||fieldKey||'',
       name:defaultName,apiUrl:'',apiInterval:30,apiTemplate:'',
       gradientDir:null,gradientStop:0,src:'',objectFit:'contain'};
 
     if(type==='ticker'){
-      const ic=cssMap[id+'-inner']||{};
-      el.fontSize=parseFloat(ic.fontSize)||32;el.fontWeight=ic.fontWeight||'400';
-      el.fontFamily=(ic.fontFamily||'DM Sans').replace(/['"]/g,'').split(',')[0].trim();
-      el.color=ic.color||'#ffffff';
-      el.bgColor=extractColor(css.background||css.backgroundColor||'transparent');
-      el.borderRadius=0;el.tickerSpeed=120;el.tickerSep='  •  ';
-      el.text=spxInfo?.value||(innerEl?innerEl.textContent.trim().slice(0,80):'');
+      const ic=innerEl?iwin.getComputedStyle(innerEl):cs;
+      elObj.fontSize=Math.round(parseFloat(ic.fontSize))||32;elObj.fontWeight=ic.fontWeight||'400';
+      elObj.fontFamily=(ic.fontFamily||'DM Sans').replace(/['"]/g,'').split(',')[0].trim();
+      elObj.color=_toHex(ic.color)||'#ffffff';elObj.bgColor=_toHex(cs.backgroundColor)||'transparent';
+      elObj.borderRadius=0;elObj.tickerSpeed=120;elObj.tickerSep='  •  ';
+      elObj.text=spxInfo?.value||(innerEl?innerEl.textContent.trim().slice(0,80):'');
     }else if(type==='text'){
-      el.text=spxInfo?.value||div.textContent.trim()||'Tekst';
-      el.fontSize=parseFloat(css.fontSize)||32;el.fontWeight=css.fontWeight||'400';
-      el.fontFamily=(css.fontFamily||'DM Sans').replace(/['"]/g,'').split(',')[0].trim();
-      el.color=css.color||'#ffffff';el.bgColor='transparent';el.borderRadius=0;
+      elObj.text=spxInfo?.value||directText||'Tekst';
+      elObj.fontSize=Math.round(parseFloat(cs.fontSize))||32;elObj.fontWeight=cs.fontWeight||'400';
+      elObj.fontFamily=(cs.fontFamily||'DM Sans').replace(/['"]/g,'').split(',')[0].trim();
+      elObj.color=_toHex(cs.color)||'#ffffff';elObj.bgColor='transparent';elObj.borderRadius=0;
     }else if(type==='rect'){
-      el.text='';el.fontSize=32;el.fontWeight='400';el.fontFamily='DM Sans';el.color='#ffffff';
-      el.bgColor=extractColor(css.background||css.backgroundColor||'#444444');
-      el.borderRadius=parseFloat(css.borderRadius)||0;
+      elObj.text='';elObj.fontSize=32;elObj.fontWeight='400';elObj.fontFamily='DM Sans';elObj.color='#ffffff';
+      elObj.bgColor=bgHex||'#444444';elObj.borderRadius=Math.round(parseFloat(cs.borderRadius))||0;
     }else{
-      el.text='';el.fontSize=32;el.fontWeight='400';el.fontFamily='DM Sans';el.color='#ffffff';
-      el.bgColor=extractColor(css.background||css.backgroundColor||'#ffffff');el.borderRadius=2;
+      elObj.text='';elObj.fontSize=32;elObj.fontWeight='400';elObj.fontFamily='DM Sans';elObj.color='#ffffff';
+      elObj.bgColor=bgHex||'#ffffff';elObj.borderRadius=2;
     }
-    imported.push({el,domId:id});
+    imported.push({el:elObj,domId:id});
   });
 
+  cleanup();
   if(!imported.length){toast('Ingen elementer fundet — er det en SPX-editor template?');return;}
   showImportModal(imported,importedBg,filename,warnings,spxFields.length);
 }
