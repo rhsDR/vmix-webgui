@@ -1512,18 +1512,18 @@ function toast(msg,type){const t=document.getElementById('toast');t.textContent=
 function importHTML(ev){const file=ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=e=>parseHTMLTemplate(e.target.result,file.name);reader.readAsText(file);ev.target.value='';}
 
 function parseHTMLTemplate(src,filename){
-  const parser=new DOMParser();const doc=parser.parseFromString(src,'text/html');const imported=[];const warnings=[];
+  const parser=new DOMParser();const doc=parser.parseFromString(src,'text/html');
+  const imported=[];const warnings=[];
 
   // Background
   const bodyStyle=doc.body?.getAttribute('style')||'';
   const bgMatch=bodyStyle.match(/background(?:-color)?\s*:\s*([^;]+)/i);
   const importedBg=bgMatch?bgMatch[1].trim():'transparent';
 
-  // Parse CSS — regex now handles #id.classname selectors (needed for .in/.out rules)
+  // CSS parser — handles #id and #id.class selectors (needed for .in/.out rules)
   const cssMap={};
   [...doc.querySelectorAll('style')].forEach(s=>{
-    const text=s.textContent||'';
-    const ruleRx=/#([\w-.]+)\s*\{([^}]*)\}/g;let m;
+    const text=s.textContent||'';const ruleRx=/#([\w-.]+)\s*\{([^}]*)\}/g;let m;
     while((m=ruleRx.exec(text))!==null){
       const key=m[1],block=m[2];if(!cssMap[key])cssMap[key]={};
       block.split(';').forEach(pair=>{const c=pair.indexOf(':');if(c<0)return;
@@ -1532,121 +1532,141 @@ function parseHTMLTemplate(src,filename){
     }
   });
 
-  // Parse SPX field definitions from window.SPXGCTemplateDefinition
+  // Helpers
+  function getDivCSS(div){
+    const css={...cssMap[div.id]||{}};
+    (div.getAttribute('style')||'').split(';').forEach(pair=>{
+      const c=pair.indexOf(':');if(c<0)return;
+      const prop=pair.slice(0,c).trim().replace(/-([a-z])/g,(_,l)=>l.toUpperCase());
+      const val=pair.slice(c+1).trim();if(prop&&val)css[prop]=val;
+    });return css;
+  }
+  function extractColor(val){
+    if(!val||val==='transparent')return'transparent';
+    if(val.includes('linear-gradient')){
+      const hex=val.match(/#[0-9a-fA-F]{3,6}/);if(hex)return hex[0];
+      const rgb=val.match(/rgba?\([^)]+\)/);if(rgb)return rgb[0];return'#000000';
+    }return val;
+  }
+  // Sum top/left of ALL ancestors (for nested/flex layouts)
+  function getChainPos(el){
+    let x=0,y=0,cur=el.parentElement;
+    while(cur&&cur!==doc.body){
+      if(cur.id&&cssMap[cur.id]){x+=parseFloat(cssMap[cur.id].left)||0;y+=parseFloat(cssMap[cur.id].top)||0;}
+      cur=cur.parentElement;
+    }return{x,y};
+  }
+
+  // SPX field definitions from window.SPXGCTemplateDefinition
   let spxFields=[];
-  [...doc.querySelectorAll('script:not([src])')].forEach(sc=>{
+  const allScripts=[...doc.querySelectorAll('script:not([src])')];
+  allScripts.forEach(sc=>{
     const st=sc.textContent||'';
     const m=st.match(/SPXGCTemplateDefinition\s*=\s*(\{[\s\S]*?\})\s*;/);
     if(m){try{const d=JSON.parse(m[1]);spxFields=d.DataFields||[];}catch(e){}}
   });
   const spxMap={};spxFields.forEach((f,i)=>spxMap['f'+i]=f);
 
-  // Map element DOM id → field key (e.g. 'el1' → 'f0')
-  // Matches: getElementById('el1')...data.f0  (handles our clean((data&&data.f0...) pattern)
+  // Build updateFieldMap — two strategies:
+  // 1. Direct:   getElementById('el1')...data.f0
+  // 2. Indirect: let n = data?.f0; getElementById('name')...clean(n)
   const updateFieldMap={};
-  [...doc.querySelectorAll('script:not([src])')].forEach(sc=>{
+  allScripts.forEach(sc=>{
     const st=sc.textContent||'';
-    const rx=/getElementById\(['"]([^'"]+)['"]\)[^;]*?data\.(f\d+)/g;let m;
-    while((m=rx.exec(st))!==null)if(!updateFieldMap[m[1]])updateFieldMap[m[1]]=m[2];
+    // Direct
+    {const rx=/getElementById\(['"]([^'"]+)['"]\)[^;]*?data\.(f\d+)/g;let m;
+    while((m=rx.exec(st))!==null)if(!updateFieldMap[m[1]])updateFieldMap[m[1]]=m[2];}
+    // Indirect: build var→field map first
+    const varMap={};
+    {const rx=/(?:let|var|const)\s+(\w+)\s*=\s*data\??\.(\w+)/g;let m;
+    while((m=rx.exec(st))!==null)varMap[m[1]]=m[2];}
+    if(Object.keys(varMap).length){
+      const rx=/getElementById\(['"]([^'"]+)['"]\)[^=]*=\s*(?:clean\()?(\w+)\)?/g;let m;
+      while((m=rx.exec(st))!==null){const v=m[2];if(varMap[v]&&!updateFieldMap[m[1]])updateFieldMap[m[1]]=varMap[v];}
+    }
   });
 
-  // Helper: extract a plain color from a possible gradient value
-  function extractColor(val){
-    if(!val||val==='transparent')return'transparent';
-    if(val.includes('linear-gradient')){
-      const hex=val.match(/#[0-9a-fA-F]{3,6}/);if(hex)return hex[0];
-      const rgb=val.match(/rgba?\([^)]+\)/);if(rgb)return rgb[0];
-      return'#000000';
-    }
-    return val;
+  // --- Collect divs to process ---
+  const skipIds=new Set(['hiddenSpxData','sel-box','res-label']);
+  const skipRe=/^f\d+$/; // Skip SPX hidden data divs (f0, f1, ...)
+  const isHidden=div=>/display\s*:\s*none/i.test(div.getAttribute('style')||'');
+  const divsToProcess=[];
+  let deepScan=false;
+
+  // Standard mode: body-level positioned elements (our own exported format + lt-wrap)
+  const bodyDivs=[];
+  [...doc.body.querySelectorAll(':scope > div')].forEach(div=>{
+    if(!div.id||skipIds.has(div.id)||skipRe.test(div.id)||isHidden(div))return;
+    if(div.id==='lt-wrap'){
+      [...div.querySelectorAll(':scope > div')].forEach(child=>{
+        if(child.id&&!skipIds.has(child.id)&&!isHidden(child))bodyDivs.push(child);
+      });
+    }else bodyDivs.push(div);
+  });
+  const positionedDivs=bodyDivs.filter(div=>{
+    const css=cssMap[div.id]||{};return(css.left||css.top)&&(css.width||css.height);
+  });
+
+  if(positionedDivs.length>0){
+    divsToProcess.push(...positionedDivs);
+  }else{
+    // Deep scan: find ALL styled divs regardless of nesting (for flex/nested external templates)
+    deepScan=true;
+    const processed=new Set();
+    doc.querySelectorAll('div[id]').forEach(div=>{
+      const id=div.id;
+      if(skipIds.has(id)||skipRe.test(id)||processed.has(id)||isHidden(div))return;
+      const css=cssMap[id]||{};
+      const hasText=!!(css.fontSize||css.fontFamily);
+      const hasBg=!!(css.background||css.backgroundColor);
+      const hasSize=!!(css.width||css.height||css.minWidth);
+      if(hasText||(hasBg&&hasSize)){processed.add(id);divsToProcess.push(div);}
+    });
+    if(divsToProcess.length)warnings.push('Flex/nested layout — positioner er estimerede, juster dem i editoren');
   }
 
-  // Collect divs — handle #lt-wrap wrapper (Lower Third), skip utility divs
-  const skipIds=new Set(['hiddenSpxData','sel-box','res-label']);
-  const divsToProcess=[];
-  [...doc.body.querySelectorAll(':scope > div')].forEach(div=>{
-    if(!div.id||skipIds.has(div.id))return;
-    if(div.id==='lt-wrap'){
-      // recurse into lt-wrap children
-      [...div.querySelectorAll(':scope > div')].forEach(child=>{
-        if(child.id&&!skipIds.has(child.id))divsToProcess.push(child);
-      });
-    }else{
-      divsToProcess.push(div);
-    }
-  });
-
+  // --- Process each div ---
   divsToProcess.forEach(div=>{
-    const id=div.id;
-    // Merge CSS rule + inline style
-    const css={...cssMap[id]||{}};
-    (div.getAttribute('style')||'').split(';').forEach(pair=>{
-      const c=pair.indexOf(':');if(c<0)return;
-      const prop=pair.slice(0,c).trim().replace(/-([a-z])/g,(_,l)=>l.toUpperCase());
-      const val=pair.slice(c+1).trim();if(prop&&val)css[prop]=val;
-    });
-
-    const x=parseFloat(css.left)||0;
-    const y=parseFloat(css.top)||0;
-    const w=parseFloat(css.width)||200;
+    const id=div.id;const css=getDivCSS(div);
+    const chain=deepScan?getChainPos(div):{x:0,y:0};
+    const x=(parseFloat(css.left)||0)+chain.x;
+    const y=(parseFloat(css.top)||0)+chain.y;
+    const w=parseFloat(css.width)||parseFloat(css.minWidth)||200;
     const h=parseFloat(css.height)||50;
 
-    // Detect type — ticker first (has -inner child), then text, line, rect
+    // Type detection
     const innerEl=div.querySelector(`#${id}-inner,.ticker-inner`);
     const hasTextProps=!!(css.fontSize||css.fontFamily||css.fontWeight);
     const isLine=h<=8&&!hasTextProps&&!innerEl;
     let type='rect';
-    if(innerEl)type='ticker';
-    else if(hasTextProps)type='text';
-    else if(isLine)type='line';
+    if(innerEl)type='ticker';else if(hasTextProps)type='text';else if(isLine)type='line';
 
-    // Detect animation type from base (out) CSS state
+    // Animation (only reliable in standard mode)
     const outTransform=css.transform||'';
     let animation='none';
-    if(outTransform.includes('translateX(-'))animation='slide-left';
-    else if(outTransform.includes('translateX('))animation='slide-right';
-    else if(outTransform.includes('translateY(')&&!outTransform.includes('-'))animation='slide-up';
-    else if(outTransform.includes('translateY(-'))animation='slide-down';
-    else if(outTransform.includes('scaleX('))animation='wipe';
-    else if(outTransform.includes('scale('))animation='scale';
-    else if(String(css.opacity)==='0')animation='fade';
-
-    // Actual opacity — animated elements have opacity:0 in base state but should be 1 in editor
-    const opacity=(animation!=='none'&&animation!=='wipe')
-      ?1
-      :(css.opacity!==undefined?parseFloat(css.opacity):1);
-
-    // Animation timing from #id.in rule (now correctly parsed by updated regex)
-    let animDelay=0,animDuration=0.45;
-    const inRule=cssMap[id+'.in']||{};
-    const trans=inRule.transition||'';
-    if(trans){
-      const durM=trans.match(/(\d+\.?\d*)s\s+(?:ease|cubic)/);
-      if(durM)animDuration=parseFloat(durM[1]);
-      trans.split(',').forEach(tp=>{
-        const parts=tp.trim().split(/\s+/);
-        if(parts.length>=4){const d=parseFloat(parts[3]);if(!isNaN(d)&&d>0)animDelay=Math.max(animDelay,d);}
-      });
+    if(!deepScan){
+      if(outTransform.includes('translateX(-'))animation='slide-left';
+      else if(outTransform.includes('translateX('))animation='slide-right';
+      else if(outTransform.includes('translateY(')&&!outTransform.includes('-'))animation='slide-up';
+      else if(outTransform.includes('translateY(-'))animation='slide-down';
+      else if(outTransform.includes('scaleX('))animation='wipe';
+      else if(outTransform.includes('scale('))animation='scale';
+      else if(String(css.opacity)==='0')animation='fade';
     }
+    const opacity=(animation!=='none'&&animation!=='wipe')?1:(css.opacity!==undefined?parseFloat(css.opacity):1);
 
-    // Out animation timing from #id.out rule
-    let animOutDuration=0.3,animOutDelay=0;
-    const outRule=cssMap[id+'.out']||{};
-    const outTrans=outRule.transition||'';
-    if(outTrans){
-      const odurM=outTrans.match(/(\d+\.?\d*)s\s+ease-in/);
-      if(odurM)animOutDuration=parseFloat(odurM[1]);
-      outTrans.split(',').forEach(tp=>{
-        const parts=tp.trim().split(/\s+/);
-        if(parts.length>=4){const d=parseFloat(parts[3]);if(!isNaN(d)&&d>0)animOutDelay=Math.max(animOutDelay,d);}
-      });
-    }
+    // Timing from .in / .out rules
+    let animDelay=0,animDuration=0.45,animOutDuration=0.3,animOutDelay=0;
+    const inRule=cssMap[id+'.in']||{};const trans=inRule.transition||'';
+    if(trans){const durM=trans.match(/(\d+\.?\d*)s\s+(?:ease|cubic)/);if(durM)animDuration=parseFloat(durM[1]);
+      trans.split(',').forEach(tp=>{const p=tp.trim().split(/\s+/);if(p.length>=4){const d=parseFloat(p[3]);if(!isNaN(d)&&d>0)animDelay=Math.max(animDelay,d);}});}
+    const outRule=cssMap[id+'.out']||{};const outTrans=outRule.transition||'';
+    if(outTrans){const odurM=outTrans.match(/(\d+\.?\d*)s\s+ease-in/);if(odurM)animOutDuration=parseFloat(odurM[1]);
+      outTrans.split(',').forEach(tp=>{const p=tp.trim().split(/\s+/);if(p.length>=4){const d=parseFloat(p[3]);if(!isNaN(d)&&d>0)animOutDelay=Math.max(animOutDelay,d);}});}
 
-    // SPX field
     const fieldKey=updateFieldMap[id];
     const spxInfo=fieldKey?spxMap[fieldKey]:null;
     const isSpxField=!!fieldKey;
-
     const textContent=div.textContent.trim().replace(/\s+/g,' ').slice(0,30);
     const defaultName=type==='text'?(textContent||id):type==='ticker'?'Ticker':type==='line'?'Linje':'Rektangel';
 
@@ -1657,32 +1677,26 @@ function parseHTMLTemplate(src,filename){
       gradientDir:null,gradientStop:0,src:'',objectFit:'contain'};
 
     if(type==='ticker'){
-      const innerCss=cssMap[id+'-inner']||{};
-      el.fontSize=parseFloat(innerCss.fontSize)||32;
-      el.fontWeight=innerCss.fontWeight||'400';
-      el.fontFamily=(innerCss.fontFamily||'DM Sans').replace(/['"]/g,'').split(',')[0].trim();
-      el.color=innerCss.color||'#ffffff';
+      const ic=cssMap[id+'-inner']||{};
+      el.fontSize=parseFloat(ic.fontSize)||32;el.fontWeight=ic.fontWeight||'400';
+      el.fontFamily=(ic.fontFamily||'DM Sans').replace(/['"]/g,'').split(',')[0].trim();
+      el.color=ic.color||'#ffffff';
       el.bgColor=extractColor(css.background||css.backgroundColor||'transparent');
-      el.borderRadius=0;
-      el.tickerSpeed=120;el.tickerSep='  •  ';
+      el.borderRadius=0;el.tickerSpeed=120;el.tickerSep='  •  ';
       el.text=spxInfo?.value||(innerEl?innerEl.textContent.trim().slice(0,80):'');
     }else if(type==='text'){
       el.text=spxInfo?.value||div.textContent.trim()||'Tekst';
-      el.fontSize=parseFloat(css.fontSize)||32;
-      el.fontWeight=css.fontWeight||'400';
+      el.fontSize=parseFloat(css.fontSize)||32;el.fontWeight=css.fontWeight||'400';
       el.fontFamily=(css.fontFamily||'DM Sans').replace(/['"]/g,'').split(',')[0].trim();
-      el.color=css.color||'#ffffff';
-      el.bgColor='transparent';el.borderRadius=0;
+      el.color=css.color||'#ffffff';el.bgColor='transparent';el.borderRadius=0;
     }else if(type==='rect'){
       el.text='';el.fontSize=32;el.fontWeight='400';el.fontFamily='DM Sans';el.color='#ffffff';
       el.bgColor=extractColor(css.background||css.backgroundColor||'#444444');
       el.borderRadius=parseFloat(css.borderRadius)||0;
-    }else{// line
+    }else{
       el.text='';el.fontSize=32;el.fontWeight='400';el.fontFamily='DM Sans';el.color='#ffffff';
-      el.bgColor=extractColor(css.background||css.backgroundColor||'#ffffff');
-      el.borderRadius=2;
+      el.bgColor=extractColor(css.background||css.backgroundColor||'#ffffff');el.borderRadius=2;
     }
-
     imported.push({el,domId:id});
   });
 
@@ -1694,8 +1708,8 @@ function showImportModal(imported,importedBg,filename,warnings,spxCount){
   const modal=document.getElementById('import-modal');const scroll=document.getElementById('import-scroll');const footer=document.getElementById('import-footer');
   document.getElementById('import-title').textContent=`Indlæs: ${filename}`;
   let html='';
+  html+=`<div class="im-ok">✓ ${imported.length} element${imported.length!==1?'er':''} fundet · ${spxCount} SPX felt${spxCount!==1?'er':''}</div>`;
   if(warnings.length){html+=`<div class="im-warn">⚠ ${warnings.join('<br>')}</div>`;}
-  else{html+=`<div class="im-ok">✓ ${imported.length} element${imported.length!==1?'er':''} fundet · ${spxCount} SPX felt${spxCount!==1?'er':''}</div>`;}
   html+=`<div class="im-section"><div class="im-title">Elementer</div>`;
   imported.forEach(({el,domId})=>{const icon=el.type==='text'?'T':el.type==='ticker'?'▶▶':el.type==='line'?'—':'▭';const sub=el.type==='text'||el.type==='ticker'?`${(el.text||'').slice(0,40)} · ${el.fontSize}px ${el.fontFamily}`:`${Math.round(el.w)}×${Math.round(el.h)}px · ${el.bgColor}`;html+=`<div class="im-el"><div class="im-icon">${icon}</div><div class="im-info"><div class="im-name">${el.name} <span style="color:var(--text3);font-size:10px">#${domId}</span></div><div class="im-sub">${sub} · anim: ${el.animation} +${el.animDelay}s</div></div>${el.spxField?`<div class="im-badge">SPX: ${el.fieldLabel}</div>`:''}</div>`;});
   html+=`</div><div class="im-section"><div class="im-title">Baggrund</div><div class="im-el"><div class="im-icon" style="width:22px;height:22px;background:${importedBg};border-radius:3px;border:1px solid var(--border2)"></div><div class="im-info"><div class="im-name">${importedBg}</div></div></div></div>`;
