@@ -939,7 +939,7 @@ function renderPropsTab(){
           ${[null,'→','←','↓','↑','↔','↕'].map(d=>`<button class="achip${(el.gradientDir??null)===d?' active':''}" style="padding:4px 7px;font-size:13px" onclick="setGradientDir(${d===null?'null':JSON.stringify(d)})">${d===null?'●':d}</button>`).join('')}
         </div>
       </div>
-      ${el.gradientDir?`<div class="prow"><span class="plbl">${el.gradientDir==='↔'||el.gradientDir==='↕'?'Solid zone':'Fade fra'}</span>
+      ${el.gradientDir?`<div class="prow"><span class="plbl">${el.gradientDir==='↔'||el.gradientDir==='↕'?'Fade bredde':'Fade fra'}</span>
         <input type="range" id="p-gstop" min="0" max="90" step="5" value="${el.gradientStop??0}" style="flex:1;accent-color:var(--accent)">
         <span style="font-size:11px;color:var(--text2);min-width:28px;text-align:right" id="p-gstop-lbl">${el.gradientStop??0}%</span>
       </div>`:''}
