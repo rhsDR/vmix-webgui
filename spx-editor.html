@@ -265,6 +265,8 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
     <button class="tl-btn" id="tool-rect" onclick="setTool('rect')"><span class="tl-tip">Rektangel (R)</span>&#9645;</button>
     <button class="tl-btn" id="tool-line" onclick="setTool('line')"><span class="tl-tip">Linje (L)</span>&#8212;</button>
     <button class="tl-btn" id="tool-ticker" onclick="setTool('ticker')"><span class="tl-tip">Ticker (K)</span>&#9656;&#9656;</button>
+    <button class="tl-btn" id="tool-image" onclick="document.getElementById('img-file-inp').click()"><span class="tl-tip">Billede (I)</span>&#9974;</button>
+    <input type="file" id="img-file-inp" accept="image/*" style="display:none" onchange="importImageFile(event)">
     <div class="tl-sep"></div>
     <button class="tl-btn" onclick="duplicateSel()" title="Dupliker (Ctrl+D)"><span class="tl-tip">Dupliker (Ctrl+D)</span>&#8711;</button>
     <div class="tl-sep"></div>
@@ -468,6 +470,7 @@ function mkEl(type,p={}){
     fontFamily:p.fontFamily??'DM Sans',
     color:p.color??'#ffffff',
     bgColor:p.bgColor??(type==='rect'?'#e8593c':'transparent'),
+    src:p.src??'',objectFit:p.objectFit??'contain',
     gradientDir:p.gradientDir??null,
     gradientStop:p.gradientStop??0,
     opacity:p.opacity??1,borderRadius:p.borderRadius??0,
@@ -537,6 +540,17 @@ function render(){
         const st=document.createElement('style');st.id=animId;
         st.textContent=`@keyframes ticker-scroll-${el.id}{0%{transform:translateX(${el.w*scale}px)}100%{transform:translateX(-50%)}}`;
         document.head.appendChild(st);
+      }
+    }else if(el.type==='image'){
+      div.style.overflow='hidden';
+      if(el.src){
+        const img=document.createElement('img');
+        img.src=el.src;
+        img.style.cssText=`width:100%;height:100%;object-fit:${el.objectFit||'contain'};display:block;pointer-events:none;`;
+        div.appendChild(img);
+      }else{
+        div.style.cssText+=`display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);border:2px dashed rgba(255,255,255,.2);`;
+        div.innerHTML='<span style="font-size:'+Math.round(14*scale)+'px;color:rgba(255,255,255,.3)">🖼</span>';
       }
     }
     const brd=document.createElement('div');brd.className='el-border';div.appendChild(brd);
@@ -723,6 +737,7 @@ document.addEventListener('keydown',e=>{
     if(e.key==='r'||e.key==='R'){setTool('rect');return;}
     if(e.key==='l'||e.key==='L'){setTool('line');return;}
     if(e.key==='k'||e.key==='K'){setTool('ticker');return;}
+    if(e.key==='i'||e.key==='I'){document.getElementById('img-file-inp').click();return;}
   }
   if(e.key==='g'||e.key==='G'){toggleGrid();return;}
   if((e.key==='Delete'||e.key==='Backspace')&&selIds.length){
@@ -752,6 +767,23 @@ function setTool(t){
   document.querySelectorAll('.tl-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tool-'+t)?.classList.add('active');
   canvas.style.cursor=t==='select'?'default':t==='ticker'?'cell':'crosshair';
+}
+function importImageFile(ev){
+  const file=ev.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const src=e.target.result;
+    const img=new Image();
+    img.onload=()=>{
+      const aspect=img.width/img.height;
+      const w=Math.min(img.width,960),h=Math.round(w/aspect);
+      const el=mkEl('image',{x:Math.round((CW-w)/2),y:Math.round((CH-h)/2),w,h,src,name:file.name.replace(/\.[^.]+$/,''),objectFit:'contain'});
+      saveState();elements.push(el);selIds=[el.id];setTool('select');render();renderPanel();
+      toast('Billede indsat','ok');
+    };
+    img.src=src;
+  };
+  reader.readAsDataURL(file);ev.target.value='';
 }
 
 function duplicateSel(){
@@ -893,8 +925,8 @@ function updLayersList(){
   const list=document.getElementById('layers-list');if(!list)return;
   list.innerHTML=[...elements].reverse().map(el=>`
     <div class="li${selIds.includes(el.id)?' sel':''}${el.locked?' locked':''}" onclick="selFromLayer(${el.id})">
-      <span class="li-icon">${el.type==='text'?'T':el.type==='ticker'?'▶▶':el.type==='rect'?'▭':'—'}</span>
-      <span class="li-swatch" style="background:${el.type==='text'?el.color:el.type==='ticker'?el.color:_bgCss(el)}"></span>
+      <span class="li-icon">${el.type==='text'?'T':el.type==='ticker'?'▶▶':el.type==='rect'?'▭':el.type==='image'?'🖼':'—'}</span>
+      <span class="li-swatch" style="background:${el.type==='image'?(el.src?'transparent':'rgba(255,255,255,.1)'):el.type==='text'?el.color:el.type==='ticker'?el.color:_bgCss(el)}${el.type==='image'&&el.src?';background-image:url('+el.src+');background-size:cover;background-position:center':''}"></span>
       <span class="li-name">${el.name}</span>
       <div class="li-acts">
         <button class="la" onclick="event.stopPropagation();toggleVis(${el.id})">${el.visible?'👁':'🚫'}</button>
@@ -964,6 +996,18 @@ function renderPropsTab(){
       <div class="prow"><span class="plbl">Hastighed (px/s)</span><input class="pi sm" type="number" id="p-ticker-speed" value="${el.tickerSpeed??120}" min="20" max="600" step="10"></div>
       <div class="prow"><span class="plbl">Separator</span><input class="pi" id="p-ticker-sep" value="${el.tickerSep??'  •  '}"></div>
     </div>`:''}
+    ${el.type==='image'?`<div class="psec"><div class="psec-title">Billede</div>
+      <div style="margin-bottom:8px;text-align:center;min-height:60px;background:rgba(255,255,255,.04);border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+        ${el.src?`<img src="${el.src}" style="max-width:100%;max-height:80px;object-fit:contain;border-radius:4px;">`:'<span style="font-size:11px;color:var(--text3)">Intet billede</span>'}
+      </div>
+      <button class="pi" style="width:100%;margin-bottom:8px" onclick="document.getElementById('img-file-inp').click()">Skift billede...</button>
+      <div class="prow"><span class="plbl">Tilpasning</span><select class="pi sm" id="p-obj-fit">
+        <option value="contain"${el.objectFit==='contain'?' selected':''}>Contain</option>
+        <option value="cover"${el.objectFit==='cover'?' selected':''}>Cover</option>
+        <option value="fill"${el.objectFit==='fill'?' selected':''}>Fill</option>
+        <option value="none"${el.objectFit==='none'?' selected':''}>Ingen</option>
+      </select></div>
+    </div>`:''}
     <div class="psec"><div class="psec-title">Live API (valgfrit)</div>
       <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.7">${el.type==='ticker'?'Brug <span style="font-family:var(--mono);color:var(--accent)">{ticker_normal}</span> eller <span style="font-family:var(--mono);color:var(--accent)">{ticker_breaking}</span> for kampdag tickers.<br>':''}Brug <span style="font-family:var(--mono);color:var(--accent)">{feltnavn}</span> til at indsætte værdier fra JSON.</div>
       <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">URL</label>
@@ -1025,6 +1069,7 @@ function renderPropsTab(){
   const tapiIvl=document.getElementById('p-api-ivl');if(tapiIvl)tapiIvl.addEventListener('input',e=>{el.apiInterval=parseFloat(e.target.value)||30;});
   const tapiTpl=document.getElementById('p-api-tpl');if(tapiTpl)tapiTpl.addEventListener('input',e=>{el.apiTemplate=e.target.value;});
   const spx=document.getElementById('p-spx');if(spx)spx.addEventListener('change',e=>{el.spxField=e.target.checked;document.getElementById('p-spx-extra').style.display=e.target.checked?'':'none';});
+  const pofit=document.getElementById('p-obj-fit');if(pofit)pofit.addEventListener('change',e=>{el.objectFit=e.target.value;render();});
 }
 
 function pickFont(f){const el=elements.find(x=>x.id===selIds[0]);if(el){saveState();el.fontFamily=f;render();renderPanel();}document.getElementById('font-list')?.classList.remove('open');}
@@ -1112,6 +1157,7 @@ function exportSPX_CSS(){
     if(el.type==='text')css+=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;white-space:nowrap;display:flex;align-items:center;`;
     if(el.type==='rect')css+=`background:${_bgCss(el)};border-radius:${el.borderRadius}px;`;
     if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
+    if(el.type==='image')css+=`overflow:hidden;`;
     if(a!=='none')css+=outState;css+='}\n';
     const ao=resolveAnimOut(el);const outDur=el.animOutDuration??0.3;const outDelay=el.animOutDelay??0;
     const outTo=_cssAnimOutTo(ao);
@@ -1122,6 +1168,7 @@ function exportSPX_CSS(){
       if(el.spxField){htmlLines.push(`  <div id="${id}"><div id="${id}-inner" class="ticker-inner"></div></div>`);updateLines.push(`  (function(){var t=clean((data&&data.f${fIdx}!=null)?String(data.f${fIdx}):document.getElementById('f${fIdx}').innerText);var items=t.split('|').map(function(s){return s.trim();}).filter(Boolean);var txt=items.join('${sep}');var full=txt+'${sep}'+txt;var w=document.getElementById('${id}');if(w&&w._tickerUpdate){w._tickerUpdate(full);}else{var inn=document.getElementById('${id}-inner');if(inn)inn.textContent=full;}})();`);hiddenDivLines.push(`  <div id="f${fIdx}"></div>`);fIdx++;}
       else{htmlLines.push(`  <div id="${id}"><div id="${id}-inner" class="ticker-inner">${el.text}${sep}${el.text}</div></div>`);}
     }else if(el.type==='text'&&el.spxField){htmlLines.push(`  <div id="${id}"${isLT?' class="lt-text"':''}>${el.text}</div>`);updateLines.push(`  document.getElementById('${id}').innerHTML=clean((data&&data.f${fIdx}!=null)?String(data.f${fIdx}):document.getElementById('f${fIdx}').innerText);`);hiddenDivLines.push(`  <div id="f${fIdx}"></div>`);fIdx++;}
+    else if(el.type==='image'){htmlLines.push(`  <div id="${id}">${el.src?`<img src="${el.src}" style="width:100%;height:100%;object-fit:${el.objectFit||'contain'};display:block;">`:''}</div>`);}
     else{htmlLines.push(`  <div id="${id}"${isLT&&el.type==='text'?' class="lt-text"':''}>${el.type==='text'?el.text:''}</div>`);}
     if(a!=='none'&&el.type!=='ticker'){playLines.push(`  document.getElementById('${id}').classList.remove('out');document.getElementById('${id}').classList.add('in');`);stopLines.push(`  document.getElementById('${id}').classList.remove('in');document.getElementById('${id}').classList.add('out');`);}
   });
@@ -1173,6 +1220,7 @@ function exportSPX_GSAP(){
     if(el.type==='text')css+=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;white-space:nowrap;display:flex;align-items:center;`;
     if(el.type==='rect')css+=`background:${_bgCss(el)};border-radius:${el.borderRadius}px;`;
     if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
+    if(el.type==='image')css+=`overflow:hidden;`;
     if(el.animation==='fade')css+='opacity:0;';
     else if(el.animation==='slide-left')css+='opacity:0;transform:translateX(-60px);';
     else if(el.animation==='slide-right')css+='opacity:0;transform:translateX(60px);';
@@ -1185,6 +1233,7 @@ function exportSPX_GSAP(){
       if(el.spxField){htmlLines.push(`  <div id="${id}"><div id="${id}-inner"></div></div>`);updateLines.push(`  (function(){var t=clean((data&&data.f${fIdx}!=null)?String(data.f${fIdx}):document.getElementById('f${fIdx}').innerText);var items=t.split('|').map(function(s){return s.trim();}).filter(Boolean);var txt=items.join('${sep}');var full=txt+'${sep}'+txt;var w=document.getElementById('${id}');if(w&&w._tickerUpdate){w._tickerUpdate(full);}else{var inn=document.getElementById('${id}-inner');if(inn)inn.textContent=full;}})();`);hiddenDivLines.push(`  <div id="f${fIdx}"></div>`);fIdx++;}
       else{htmlLines.push(`  <div id="${id}"><div id="${id}-inner">${el.text}${sep}${el.text}</div></div>`);}
     }else if(el.type==='text'&&el.spxField){htmlLines.push(`  <div id="${id}"${isLT?' class="lt-text"':''}>${el.text}</div>`);updateLines.push(`  document.getElementById('${id}').innerHTML=clean((data&&data.f${fIdx}!=null)?String(data.f${fIdx}):document.getElementById('f${fIdx}').innerText);`);hiddenDivLines.push(`  <div id="f${fIdx}"></div>`);fIdx++;}
+    else if(el.type==='image'){htmlLines.push(`  <div id="${id}">${el.src?`<img src="${el.src}" style="width:100%;height:100%;object-fit:${el.objectFit||'contain'};display:block;">`:''}</div>`);}
     else{htmlLines.push(`  <div id="${id}"${isLT&&el.type==='text'?' class="lt-text"':''}>${el.type==='text'?el.text:''}</div>`);}
   });
   if(isLT){
