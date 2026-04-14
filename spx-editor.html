@@ -518,7 +518,7 @@ function render(){
       div.style.whiteSpace='nowrap';div.style.pointerEvents='all';
       div.textContent=_stColor(el,'text');
     }else if(el.type==='rect'){
-      div.style.background=el.gradientDir?_bgCss(el):_stColor(el,'bgColor');
+      div.style.background=_bgCss(el,_stColor(el,'bgColor'));
       div.style.borderRadius=(el.borderRadius*scale)+'px';
     }else if(el.type==='line'){
       div.style.background=el.bgColor==='transparent'?el.color:el.bgColor;
@@ -869,9 +869,9 @@ function bindGradientStop(){
   });
   sl.addEventListener('change',()=>saveState());
 }
-function _bgCss(el){
-  if(!el.gradientDir)return el.bgColor;
-  const c=el.bgColor,s=el.gradientStop??0;
+function _bgCss(el,colorOverride){
+  if(!el.gradientDir)return colorOverride||el.bgColor;
+  const c=colorOverride||el.bgColor,s=el.gradientStop??0;
   const map={'→':'to right','←':'to left','↓':'to bottom','↑':'to top'};
   if(el.gradientDir==='↔'){
     const m=Math.max(1,Math.round(s)),m2=100-m;
@@ -912,8 +912,10 @@ function renderPropsTab(){
     body.innerHTML=`<div class="empty-hint">Klik på et element for at redigere det.<br><br>
       <span class="kbd">V</span> Vælg &nbsp; <span class="kbd">T</span> Tekst<br>
       <span class="kbd">R</span> Rektangel &nbsp; <span class="kbd">L</span> Linje<br>
-      <span class="kbd">Del</span> Slet &nbsp; <span class="kbd">Ctrl+D</span> Kopi<br>
-      <span class="kbd">Ctrl+Z</span> Fortryd &nbsp; <span class="kbd">Esc</span> Fravælg</div>`;
+      <span class="kbd">Del</span> Slet &nbsp; <span class="kbd">Ctrl+D</span> Dupliker<br>
+      <span class="kbd">Ctrl+C</span> Kopier &nbsp; <span class="kbd">Ctrl+V</span> Indsæt<br>
+      <span class="kbd">Ctrl+Z</span> Fortryd &nbsp; <span class="kbd">Ctrl+Y</span> Gentag<br>
+      <span class="kbd">Ctrl+A</span> Vælg alle &nbsp; <span class="kbd">Esc</span> Fravælg</div>`;
     return;
   }
   if(selIds.length>1){
