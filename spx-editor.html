@@ -121,6 +121,7 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 .li:hover{background:var(--surface2);}
 .li.sel{background:var(--surface2);border-color:var(--border2);}
 .li-icon{font-size:11px;width:14px;text-align:center;flex-shrink:0;color:var(--text3);}
+.li-swatch{width:12px;height:12px;border-radius:2px;flex-shrink:0;border:1px solid rgba(255,255,255,.12);}
 .li-name{flex:1;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .li.sel .li-name{color:var(--text);}
 .li-acts{display:flex;gap:2px;opacity:0;flex-shrink:0;}
@@ -892,7 +893,8 @@ function updLayersList(){
   const list=document.getElementById('layers-list');if(!list)return;
   list.innerHTML=[...elements].reverse().map(el=>`
     <div class="li${selIds.includes(el.id)?' sel':''}${el.locked?' locked':''}" onclick="selFromLayer(${el.id})">
-      <span class="li-icon">${el.type==='text'?'T':el.type==='rect'?'▭':'—'}</span>
+      <span class="li-icon">${el.type==='text'?'T':el.type==='ticker'?'▶▶':el.type==='rect'?'▭':'—'}</span>
+      <span class="li-swatch" style="background:${el.type==='text'?el.color:el.type==='ticker'?el.color:_bgCss(el)}"></span>
       <span class="li-name">${el.name}</span>
       <div class="li-acts">
         <button class="la" onclick="event.stopPropagation();toggleVis(${el.id})">${el.visible?'👁':'🚫'}</button>
