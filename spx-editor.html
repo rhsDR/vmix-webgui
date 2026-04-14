@@ -624,6 +624,23 @@ function applyScrubState(){
   elements.forEach(el=>{
     const div=canvas.querySelector(`[data-id="${el.id}"]`);
     if(!div)return;
+
+    // Ticker: pause CSS animation and set scroll position
+    if(el.type==='ticker'){
+      const inner=div.querySelector('div');if(!inner)return;
+      const tickerDur=Math.max(0.1,Math.round(el.w*2/(el.tickerSpeed||120)*10)/10);
+      const visibleAt=(el.animDelay||0)+(el.animation==='none'?0:el.animDuration||0.45);
+      inner.style.animationPlayState='paused';
+      if(t<visibleAt){
+        inner.style.animationDelay='0s';
+      }else{
+        const scrollTime=t-visibleAt;
+        const cyclePos=scrollTime%tickerDur;
+        inner.style.animationDelay=`-${cyclePos.toFixed(3)}s`;
+      }
+      return;
+    }
+
     const a=el.animation;if(a==='none')return;
     const ao=resolveAnimOut(el);
     const inDelay=el.animDelay||0,inDur=Math.max(el.animDuration||0.5,0.001);
@@ -943,7 +960,7 @@ function renderPropsTab(){
   if(!selIds.length){
     body.innerHTML=`<div class="empty-hint">Klik på et element for at redigere det.<br><br>
       <span class="kbd">V</span> Vælg &nbsp; <span class="kbd">T</span> Tekst<br>
-      <span class="kbd">R</span> Rektangel &nbsp; <span class="kbd">L</span> Linje<br>
+      <span class="kbd">R</span> Rektangel &nbsp; <span class="kbd">L</span> Linje &nbsp; <span class="kbd">I</span> Billede<br>
       <span class="kbd">Del</span> Slet &nbsp; <span class="kbd">Ctrl+D</span> Dupliker<br>
       <span class="kbd">Ctrl+C</span> Kopier &nbsp; <span class="kbd">Ctrl+V</span> Indsæt<br>
       <span class="kbd">Ctrl+Z</span> Fortryd &nbsp; <span class="kbd">Ctrl+Y</span> Gentag<br>
@@ -1406,6 +1423,11 @@ function renderTimeline(){
 
 function animatePlayhead(totalDur){
   scrubTime=null;
+  // Resume ticker animations that may have been paused during scrub
+  elements.filter(e=>e.type==='ticker').forEach(el=>{
+    const inner=canvas.querySelector(`[data-id="${el.id}"] div`);
+    if(inner){inner.style.animationPlayState='';inner.style.animationDelay='';}
+  });
   const ph=document.getElementById('tl-playhead');const track=document.getElementById('tl-track');if(!ph||!track)return;
   const trackW=track.offsetWidth;const pxPerS=trackW/(TL_MAX_S/tlZoom);
   ph.style.cssText=`display:block;height:${20+elements.length*TL_ROW_H}px;top:0;`;
