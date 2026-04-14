@@ -67,9 +67,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .el.selected .el-del{display:flex;}
 .rh{position:absolute;width:8px;height:8px;background:#fff;border:1.5px solid var(--accent);border-radius:2px;z-index:20;opacity:0;}
 .el.selected .rh{opacity:1;}
-.rh-se{right:-4px;bottom:-4px;cursor:se-resize;}
+.rh-nw{left:-4px;top:-4px;cursor:nw-resize;}
+.rh-n{left:calc(50% - 4px);top:-4px;cursor:n-resize;}
+.rh-ne{right:-4px;top:-4px;cursor:ne-resize;}
+.rh-w{left:-4px;top:calc(50% - 4px);cursor:w-resize;}
 .rh-e{right:-4px;top:calc(50% - 4px);cursor:e-resize;}
+.rh-sw{left:-4px;bottom:-4px;cursor:sw-resize;}
 .rh-s{left:calc(50% - 4px);bottom:-4px;cursor:s-resize;}
+.rh-se{right:-4px;bottom:-4px;cursor:se-resize;}
 .el-lock{position:absolute;top:-9px;left:-9px;font-size:9px;opacity:0;pointer-events:none;}
 .el.locked .el-lock{opacity:.7;}
 
@@ -491,12 +496,12 @@ function render(){
     db.addEventListener('mousedown',e=>{e.stopPropagation();saveState();elements=elements.filter(x=>x.id!==el.id);selIds=[];render();renderPanel();});
     div.appendChild(db);
     if(isSel(el.id)&&!el.locked){
-      ['rh-se','rh-e','rh-s'].forEach(cls=>{
+      ['rh-nw','rh-n','rh-ne','rh-w','rh-e','rh-sw','rh-s','rh-se'].forEach(cls=>{
         const rh=document.createElement('div');rh.className='rh '+cls;
         rh.addEventListener('mousedown',e=>{
           e.stopPropagation();resizing=true;resEl=el;
           resHandle=cls.split('-')[1];
-          resStart={mx:e.clientX,my:e.clientY,w:el.w,h:el.h};saveState();
+          resStart={mx:e.clientX,my:e.clientY,w:el.w,h:el.h,x:el.x,y:el.y};saveState();
         });
         div.appendChild(rh);
       });
@@ -604,8 +609,10 @@ document.addEventListener('mousemove',e=>{
   }
   if(resizing&&resEl){
     const dx=(e.clientX-resStart.mx)/scale,dy=(e.clientY-resStart.my)/scale;
-    if(resHandle==='se'||resHandle==='e')resEl.w=Math.max(10,snap(resStart.w+dx));
-    if(resHandle==='se'||resHandle==='s')resEl.h=Math.max(2,snap(resStart.h+dy));
+    if(resHandle==='e'||resHandle==='ne'||resHandle==='se')resEl.w=Math.max(10,snap(resStart.w+dx));
+    if(resHandle==='s'||resHandle==='sw'||resHandle==='se')resEl.h=Math.max(2,snap(resStart.h+dy));
+    if(resHandle==='w'||resHandle==='nw'||resHandle==='sw'){const nw=Math.max(10,snap(resStart.w-dx));resEl.x=resStart.x+(resStart.w-nw);resEl.w=nw;}
+    if(resHandle==='n'||resHandle==='nw'||resHandle==='ne'){const nh=Math.max(2,snap(resStart.h-dy));resEl.y=resStart.y+(resStart.h-nh);resEl.h=nh;}
     render();renderPanel();return;
   }
   if(boxSel){
