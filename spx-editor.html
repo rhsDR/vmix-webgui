@@ -8,9 +8,9 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
-  --bg:#0e0f11;--surface:#16181c;--surface2:#1e2026;--surface3:#252830;
-  --border:#2a2d35;--border2:#353840;
-  --text:#e8e9ec;--text2:#8c909a;--text3:#555a66;
+  --bg:#1b1d24;--surface:#22252d;--surface2:#292d38;--surface3:#313645;
+  --border:#373c4a;--border2:#434958;
+  --text:#e4e6ec;--text2:#8c96b0;--text3:#525c72;
   --accent:#e8593c;--accent2:#ff6b4a;--blue:#3b82f6;--green:#22c55e;
   --r:6px;--font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
 }
@@ -104,7 +104,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 #pbody::-webkit-scrollbar{width:3px;}
 #pbody::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 .psec{padding:11px 13px;border-bottom:1px solid var(--border);}
-.psec-title{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:9px;}
+.psec-title{font-size:10px;font-weight:600;letter-spacing:.07em;color:var(--text2);text-transform:uppercase;margin:-11px -13px 10px;padding:6px 13px 5px;background:rgba(0,0,0,.28);border-bottom:1px solid var(--border);}
 .prow{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
 .plbl{font-size:11px;color:var(--text2);flex-shrink:0;min-width:56px;}
 input.pi,select.pi,textarea.pi{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:11px;padding:4px 7px;width:100%;outline:none;transition:border .15s;}
@@ -209,6 +209,10 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 .cb-color{width:24px;height:24px;border:1px solid var(--border2);border-radius:4px;cursor:pointer;padding:1px;background:var(--surface3);flex-shrink:0;}
 .cb-sep{width:1px;height:18px;background:var(--border);margin:0 3px;flex-shrink:0;}
 .cb-hint{font-size:11px;color:var(--text3);}
+/* Scrub labels */
+.scrub-lbl{cursor:ew-resize!important;user-select:none;}
+.scrub-lbl:hover{color:var(--text)!important;}
+body.scrubbing{cursor:ew-resize!important;user-select:none;}
 
 /* PANEL COLLAPSE */
 #panel{width:280px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width .2s;}
@@ -268,16 +272,22 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 .ctx-kbd{font-family:var(--mono);font-size:10px;color:var(--text3);}
 
 /* THEMES */
-/* Grå — medium warm slate (After Effects style) */
+/* Mørk — near-black (old default) */
+html.theme-dark{
+  --bg:#0e0f11;--surface:#16181c;--surface2:#1e2026;--surface3:#252830;
+  --border:#2a2d35;--border2:#353840;
+  --text:#e8e9ec;--text2:#8c909a;--text3:#555a66;
+}
+/* Grå — warm medium gray (After Effects / Premiere style) */
 html.theme-graa{
-  --bg:#292c31;--surface:#31353c;--surface2:#383c44;--surface3:#40454e;
-  --border:#474c57;--border2:#545a67;
-  --text:#e8e9ec;--text2:#a0a8b8;--text3:#6b7285;
+  --bg:#2c3038;--surface:#343840;--surface2:#3c404a;--surface3:#454a55;
+  --border:#50555f;--border2:#5c616e;
+  --text:#e8e9ec;--text2:#a8b0c0;--text3:#72798a;
 }
 /* Kold — steel blue-dark (DaVinci Resolve style) */
 html.theme-kold{
-  --bg:#1a1e28;--surface:#1f2535;--surface2:#252c3d;--surface3:#2c3347;
-  --border:#2e3649;--border2:#384258;
+  --bg:#191e2a;--surface:#1e2435;--surface2:#242c40;--surface3:#2b344d;
+  --border:#2d3650;--border2:#38435f;
   --text:#e2e8f0;--text2:#8b98b8;--text3:#4e5970;
 }
 /* Theme switcher UI */
@@ -384,9 +394,10 @@ html.theme-kold{
       <div style="padding:6px 14px 12px">
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:7px">Farvetema</div>
         <div style="display:flex;gap:5px">
-          <button class="theme-swatch active" id="ts-dark" onclick="setTheme('dark')"><span class="ts-dot" style="background:#0e0f11;border-color:#444"></span>Mørk</button>
-          <button class="theme-swatch" id="ts-graa" onclick="setTheme('graa')"><span class="ts-dot" style="background:#292c31;border-color:#555"></span>Grå</button>
-          <button class="theme-swatch" id="ts-kold" onclick="setTheme('kold')"><span class="ts-dot" style="background:#1a1e28;border-color:#334"></span>Kold</button>
+          <button class="theme-swatch active" id="ts-default" onclick="setTheme('default')"><span class="ts-dot" style="background:#1b1d24;border-color:#444"></span>Standard</button>
+          <button class="theme-swatch" id="ts-dark" onclick="setTheme('dark')"><span class="ts-dot" style="background:#0e0f11;border-color:#333"></span>Mørk</button>
+          <button class="theme-swatch" id="ts-graa" onclick="setTheme('graa')"><span class="ts-dot" style="background:#2c3038;border-color:#556"></span>Grå</button>
+          <button class="theme-swatch" id="ts-kold" onclick="setTheme('kold')"><span class="ts-dot" style="background:#191e2a;border-color:#335"></span>Kold</button>
         </div>
       </div>
     </div>
@@ -709,7 +720,7 @@ function toggleFilDropdown(){
   if(isOpen){
     renderRecentProjects();
     // sync theme swatch active state
-    const cur=localStorage.getItem('spx_theme')||'dark';
+    const cur=localStorage.getItem('spx_theme')||'default';
     THEMES.forEach(id=>{const btn=document.getElementById('ts-'+id);if(btn)btn.classList.toggle('active',id===cur);});
     // sync visible project-name input
     const vis=document.getElementById('project-name-vis');
@@ -721,10 +732,10 @@ function closeFilDropdown(){
   document.getElementById('fil-dropdown').classList.remove('open');
   document.getElementById('rt-fil').classList.remove('active');
 }
-const THEMES=['dark','graa','kold'];
+const THEMES=['default','dark','graa','kold'];
 function setTheme(t){
   THEMES.forEach(id=>document.documentElement.classList.remove('theme-'+id));
-  if(t!=='dark')document.documentElement.classList.add('theme-'+t);
+  if(t!=='default')document.documentElement.classList.add('theme-'+t);
   localStorage.setItem('spx_theme',t);
   THEMES.forEach(id=>{
     const btn=document.getElementById('ts-'+id);
@@ -732,7 +743,7 @@ function setTheme(t){
   });
 }
 function _applyTheme(){
-  const t=localStorage.getItem('spx_theme')||'dark';
+  const t=localStorage.getItem('spx_theme')||'default';
   setTheme(t);
 }
 function renderRecentProjects(){
@@ -791,17 +802,17 @@ function _renderRibbonFormat(){
   if(!el){pane.innerHTML='<span class="cb-hint">Vælg et element for at redigere</span>';return;}
   if(selIds.length>1){pane.innerHTML=`<span class="cb-hint">${selIds.length} elementer valgt</span>`;return;}
   const isText=el.type==='text',isTicker=el.type==='ticker',isRect=el.type==='rect',isLine=el.type==='line',isImg=el.type==='image';
-  let h=`<span class="cb-lbl">X</span><input class="cb-inp" id="cb-x" type="number" value="${Math.round(el.x)}">
-    <span class="cb-lbl">Y</span><input class="cb-inp" id="cb-y" type="number" value="${Math.round(el.y)}">
+  let h=`<span class="cb-lbl scrub-lbl" data-for="cb-x">X</span><input class="cb-inp" id="cb-x" type="number" value="${Math.round(el.x)}">
+    <span class="cb-lbl scrub-lbl" data-for="cb-y">Y</span><input class="cb-inp" id="cb-y" type="number" value="${Math.round(el.y)}">
     <span class="cb-sep"></span>
-    <span class="cb-lbl">W</span><input class="cb-inp" id="cb-w" type="number" value="${Math.round(el.w)}">
-    <span class="cb-lbl">H</span><input class="cb-inp" id="cb-h" type="number" value="${Math.round(el.h)}">
+    <span class="cb-lbl scrub-lbl" data-for="cb-w">W</span><input class="cb-inp" id="cb-w" type="number" value="${Math.round(el.w)}" data-min="2">
+    <span class="cb-lbl scrub-lbl" data-for="cb-h">H</span><input class="cb-inp" id="cb-h" type="number" value="${Math.round(el.h)}" data-min="2">
     <span class="cb-sep"></span>
-    <span class="cb-lbl">Opacity</span><input class="cb-inp sm" id="cb-op" type="number" value="${Math.round(el.opacity*100)}" min="0" max="100"><span class="cb-lbl" style="margin-left:-2px">%</span>`;
+    <span class="cb-lbl scrub-lbl" data-for="cb-op">Opacity</span><input class="cb-inp sm" id="cb-op" type="number" value="${Math.round(el.opacity*100)}" data-min="0" data-max="100"><span class="cb-lbl" style="margin-left:-2px">%</span>`;
   if(isText||isTicker){
     h+=`<span class="cb-sep"></span>
     <select class="cb-sel" id="cb-font" style="width:120px">${FONTS.map(f=>`<option value="${f}"${f===el.fontFamily?' selected':''}>${f}</option>`).join('')}</select>
-    <input class="cb-inp sm" id="cb-fs" type="number" value="${el.fontSize}">
+    <span class="cb-lbl scrub-lbl" data-for="cb-fs" data-min="1" style="min-width:0">px</span><input class="cb-inp sm" id="cb-fs" type="number" value="${el.fontSize}" data-min="1">
     <select class="cb-sel" id="cb-fw" style="width:105px">${fwfsOpts(el)}</select>
     <span class="cb-sep"></span>
     <input type="color" class="cb-color" id="cb-color" value="${el.color}" title="Tekstfarve">`;
@@ -813,7 +824,7 @@ function _renderRibbonFormat(){
   }
   if(isRect)h+=`<span class="cb-sep"></span>
     <input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}" title="Fyld">
-    <span class="cb-lbl">R</span><input class="cb-inp sm" id="cb-br" type="number" value="${el.borderRadius}" min="0">`;
+    <span class="cb-lbl scrub-lbl" data-for="cb-br" data-min="0">R</span><input class="cb-inp sm" id="cb-br" type="number" value="${el.borderRadius}" data-min="0">`;
   if(isLine)h+=`<span class="cb-sep"></span>
     <input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:el.color}" title="Farve">`;
   if(isImg)h+=`<span class="cb-sep"></span>
@@ -846,13 +857,13 @@ function _renderRibbonAnim(){
   pane.innerHTML=`
     <span class="cb-lbl" style="font-weight:600;color:var(--text2)">IND</span>
     <select class="cb-sel" id="rb-ain" style="width:100px">${ainSel}</select>
-    <span class="cb-lbl">Delay</span><input class="cb-inp sm" id="rb-adl" type="number" value="${el.animDelay}" step="0.05" min="0">
-    <span class="cb-lbl">Dur</span><input class="cb-inp sm" id="rb-adur" type="number" value="${el.animDuration}" step="0.05" min="0.05">
+    <span class="cb-lbl scrub-lbl" data-for="rb-adl" data-step="0.05" data-min="0">Delay</span><input class="cb-inp sm" id="rb-adl" type="number" value="${el.animDelay}" step="0.05" data-step="0.05" data-min="0">
+    <span class="cb-lbl scrub-lbl" data-for="rb-adur" data-step="0.05" data-min="0.05">Dur</span><input class="cb-inp sm" id="rb-adur" type="number" value="${el.animDuration}" step="0.05" data-step="0.05" data-min="0.05">
     <span class="cb-sep"></span>
     <span class="cb-lbl" style="font-weight:600;color:var(--text2)">UD</span>
     <select class="cb-sel" id="rb-aout" style="width:100px">${aoutSel}</select>
-    <span class="cb-lbl">Delay</span><input class="cb-inp sm" id="rb-aodl" type="number" value="${el.animOutDelay??0}" step="0.05" min="0">
-    <span class="cb-lbl">Dur</span><input class="cb-inp sm" id="rb-aodur" type="number" value="${el.animOutDuration??0.3}" step="0.05" min="0.05">
+    <span class="cb-lbl scrub-lbl" data-for="rb-aodl" data-step="0.05" data-min="0">Delay</span><input class="cb-inp sm" id="rb-aodl" type="number" value="${el.animOutDelay??0}" step="0.05" data-step="0.05" data-min="0">
+    <span class="cb-lbl scrub-lbl" data-for="rb-aodur" data-step="0.05" data-min="0.05">Dur</span><input class="cb-inp sm" id="rb-aodur" type="number" value="${el.animOutDuration??0.3}" step="0.05" data-step="0.05" data-min="0.05">
     <span class="cb-sep"></span>
     <button class="tb-btn" onclick="previewAnim()">&#9654; Preview</button>`;
   const cbn=(id,fn)=>{const inp=document.getElementById(id);if(inp){inp.addEventListener('input',e=>{fn(parseFloat(e.target.value)||0);render();});inp.addEventListener('change',()=>saveState());}};
@@ -2280,6 +2291,40 @@ document.getElementById('tl-scroll').addEventListener('scroll',function(){
 })();
 // Apply saved color theme (must run after const THEMES is declared)
 _applyTheme();
+
+/* ── SCRUB INPUT HANDLER ─────────────────────────── */
+(function(){
+  let _s=null;
+  document.addEventListener('mousedown',e=>{
+    const lbl=e.target.closest('.scrub-lbl');
+    if(!lbl||e.button!==0)return;
+    const inp=document.getElementById(lbl.dataset.for);
+    if(!inp)return;
+    _s={inp,x0:e.clientX,v0:parseFloat(inp.value)||0,moved:false};
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!_s)return;
+    const dx=e.clientX-_s.x0;
+    if(!_s.moved&&Math.abs(dx)<3)return;
+    _s.moved=true;
+    document.body.classList.add('scrubbing');
+    const step=parseFloat(_s.inp.dataset.step||1);
+    const mult=e.shiftKey?10:e.ctrlKey?0.1:1;
+    const min=_s.inp.dataset.min!==undefined?parseFloat(_s.inp.dataset.min):-Infinity;
+    const max=_s.inp.dataset.max!==undefined?parseFloat(_s.inp.dataset.max):Infinity;
+    let val=_s.v0+dx*step*mult;
+    val=Math.max(min,Math.min(max,step<1?parseFloat(val.toFixed(2)):Math.round(val)));
+    _s.inp.value=val;
+    _s.inp.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  document.addEventListener('mouseup',()=>{
+    if(!_s)return;
+    document.body.classList.remove('scrubbing');
+    if(_s.moved)_s.inp.dispatchEvent(new Event('change',{bubbles:true}));
+    _s=null;
+  });
+})();
 </script>
 </body>
 </html>
