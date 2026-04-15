@@ -303,6 +303,7 @@ body.scrubbing{cursor:ew-resize!important;user-select:none;}
 .ctx-item{padding:6px 14px;font-size:12px;color:var(--text2);cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:20px;}
 .ctx-item:hover{background:var(--surface2);color:var(--text);}
 .ctx-item.danger:hover{color:#f87171;}
+.ctx-item.ctx-disabled{opacity:.38;cursor:default;pointer-events:none;}
 .ctx-sep{height:1px;background:var(--border);margin:3px 0;}
 .ctx-kbd{font-family:var(--mono);font-size:10px;color:var(--text3);}
 
@@ -800,6 +801,7 @@ function mkEl(type,p={}){
     fontStyle:p.fontStyle??'normal',
     autoWidth:p.autoWidth??false,
     widthBindEl:p.widthBindEl??null,
+    groupId:p.groupId??null,
     name:p.name??(type==='text'?'Tekst':type==='rect'?'Rektangel':'Linje'),
     keyframes:p.keyframes??[],
   };
@@ -934,7 +936,18 @@ function _renderRibbonFormat(){
   const pane=document.getElementById('rb-format');if(!pane)return;
   const el=_elForRibbon();
   if(!el){selKf=null;pane.innerHTML='<span class="cb-hint" style="padding:0 12px">Vælg et element for at redigere</span>';return;}
-  if(selIds.length>1){selKf=null;pane.innerHTML=`<span class="cb-hint" style="padding:0 12px">${selIds.length} elementer valgt</span>`;return;}
+  if(selIds.length>1){
+    selKf=null;
+    const _sels=elements.filter(x=>selIds.includes(x.id));
+    const _allGid=_sels.every(x=>x.groupId&&x.groupId===_sels[0].groupId);
+    const _anyGid=_sels.some(x=>x.groupId);
+    pane.innerHTML=`<div class="rb-pane" style="gap:8px">
+      <span class="cb-hint">${selIds.length} elementer valgt</span>
+      ${!_anyGid?`<button class="tb-btn" onclick="groupSel()">⊞ Gruppér</button>`:''}
+      ${_allGid?`<button class="tb-btn" onclick="ungroupSel()">⊟ Opløs gruppe</button>`:''}
+    </div>`;
+    return;
+  }
   // Auto-clear selKf if it belongs to a different element
   if(selKf&&selKf.elId!==el.id)selKf=null;
   const kf=selKf?.elId===el.id?(el.keyframes||[])[selKf.kfIdx]:null;
@@ -1082,6 +1095,21 @@ function _renderRibbonData(){
   cb('rb-tpl',v=>{el.apiTemplate=v;});
 }
 function copySel(){if(selIds.length){clipboard=selIds.map(id=>JSON.parse(JSON.stringify(elements.find(x=>x.id===id)))).filter(Boolean);toast(clipboard.length+' kopieret');}}
+function _groupColor(gid){const p=['#3b82f6','#22c55e','#f59e0b','#a855f7','#e8593c','#06b6d4','#ec4899'];let h=0;for(let i=0;i<gid.length;i++)h=(h*31+gid.charCodeAt(i))>>>0;return p[h%p.length];}
+function groupSel(){
+  if(selIds.length<2){toast('Vælg mindst 2 elementer');return;}
+  const sels=elements.filter(x=>selIds.includes(x.id));
+  if(sels.some(x=>x.groupId)){toast('Elementer er allerede i en gruppe');return;}
+  saveState();const gid='grp'+(++elCtr);
+  sels.forEach(el=>el.groupId=gid);
+  render();renderPanel();toast('Gruppe oprettet ('+sels.length+' elementer)');
+}
+function ungroupSel(){
+  const sels=elements.filter(x=>selIds.includes(x.id));
+  const gid=sels.find(x=>x.groupId)?.groupId;if(!gid)return;
+  saveState();elements.filter(x=>x.groupId===gid).forEach(el=>el.groupId=null);
+  render();renderPanel();toast('Gruppe opløst');
+}
 /* ── END RIBBON ──────────────────────────────────── */
 function togglePanel(){
   const p=document.getElementById('panel'),btn=document.getElementById('panel-toggle');
@@ -1217,6 +1245,9 @@ function render(){
       if(!e.shiftKey)selIds=[el.id];
       else if(!selIds.includes(el.id))selIds.push(el.id);
       else selIds=selIds.filter(i=>i!==el.id);
+      // Expand selection to whole group
+      const gid=elements.find(x=>x.id===el.id)?.groupId;
+      if(gid)selIds=[...new Set([...selIds,...elements.filter(x=>x.groupId===gid).map(x=>x.id)])];
       render();renderPanel();
       dragging=true;
       dragOff=selIds.map(id=>{const e2=elements.find(x=>x.id===id);return{id,ox:e.clientX/scale-e2.x,oy:e.clientY/scale-e2.y};});
@@ -1420,6 +1451,8 @@ function showCtx(e,el){
     <div class="ctx-sep"></div>
     <div class="ctx-item" onclick="toggleLock(${el.id});hideCtx()">${el.locked?'Lås op':'Lås element'}</div>
     <div class="ctx-item" onclick="toggleVis(${el.id});hideCtx()">${el.visible?'Skjul':'Vis'} element</div>
+    <div class="ctx-sep"></div>
+    ${el.groupId?`<div class="ctx-item" onclick="ungroupSel();hideCtx()">⊟ Opløs gruppe</div>`:(selIds.length>=2?`<div class="ctx-item" onclick="groupSel();hideCtx()">⊞ Gruppér valgte</div>`:`<div class="ctx-item ctx-disabled">⊞ Gruppér (vælg flere)</div>`)}
     <div class="ctx-sep"></div>
     <div class="ctx-item danger" onclick="saveState();elements=elements.filter(x=>x.id!==${el.id});selIds=[];render();renderPanel();hideCtx()">Slet <span class="ctx-kbd">Del</span></div>
   `;
@@ -1721,7 +1754,7 @@ function renderLayersTab(){document.getElementById('pbody').innerHTML='<div id="
 function updLayersList(){
   const list=document.getElementById('layers-list');if(!list)return;
   list.innerHTML=[...elements].reverse().map(el=>`
-    <div class="li${selIds.includes(el.id)?' sel':''}${el.locked?' locked':''}" onclick="selFromLayer(${el.id})">
+    <div class="li${selIds.includes(el.id)?' sel':''}${el.locked?' locked':''}" onclick="selFromLayer(${el.id})" style="${el.groupId?'border-left:3px solid '+_groupColor(el.groupId)+';padding-left:5px':''}">
       <span class="li-icon">${el.type==='text'?'T':el.type==='ticker'?'▶▶':el.type==='rect'?'▭':el.type==='image'?'🖼':'—'}</span>
       <span class="li-swatch" style="background:${el.type==='image'?(el.src?'transparent':'rgba(255,255,255,.1)'):el.type==='text'?el.color:el.type==='ticker'?el.color:_bgCss(el)}${el.type==='image'&&el.src?';background-image:url('+el.src+');background-size:cover;background-position:center':''}"></span>
       <span class="li-name">${el.name}</span>
@@ -1733,7 +1766,7 @@ function updLayersList(){
       </div>
     </div>`).join('');
 }
-function selFromLayer(id){selIds=[id];render();switchTab('props');}
+function selFromLayer(id){const eg=elements.find(x=>x.id===id);const gg=eg?.groupId;selIds=gg?elements.filter(x=>x.groupId===gg).map(x=>x.id):[id];render();switchTab('props');}
 
 function renderPropsTab(){
   const body=document.getElementById('pbody');
