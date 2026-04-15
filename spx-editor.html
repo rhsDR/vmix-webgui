@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SPX Template Editor</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&family=Oswald:wght@400;600;700&family=Bebas+Neue&family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;400;600;700&family=Raleway:wght@300;400;600;700&family=Anton&family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Lato:wght@300;400;700&family=Poppins:wght@300;400;500;600;700&family=Nunito:wght@300;400;600;700&family=Oswald:wght@400;600;700&family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500;600;700&family=Exo+2:wght@300;400;600;700&family=Rajdhani:wght@400;500;600;700&family=Teko:wght@400;500;600&family=Kanit:wght@300;400;500;700&family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;400;600;700&family=Raleway:wght@300;400;600;700&family=Anton&family=Roboto+Condensed:wght@300;400;700&family=Source+Sans+3:wght@300;400;600;700&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
@@ -385,7 +385,7 @@ let smartTickerSettings={
   apiUrl:'',apiInterval:15
 };
 
-const FONTS=['DM Sans','Oswald','Bebas Neue','Playfair Display','Montserrat','Raleway','Anton','Roboto Condensed','Georgia','Courier New'];
+const FONTS=['DM Sans','Inter','Lato','Poppins','Nunito','Source Sans 3','PT Sans','Barlow','Barlow Condensed','Oswald','Roboto Condensed','Montserrat','Raleway','Exo 2','Kanit','Rajdhani','Teko','Bebas Neue','Anton','Playfair Display','Georgia','Courier New'];
 const ANIMS=['fade','slide-left','slide-right','slide-up','slide-down','wipe','scale','none'];
 const ANIM_LBL={fade:'Fade','slide-left':'← Venstre','slide-right':'Højre →','slide-up':'Op','slide-down':'Ned',wipe:'Wipe',scale:'Scale',none:'Ingen'};
 const ANIMS_OUT=['auto','fade','slide-left','slide-right','slide-up','slide-down','wipe','scale','none'];
@@ -541,6 +541,9 @@ function mkEl(type,p={}){
     animOutDelay:p.animOutDelay??0,
     animOutDuration:p.animOutDuration??0.3,
     lockAspect:p.lockAspect??(type==='image'),
+    textAlign:p.textAlign??'left',
+    fontStyle:p.fontStyle??'normal',
+    autoWidth:p.autoWidth??false,
     name:p.name??(type==='text'?'Tekst':type==='rect'?'Rektangel':'Linje'),
   };
 }
@@ -567,12 +570,26 @@ function render(){
     div.style.cssText=`left:${el.x*scale}px;top:${el.y*scale}px;width:${el.w*scale}px;height:${el.h*scale}px;opacity:${el.opacity};`;
     if(el.type==='text'){
       div.style.display='flex';div.style.alignItems='center';
+      const jc=el.textAlign==='center'?'center':el.textAlign==='right'?'flex-end':'flex-start';
+      div.style.justifyContent=jc;
       div.style.color=_stColor(el,'color');
       div.style.fontSize=(el.fontSize*scale)+'px';
       div.style.fontWeight=el.fontWeight;
+      div.style.fontStyle=el.fontStyle||'normal';
       div.style.fontFamily=`'${el.fontFamily}',sans-serif`;
       div.style.whiteSpace='nowrap';div.style.pointerEvents='all';
-      if(el.bgColor&&el.bgColor!=='transparent'){div.style.background=el.bgColor;div.style.borderRadius=(el.borderRadius||0)*scale+'px';div.style.padding='0 '+Math.round(8*scale)+'px';}
+      const hasBg=el.bgColor&&el.bgColor!=='transparent';
+      if(hasBg){div.style.background=el.bgColor;div.style.borderRadius=(el.borderRadius||0)*scale+'px';div.style.padding='0 '+Math.round(8*scale)+'px';}
+      if(el.autoWidth){
+        const sp=document.createElement('span');
+        const pad=hasBg?Math.round(8*scale)*2:0;
+        sp.style.cssText=`position:fixed;visibility:hidden;white-space:nowrap;font-size:${el.fontSize*scale}px;font-weight:${el.fontWeight};font-style:${el.fontStyle||'normal'};font-family:'${el.fontFamily}',sans-serif;`;
+        sp.textContent=el.text||' ';
+        document.body.appendChild(sp);
+        const mw=Math.ceil((sp.offsetWidth+pad)/scale)+2;
+        document.body.removeChild(sp);
+        if(mw!==el.w){el.w=mw;div.style.width=el.w*scale+'px';}
+      }
       div.textContent=_stColor(el,'text');
     }else if(el.type==='rect'){
       div.style.background=_bgCss(el,_stColor(el,'bgColor'));
@@ -1054,7 +1071,15 @@ function renderPropsTab(){
         <div><label>Størrelse</label><input class="pi" type="number" id="p-fs" value="${el.fontSize}"></div>
         <div><label>Vægt</label><select class="pi" id="p-fw">${['300','400','500','600','700'].map(w=>`<option value="${w}"${el.fontWeight===w?' selected':''}>${{300:'Light',400:'Regular',500:'Medium',600:'Semibold',700:'Bold'}[w]}</option>`).join('')}</select></div>
       </div>
+      <div class="prow"><span class="plbl">Stil</span>
+        <div style="display:flex;gap:4px">
+          ${['left','center','right'].map(a=>`<button class="achip${(el.textAlign||'left')===a?' active':''}" title="${a==='left'?'Venstre':a==='center'?'Centrér':'Højre'}" onclick="setTextAlign('${a}')">${a==='left'?'&#8676;':a==='center'?'&#8644;':'&#8677;'}</button>`).join('')}
+          <button class="achip${el.fontStyle==='italic'?' active':''}" style="font-style:italic;padding:2px 9px" title="Kursiv" onclick="setFontStyle()">I</button>
+        </div>
+      </div>
       <div class="prow"><span class="plbl">Farve</span><input type="color" class="pc" id="p-col" value="${el.color}"><input class="pi" id="p-col-hex" value="${el.color}"></div>
+      <div class="prow"><span class="plbl">Baggrund</span><input type="color" class="pc" id="p-txt-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}"><input class="pi" id="p-txt-bgc-hex" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'transparent'}"></div>
+      <div class="prow"><span class="plbl">Auto-bredde</span><label class="pchk" style="margin:0"><input type="checkbox" id="p-autowidth" ${el.autoWidth?'checked':''}>Følg tekst-bredde</label></div>
     </div>`:''}
     ${el.type==='rect'||el.type==='line'?`<div class="psec"><div class="psec-title">Udseende</div>
       <div class="prow"><span class="plbl">Farve</span><input type="color" class="pc" id="p-bgc" value="${el.bgColor==='transparent'?'#000000':el.bgColor}"><input class="pi" id="p-bgc-hex" value="${el.bgColor}"></div>
@@ -1161,10 +1186,16 @@ function renderPropsTab(){
   const spx=document.getElementById('p-spx');if(spx)spx.addEventListener('change',e=>{el.spxField=e.target.checked;document.getElementById('p-spx-extra').style.display=e.target.checked?'':'none';});
   const pofit=document.getElementById('p-obj-fit');if(pofit)pofit.addEventListener('change',e=>{el.objectFit=e.target.value;render();});
   const plka=document.getElementById('p-lock-aspect');if(plka)plka.addEventListener('change',e=>{el.lockAspect=e.target.checked;});
+  const paw=document.getElementById('p-autowidth');if(paw)paw.addEventListener('change',e=>{el.autoWidth=e.target.checked;render();});
+  const tbp=document.getElementById('p-txt-bgc'),tbhx=document.getElementById('p-txt-bgc-hex');
+  if(tbp){tbp.addEventListener('input',e=>{el.bgColor=e.target.value;if(tbhx)tbhx.value=e.target.value;render();});}
+  if(tbhx){tbhx.addEventListener('input',e=>{const v=e.target.value.trim();el.bgColor=(v===''||v==='transparent')?'transparent':v;if(tbp&&/^#[0-9a-fA-F]{6}$/.test(v))tbp.value=v;render();});}
 }
 
 function pickFont(f){const el=elements.find(x=>x.id===selIds[0]);if(el){saveState();el.fontFamily=f;render();renderPanel();}document.getElementById('font-list')?.classList.remove('open');}
 document.addEventListener('click',e=>{if(!e.target.closest('.fp-wrap'))document.getElementById('font-list')?.classList.remove('open');});
+function setTextAlign(a){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.textAlign=a;render();renderPanel();}
+function setFontStyle(){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.fontStyle=el.fontStyle==='italic'?'normal':'italic';render();renderPanel();}
 function setAnim(dir,a){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;if(dir==='in')el.animation=a;else el.animOut=a;renderPanel();renderTimeline();}
 
 function previewAnim(){
@@ -1262,8 +1293,9 @@ function exportSPX_CSS(){
     else if(a==='wipe'){outState='transform:scaleX(0);transform-origin:left;opacity:1;';inState='transform:scaleX(1);transform-origin:left;opacity:1;';}
     else if(a==='scale'){outState='opacity:0;transform:scale(0.8);';inState=`opacity:${el.opacity};transform:none;`;}
     else{outState=`opacity:${el.opacity};`;inState=`opacity:${el.opacity};transform:none;`;}
-    css+=`#${id}{position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;opacity:${el.opacity};`;
-    if(el.type==='text'){css+=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;white-space:nowrap;display:flex;align-items:center;`;if(el.bgColor&&el.bgColor!=='transparent')css+=`background:${el.bgColor};border-radius:${el.borderRadius||0}px;padding:0 8px;`;}
+    const aw=el.autoWidth?'max-content':el.w+'px';
+    css+=`#${id}{position:absolute;left:${el.x}px;top:${el.y}px;width:${aw};height:${el.h}px;opacity:${el.opacity};`;
+    if(el.type==='text'){const jc=el.textAlign==='center'?'center':el.textAlign==='right'?'flex-end':'flex-start';css+=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-style:${el.fontStyle||'normal'};font-family:'${el.fontFamily}',sans-serif;white-space:nowrap;display:flex;align-items:center;justify-content:${jc};`;if(el.bgColor&&el.bgColor!=='transparent')css+=`background:${el.bgColor};border-radius:${el.borderRadius||0}px;padding:0 8px;`;}
     if(el.type==='rect')css+=`background:${_bgCss(el)};border-radius:${el.borderRadius}px;`;
     if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
     if(el.type==='image')css+=`overflow:hidden;`;
@@ -1325,8 +1357,9 @@ function exportSPX_GSAP(){
   let css='',htmlLines=[],updateLines=[],hiddenDivLines=[];let fIdx=0;
   elements.forEach(el=>{
     const id='el'+el.id;
-    css+=`#${id}{position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;`;
-    if(el.type==='text'){css+=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-family:'${el.fontFamily}',sans-serif;white-space:nowrap;display:flex;align-items:center;`;if(el.bgColor&&el.bgColor!=='transparent')css+=`background:${el.bgColor};border-radius:${el.borderRadius||0}px;padding:0 8px;`;}
+    const gaw=el.autoWidth?'max-content':el.w+'px';
+    css+=`#${id}{position:absolute;left:${el.x}px;top:${el.y}px;width:${gaw};height:${el.h}px;`;
+    if(el.type==='text'){const gjc=el.textAlign==='center'?'center':el.textAlign==='right'?'flex-end':'flex-start';css+=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-style:${el.fontStyle||'normal'};font-family:'${el.fontFamily}',sans-serif;white-space:nowrap;display:flex;align-items:center;justify-content:${gjc};`;if(el.bgColor&&el.bgColor!=='transparent')css+=`background:${el.bgColor};border-radius:${el.borderRadius||0}px;padding:0 8px;`;}
     if(el.type==='rect')css+=`background:${_bgCss(el)};border-radius:${el.borderRadius}px;`;
     if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
     if(el.type==='image')css+=`overflow:hidden;`;
