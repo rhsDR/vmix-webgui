@@ -135,19 +135,23 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 .sb span{color:var(--text2);}
 
 /* TIMELINE PANEL */
-#timeline{height:180px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;}
+#timeline{height:180px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;min-height:60px;max-height:600px;}
+#tl-resize-handle{height:4px;cursor:ns-resize;flex-shrink:0;background:transparent;transition:background .15s;}
+#tl-resize-handle:hover,#tl-resize-handle.active{background:var(--accent);}
 #tl-header{height:32px;display:flex;align-items:center;padding:0 12px;gap:10px;border-bottom:1px solid var(--border);flex-shrink:0;}
 #tl-header span{font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.04em;}
-#tl-body{flex:1;overflow:hidden;display:flex;}
-#tl-labels{width:140px;flex-shrink:0;overflow:hidden;border-right:1px solid var(--border);}
-#tl-labels-inner{padding-top:20px;}
+#tl-body{flex:1;overflow:hidden;display:flex;min-height:0;}
+#tl-labels{width:140px;flex-shrink:0;overflow:hidden;border-right:1px solid var(--border);display:flex;flex-direction:column;}
+#tl-labels-ruler{height:20px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface2);}
+#tl-labels-inner{overflow-y:hidden;overflow-x:hidden;flex:1;}
 .tl-label{height:28px;display:flex;align-items:center;padding:0 10px;font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:background .1s;}
 .tl-label:hover{background:var(--surface2);color:var(--text2);}
 .tl-label.sel{color:var(--accent);}
-#tl-track{flex:1;overflow:hidden;position:relative;}
-#tl-ruler{height:20px;background:var(--surface2);border-bottom:1px solid var(--border);position:relative;overflow:hidden;}
+#tl-track{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column;}
+#tl-ruler{height:20px;background:var(--surface2);border-bottom:1px solid var(--border);position:relative;overflow:hidden;flex-shrink:0;}
 #tl-ruler canvas{position:absolute;top:0;left:0;}
-#tl-bars{position:relative;overflow:hidden;}
+#tl-scroll{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;}
+#tl-bars{position:relative;}
 .tl-row{height:28px;position:relative;border-bottom:1px solid rgba(255,255,255,.03);}
 .tl-bar{position:absolute;top:4px;height:20px;border-radius:3px;cursor:pointer;transition:filter .1s;display:flex;align-items:center;padding:0 6px;font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;min-width:4px;}
 .tl-bar:hover{filter:brightness(1.2);}
@@ -303,6 +307,7 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 
 <!-- TIMELINE -->
 <div id="timeline">
+  <div id="tl-resize-handle"></div>
   <div id="tl-header">
     <span>TIDSLINJE</span>
     <div id="tl-zoom">
@@ -314,10 +319,10 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
     <button class="tb-btn" style="height:22px;font-size:11px" onclick="previewSelAnim()">&#9654; Valgte</button>
   </div>
   <div id="tl-body">
-    <div id="tl-labels"><div id="tl-labels-inner"></div></div>
+    <div id="tl-labels"><div id="tl-labels-ruler"></div><div id="tl-labels-inner"></div></div>
     <div id="tl-track">
       <div id="tl-ruler"><canvas id="tl-ruler-canvas"></canvas></div>
-      <div id="tl-bars"></div>
+      <div id="tl-scroll"><div id="tl-bars"></div></div>
       <div id="tl-playhead" style="display:none"></div>
     </div>
   </div>
@@ -688,7 +693,7 @@ function scrubTo(t){
   const pxPerS=track.offsetWidth/totalS;
   ph.style.display='block';
   ph.style.left=Math.round(scrubTime*pxPerS)+'px';
-  ph.style.height=(20+elements.length*TL_ROW_H)+'px';
+  ph.style.height='100%';
   ph.dataset.t=scrubTime.toFixed(2)+'s';
   applyScrubState();
 }
@@ -1477,7 +1482,7 @@ function animatePlayhead(totalDur){
   });
   const ph=document.getElementById('tl-playhead');const track=document.getElementById('tl-track');if(!ph||!track)return;
   const trackW=track.offsetWidth;const pxPerS=trackW/(TL_MAX_S/tlZoom);
-  ph.style.cssText=`display:block;height:${20+elements.length*TL_ROW_H}px;top:0;`;
+  ph.style.cssText=`display:block;height:100%;top:0;`;
   const t0=performance.now();
   (function step(now){const e=(now-t0)/1000;ph.style.left=Math.min(e*pxPerS,trackW-1)+'px';if(e<totalDur)requestAnimationFrame(step);else ph.style.display='none';})(performance.now());
 }
@@ -1755,6 +1760,24 @@ document.getElementById('import-modal').addEventListener('click',function(e){if(
 
 calcScale();canvas.style.background=bgColor;render();renderPanel();renderTimeline();updUndoBtns();
 new ResizeObserver(()=>renderTimeline()).observe(document.getElementById('tl-track'));
+
+// Timeline resize handle
+(function(){
+  const handle=document.getElementById('tl-resize-handle');
+  const tl=document.getElementById('timeline');
+  let sy,sh;
+  handle.addEventListener('mousedown',e=>{
+    sy=e.clientY;sh=tl.offsetHeight;handle.classList.add('active');e.preventDefault();
+    const mv=e=>{tl.style.height=Math.max(60,Math.min(600,sh-(e.clientY-sy)))+'px';renderTimeline();};
+    const up=()=>{handle.classList.remove('active');document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  });
+})();
+
+// Timeline scroll sync — labels follow bars scroll
+document.getElementById('tl-scroll').addEventListener('scroll',function(){
+  document.getElementById('tl-labels-inner').scrollTop=this.scrollTop;
+});
 
 // Timeline scrub — klik/drag på ruler
 (function(){
