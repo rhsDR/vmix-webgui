@@ -266,6 +266,25 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 .ctx-item.danger:hover{color:#f87171;}
 .ctx-sep{height:1px;background:var(--border);margin:3px 0;}
 .ctx-kbd{font-family:var(--mono);font-size:10px;color:var(--text3);}
+
+/* THEMES */
+/* Grå — medium warm slate (After Effects style) */
+html.theme-graa{
+  --bg:#292c31;--surface:#31353c;--surface2:#383c44;--surface3:#40454e;
+  --border:#474c57;--border2:#545a67;
+  --text:#e8e9ec;--text2:#a0a8b8;--text3:#6b7285;
+}
+/* Kold — steel blue-dark (DaVinci Resolve style) */
+html.theme-kold{
+  --bg:#1a1e28;--surface:#1f2535;--surface2:#252c3d;--surface3:#2c3347;
+  --border:#2e3649;--border2:#384258;
+  --text:#e2e8f0;--text2:#8b98b8;--text3:#4e5970;
+}
+/* Theme switcher UI */
+.theme-swatch{display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-family:var(--font);font-size:11px;transition:all .15s;flex:1;justify-content:center;}
+.theme-swatch:hover{background:var(--surface3);color:var(--text);}
+.theme-swatch.active{border-color:var(--accent);color:var(--accent);background:rgba(232,89,60,.1);}
+.ts-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,.15);}
 </style>
 </head>
 <body>
@@ -360,6 +379,15 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
         <button class="tb-btn icon" id="grid-btn" title="Vis grid (G)" onclick="toggleGrid()">&#35;</button>
         <button class="tb-btn icon" id="snap-btn" title="Snap (S)" onclick="toggleSnap()" style="color:var(--accent)">&#9889;</button>
         <button class="tb-btn" style="height:28px;font-size:11px" onclick="toggleTimeline()">&#9650; Tidslinje</button>
+      </div>
+      <div class="fd-sep"></div>
+      <div style="padding:6px 14px 12px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:7px">Farvetema</div>
+        <div style="display:flex;gap:5px">
+          <button class="theme-swatch active" id="ts-dark" onclick="setTheme('dark')"><span class="ts-dot" style="background:#0e0f11;border-color:#444"></span>Mørk</button>
+          <button class="theme-swatch" id="ts-graa" onclick="setTheme('graa')"><span class="ts-dot" style="background:#292c31;border-color:#555"></span>Grå</button>
+          <button class="theme-swatch" id="ts-kold" onclick="setTheme('kold')"><span class="ts-dot" style="background:#1a1e28;border-color:#334"></span>Kold</button>
+        </div>
       </div>
     </div>
     <div class="fd-right">
@@ -563,6 +591,8 @@ document.addEventListener('mousedown',e=>{
 });
 // Init ribbon to format tab
 setRibbonTab('format');
+// Apply saved color theme
+_applyTheme();
 // Canvas zoom via Ctrl+scroll
 area.addEventListener('wheel',e=>{
   if(!e.ctrlKey&&!e.metaKey)return;
@@ -680,6 +710,9 @@ function toggleFilDropdown(){
   document.getElementById('rt-fil').classList.toggle('active',isOpen);
   if(isOpen){
     renderRecentProjects();
+    // sync theme swatch active state
+    const cur=localStorage.getItem('spx_theme')||'dark';
+    THEMES.forEach(id=>{const btn=document.getElementById('ts-'+id);if(btn)btn.classList.toggle('active',id===cur);});
     // sync visible project-name input
     const vis=document.getElementById('project-name-vis');
     const hid=document.getElementById('project-name');
@@ -689,6 +722,20 @@ function toggleFilDropdown(){
 function closeFilDropdown(){
   document.getElementById('fil-dropdown').classList.remove('open');
   document.getElementById('rt-fil').classList.remove('active');
+}
+const THEMES=['dark','graa','kold'];
+function setTheme(t){
+  THEMES.forEach(id=>document.documentElement.classList.remove('theme-'+id));
+  if(t!=='dark')document.documentElement.classList.add('theme-'+t);
+  localStorage.setItem('spx_theme',t);
+  THEMES.forEach(id=>{
+    const btn=document.getElementById('ts-'+id);
+    if(btn)btn.classList.toggle('active',id===t);
+  });
+}
+function _applyTheme(){
+  const t=localStorage.getItem('spx_theme')||'dark';
+  setTheme(t);
 }
 function renderRecentProjects(){
   const list=document.getElementById('fd-recent-list');if(!list)return;
