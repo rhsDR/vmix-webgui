@@ -309,11 +309,10 @@ html.theme-kold{
   --border:#2d3650;--border2:#38435f;
   --text:#e2e8f0;--text2:#8b98b8;--text3:#4e5970;
 }
-/* Theme switcher UI */
-.theme-swatch{display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-family:var(--font);font-size:11px;transition:all .15s;flex:1;justify-content:center;}
-.theme-swatch:hover{background:var(--surface3);color:var(--text);}
-.theme-swatch.active{border-color:var(--accent);color:var(--accent);background:rgba(232,89,60,.1);}
-.ts-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,.15);}
+/* Theme dot buttons i topbar */
+.theme-dot{width:14px;height:14px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;flex-shrink:0;transition:border-color .15s,transform .1s;}
+.theme-dot:hover{transform:scale(1.25);}
+.theme-dot.active{border-color:var(--accent);}
 </style>
 </head>
 <body>
@@ -333,6 +332,25 @@ html.theme-kold{
     <button class="rt" id="rt-anim" onclick="setRibbonTab('anim')">Animationer</button>
     <button class="rt" id="rt-data" onclick="setRibbonTab('data')">Data</button>
     <div class="tb-spacer"></div>
+    <!-- Preset / Canvas / Tema — flyttet fra fil-dropdown -->
+    <select id="ttype-top" style="background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text2);font-family:var(--font);font-size:11px;padding:2px 5px;height:24px;cursor:pointer;outline:none" onchange="document.getElementById('ttype').value=this.value;document.getElementById('ttype-vis').value=this.value;updSmartTickerUI()">
+      <option value="lower_third">Lower Third</option>
+      <option value="ticker">Ticker / Crawl</option>
+      <option value="smart_ticker">&#9889; Smart Ticker</option>
+      <option value="credit">Credit</option>
+      <option value="fullscreen">Fullscreen Title</option>
+    </select>
+    <button class="tb-btn" style="height:24px;font-size:11px" onclick="loadPreset()" title="Indlæs preset">&#9203; Preset</button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn icon" id="grid-btn" title="Vis grid (G)" onclick="toggleGrid()">&#35;</button>
+    <button class="tb-btn icon" id="snap-btn" title="Snap til grid" onclick="toggleSnap()" style="color:var(--accent)">&#9889;</button>
+    <button class="tb-btn icon" title="Vis/skjul tidslinje" onclick="toggleTimeline()">&#9650;</button>
+    <div class="tb-sep"></div>
+    <button class="theme-dot" id="ts-default" onclick="setTheme('default')" title="Standard" style="background:#1b1d24"></button>
+    <button class="theme-dot" id="ts-dark" onclick="setTheme('dark')" title="Mørk" style="background:#0e0f11"></button>
+    <button class="theme-dot" id="ts-graa" onclick="setTheme('graa')" title="Grå" style="background:#2c3038"></button>
+    <button class="theme-dot" id="ts-kold" onclick="setTheme('kold')" title="Kold" style="background:#191e2a"></button>
+    <div class="tb-sep"></div>
     <div class="export-mode">
       <span>Eksport:</span>
       <div class="mode-pill">
@@ -395,7 +413,7 @@ html.theme-kold{
       <div class="fd-item" onclick="exportSPX();closeFilDropdown()"><span class="fd-icon">⬆</span><span>Eksportér SPX .html</span></div>
       <div class="fd-sep"></div>
       <div style="padding:6px 14px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <select id="ttype-vis" style="flex:1;min-width:0;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:11px;padding:3px 6px;outline:none;cursor:pointer" onchange="document.getElementById('ttype').value=this.value;updSmartTickerUI()">
+        <select id="ttype-vis" style="flex:1;min-width:0;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:11px;padding:3px 6px;outline:none;cursor:pointer" onchange="document.getElementById('ttype').value=this.value;document.getElementById('ttype-top').value=this.value;updSmartTickerUI()">
           <option value="lower_third">Lower Third</option>
           <option value="ticker">Ticker / Crawl</option>
           <option value="smart_ticker">&#9889; Smart Ticker</option>
@@ -403,21 +421,6 @@ html.theme-kold{
           <option value="fullscreen">Fullscreen Title</option>
         </select>
         <button class="tb-btn" style="height:26px;font-size:11px" onclick="loadPreset();closeFilDropdown()">&#9203; Preset</button>
-      </div>
-      <div style="padding:4px 14px 10px;display:flex;gap:6px">
-        <button class="tb-btn icon" id="grid-btn" title="Vis grid (G)" onclick="toggleGrid()">&#35;</button>
-        <button class="tb-btn icon" id="snap-btn" title="Snap (S)" onclick="toggleSnap()" style="color:var(--accent)">&#9889;</button>
-        <button class="tb-btn" style="height:28px;font-size:11px" onclick="toggleTimeline()">&#9650; Tidslinje</button>
-      </div>
-      <div class="fd-sep"></div>
-      <div style="padding:6px 14px 12px">
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:7px">Farvetema</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
-          <button class="theme-swatch active" id="ts-default" onclick="setTheme('default')"><span class="ts-dot" style="background:#1b1d24;border-color:#444"></span>Standard</button>
-          <button class="theme-swatch" id="ts-dark" onclick="setTheme('dark')"><span class="ts-dot" style="background:#0e0f11;border-color:#333"></span>Mørk</button>
-          <button class="theme-swatch" id="ts-graa" onclick="setTheme('graa')"><span class="ts-dot" style="background:#2c3038;border-color:#556"></span>Grå</button>
-          <button class="theme-swatch" id="ts-kold" onclick="setTheme('kold')"><span class="ts-dot" style="background:#191e2a;border-color:#335"></span>Kold</button>
-        </div>
       </div>
     </div>
     <div class="fd-right">
