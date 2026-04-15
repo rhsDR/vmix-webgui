@@ -40,7 +40,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 #undo-info{font-size:10px;color:var(--text3);font-family:var(--mono);min-width:24px;}
 
 /* MAIN LAYOUT */
-#app{display:flex;flex-direction:column;height:calc(100vh - 46px - 24px);}
+#app{display:flex;flex-direction:column;height:calc(100vh - 46px - 36px - 24px);}
 #app-main{display:flex;flex:1;overflow:hidden;}
 
 /* LEFT TOOLBAR */
@@ -53,7 +53,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .tl-btn:hover .tl-tip{opacity:1;}
 
 /* CANVAS AREA */
-#canvas-area{flex:1;overflow:hidden;position:relative;background:var(--bg);}
 #canvas-viewport{width:100%;height:100%;overflow:auto;}
 #canvas-vp-inner{min-width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;padding:40px;box-sizing:border-box;}
 #canvas-area.panning{cursor:grab!important;}
@@ -91,7 +90,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .el.locked .el-lock{opacity:.7;}
 
 /* RIGHT PANEL */
-#panel{width:280px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
 #ptabs{display:flex;border-bottom:1px solid var(--border);}
 .ptab{flex:1;height:34px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-family:var(--font);font-size:11px;font-weight:500;border-bottom:2px solid transparent;transition:all .15s;}
 .ptab:hover{color:var(--text2);}
@@ -169,6 +167,29 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 #tl-zoom{display:flex;align-items:center;gap:6px;margin-left:auto;}
 #tl-zoom input{width:80px;accent-color:var(--accent);}
 #tl-zoom span{font-size:10px;color:var(--text3);min-width:28px;font-family:var(--mono);}
+
+/* CONTEXT BAR */
+#ctxbar{height:36px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 10px;gap:4px;flex-shrink:0;overflow:hidden;}
+.cb-lbl{font-size:10px;color:var(--text3);flex-shrink:0;margin-right:1px;}
+.cb-inp{height:24px;padding:0 5px;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;transition:border .15s;width:52px;-moz-appearance:textfield;}
+.cb-inp::-webkit-inner-spin-button,.cb-inp::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+.cb-inp:focus{border-color:var(--accent);}
+.cb-inp.wide{width:110px;font-family:var(--font);}
+.cb-inp.sm{width:40px;}
+.cb-sel{height:24px;padding:0 5px;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:11px;outline:none;cursor:pointer;}
+.cb-btn{height:24px;min-width:24px;padding:0 7px;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text2);cursor:pointer;font-size:12px;transition:all .12s;display:inline-flex;align-items:center;justify-content:center;}
+.cb-btn:hover{background:var(--surface2);color:var(--text);}
+.cb-btn.active{background:rgba(232,89,60,.15);border-color:var(--accent);color:var(--accent);}
+.cb-color{width:24px;height:24px;border:1px solid var(--border2);border-radius:4px;cursor:pointer;padding:1px;background:var(--surface3);flex-shrink:0;}
+.cb-sep{width:1px;height:18px;background:var(--border);margin:0 3px;flex-shrink:0;}
+.cb-hint{font-size:11px;color:var(--text3);}
+
+/* PANEL COLLAPSE */
+#panel{width:280px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width .2s;}
+#panel.collapsed{width:0;overflow:hidden;}
+#panel-toggle{position:absolute;right:0;top:50%;transform:translateY(-50%);width:16px;height:48px;background:var(--surface2);border:1px solid var(--border);border-right:none;border-radius:6px 0 0 6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text3);z-index:10;transition:all .15s;}
+#panel-toggle:hover{background:var(--surface3);color:var(--text);}
+#canvas-area{flex:1;overflow:hidden;position:relative;background:var(--bg);}
 
 /* EXPORT MODE */
 .export-mode{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:0 8px;height:28px;}
@@ -267,6 +288,8 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
   <button class="tb-btn primary" id="btn-spx-export" onclick="exportSPX()">&#11014; Eksportér SPX .html</button>
 </div>
 
+<div id="ctxbar"><span class="cb-hint">Klik på et element for at redigere</span></div>
+
 <div id="app">
 <div id="app-main">
   <div id="toolbar">
@@ -306,7 +329,8 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
   </div>
   </div>
 
-  <div id="panel">
+  <div id="panel" style="position:relative">
+    <button id="panel-toggle" onclick="togglePanel()" title="Skjul/vis panel">&#8250;</button>
     <div id="ptabs">
       <button class="ptab active" id="tab-props" onclick="switchTab('props')">Egenskaber</button>
       <button class="ptab" id="tab-layers" onclick="switchTab('layers')">Lag</button>
@@ -321,6 +345,7 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
   <div id="tl-resize-handle"></div>
   <div id="tl-header">
     <span>TIDSLINJE</span>
+    <button class="tb-btn icon" style="height:22px;font-size:11px;margin-left:4px" onclick="toggleTimeline()" title="Skjul tidslinje">&#8964;</button>
     <div id="tl-zoom">
       <span style="font-size:11px;color:var(--text3)">Zoom</span>
       <input type="range" id="tl-zoom-slider" min="1" max="10" value="3" step="0.5" oninput="tlZoom=parseFloat(this.value);document.getElementById('tl-zoom-val').textContent=tlZoom+'x';renderTimeline()">
@@ -347,6 +372,7 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
   <div class="sb">W: <span id="sb-w">—</span></div>
   <div class="sb">H: <span id="sb-h">—</span></div>
   <div class="sb" style="margin-left:auto">Elementer: <span id="sb-n">0</span></div>
+  <button id="tl-show-btn" onclick="toggleTimeline()" style="display:none;background:none;border:1px solid var(--border2);color:var(--text3);height:18px;padding:0 8px;border-radius:3px;cursor:pointer;font-size:10px" title="Vis tidslinje">&#9650; Tidslinje</button>
   <div class="sb" style="display:flex;align-items:center;gap:4px">
     <button onclick="setCanvasZoom(canvasZoom/1.25)" style="background:none;border:1px solid var(--border2);color:var(--text2);width:18px;height:18px;border-radius:3px;cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center" title="Zoom ud (Ctrl+−)">−</button>
     <span style="font-size:11px;color:var(--text3)">Zoom:</span><span id="sb-zoom" style="font-family:var(--mono);font-size:11px;color:var(--text2);min-width:38px;text-align:center">100%</span>
@@ -547,6 +573,86 @@ function mkEl(type,p={}){
     name:p.name??(type==='text'?'Tekst':type==='rect'?'Rektangel':'Linje'),
   };
 }
+
+/* ── CONTEXT BAR ─────────────────────────────────── */
+function renderCtxBar(){
+  const bar=document.getElementById('ctxbar');if(!bar)return;
+  if(!selIds.length){bar.innerHTML='<span class="cb-hint">Klik på et element for at redigere</span>';return;}
+  if(selIds.length>1){bar.innerHTML=`<span class="cb-hint">${selIds.length} elementer valgt</span>`;return;}
+  const el=elements.find(x=>x.id===selIds[0]);if(!el){bar.innerHTML='';return;}
+  const isText=el.type==='text',isTicker=el.type==='ticker',isRect=el.type==='rect',isLine=el.type==='line',isImg=el.type==='image';
+  let h=`
+    <span class="cb-lbl">X</span><input class="cb-inp" id="cb-x" type="number" value="${Math.round(el.x)}">
+    <span class="cb-lbl">Y</span><input class="cb-inp" id="cb-y" type="number" value="${Math.round(el.y)}">
+    <span class="cb-sep"></span>
+    <span class="cb-lbl">W</span><input class="cb-inp" id="cb-w" type="number" value="${Math.round(el.w)}">
+    <span class="cb-lbl">H</span><input class="cb-inp" id="cb-h" type="number" value="${Math.round(el.h)}">
+    <span class="cb-sep"></span>
+    <span class="cb-lbl">Opacity</span><input class="cb-inp sm" id="cb-op" type="number" value="${Math.round(el.opacity*100)}" min="0" max="100">
+    <span class="cb-lbl" style="margin-left:-2px">%</span>
+  `;
+  if(isText||isTicker){
+    h+=`<span class="cb-sep"></span>
+    <select class="cb-sel" id="cb-font" style="width:120px">${FONTS.map(f=>`<option value="${f}"${f===el.fontFamily?' selected':''}>${f}</option>`).join('')}</select>
+    <input class="cb-inp sm" id="cb-fs" type="number" value="${el.fontSize}" title="Størrelse">
+    <select class="cb-sel" id="cb-fw" style="width:60px">${['300','400','500','600','700'].map(w=>`<option value="${w}"${el.fontWeight===w?' selected':''}>${{300:'Light',400:'Reg',500:'Med',600:'Semi',700:'Bold'}[w]}</option>`).join('')}</select>
+    <span class="cb-sep"></span>
+    <input type="color" class="cb-color" id="cb-color" value="${el.color}" title="Tekstfarve">`;
+    if(isText)h+=`
+    <button class="cb-btn${el.fontStyle==='italic'?' active':''}" onclick="setFontStyle()" title="Kursiv" style="font-style:italic;width:28px">I</button>
+    <button class="cb-btn${(el.textAlign||'left')==='left'?' active':''}" onclick="setTextAlign('left')" title="Venstre">&#8676;</button>
+    <button class="cb-btn${(el.textAlign||'left')==='center'?' active':''}" onclick="setTextAlign('center')" title="Centrér">&#8644;</button>
+    <button class="cb-btn${(el.textAlign||'left')==='right'?' active':''}" onclick="setTextAlign('right')" title="Højre">&#8677;</button>
+    <span class="cb-sep"></span>
+    <input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}" title="Baggrund">`;
+  }
+  if(isRect){
+    h+=`<span class="cb-sep"></span>
+    <input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}" title="Fyld">
+    <span class="cb-lbl">R</span><input class="cb-inp sm" id="cb-br" type="number" value="${el.borderRadius}" min="0" title="Afrunding">`;
+  }
+  if(isLine){
+    h+=`<span class="cb-sep"></span>
+    <input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:el.color}" title="Farve">`;
+  }
+  if(isImg){
+    h+=`<span class="cb-sep"></span>
+    <select class="cb-sel" id="cb-fit"><option value="contain"${el.objectFit==='contain'?' selected':''}>Contain</option><option value="cover"${el.objectFit==='cover'?' selected':''}>Cover</option><option value="fill"${el.objectFit==='fill'?' selected':''}>Fill</option><option value="none"${el.objectFit==='none'?' selected':''}>None</option></select>`;
+  }
+  h+=`<span class="cb-sep"></span><span class="cb-lbl">Navn</span><input class="cb-inp wide" id="cb-name" value="${el.name.replace(/"/g,'&quot;')}" title="Elementnavn">`;
+  bar.innerHTML=h;
+  bindCtxBar(el);
+}
+function bindCtxBar(el){
+  const cb=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('input',e=>{fn(e.target.value);render();renderPanel();});};
+  const cbn=(id,fn)=>{const inp=document.getElementById(id);if(inp){inp.addEventListener('input',e=>{fn(parseFloat(e.target.value)||0);render();renderPanel();});inp.addEventListener('change',()=>saveState());}};
+  cbn('cb-x',v=>{el.x=v;});cbn('cb-y',v=>{el.y=v;});
+  cbn('cb-w',v=>{el.w=Math.max(2,v);});cbn('cb-h',v=>{el.h=Math.max(2,v);});
+  cbn('cb-op',v=>{el.opacity=Math.max(0,Math.min(1,v/100));});
+  cb('cb-font',v=>{saveState();el.fontFamily=v;});
+  cbn('cb-fs',v=>{el.fontSize=Math.max(1,v);});
+  cb('cb-fw',v=>{saveState();el.fontWeight=v;});
+  cbn('cb-br',v=>{el.borderRadius=Math.max(0,v);});
+  cb('cb-name',v=>{el.name=v;updLayersList&&updLayersList();});
+  cb('cb-fit',v=>{el.objectFit=v;});
+  const cc=document.getElementById('cb-color');
+  if(cc)cc.addEventListener('input',e=>{el.color=e.target.value;render();renderPanel();});
+  const cbg=document.getElementById('cb-bgc');
+  if(cbg)cbg.addEventListener('input',e=>{el.bgColor=e.target.value;render();renderPanel();});
+}
+function togglePanel(){
+  const p=document.getElementById('panel'),btn=document.getElementById('panel-toggle');
+  const collapsed=p.classList.toggle('collapsed');
+  if(btn)btn.textContent=collapsed?'‹':'›';
+}
+function toggleTimeline(){
+  const tl=document.getElementById('timeline'),btn=document.getElementById('tl-show-btn');
+  const hidden=tl.style.display==='none';
+  tl.style.display=hidden?'':'none';
+  if(btn)btn.style.display=hidden?'none':'';
+  calcScale();
+}
+/* ── END CONTEXT BAR ─────────────────────────────── */
 
 function render(){
   [...canvas.querySelectorAll('.el')].forEach(e=>e.remove());
@@ -927,12 +1033,17 @@ function toggleVis(id){const el=elements.find(x=>x.id===id);if(el){el.visible=!e
 
 function updStatus(){
   document.getElementById('sb-n').textContent=elements.length;
-  if(selIds.length===1){const el=elements.find(x=>x.id===selIds[0]);if(el){document.getElementById('sb-x').textContent=Math.round(el.x);document.getElementById('sb-y').textContent=Math.round(el.y);document.getElementById('sb-w').textContent=Math.round(el.w);document.getElementById('sb-h').textContent=Math.round(el.h);return;}}
+  if(selIds.length===1){const el=elements.find(x=>x.id===selIds[0]);if(el){document.getElementById('sb-x').textContent=Math.round(el.x);document.getElementById('sb-y').textContent=Math.round(el.y);document.getElementById('sb-w').textContent=Math.round(el.w);document.getElementById('sb-h').textContent=Math.round(el.h);
+    // sync ctxbar number fields without full re-render (to preserve focus)
+    const sync=(id,v)=>{const el2=document.getElementById(id);if(el2&&document.activeElement!==el2)el2.value=Math.round(v);};
+    sync('cb-x',el.x);sync('cb-y',el.y);sync('cb-w',el.w);sync('cb-h',el.h);
+    return;
+  }}
   ['sb-x','sb-y','sb-w','sb-h'].forEach(id=>document.getElementById(id).textContent='—');
 }
 
 function switchTab(t){currentTab=t;document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+t).classList.add('active');renderPanel();}
-function renderPanel(){if(currentTab==='layers'){renderLayersTab();return;}if(currentTab==='canvas'){renderCanvasTab();return;}renderPropsTab();}
+function renderPanel(){if(currentTab==='layers'){renderLayersTab();}else if(currentTab==='canvas'){renderCanvasTab();}else{renderPropsTab();}renderCtxBar();}
 
 function renderCanvasTab(){
   document.getElementById('pbody').innerHTML=`
