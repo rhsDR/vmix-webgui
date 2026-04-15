@@ -175,8 +175,27 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 #tl-zoom span{font-size:10px;color:var(--text3);min-width:28px;font-family:var(--mono);}
 
 /* CONTEXT BAR */
+#ribbon{position:relative;}
 #ribbon-bar{height:36px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;overflow:hidden;}
 .rb-pane{display:flex;align-items:center;gap:4px;width:100%;}
+
+/* FIL DROPDOWN */
+#fil-dropdown{position:absolute;top:70px;left:0;width:460px;background:var(--surface);border:1px solid var(--border2);border-top:none;border-radius:0 0 8px 0;z-index:600;display:none;box-shadow:6px 10px 30px rgba(0,0,0,.6);}
+#fil-dropdown.open{display:flex;}
+.fd-left{width:200px;padding:8px 0;border-right:1px solid var(--border);flex-shrink:0;}
+.fd-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;font-size:12px;color:var(--text2);transition:background .1s;user-select:none;}
+.fd-item:hover{background:var(--surface2);color:var(--text);}
+.fd-icon{font-size:15px;width:22px;text-align:center;flex-shrink:0;}
+.fd-kbd{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3);}
+.fd-sep{height:1px;background:var(--border);margin:5px 12px;}
+.fd-right{flex:1;padding:14px 16px;overflow-y:auto;}
+.fd-section-title{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:10px;}
+.fd-recent{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;cursor:pointer;transition:background .1s;}
+.fd-recent:hover{background:var(--surface2);}
+.fd-recent-icon{font-size:18px;flex-shrink:0;}
+.fd-recent-name{font-size:12px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fd-recent-date{font-size:10px;color:var(--text3);margin-top:1px;}
+.fd-empty{font-size:11px;color:var(--text3);font-style:italic;}
 .cb-lbl{font-size:10px;color:var(--text3);flex-shrink:0;margin-right:1px;}
 .cb-inp{height:24px;padding:0 5px;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;transition:border .15s;width:52px;-moz-appearance:textfield;}
 .cb-inp::-webkit-inner-spin-button,.cb-inp::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
@@ -279,28 +298,17 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
     <button class="tb-btn primary" id="btn-spx-export" onclick="exportSPX()">&#11014; Eksportér</button>
   </div>
   <div id="ribbon-bar">
-    <div id="rb-fil" class="rb-pane">
-      <input type="text" id="project-name" placeholder="Projektnavn..." title="Projektnavn">
-      <button class="tb-btn icon" title="Gem (Ctrl+S)" onclick="saveProject()">&#128190;</button>
-      <button class="tb-btn icon" title="Åbn projekt" onclick="document.getElementById('load-inp').click()">&#128193;</button>
-      <input type="file" id="load-inp" accept=".json" style="display:none" onchange="loadProject(event)">
-      <button class="tb-btn" onclick="document.getElementById('html-inp').click()">&#11015; Åbn .html</button>
-      <input type="file" id="html-inp" accept=".html,.htm" style="display:none" onchange="importHTML(event)">
-      <div class="tb-sep"></div>
-      <select id="ttype" onchange="updSmartTickerUI()">
-        <option value="lower_third">Lower Third</option>
-        <option value="ticker">Ticker / Crawl</option>
-        <option value="smart_ticker">&#9889; Smart Ticker</option>
-        <option value="credit">Credit</option>
-        <option value="fullscreen">Fullscreen Title</option>
-      </select>
-      <button class="tb-btn" onclick="loadPreset()">&#9203; Preset</button>
-      <div class="tb-sep"></div>
-      <button class="tb-btn icon" id="grid-btn" title="Vis grid (G)" onclick="toggleGrid()">&#35;</button>
-      <button class="tb-btn icon" id="snap-btn" title="Snap til grid (S)" onclick="toggleSnap()" style="color:var(--accent)">&#9889;</button>
-      <div class="tb-sep"></div>
-      <button class="tb-btn" onclick="toggleTimeline()" title="Vis/skjul tidslinje">&#9650; Tidslinje</button>
-    </div>
+    <!-- project-name, load-inp, html-inp, ttype kept hidden for JS references -->
+    <input type="text" id="project-name" style="display:none">
+    <input type="file" id="load-inp" accept=".json" style="display:none" onchange="loadProject(event)">
+    <input type="file" id="html-inp" accept=".html,.htm" style="display:none" onchange="importHTML(event)">
+    <select id="ttype" style="display:none" onchange="updSmartTickerUI()">
+      <option value="lower_third">Lower Third</option>
+      <option value="ticker">Ticker / Crawl</option>
+      <option value="smart_ticker">Smart Ticker</option>
+      <option value="credit">Credit</option>
+      <option value="fullscreen">Fullscreen Title</option>
+    </select>
     <div id="rb-edit" class="rb-pane" style="display:none">
       <button class="tb-btn icon" id="btn-undo" onclick="undo()" title="Fortryd (Ctrl+Z)" disabled>&#8617;</button>
       <button class="tb-btn icon" id="btn-redo" onclick="redo()" title="Gentag (Ctrl+Y)" disabled>&#8618;</button>
@@ -320,6 +328,44 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
     <div id="rb-format" class="rb-pane" style="display:none"><span class="cb-hint">Vælg et element</span></div>
     <div id="rb-anim" class="rb-pane" style="display:none"><span class="cb-hint">Vælg et element</span></div>
     <div id="rb-data" class="rb-pane" style="display:none"><span class="cb-hint">Vælg et element</span></div>
+  </div>
+
+  <!-- FIL DROPDOWN -->
+  <div id="fil-dropdown">
+    <div class="fd-left">
+      <div style="padding:10px 14px 8px;border-bottom:1px solid var(--border);margin-bottom:4px">
+        <input id="project-name-vis" placeholder="Projektnavn..." style="width:100%;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:12px;padding:5px 8px;outline:none" oninput="document.getElementById('project-name').value=this.value" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'">
+      </div>
+      <div class="fd-item" onclick="newProject()"><span class="fd-icon">📄</span><span>Ny</span></div>
+      <div class="fd-sep"></div>
+      <div class="fd-item" onclick="document.getElementById('load-inp').click();closeFilDropdown()"><span class="fd-icon">📂</span><span>Åbn projekt</span><span class="fd-kbd">Ctrl+O</span></div>
+      <div class="fd-item" onclick="saveProject();closeFilDropdown()"><span class="fd-icon">💾</span><span>Gem</span><span class="fd-kbd">Ctrl+S</span></div>
+      <div class="fd-item" onclick="saveProjectAs()"><span class="fd-icon">📋</span><span>Gem som...</span></div>
+      <div class="fd-sep"></div>
+      <div class="fd-item" onclick="document.getElementById('html-inp').click();closeFilDropdown()"><span class="fd-icon">⬇</span><span>Åbn template (.html)</span></div>
+      <div class="fd-sep"></div>
+      <div class="fd-item" onclick="exportSPX();closeFilDropdown()"><span class="fd-icon">⬆</span><span>Eksportér SPX .html</span></div>
+      <div class="fd-sep"></div>
+      <div style="padding:6px 14px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <select id="ttype-vis" style="flex:1;min-width:0;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:11px;padding:3px 6px;outline:none;cursor:pointer" onchange="document.getElementById('ttype').value=this.value;updSmartTickerUI()">
+          <option value="lower_third">Lower Third</option>
+          <option value="ticker">Ticker / Crawl</option>
+          <option value="smart_ticker">&#9889; Smart Ticker</option>
+          <option value="credit">Credit</option>
+          <option value="fullscreen">Fullscreen Title</option>
+        </select>
+        <button class="tb-btn" style="height:26px;font-size:11px" onclick="loadPreset();closeFilDropdown()">&#9203; Preset</button>
+      </div>
+      <div style="padding:4px 14px 10px;display:flex;gap:6px">
+        <button class="tb-btn icon" id="grid-btn" title="Vis grid (G)" onclick="toggleGrid()">&#35;</button>
+        <button class="tb-btn icon" id="snap-btn" title="Snap (S)" onclick="toggleSnap()" style="color:var(--accent)">&#9889;</button>
+        <button class="tb-btn" style="height:28px;font-size:11px" onclick="toggleTimeline()">&#9650; Tidslinje</button>
+      </div>
+    </div>
+    <div class="fd-right">
+      <div class="fd-section-title">Seneste projekter</div>
+      <div id="fd-recent-list"></div>
+    </div>
   </div>
 </div>
 
@@ -510,6 +556,13 @@ function drawRulers(){
   }
 }
 window.addEventListener('resize',calcScale);
+// Close fil dropdown when clicking outside
+document.addEventListener('mousedown',e=>{
+  const dd=document.getElementById('fil-dropdown');
+  if(dd&&dd.classList.contains('open')&&!dd.contains(e.target)&&!document.getElementById('rt-fil').contains(e.target))closeFilDropdown();
+});
+// Init ribbon to format tab
+setRibbonTab('format');
 // Canvas zoom via Ctrl+scroll
 area.addEventListener('wheel',e=>{
   if(!e.ctrlKey&&!e.metaKey)return;
@@ -609,15 +662,73 @@ function mkEl(type,p={}){
 }
 
 /* ── RIBBON ──────────────────────────────────────── */
-let ribbonTab='fil';
+let ribbonTab='format';
 function setRibbonTab(t){
+  if(t==='fil'){toggleFilDropdown();return;}
+  closeFilDropdown();
   ribbonTab=t;
   document.querySelectorAll('.rt').forEach(b=>b.classList.remove('active'));
   const rb=document.getElementById('rt-'+t);if(rb)rb.classList.add('active');
-  ['fil','edit','format','anim','data'].forEach(id=>{
+  ['edit','format','anim','data'].forEach(id=>{
     const el=document.getElementById('rb-'+id);if(el)el.style.display=id===t?'flex':'none';
   });
   renderRibbonBar();
+}
+function toggleFilDropdown(){
+  const dd=document.getElementById('fil-dropdown');
+  const isOpen=dd.classList.toggle('open');
+  document.getElementById('rt-fil').classList.toggle('active',isOpen);
+  if(isOpen){
+    renderRecentProjects();
+    // sync visible project-name input
+    const vis=document.getElementById('project-name-vis');
+    const hid=document.getElementById('project-name');
+    if(vis&&hid)vis.value=hid.value;
+  }
+}
+function closeFilDropdown(){
+  document.getElementById('fil-dropdown').classList.remove('open');
+  document.getElementById('rt-fil').classList.remove('active');
+}
+function renderRecentProjects(){
+  const list=document.getElementById('fd-recent-list');if(!list)return;
+  const recent=JSON.parse(localStorage.getItem('spx_recent')||'[]');
+  if(!recent.length){list.innerHTML='<div class="fd-empty">Ingen seneste projekter</div>';return;}
+  list.innerHTML=recent.map((r,i)=>`
+    <div class="fd-recent" onclick="loadRecentProject(${i})">
+      <span class="fd-recent-icon">📁</span>
+      <div><div class="fd-recent-name">${r.name}</div><div class="fd-recent-date">${_relDate(r.date)}</div></div>
+    </div>`).join('');
+}
+function _relDate(iso){
+  const d=new Date(iso),now=new Date(),diff=Math.floor((now-d)/60000);
+  if(diff<1)return'Lige nu';if(diff<60)return diff+'m siden';
+  if(diff<1440)return Math.floor(diff/60)+'t siden';
+  return Math.floor(diff/1440)+'d siden';
+}
+function _addRecent(name){
+  if(!name)return;
+  let r=JSON.parse(localStorage.getItem('spx_recent')||'[]');
+  r=r.filter(x=>x.name!==name);
+  r.unshift({name,date:new Date().toISOString()});
+  localStorage.setItem('spx_recent',JSON.stringify(r.slice(0,8)));
+}
+function loadRecentProject(idx){
+  const r=JSON.parse(localStorage.getItem('spx_recent')||'[]');
+  if(!r[idx])return;
+  toast('Kan ikke genindlæse — brug Åbn projekt');
+}
+function newProject(){
+  if(elements.length&&!confirm('Nyt projekt? Ikke-gemte ændringer går tabt.'))return;
+  saveState();elements=[];selIds=[];bgColor='transparent';elCtr=0;
+  canvas.style.background=bgColor;
+  document.getElementById('project-name').value='';
+  render();renderPanel();renderTimeline();closeFilDropdown();toast('Nyt projekt','ok');
+}
+function saveProjectAs(){
+  const cur=document.getElementById('project-name').value||'projekt';
+  const name=prompt('Gem som:',cur);
+  if(name){document.getElementById('project-name').value=name;saveProject();closeFilDropdown();}
 }
 function renderRibbonBar(){
   const t=ribbonTab;
@@ -1440,16 +1551,23 @@ function previewSelAnim(){
   setTimeout(()=>{div.style.transition=`opacity ${el.animDuration}s ease,transform ${el.animDuration}s cubic-bezier(0.22,1,0.36,1)`;div.style.opacity=el.opacity;div.style.transform='none';if(el.animation==='wipe'){div.style.transform='scaleX(1)';div.style.transformOrigin='left';}},80);
 }
 
-function _projFilename(ext){const n=document.getElementById('project-name').value.trim().replace(/[^\wæøåÆØÅ\-]/g,'_');return(n||document.getElementById('ttype').value||'project')+ext;}
+function _projFilename(ext){
+  const hid=document.getElementById('project-name');
+  const vis=document.getElementById('project-name-vis');
+  const n=((hid&&hid.value)||(vis&&vis.value)||'').trim().replace(/[^\wæøåÆØÅ\-]/g,'_');
+  return(n||document.getElementById('ttype').value||'project')+ext;
+}
 function saveProject(){
-  const data=JSON.stringify({version:3,elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,projectName:document.getElementById('project-name').value.trim()},null,2);
-  try{const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},200);toast('Projekt gemt','ok');}
-  catch(err){const uri='data:application/json;charset=utf-8,'+encodeURIComponent(data);const a=document.createElement('a');a.href=uri;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>document.body.removeChild(a),200);toast('Projekt gemt','ok');}
+  const name=document.getElementById('project-name').value.trim();
+  const data=JSON.stringify({version:3,elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,projectName:name},null,2);
+  try{const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},200);}
+  catch(err){const uri='data:application/json;charset=utf-8,'+encodeURIComponent(data);const a=document.createElement('a');a.href=uri;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>document.body.removeChild(a),200);}
+  _addRecent(name||'Unavngivet');toast('Projekt gemt','ok');
 }
 function loadProject(ev){
   const file=ev.target.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=e=>{try{const d=JSON.parse(e.target.result);elements=d.elements||[];bgColor=d.bgColor||'transparent';elCtr=d.elCtr||elements.length;transitionOnUpdate=d.transitionOnUpdate??true;if(d.smartTickerSettings)Object.assign(smartTickerSettings,d.smartTickerSettings);if(d.projectName)document.getElementById('project-name').value=d.projectName;canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];updUndoBtns();render();renderPanel();renderTimeline();toast('Projekt indlæst','ok');}catch{toast('Ugyldig projektfil');}};
+  reader.onload=e=>{try{const d=JSON.parse(e.target.result);elements=d.elements||[];bgColor=d.bgColor||'transparent';elCtr=d.elCtr||elements.length;transitionOnUpdate=d.transitionOnUpdate??true;if(d.smartTickerSettings)Object.assign(smartTickerSettings,d.smartTickerSettings);if(d.projectName){document.getElementById('project-name').value=d.projectName;_addRecent(d.projectName);}canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];updUndoBtns();render();renderPanel();renderTimeline();toast('Projekt indlæst','ok');}catch{toast('Ugyldig projektfil');}};
   reader.readAsText(file);ev.target.value='';
 }
 
