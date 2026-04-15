@@ -16,8 +16,12 @@
 }
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;}
 
-/* TOP BAR */
-#topbar{height:46px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:7px;flex-shrink:0;}
+/* RIBBON */
+#ribbon{background:var(--surface);flex-shrink:0;}
+#ribbon-tabs{height:34px;display:flex;align-items:center;padding:0 8px;gap:2px;border-bottom:1px solid var(--border);}
+.rt{height:26px;padding:0 13px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-family:var(--font);font-size:12px;border-radius:4px;transition:all .15s;flex-shrink:0;}
+.rt:hover{background:var(--surface2);color:var(--text2);}
+.rt.active{color:var(--accent);background:rgba(232,89,60,.08);}
 .logo{font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px;flex-shrink:0;color:var(--text);}
 .logo svg{flex-shrink:0;}
 .logo em{color:var(--accent);font-style:normal;}
@@ -40,7 +44,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 #undo-info{font-size:10px;color:var(--text3);font-family:var(--mono);min-width:24px;}
 
 /* MAIN LAYOUT */
-#app{display:flex;flex-direction:column;height:calc(100vh - 46px - 36px - 24px);}
+#app{display:flex;flex-direction:column;height:calc(100vh - 34px - 36px - 24px);}
 #app-main{display:flex;flex:1;overflow:hidden;}
 
 /* LEFT TOOLBAR */
@@ -170,7 +174,8 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 #tl-zoom span{font-size:10px;color:var(--text3);min-width:28px;font-family:var(--mono);}
 
 /* CONTEXT BAR */
-#ctxbar{height:36px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 10px;gap:4px;flex-shrink:0;overflow:hidden;}
+#ribbon-bar{height:36px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;overflow:hidden;}
+.rb-pane{display:flex;align-items:center;gap:4px;width:100%;}
 .cb-lbl{font-size:10px;color:var(--text3);flex-shrink:0;margin-right:1px;}
 .cb-inp{height:24px;padding:0 5px;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;transition:border .15s;width:52px;-moz-appearance:textfield;}
 .cb-inp::-webkit-inner-spin-button,.cb-inp::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
@@ -245,51 +250,77 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 </head>
 <body>
 
-<div id="topbar">
-  <div class="logo">
-    <svg width="16" height="16" viewBox="0 0 16 16"><rect x="1" y="4" width="14" height="9" rx="2" fill="#e8593c" opacity=".9"/><rect x="1" y="1" width="6" height="2.5" rx="1" fill="#e8593c" opacity=".45"/></svg>
-    SPX <em>Editor</em>
-  </div>
-  <div class="tb-sep"></div>
-  <button class="tb-btn back" onclick="window.location.href='projects.html'">&#8592; Projekter</button>
-  <div class="tb-sep"></div>
-  <select id="ttype" onchange="updSmartTickerUI()">
-    <option value="lower_third">Lower Third</option>
-    <option value="ticker">Ticker / Crawl</option>
-    <option value="smart_ticker">⚡ Smart Ticker</option>
-    <option value="credit">Credit</option>
-    <option value="fullscreen">Fullscreen Title</option>
-  </select>
-  <button class="tb-btn" onclick="loadPreset()">&#9203; Preset</button>
-  <div class="tb-sep"></div>
-  <button class="tb-btn icon" id="btn-undo" onclick="undo()" title="Fortryd (Ctrl+Z)">&#8617;</button>
-  <button class="tb-btn icon" id="btn-redo" onclick="redo()" title="Gentag (Ctrl+Y)">&#8618;</button>
-  <span id="undo-info"></span>
-  <div class="tb-sep"></div>
-  <input type="text" id="project-name" placeholder="Projektnavn..." title="Projektnavn (bruges som filnavn ved eksport)">
-  <button class="tb-btn icon" title="Gem projekt (Ctrl+S)" onclick="saveProject()">&#128190;</button>
-  <button class="tb-btn icon" title="Åbn projekt (.json)" onclick="document.getElementById('load-inp').click()">&#128193;</button>
-  <input type="file" id="load-inp" accept=".json" style="display:none" onchange="loadProject(event)">
-  <button class="tb-btn" title="Åbn SPX template (.html)" onclick="document.getElementById('html-inp').click()" style="gap:5px">&#11015; Åbn .html</button>
-  <input type="file" id="html-inp" accept=".html,.htm" style="display:none" onchange="importHTML(event)">
-  <div class="tb-sep"></div>
-  <button class="tb-btn icon" id="grid-btn" title="Vis grid (G)" onclick="toggleGrid()">&#35;</button>
-  <button class="tb-btn icon" id="snap-btn" title="Snap til grid (S)" onclick="toggleSnap()" style="color:var(--accent)">&#9889;</button>
-  <div class="tb-spacer"></div>
-  <div class="export-mode">
-    <span>Eksport:</span>
-    <div class="mode-pill">
-      <div class="mode-opt active" id="mode-css" onclick="setExportMode('css')">CSS</div>
-      <div class="mode-opt" id="mode-gsap" onclick="setExportMode('gsap')">GSAP</div>
+<div id="ribbon">
+  <div id="ribbon-tabs">
+    <div class="logo">
+      <svg width="14" height="14" viewBox="0 0 16 16"><rect x="1" y="4" width="14" height="9" rx="2" fill="#e8593c" opacity=".9"/><rect x="1" y="1" width="6" height="2.5" rx="1" fill="#e8593c" opacity=".45"/></svg>
+      SPX <em>Editor</em>
     </div>
+    <div class="tb-sep" style="margin:0 6px"></div>
+    <button class="rt active" id="rt-fil" onclick="setRibbonTab('fil')">Fil</button>
+    <button class="rt" id="rt-edit" onclick="setRibbonTab('edit')">Redigér</button>
+    <button class="rt" id="rt-format" onclick="setRibbonTab('format')">Format</button>
+    <button class="rt" id="rt-anim" onclick="setRibbonTab('anim')">Animationer</button>
+    <button class="rt" id="rt-data" onclick="setRibbonTab('data')">Data</button>
+    <div class="tb-spacer"></div>
+    <div class="export-mode">
+      <span>Eksport:</span>
+      <div class="mode-pill">
+        <div class="mode-opt active" id="mode-css" onclick="setExportMode('css')">CSS</div>
+        <div class="mode-opt" id="mode-gsap" onclick="setExportMode('gsap')">GSAP</div>
+      </div>
+    </div>
+    <button class="tb-btn" id="btn-breaking-preview" style="display:none" onclick="toggleBreakingPreview()">&#9889; Breaking</button>
+    <button class="tb-btn" onclick="previewAnim()">&#9654; Preview</button>
+    <button class="tb-btn primary" id="btn-st-export" style="display:none" onclick="exportSmartTicker()">&#11014; Smart Ticker</button>
+    <button class="tb-btn primary" id="btn-spx-export" onclick="exportSPX()">&#11014; Eksportér</button>
   </div>
-  <button class="tb-btn" id="btn-breaking-preview" style="display:none" onclick="toggleBreakingPreview()">&#9889; Breaking</button>
-  <button class="tb-btn" onclick="previewAnim()">&#9654; Preview</button>
-  <button class="tb-btn primary" id="btn-st-export" style="display:none" onclick="exportSmartTicker()">&#11014; Eksportér Smart Ticker</button>
-  <button class="tb-btn primary" id="btn-spx-export" onclick="exportSPX()">&#11014; Eksportér SPX .html</button>
+  <div id="ribbon-bar">
+    <div id="rb-fil" class="rb-pane">
+      <button class="tb-btn back" onclick="window.location.href='projects.html'">&#8592; Projekter</button>
+      <div class="tb-sep"></div>
+      <input type="text" id="project-name" placeholder="Projektnavn..." title="Projektnavn">
+      <button class="tb-btn icon" title="Gem (Ctrl+S)" onclick="saveProject()">&#128190;</button>
+      <button class="tb-btn icon" title="Åbn projekt" onclick="document.getElementById('load-inp').click()">&#128193;</button>
+      <input type="file" id="load-inp" accept=".json" style="display:none" onchange="loadProject(event)">
+      <button class="tb-btn" onclick="document.getElementById('html-inp').click()">&#11015; Åbn .html</button>
+      <input type="file" id="html-inp" accept=".html,.htm" style="display:none" onchange="importHTML(event)">
+      <div class="tb-sep"></div>
+      <select id="ttype" onchange="updSmartTickerUI()">
+        <option value="lower_third">Lower Third</option>
+        <option value="ticker">Ticker / Crawl</option>
+        <option value="smart_ticker">&#9889; Smart Ticker</option>
+        <option value="credit">Credit</option>
+        <option value="fullscreen">Fullscreen Title</option>
+      </select>
+      <button class="tb-btn" onclick="loadPreset()">&#9203; Preset</button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn icon" id="grid-btn" title="Vis grid (G)" onclick="toggleGrid()">&#35;</button>
+      <button class="tb-btn icon" id="snap-btn" title="Snap til grid (S)" onclick="toggleSnap()" style="color:var(--accent)">&#9889;</button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" onclick="toggleTimeline()" title="Vis/skjul tidslinje">&#9650; Tidslinje</button>
+    </div>
+    <div id="rb-edit" class="rb-pane" style="display:none">
+      <button class="tb-btn icon" id="btn-undo" onclick="undo()" title="Fortryd (Ctrl+Z)" disabled>&#8617;</button>
+      <button class="tb-btn icon" id="btn-redo" onclick="redo()" title="Gentag (Ctrl+Y)" disabled>&#8618;</button>
+      <span id="undo-info"></span>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" onclick="copySel()">Kopier</button>
+      <button class="tb-btn" onclick="pasteSel()">Sæt ind</button>
+      <button class="tb-btn" onclick="duplicateSel()">Dupliker</button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn icon" onclick="alignSel('left')" title="Justér venstre">&#8676;</button>
+      <button class="tb-btn icon" onclick="alignSel('hcenter')" title="Centrér horisontalt">&#8660;</button>
+      <button class="tb-btn icon" onclick="alignSel('right')" title="Justér højre">&#8677;</button>
+      <button class="tb-btn icon" onclick="alignSel('top')" title="Justér top">&#8679;</button>
+      <button class="tb-btn icon" onclick="alignSel('vcenter')" title="Centrér vertikalt">&#8661;</button>
+      <button class="tb-btn icon" onclick="alignSel('bottom')" title="Justér bund">&#8681;</button>
+    </div>
+    <div id="rb-format" class="rb-pane" style="display:none"><span class="cb-hint">Vælg et element</span></div>
+    <div id="rb-anim" class="rb-pane" style="display:none"><span class="cb-hint">Vælg et element</span></div>
+    <div id="rb-data" class="rb-pane" style="display:none"><span class="cb-hint">Vælg et element</span></div>
+  </div>
 </div>
-
-<div id="ctxbar"><span class="cb-hint">Klik på et element for at redigere</span></div>
 
 <div id="app">
 <div id="app-main">
@@ -373,7 +404,6 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
   <div class="sb">W: <span id="sb-w">—</span></div>
   <div class="sb">H: <span id="sb-h">—</span></div>
   <div class="sb" style="margin-left:auto">Elementer: <span id="sb-n">0</span></div>
-  <button id="tl-show-btn" onclick="toggleTimeline()" style="display:none;background:none;border:1px solid var(--border2);color:var(--text3);height:18px;padding:0 8px;border-radius:3px;cursor:pointer;font-size:10px" title="Vis tidslinje">&#9650; Tidslinje</button>
   <div class="sb" style="display:flex;align-items:center;gap:4px">
     <button onclick="setCanvasZoom(canvasZoom/1.25)" style="background:none;border:1px solid var(--border2);color:var(--text2);width:18px;height:18px;border-radius:3px;cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center" title="Zoom ud (Ctrl+−)">−</button>
     <span style="font-size:11px;color:var(--text3)">Zoom:</span><span id="sb-zoom" style="font-family:var(--mono);font-size:11px;color:var(--text2);min-width:38px;text-align:center">100%</span>
@@ -577,55 +607,65 @@ function mkEl(type,p={}){
   };
 }
 
-/* ── CONTEXT BAR ─────────────────────────────────── */
-function renderCtxBar(){
-  const bar=document.getElementById('ctxbar');if(!bar)return;
-  if(!selIds.length){bar.innerHTML='<span class="cb-hint">Klik på et element for at redigere</span>';return;}
-  if(selIds.length>1){bar.innerHTML=`<span class="cb-hint">${selIds.length} elementer valgt</span>`;return;}
-  const el=elements.find(x=>x.id===selIds[0]);if(!el){bar.innerHTML='';return;}
+/* ── RIBBON ──────────────────────────────────────── */
+let ribbonTab='fil';
+function setRibbonTab(t){
+  ribbonTab=t;
+  document.querySelectorAll('.rt').forEach(b=>b.classList.remove('active'));
+  const rb=document.getElementById('rt-'+t);if(rb)rb.classList.add('active');
+  ['fil','edit','format','anim','data'].forEach(id=>{
+    const el=document.getElementById('rb-'+id);if(el)el.style.display=id===t?'flex':'none';
+  });
+  renderRibbonBar();
+}
+function renderRibbonBar(){
+  const t=ribbonTab;
+  if(t==='format')_renderRibbonFormat();
+  else if(t==='anim')_renderRibbonAnim();
+  else if(t==='data')_renderRibbonData();
+}
+function _elForRibbon(){
+  if(!selIds.length||selIds.length>1)return null;
+  return elements.find(x=>x.id===selIds[0])||null;
+}
+function _renderRibbonFormat(){
+  const pane=document.getElementById('rb-format');if(!pane)return;
+  const el=_elForRibbon();
+  if(!el){pane.innerHTML='<span class="cb-hint">Vælg et element for at redigere</span>';return;}
+  if(selIds.length>1){pane.innerHTML=`<span class="cb-hint">${selIds.length} elementer valgt</span>`;return;}
   const isText=el.type==='text',isTicker=el.type==='ticker',isRect=el.type==='rect',isLine=el.type==='line',isImg=el.type==='image';
-  let h=`
-    <span class="cb-lbl">X</span><input class="cb-inp" id="cb-x" type="number" value="${Math.round(el.x)}">
+  let h=`<span class="cb-lbl">X</span><input class="cb-inp" id="cb-x" type="number" value="${Math.round(el.x)}">
     <span class="cb-lbl">Y</span><input class="cb-inp" id="cb-y" type="number" value="${Math.round(el.y)}">
     <span class="cb-sep"></span>
     <span class="cb-lbl">W</span><input class="cb-inp" id="cb-w" type="number" value="${Math.round(el.w)}">
     <span class="cb-lbl">H</span><input class="cb-inp" id="cb-h" type="number" value="${Math.round(el.h)}">
     <span class="cb-sep"></span>
-    <span class="cb-lbl">Opacity</span><input class="cb-inp sm" id="cb-op" type="number" value="${Math.round(el.opacity*100)}" min="0" max="100">
-    <span class="cb-lbl" style="margin-left:-2px">%</span>
-  `;
+    <span class="cb-lbl">Opacity</span><input class="cb-inp sm" id="cb-op" type="number" value="${Math.round(el.opacity*100)}" min="0" max="100"><span class="cb-lbl" style="margin-left:-2px">%</span>`;
   if(isText||isTicker){
     h+=`<span class="cb-sep"></span>
     <select class="cb-sel" id="cb-font" style="width:120px">${FONTS.map(f=>`<option value="${f}"${f===el.fontFamily?' selected':''}>${f}</option>`).join('')}</select>
-    <input class="cb-inp sm" id="cb-fs" type="number" value="${el.fontSize}" title="Størrelse">
-    <select class="cb-sel" id="cb-fw" style="width:100px">${fwfsOpts(el)}</select>
+    <input class="cb-inp sm" id="cb-fs" type="number" value="${el.fontSize}">
+    <select class="cb-sel" id="cb-fw" style="width:105px">${fwfsOpts(el)}</select>
     <span class="cb-sep"></span>
     <input type="color" class="cb-color" id="cb-color" value="${el.color}" title="Tekstfarve">`;
-    if(isText)h+=`
-    <button class="cb-btn${(el.textAlign||'left')==='left'?' active':''}" onclick="setTextAlign('left')" title="Venstre">&#8676;</button>
-    <button class="cb-btn${(el.textAlign||'left')==='center'?' active':''}" onclick="setTextAlign('center')" title="Centrér">&#8644;</button>
-    <button class="cb-btn${(el.textAlign||'left')==='right'?' active':''}" onclick="setTextAlign('right')" title="Højre">&#8677;</button>
+    if(isText)h+=`<button class="cb-btn${(el.textAlign||'left')==='left'?' active':''}" onclick="setTextAlign('left')">&#8676;</button>
+    <button class="cb-btn${(el.textAlign||'left')==='center'?' active':''}" onclick="setTextAlign('center')">&#8644;</button>
+    <button class="cb-btn${(el.textAlign||'left')==='right'?' active':''}" onclick="setTextAlign('right')">&#8677;</button>
     <span class="cb-sep"></span>
     <input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}" title="Baggrund">`;
   }
-  if(isRect){
-    h+=`<span class="cb-sep"></span>
+  if(isRect)h+=`<span class="cb-sep"></span>
     <input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}" title="Fyld">
-    <span class="cb-lbl">R</span><input class="cb-inp sm" id="cb-br" type="number" value="${el.borderRadius}" min="0" title="Afrunding">`;
-  }
-  if(isLine){
-    h+=`<span class="cb-sep"></span>
+    <span class="cb-lbl">R</span><input class="cb-inp sm" id="cb-br" type="number" value="${el.borderRadius}" min="0">`;
+  if(isLine)h+=`<span class="cb-sep"></span>
     <input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:el.color}" title="Farve">`;
-  }
-  if(isImg){
-    h+=`<span class="cb-sep"></span>
+  if(isImg)h+=`<span class="cb-sep"></span>
     <select class="cb-sel" id="cb-fit"><option value="contain"${el.objectFit==='contain'?' selected':''}>Contain</option><option value="cover"${el.objectFit==='cover'?' selected':''}>Cover</option><option value="fill"${el.objectFit==='fill'?' selected':''}>Fill</option><option value="none"${el.objectFit==='none'?' selected':''}>None</option></select>`;
-  }
-  h+=`<span class="cb-sep"></span><span class="cb-lbl">Navn</span><input class="cb-inp wide" id="cb-name" value="${el.name.replace(/"/g,'&quot;')}" title="Elementnavn">`;
-  bar.innerHTML=h;
-  bindCtxBar(el);
+  h+=`<span class="cb-sep"></span><span class="cb-lbl">Navn</span><input class="cb-inp wide" id="cb-name" value="${el.name.replace(/"/g,'&quot;')}">`;
+  pane.innerHTML=h;
+  _bindCtxBar(el);
 }
-function bindCtxBar(el){
+function _bindCtxBar(el){
   const cb=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('input',e=>{fn(e.target.value);render();renderPanel();});};
   const cbn=(id,fn)=>{const inp=document.getElementById(id);if(inp){inp.addEventListener('input',e=>{fn(parseFloat(e.target.value)||0);render();renderPanel();});inp.addEventListener('change',()=>saveState());}};
   cbn('cb-x',v=>{el.x=v;});cbn('cb-y',v=>{el.y=v;});
@@ -637,21 +677,63 @@ function bindCtxBar(el){
   cbn('cb-br',v=>{el.borderRadius=Math.max(0,v);});
   cb('cb-name',v=>{el.name=v;updLayersList&&updLayersList();});
   cb('cb-fit',v=>{el.objectFit=v;});
-  const cc=document.getElementById('cb-color');
-  if(cc)cc.addEventListener('input',e=>{el.color=e.target.value;render();renderPanel();});
-  const cbg=document.getElementById('cb-bgc');
-  if(cbg)cbg.addEventListener('input',e=>{el.bgColor=e.target.value;render();renderPanel();});
+  const cc=document.getElementById('cb-color');if(cc)cc.addEventListener('input',e=>{el.color=e.target.value;render();renderPanel();});
+  const cbg=document.getElementById('cb-bgc');if(cbg)cbg.addEventListener('input',e=>{el.bgColor=e.target.value;render();renderPanel();});
 }
+function _renderRibbonAnim(){
+  const pane=document.getElementById('rb-anim');if(!pane)return;
+  const el=_elForRibbon();
+  if(!el){pane.innerHTML='<span class="cb-hint">Vælg et element for at angive animation</span>';return;}
+  const ainSel=ANIMS.map(a=>`<option value="${a}"${el.animation===a?' selected':''}>${ANIM_LBL[a]}</option>`).join('');
+  const aoutSel=ANIMS_OUT.map(a=>`<option value="${a}"${(el.animOut||'auto')===a?' selected':''}>${ANIM_OUT_LBL[a]}</option>`).join('');
+  pane.innerHTML=`
+    <span class="cb-lbl" style="font-weight:600;color:var(--text2)">IND</span>
+    <select class="cb-sel" id="rb-ain" style="width:100px">${ainSel}</select>
+    <span class="cb-lbl">Delay</span><input class="cb-inp sm" id="rb-adl" type="number" value="${el.animDelay}" step="0.05" min="0">
+    <span class="cb-lbl">Dur</span><input class="cb-inp sm" id="rb-adur" type="number" value="${el.animDuration}" step="0.05" min="0.05">
+    <span class="cb-sep"></span>
+    <span class="cb-lbl" style="font-weight:600;color:var(--text2)">UD</span>
+    <select class="cb-sel" id="rb-aout" style="width:100px">${aoutSel}</select>
+    <span class="cb-lbl">Delay</span><input class="cb-inp sm" id="rb-aodl" type="number" value="${el.animOutDelay??0}" step="0.05" min="0">
+    <span class="cb-lbl">Dur</span><input class="cb-inp sm" id="rb-aodur" type="number" value="${el.animOutDuration??0.3}" step="0.05" min="0.05">
+    <span class="cb-sep"></span>
+    <button class="tb-btn" onclick="previewAnim()">&#9654; Preview</button>`;
+  const cbn=(id,fn)=>{const inp=document.getElementById(id);if(inp){inp.addEventListener('input',e=>{fn(parseFloat(e.target.value)||0);render();});inp.addEventListener('change',()=>saveState());}};
+  const cbs=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('change',e=>{saveState();fn(e.target.value);renderTimeline();});};
+  cbs('rb-ain',v=>{el.animation=v;});cbs('rb-aout',v=>{el.animOut=v;});
+  cbn('rb-adl',v=>{el.animDelay=v;});cbn('rb-adur',v=>{el.animDuration=v;});
+  cbn('rb-aodl',v=>{el.animOutDelay=v;});cbn('rb-aodur',v=>{el.animOutDuration=v;});
+}
+function _renderRibbonData(){
+  const pane=document.getElementById('rb-data');if(!pane)return;
+  const el=_elForRibbon();
+  if(!el){pane.innerHTML='<span class="cb-hint">Vælg et element for at konfigurere data</span>';return;}
+  pane.innerHTML=`
+    <label class="cb-lbl" style="cursor:pointer"><input type="checkbox" id="rb-spx" ${el.spxField?'checked':''} style="accent-color:var(--accent);margin-right:4px">SPX felt</label>
+    <input class="cb-inp wide" id="rb-flbl" value="${el.fieldLabel||''}" placeholder="Felt-label" ${el.spxField?'':'style="opacity:.4"'}>
+    <span class="cb-sep"></span>
+    <span class="cb-lbl">API URL</span><input class="cb-inp" id="rb-url" style="width:220px" value="${el.apiUrl||''}" placeholder="https://...">
+    <span class="cb-lbl">Interval</span><input class="cb-inp sm" id="rb-ivl" type="number" value="${el.apiInterval??30}" min="5" max="300">
+    <span class="cb-lbl" style="margin-left:-2px">s</span>
+    <span class="cb-lbl">Skabelon</span><input class="cb-inp wide" id="rb-tpl" value="${el.apiTemplate||''}" placeholder="{feltnavn}">`;
+  const cb=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('input',e=>fn(e.target.value));};
+  const spx=document.getElementById('rb-spx');
+  if(spx)spx.addEventListener('change',e=>{el.spxField=e.target.checked;const flbl=document.getElementById('rb-flbl');if(flbl)flbl.style.opacity=e.target.checked?'1':'.4';renderPanel();});
+  cb('rb-flbl',v=>{el.fieldLabel=v;renderPanel();});
+  cb('rb-url',v=>{el.apiUrl=v;});
+  cb('rb-ivl',v=>{el.apiInterval=parseFloat(v)||30;});
+  cb('rb-tpl',v=>{el.apiTemplate=v;});
+}
+function copySel(){if(selIds.length){clipboard=selIds.map(id=>JSON.parse(JSON.stringify(elements.find(x=>x.id===id)))).filter(Boolean);toast(clipboard.length+' kopieret');}}
+/* ── END RIBBON ──────────────────────────────────── */
 function togglePanel(){
   const p=document.getElementById('panel'),btn=document.getElementById('panel-toggle');
   const collapsed=p.classList.toggle('collapsed');
   if(btn)btn.textContent=collapsed?'‹':'›';
 }
 function toggleTimeline(){
-  const tl=document.getElementById('timeline'),btn=document.getElementById('tl-show-btn');
-  const hidden=tl.style.display==='none';
-  tl.style.display=hidden?'':'none';
-  if(btn)btn.style.display=hidden?'none':'';
+  const tl=document.getElementById('timeline');
+  tl.style.display=tl.style.display==='none'?'':'none';
   calcScale();
 }
 /* ── END CONTEXT BAR ─────────────────────────────── */
@@ -1045,7 +1127,7 @@ function updStatus(){
 }
 
 function switchTab(t){currentTab=t;document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+t).classList.add('active');renderPanel();}
-function renderPanel(){if(currentTab==='layers'){renderLayersTab();}else if(currentTab==='canvas'){renderCanvasTab();}else{renderPropsTab();}renderCtxBar();}
+function renderPanel(){if(currentTab==='layers'){renderLayersTab();}else if(currentTab==='canvas'){renderCanvasTab();}else{renderPropsTab();}renderRibbonBar();}
 
 function renderCanvasTab(){
   document.getElementById('pbody').innerHTML=`
