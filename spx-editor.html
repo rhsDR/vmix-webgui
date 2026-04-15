@@ -518,6 +518,8 @@ let showGrid=false,snapOn=true,gridSz=20;
 let bgColor='transparent';
 let currentTab='props';
 let exportMode='css';
+let ribbonTab='format';
+const THEMES=['default','dark','graa','kold'];
 let tlZoom=3;
 let scrubTime=null,isScrubbing=false,_arrowMoving=false;
 let transitionOnUpdate=true;
@@ -701,7 +703,6 @@ function mkEl(type,p={}){
 }
 
 /* ── RIBBON ──────────────────────────────────────── */
-let ribbonTab='format';
 function setRibbonTab(t){
   if(t==='fil'){toggleFilDropdown();return;}
   closeFilDropdown();
@@ -732,7 +733,6 @@ function closeFilDropdown(){
   document.getElementById('fil-dropdown').classList.remove('open');
   document.getElementById('rt-fil').classList.remove('active');
 }
-const THEMES=['default','dark','graa','kold'];
 function setTheme(t){
   THEMES.forEach(id=>document.documentElement.classList.remove('theme-'+id));
   if(t!=='default')document.documentElement.classList.add('theme-'+t);
