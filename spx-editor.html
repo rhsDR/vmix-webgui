@@ -48,11 +48,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 #app-main{display:flex;flex:1;overflow:hidden;}
 
 /* LEFT TOOLBAR */
-#toolbar{width:44px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:2px;flex-shrink:0;}
-.tl-btn{width:32px;height:32px;border-radius:var(--r);border:none;background:transparent;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s;position:relative;}
-.tl-btn:hover{background:var(--surface3);color:var(--text2);}
-.tl-btn.active{background:var(--surface3);color:var(--accent);}
-.tl-sep{width:24px;height:1px;background:var(--border);margin:3px 0;}
+#toolbar{width:52px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:1px;flex-shrink:0;}
+.tl-btn{width:40px;height:40px;border-radius:var(--r);border:none;background:transparent;color:var(--text3);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;transition:all .15s;position:relative;gap:2px;}
+.tl-btn:hover{background:var(--surface3);color:var(--text);}
+.tl-btn.active{background:rgba(232,89,60,.12);color:var(--accent);}
+.tl-lbl{font-size:8px;font-family:var(--font);letter-spacing:.03em;line-height:1;color:inherit;pointer-events:none;}
+.tl-sep{width:30px;height:1px;background:var(--border);margin:4px 0;}
 .tl-tip{position:absolute;left:38px;top:50%;transform:translateY(-50%);background:var(--surface3);border:1px solid var(--border2);padding:3px 8px;border-radius:4px;font-size:11px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .1s;z-index:1000;color:var(--text);}
 .tl-btn:hover .tl-tip{opacity:1;}
 
@@ -325,23 +326,23 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 <div id="app">
 <div id="app-main">
   <div id="toolbar">
-    <button class="tl-btn active" id="tool-select" onclick="setTool('select')"><span class="tl-tip">Vælg (V)</span>&#8680;</button>
+    <button class="tl-btn active" id="tool-select" onclick="setTool('select')"><span class="tl-tip">Vælg (V)</span>&#8680;<span class="tl-lbl">Vælg</span></button>
     <div class="tl-sep"></div>
-    <button class="tl-btn" id="tool-text" onclick="setTool('text')"><span class="tl-tip">Tekst (T)</span>T</button>
-    <button class="tl-btn" id="tool-rect" onclick="setTool('rect')"><span class="tl-tip">Rektangel (R)</span>&#9645;</button>
-    <button class="tl-btn" id="tool-line" onclick="setTool('line')"><span class="tl-tip">Linje (L)</span>&#8212;</button>
-    <button class="tl-btn" id="tool-ticker" onclick="setTool('ticker')"><span class="tl-tip">Ticker (K)</span>&#9656;&#9656;</button>
-    <button class="tl-btn" id="tool-image" onclick="document.getElementById('img-file-inp').click()"><span class="tl-tip">Billede (I)</span>&#9974;</button>
+    <button class="tl-btn" id="tool-text" onclick="setTool('text')"><span class="tl-tip">Tekst (T)</span>T<span class="tl-lbl">Tekst</span></button>
+    <button class="tl-btn" id="tool-rect" onclick="setTool('rect')"><span class="tl-tip">Rektangel (R)</span>&#9645;<span class="tl-lbl">Rect</span></button>
+    <button class="tl-btn" id="tool-line" onclick="setTool('line')"><span class="tl-tip">Linje (L)</span>&#8212;<span class="tl-lbl">Linje</span></button>
+    <button class="tl-btn" id="tool-ticker" onclick="setTool('ticker')"><span class="tl-tip">Ticker (K)</span>&#9656;&#9656;<span class="tl-lbl">Ticker</span></button>
+    <button class="tl-btn" id="tool-image" onclick="document.getElementById('img-file-inp').click()"><span class="tl-tip">Billede (I)</span>&#9974;<span class="tl-lbl">Billede</span></button>
     <input type="file" id="img-file-inp" accept="image/*" style="display:none" onchange="importImageFile(event)">
     <div class="tl-sep"></div>
-    <button class="tl-btn" onclick="duplicateSel()" title="Dupliker (Ctrl+D)"><span class="tl-tip">Dupliker (Ctrl+D)</span>&#8711;</button>
+    <button class="tl-btn" onclick="duplicateSel()"><span class="tl-tip">Dupliker (Ctrl+D)</span>&#8711;<span class="tl-lbl">Kopi</span></button>
     <div class="tl-sep"></div>
-    <button class="tl-btn" onclick="alignSel('left')"><span class="tl-tip">Justér venstre</span>&#8676;</button>
-    <button class="tl-btn" onclick="alignSel('hcenter')"><span class="tl-tip">Centrér horisontalt</span>&#8660;</button>
-    <button class="tl-btn" onclick="alignSel('right')"><span class="tl-tip">Justér højre</span>&#8677;</button>
-    <button class="tl-btn" onclick="alignSel('top')"><span class="tl-tip">Justér top</span>&#8679;</button>
-    <button class="tl-btn" onclick="alignSel('vcenter')"><span class="tl-tip">Centrér vertikalt</span>&#8661;</button>
-    <button class="tl-btn" onclick="alignSel('bottom')"><span class="tl-tip">Justér bund</span>&#8681;</button>
+    <button class="tl-btn" onclick="alignSel('left')"><span class="tl-tip">Justér venstre</span>&#8676;<span class="tl-lbl">V.stl</span></button>
+    <button class="tl-btn" onclick="alignSel('hcenter')"><span class="tl-tip">Centrér horisontalt</span>&#8660;<span class="tl-lbl">H.ctr</span></button>
+    <button class="tl-btn" onclick="alignSel('right')"><span class="tl-tip">Justér højre</span>&#8677;<span class="tl-lbl">H.stl</span></button>
+    <button class="tl-btn" onclick="alignSel('top')"><span class="tl-tip">Justér top</span>&#8679;<span class="tl-lbl">Top</span></button>
+    <button class="tl-btn" onclick="alignSel('vcenter')"><span class="tl-tip">Centrér vertikalt</span>&#8661;<span class="tl-lbl">V.ctr</span></button>
+    <button class="tl-btn" onclick="alignSel('bottom')"><span class="tl-tip">Justér bund</span>&#8681;<span class="tl-lbl">Bund</span></button>
   </div>
 
   <div id="canvas-area">
