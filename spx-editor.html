@@ -53,7 +53,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .tl-btn:hover .tl-tip{opacity:1;}
 
 /* CANVAS AREA */
-#canvas-area{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;background:var(--bg);}
+#canvas-area{flex:1;overflow:hidden;position:relative;background:var(--bg);}
+#canvas-viewport{width:100%;height:100%;overflow:auto;display:flex;align-items:center;justify-content:center;}
+#canvas-viewport.zoomed{display:block;padding:40px;box-sizing:border-box;}
 #canvas-outer{display:grid;grid-template-columns:20px auto;grid-template-rows:20px auto auto;}
 #ruler-corner{grid-area:1/1/2/2;background:var(--surface2);border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
 #ruler-h{grid-area:1/2/2/3;height:20px;display:block;border-bottom:1px solid var(--border);}
@@ -283,6 +285,7 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
   </div>
 
   <div id="canvas-area">
+  <div id="canvas-viewport">
     <div id="canvas-outer">
       <div id="ruler-corner"></div>
       <canvas id="ruler-h"></canvas>
@@ -293,6 +296,7 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
       </div>
       <div id="res-label">1920 &times; 1080 px</div>
     </div>
+  </div>
   </div>
 
   <div id="panel">
@@ -336,7 +340,12 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
   <div class="sb">W: <span id="sb-w">—</span></div>
   <div class="sb">H: <span id="sb-h">—</span></div>
   <div class="sb" style="margin-left:auto">Elementer: <span id="sb-n">0</span></div>
-  <div class="sb">Zoom: <span id="sb-zoom">100%</span></div>
+  <div class="sb" style="display:flex;align-items:center;gap:4px">
+    <button onclick="setCanvasZoom(canvasZoom/1.25)" style="background:none;border:1px solid var(--border2);color:var(--text2);width:18px;height:18px;border-radius:3px;cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center" title="Zoom ud (Ctrl+−)">−</button>
+    <span style="font-size:11px;color:var(--text3)">Zoom:</span><span id="sb-zoom" style="font-family:var(--mono);font-size:11px;color:var(--text2);min-width:38px;text-align:center">100%</span>
+    <button onclick="setCanvasZoom(canvasZoom*1.25)" style="background:none;border:1px solid var(--border2);color:var(--text2);width:18px;height:18px;border-radius:3px;cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center" title="Zoom ind (Ctrl+=)">+</button>
+    <button onclick="setCanvasZoom(1)" style="background:none;border:1px solid var(--border2);color:var(--text3);height:18px;padding:0 5px;border-radius:3px;cursor:pointer;font-size:10px" title="Tilpas til vindue (Ctrl+0)">Fit</button>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -351,7 +360,7 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 
 <script>
 const CW=1920,CH=1080;
-let scale=1,tool='select',elements=[],selIds=[],elCtr=0;
+let scale=1,canvasZoom=1,tool='select',elements=[],selIds=[],elCtr=0;
 let dragging=false,dragOff=[],resizing=false,resEl=null,resHandle='',resStart={};
 let boxSel=false,boxStart={};
 let undoStack=[],redoStack=[],clipboard=[];
@@ -376,16 +385,32 @@ const ANIMS_OUT=['auto','fade','slide-left','slide-right','slide-up','slide-down
 const ANIM_OUT_LBL={auto:'Auto (spejl)',fade:'Fade','slide-left':'← Venstre','slide-right':'Højre →','slide-up':'Op','slide-down':'Ned',wipe:'Wipe',scale:'Scale',none:'Ingen'};
 
 const canvas=document.getElementById('canvas');
-const area=document.getElementById('canvas-area');
+const area=document.getElementById('canvas-area');const vport=document.getElementById('canvas-viewport');
 
 function calcScale(){
+  const prevOv=vport.style.overflow;vport.style.overflow='hidden';
   const aw=area.offsetWidth-80,ah=area.offsetHeight-80;
-  scale=Math.min(aw/CW,ah/CH);
+  vport.style.overflow=prevOv||'';
+  scale=Math.min(aw/CW,ah/CH)*canvasZoom;
   const cw=Math.round(CW*scale),ch=Math.round(CH*scale);
   canvas.style.width=cw+'px';canvas.style.height=ch+'px';
   const ci=document.getElementById('canvas-inner');
   if(ci){ci.style.width=cw+'px';ci.style.height=ch+'px';}
+  // Zoomed-in: viewport scrollable with padding; fit: flexbox centered
+  if(canvasZoom>1.01){vport.classList.add('zoomed');}else{vport.classList.remove('zoomed');}
+  const sz=document.getElementById('sb-zoom');if(sz)sz.textContent=Math.round(canvasZoom*100)+'%';
   drawGrid();drawRulers();render();
+}
+function setCanvasZoom(z,pivotX,pivotY){
+  const prev=canvasZoom;
+  canvasZoom=Math.max(0.15,Math.min(8,z));
+  if(canvasZoom===prev)return;
+  const ratio=canvasZoom/prev;
+  if(pivotX!=null){
+    vport.scrollLeft=(vport.scrollLeft+pivotX)*ratio-pivotX;
+    vport.scrollTop=(vport.scrollTop+pivotY)*ratio-pivotY;
+  }
+  calcScale();
 }
 function drawRulers(){
   const rh=document.getElementById('ruler-h'),rv=document.getElementById('ruler-v');
@@ -420,6 +445,14 @@ function drawRulers(){
   }
 }
 window.addEventListener('resize',calcScale);
+// Canvas zoom via Ctrl+scroll
+area.addEventListener('wheel',e=>{
+  if(!e.ctrlKey&&!e.metaKey)return;
+  e.preventDefault();
+  const rect=vport.getBoundingClientRect();
+  const px=e.clientX-rect.left,py=e.clientY-rect.top;
+  setCanvasZoom(canvasZoom*(e.deltaY<0?1.1:1/1.1),px,py);
+},{passive:false});
 
 function drawGrid(){
   const gc=document.getElementById('grid-canvas');
@@ -797,6 +830,9 @@ document.addEventListener('keydown',e=>{
     if(e.key==='a'){e.preventDefault();selIds=elements.map(x=>x.id);render();renderPanel();return;}
     if(e.key==='c'&&selIds.length){e.preventDefault();clipboard=selIds.map(id=>JSON.parse(JSON.stringify(elements.find(x=>x.id===id)))).filter(Boolean);toast(clipboard.length+' kopieret');return;}
     if(e.key==='v'&&clipboard.length){e.preventDefault();pasteSel();return;}
+    if(e.key==='0'){e.preventDefault();setCanvasZoom(1);return;}
+    if(e.key==='='||e.key==='+'){e.preventDefault();setCanvasZoom(canvasZoom*1.25);return;}
+    if(e.key==='-'){e.preventDefault();setCanvasZoom(canvasZoom/1.25);return;}
   }
   if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)&&selIds.length){
     e.preventDefault();const step=e.shiftKey?10:1;
@@ -868,7 +904,6 @@ function toggleVis(id){const el=elements.find(x=>x.id===id);if(el){el.visible=!e
 
 function updStatus(){
   document.getElementById('sb-n').textContent=elements.length;
-  document.getElementById('sb-zoom').textContent=Math.round(scale*100)+'%';
   if(selIds.length===1){const el=elements.find(x=>x.id===selIds[0]);if(el){document.getElementById('sb-x').textContent=Math.round(el.x);document.getElementById('sb-y').textContent=Math.round(el.y);document.getElementById('sb-w').textContent=Math.round(el.w);document.getElementById('sb-h').textContent=Math.round(el.h);return;}}
   ['sb-x','sb-y','sb-w','sb-h'].forEach(id=>document.getElementById(id).textContent='—');
 }
