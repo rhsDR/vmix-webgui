@@ -54,8 +54,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 
 /* CANVAS AREA */
 #canvas-area{flex:1;overflow:hidden;position:relative;background:var(--bg);}
-#canvas-viewport{width:100%;height:100%;overflow:auto;display:flex;align-items:center;justify-content:center;}
-#canvas-viewport.zoomed{display:block;padding:40px;box-sizing:border-box;}
+#canvas-viewport{width:100%;height:100%;overflow:auto;}
+#canvas-vp-inner{min-width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;padding:40px;box-sizing:border-box;}
+#canvas-area.panning{cursor:grab!important;}
+#canvas-area.panning-active{cursor:grabbing!important;}
 #canvas-outer{display:grid;grid-template-columns:20px auto;grid-template-rows:20px auto auto;}
 #ruler-corner{grid-area:1/1/2/2;background:var(--surface2);border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
 #ruler-h{grid-area:1/2/2/3;height:20px;display:block;border-bottom:1px solid var(--border);}
@@ -286,6 +288,7 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 
   <div id="canvas-area">
   <div id="canvas-viewport">
+  <div id="canvas-vp-inner">
     <div id="canvas-outer">
       <div id="ruler-corner"></div>
       <canvas id="ruler-h"></canvas>
@@ -296,6 +299,7 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
       </div>
       <div id="res-label">1920 &times; 1080 px</div>
     </div>
+  </div>
   </div>
   </div>
 
@@ -396,8 +400,6 @@ function calcScale(){
   canvas.style.width=cw+'px';canvas.style.height=ch+'px';
   const ci=document.getElementById('canvas-inner');
   if(ci){ci.style.width=cw+'px';ci.style.height=ch+'px';}
-  // Zoomed-in: viewport scrollable with padding; fit: flexbox centered
-  if(canvasZoom>1.01){vport.classList.add('zoomed');}else{vport.classList.remove('zoomed');}
   const sz=document.getElementById('sb-zoom');if(sz)sz.textContent=Math.round(canvasZoom*100)+'%';
   drawGrid();drawRulers();render();
 }
@@ -1806,6 +1808,34 @@ new ResizeObserver(()=>renderTimeline()).observe(document.getElementById('tl-tra
     const mv=e=>{tl.style.height=Math.max(60,Math.min(600,sh-(e.clientY-sy)))+'px';renderTimeline();};
     const up=()=>{handle.classList.remove('active');document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  });
+})();
+
+// Canvas panning — Space+drag or middle mouse button
+(function(){
+  let panning=false,panStart={x:0,y:0,sl:0,st:0},spaceDown=false;
+  document.addEventListener('keydown',e=>{
+    if(e.code==='Space'&&!e.target.matches('input,textarea,select')){
+      if(!spaceDown){spaceDown=true;area.classList.add('panning');}e.preventDefault();
+    }
+  });
+  document.addEventListener('keyup',e=>{
+    if(e.code==='Space'){spaceDown=false;if(!panning)area.classList.remove('panning');}
+  });
+  vport.addEventListener('mousedown',e=>{
+    if(e.button===1||(e.button===0&&spaceDown)){
+      panning=true;panStart={x:e.clientX,y:e.clientY,sl:vport.scrollLeft,st:vport.scrollTop};
+      area.classList.add('panning-active');area.classList.remove('panning');
+      e.preventDefault();e.stopPropagation();
+    }
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!panning)return;
+    vport.scrollLeft=panStart.sl-(e.clientX-panStart.x);
+    vport.scrollTop=panStart.st-(e.clientY-panStart.y);
+  });
+  document.addEventListener('mouseup',e=>{
+    if(panning){panning=false;area.classList.remove('panning-active');if(spaceDown)area.classList.add('panning');}
   });
 })();
 
