@@ -393,7 +393,7 @@ html.theme-kold{
       <div class="fd-sep"></div>
       <div style="padding:6px 14px 12px">
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:7px">Farvetema</div>
-        <div style="display:flex;gap:5px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
           <button class="theme-swatch active" id="ts-default" onclick="setTheme('default')"><span class="ts-dot" style="background:#1b1d24;border-color:#444"></span>Standard</button>
           <button class="theme-swatch" id="ts-dark" onclick="setTheme('dark')"><span class="ts-dot" style="background:#0e0f11;border-color:#333"></span>Mørk</button>
           <button class="theme-swatch" id="ts-graa" onclick="setTheme('graa')"><span class="ts-dot" style="background:#2c3038;border-color:#556"></span>Grå</button>
@@ -2298,7 +2298,7 @@ _applyTheme();
   document.addEventListener('mousedown',e=>{
     const lbl=e.target.closest('.scrub-lbl');
     if(!lbl||e.button!==0)return;
-    const inp=document.getElementById(lbl.dataset.for);
+    const inp=document.getElementById(lbl.getAttribute('data-for'));
     if(!inp)return;
     _s={inp,x0:e.clientX,v0:parseFloat(inp.value)||0,moved:false};
     e.preventDefault();
