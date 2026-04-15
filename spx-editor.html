@@ -413,6 +413,8 @@ let smartTickerSettings={
 };
 
 const FONTS=['DM Sans','Inter','Lato','Poppins','Nunito','Source Sans 3','PT Sans','Barlow','Barlow Condensed','Oswald','Roboto Condensed','Montserrat','Raleway','Exo 2','Kanit','Rajdhani','Teko','Bebas Neue','Anton','Playfair Display','Georgia','Courier New'];
+const FWFS=[['300-normal','Light'],['300-italic','Light Italic'],['400-normal','Regular'],['400-italic','Italic'],['500-normal','Medium'],['500-italic','Medium Italic'],['600-normal','Semibold'],['600-italic','Semibold Italic'],['700-normal','Bold'],['700-italic','Bold Italic']];
+function fwfsOpts(el){const cur=(el.fontWeight||'400')+'-'+(el.fontStyle||'normal');return FWFS.map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`).join('');}
 const ANIMS=['fade','slide-left','slide-right','slide-up','slide-down','wipe','scale','none'];
 const ANIM_LBL={fade:'Fade','slide-left':'← Venstre','slide-right':'Højre →','slide-up':'Op','slide-down':'Ned',wipe:'Wipe',scale:'Scale',none:'Ingen'};
 const ANIMS_OUT=['auto','fade','slide-left','slide-right','slide-up','slide-down','wipe','scale','none'];
@@ -596,11 +598,10 @@ function renderCtxBar(){
     h+=`<span class="cb-sep"></span>
     <select class="cb-sel" id="cb-font" style="width:120px">${FONTS.map(f=>`<option value="${f}"${f===el.fontFamily?' selected':''}>${f}</option>`).join('')}</select>
     <input class="cb-inp sm" id="cb-fs" type="number" value="${el.fontSize}" title="Størrelse">
-    <select class="cb-sel" id="cb-fw" style="width:60px">${['300','400','500','600','700'].map(w=>`<option value="${w}"${el.fontWeight===w?' selected':''}>${{300:'Light',400:'Reg',500:'Med',600:'Semi',700:'Bold'}[w]}</option>`).join('')}</select>
+    <select class="cb-sel" id="cb-fw" style="width:100px">${fwfsOpts(el)}</select>
     <span class="cb-sep"></span>
     <input type="color" class="cb-color" id="cb-color" value="${el.color}" title="Tekstfarve">`;
     if(isText)h+=`
-    <button class="cb-btn${el.fontStyle==='italic'?' active':''}" onclick="setFontStyle()" title="Kursiv" style="font-style:italic;width:28px">I</button>
     <button class="cb-btn${(el.textAlign||'left')==='left'?' active':''}" onclick="setTextAlign('left')" title="Venstre">&#8676;</button>
     <button class="cb-btn${(el.textAlign||'left')==='center'?' active':''}" onclick="setTextAlign('center')" title="Centrér">&#8644;</button>
     <button class="cb-btn${(el.textAlign||'left')==='right'?' active':''}" onclick="setTextAlign('right')" title="Højre">&#8677;</button>
@@ -632,7 +633,7 @@ function bindCtxBar(el){
   cbn('cb-op',v=>{el.opacity=Math.max(0,Math.min(1,v/100));});
   cb('cb-font',v=>{saveState();el.fontFamily=v;});
   cbn('cb-fs',v=>{el.fontSize=Math.max(1,v);});
-  cb('cb-fw',v=>{saveState();el.fontWeight=v;});
+  cb('cb-fw',v=>{saveState();const[w,s]=v.split('-');el.fontWeight=w;el.fontStyle=s;});
   cbn('cb-br',v=>{el.borderRadius=Math.max(0,v);});
   cb('cb-name',v=>{el.name=v;updLayersList&&updLayersList();});
   cb('cb-fit',v=>{el.objectFit=v;});
@@ -1181,12 +1182,11 @@ function renderPropsTab(){
         <div id="font-list">${FONTS.map(f=>`<div class="fopt${f===el.fontFamily?' active':''}" style="font-family:'${f}'" onclick="pickFont('${f}')">${f}</div>`).join('')}</div></div>
       <div class="pg2">
         <div><label>Størrelse</label><input class="pi" type="number" id="p-fs" value="${el.fontSize}"></div>
-        <div><label>Vægt</label><select class="pi" id="p-fw">${['300','400','500','600','700'].map(w=>`<option value="${w}"${el.fontWeight===w?' selected':''}>${{300:'Light',400:'Regular',500:'Medium',600:'Semibold',700:'Bold'}[w]}</option>`).join('')}</select></div>
+        <div><label>Vægt / Stil</label><select class="pi" id="p-fw">${fwfsOpts(el)}</select></div>
       </div>
-      <div class="prow"><span class="plbl">Stil</span>
+      <div class="prow"><span class="plbl">Justering</span>
         <div style="display:flex;gap:4px">
           ${['left','center','right'].map(a=>`<button class="achip${(el.textAlign||'left')===a?' active':''}" title="${a==='left'?'Venstre':a==='center'?'Centrér':'Højre'}" onclick="setTextAlign('${a}')">${a==='left'?'&#8676;':a==='center'?'&#8644;':'&#8677;'}</button>`).join('')}
-          <button class="achip${el.fontStyle==='italic'?' active':''}" style="font-style:italic;padding:2px 9px" title="Kursiv" onclick="setFontStyle()">I</button>
         </div>
       </div>
       <div class="prow"><span class="plbl">Farve</span><input type="color" class="pc" id="p-col" value="${el.color}"><input class="pi" id="p-col-hex" value="${el.color}"></div>
@@ -1213,7 +1213,7 @@ function renderPropsTab(){
         <div id="font-list">${FONTS.map(f=>`<div class="fopt${f===el.fontFamily?' active':''}" style="font-family:'${f}'" onclick="pickFont('${f}')">${f}</div>`).join('')}</div></div>
       <div class="pg2">
         <div><label>Størrelse</label><input class="pi" type="number" id="p-fs" value="${el.fontSize}"></div>
-        <div><label>Vægt</label><select class="pi" id="p-fw">${['300','400','500','600','700'].map(w=>`<option value="${w}"${el.fontWeight===w?' selected':''}>${{300:'Light',400:'Regular',500:'Medium',600:'Semibold',700:'Bold'}[w]}</option>`).join('')}</select></div>
+        <div><label>Vægt / Stil</label><select class="pi" id="p-fw">${fwfsOpts(el)}</select></div>
       </div>
       <div class="prow"><span class="plbl">Tekstfarve</span><input type="color" class="pc" id="p-col" value="${el.color}"><input class="pi" id="p-col-hex" value="${el.color}"></div>
       <div class="prow"><span class="plbl">Baggrund</span><input type="color" class="pc" id="p-bgc" value="${el.bgColor==='transparent'?'#000000':el.bgColor}"><input class="pi" id="p-bgc-hex" value="${el.bgColor}"></div>
@@ -1276,7 +1276,8 @@ function renderPropsTab(){
     </div>`:''}
   `;
   const b=(id,key,parse,cb)=>{const inp=document.getElementById(id);if(!inp)return;inp.addEventListener('input',e=>{el[key]=parse?parse(e.target.value):e.target.value;if(cb)cb();render();});};
-  b('p-txt','text');b('p-fs','fontSize',parseFloat);b('p-fw','fontWeight');
+  b('p-txt','text');b('p-fs','fontSize',parseFloat);
+  {const fw=document.getElementById('p-fw');if(fw)fw.addEventListener('input',e=>{const[w,s]=e.target.value.split('-');el.fontWeight=w;el.fontStyle=s;render();});}
   b('p-x','x',parseFloat);b('p-y','y',parseFloat);b('p-w','w',parseFloat);b('p-h','h',parseFloat);
   b('p-op','opacity',v=>parseFloat(v)/100);b('p-br','borderRadius',parseFloat);
   b('p-delay','animDelay',parseFloat);b('p-dur','animDuration',parseFloat);
