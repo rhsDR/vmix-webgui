@@ -591,8 +591,6 @@ document.addEventListener('mousedown',e=>{
 });
 // Init ribbon to format tab
 setRibbonTab('format');
-// Apply saved color theme
-_applyTheme();
 // Canvas zoom via Ctrl+scroll
 area.addEventListener('wheel',e=>{
   if(!e.ctrlKey&&!e.metaKey)return;
@@ -2280,6 +2278,8 @@ document.getElementById('tl-scroll').addEventListener('scroll',function(){
   document.addEventListener('mousemove',e=>{if(isScrubbing)scrubTo(evtToTime(e));});
   document.addEventListener('mouseup',()=>{isScrubbing=false;});
 })();
+// Apply saved color theme (must run after const THEMES is declared)
+_applyTheme();
 </script>
 </body>
 </html>
