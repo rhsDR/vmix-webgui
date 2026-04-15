@@ -431,6 +431,13 @@ function drawGrid(){
 function toggleGrid(){showGrid=!showGrid;drawGrid();document.getElementById('grid-btn').style.color=showGrid?'var(--accent)':'';}
 function toggleSnap(){snapOn=!snapOn;document.getElementById('snap-btn').style.color=snapOn?'var(--accent)':'';}
 function snap(v){return snapOn?Math.round(v/gridSz)*gridSz:Math.round(v);}
+const EDGE_SNAP=8; // canvas pixels
+function snapEdges(pos,size,anchors){
+  const s=snap(pos);
+  for(const a of anchors)if(Math.abs(s-a)<=EDGE_SNAP)return a;
+  for(const a of anchors)if(Math.abs(s+size-a)<=EDGE_SNAP)return a-size;
+  return s;
+}
 
 function saveState(){
   undoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings}));
@@ -490,6 +497,7 @@ function mkEl(type,p={}){
     animOut:p.animOut??'auto',
     animOutDelay:p.animOutDelay??0,
     animOutDuration:p.animOutDuration??0.3,
+    lockAspect:p.lockAspect??(type==='image'),
     name:p.name??(type==='text'?'Tekst':type==='rect'?'Rektangel':'Linje'),
   };
 }
@@ -567,7 +575,7 @@ function render(){
         rh.addEventListener('mousedown',e=>{
           e.stopPropagation();resizing=true;resEl=el;
           resHandle=cls.split('-')[1];
-          resStart={mx:e.clientX,my:e.clientY,w:el.w,h:el.h,x:el.x,y:el.y};saveState();
+          resStart={mx:e.clientX,my:e.clientY,w:el.w,h:el.h,x:el.x,y:el.y,aspect:el.w/el.h};saveState();
         });
         div.appendChild(rh);
       });
@@ -687,15 +695,28 @@ function scrubTo(t){
 
 document.addEventListener('mousemove',e=>{
   if(dragging){
-    dragOff.forEach(({id,ox,oy})=>{const el=elements.find(x=>x.id===id);if(el){el.x=snap(e.clientX/scale-ox);el.y=snap(e.clientY/scale-oy);}});
+    dragOff.forEach(({id,ox,oy})=>{const el=elements.find(x=>x.id===id);if(el){el.x=snapEdges(e.clientX/scale-ox,el.w,[0,960,1920]);el.y=snapEdges(e.clientY/scale-oy,el.h,[0,540,1080]);}});
     render();return;
   }
   if(resizing&&resEl){
     const dx=(e.clientX-resStart.mx)/scale,dy=(e.clientY-resStart.my)/scale;
-    if(resHandle==='e'||resHandle==='ne'||resHandle==='se')resEl.w=Math.max(10,snap(resStart.w+dx));
-    if(resHandle==='s'||resHandle==='sw'||resHandle==='se')resEl.h=Math.max(2,snap(resStart.h+dy));
-    if(resHandle==='w'||resHandle==='nw'||resHandle==='sw'){const nw=Math.max(10,snap(resStart.w-dx));resEl.x=resStart.x+(resStart.w-nw);resEl.w=nw;}
-    if(resHandle==='n'||resHandle==='nw'||resHandle==='ne'){const nh=Math.max(2,snap(resStart.h-dy));resEl.y=resStart.y+(resStart.h-nh);resEl.h=nh;}
+    const isCorner=['nw','ne','sw','se'].includes(resHandle);
+    const lockAR=resEl.lockAspect&&isCorner&&resStart.aspect>0;
+    if(lockAR){
+      // Aspect-ratio locked corner resize — horizontal delta drives both dims
+      let newW;
+      if(resHandle==='se'||resHandle==='ne')newW=Math.max(10,snap(resStart.w+dx));
+      else newW=Math.max(10,snap(resStart.w-dx));
+      const newH=Math.max(2,Math.round(newW/resStart.aspect));
+      resEl.w=newW;resEl.h=newH;
+      if(resHandle==='nw'||resHandle==='sw')resEl.x=resStart.x+(resStart.w-newW);
+      if(resHandle==='nw'||resHandle==='ne')resEl.y=resStart.y+(resStart.h-newH);
+    }else{
+      if(resHandle==='e'||resHandle==='ne'||resHandle==='se'){const nw=Math.max(10,snap(resStart.w+dx));resEl.w=nw;for(const a of[0,960,1920])if(Math.abs(resEl.x+nw-a)<=EDGE_SNAP){resEl.w=a-resEl.x;break;}}
+      if(resHandle==='s'||resHandle==='sw'||resHandle==='se'){const nh=Math.max(2,snap(resStart.h+dy));resEl.h=nh;for(const a of[0,540,1080])if(Math.abs(resEl.y+nh-a)<=EDGE_SNAP){resEl.h=a-resEl.y;break;}}
+      if(resHandle==='w'||resHandle==='nw'||resHandle==='sw'){let nw=Math.max(10,snap(resStart.w-dx));for(const a of[0,960,1920])if(Math.abs(resStart.x+(resStart.w-nw)-a)<=EDGE_SNAP){nw=resStart.w-(a-resStart.x);break;}resEl.x=resStart.x+(resStart.w-nw);resEl.w=Math.max(10,nw);}
+      if(resHandle==='n'||resHandle==='nw'||resHandle==='ne'){let nh=Math.max(2,snap(resStart.h-dy));for(const a of[0,540,1080])if(Math.abs(resStart.y+(resStart.h-nh)-a)<=EDGE_SNAP){nh=resStart.h-(a-resStart.y);break;}resEl.y=resStart.y+(resStart.h-nh);resEl.h=Math.max(2,nh);}
+    }
     render();renderPanel();return;
   }
   if(boxSel){
@@ -1029,6 +1050,7 @@ function renderPropsTab(){
         <option value="fill"${el.objectFit==='fill'?' selected':''}>Fill</option>
         <option value="none"${el.objectFit==='none'?' selected':''}>Ingen</option>
       </select></div>
+      <div class="prow"><span class="plbl">Lås proportioner</span><input type="checkbox" id="p-lock-aspect"${el.lockAspect?' checked':''}></div>
     </div>`:''}
     <div class="psec"><div class="psec-title">Live API (valgfrit)</div>
       <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.7">${el.type==='ticker'?'Brug <span style="font-family:var(--mono);color:var(--accent)">{ticker_normal}</span> eller <span style="font-family:var(--mono);color:var(--accent)">{ticker_breaking}</span> for kampdag tickers.<br>':''}Brug <span style="font-family:var(--mono);color:var(--accent)">{feltnavn}</span> til at indsætte værdier fra JSON.</div>
@@ -1092,6 +1114,7 @@ function renderPropsTab(){
   const tapiTpl=document.getElementById('p-api-tpl');if(tapiTpl)tapiTpl.addEventListener('input',e=>{el.apiTemplate=e.target.value;});
   const spx=document.getElementById('p-spx');if(spx)spx.addEventListener('change',e=>{el.spxField=e.target.checked;document.getElementById('p-spx-extra').style.display=e.target.checked?'':'none';});
   const pofit=document.getElementById('p-obj-fit');if(pofit)pofit.addEventListener('change',e=>{el.objectFit=e.target.value;render();});
+  const plka=document.getElementById('p-lock-aspect');if(plka)plka.addEventListener('change',e=>{el.lockAspect=e.target.checked;});
 }
 
 function pickFont(f){const el=elements.find(x=>x.id===selIds[0]);if(el){saveState();el.fontFamily=f;render();renderPanel();}document.getElementById('font-list')?.classList.remove('open');}
