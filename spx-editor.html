@@ -321,7 +321,7 @@ html.theme-kold{
       SPX <em>Editor</em>
     </div>
     <div class="tb-sep" style="margin:0 6px"></div>
-    <button class="tb-btn back" style="height:24px;font-size:11px" onclick="window.location.href='projects.html'">&#8592; Projekter</button>
+    <button class="tb-btn back" style="height:24px;font-size:11px" onclick="leaveEditor('projects.html')">&#8592; Projekter</button>
     <div class="tb-sep" style="margin:0 4px"></div>
     <button class="rt active" id="rt-fil" onclick="setRibbonTab('fil')">Fil</button>
     <button class="rt" id="rt-edit" onclick="setRibbonTab('edit')">Redigér</button>
@@ -535,6 +535,7 @@ let currentTab='props';
 let exportMode='css';
 let ribbonTab='format';
 const THEMES=['default','dark','graa','kold'];
+let _dirty=false;
 let tlZoom=3;
 let scrubTime=null,isScrubbing=false,_arrowMoving=false;
 let transitionOnUpdate=true;
@@ -654,7 +655,7 @@ function snapEdges(pos,size,anchors){
 function saveState(){
   undoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings}));
   if(undoStack.length>60)undoStack.shift();
-  redoStack=[];updUndoBtns();
+  redoStack=[];updUndoBtns();_dirty=true;
 }
 function undo(){
   if(!undoStack.length)return;
@@ -791,8 +792,8 @@ function loadRecentProject(idx){
   toast('Kan ikke genindlæse — brug Åbn projekt');
 }
 function newProject(){
-  if(elements.length&&!confirm('Nyt projekt? Ikke-gemte ændringer går tabt.'))return;
-  saveState();elements=[];selIds=[];bgColor='transparent';elCtr=0;
+  if(_dirty&&!confirm('Nyt projekt?\n\nDu har ikke-gemte ændringer — de vil gå tabt.'))return;
+  saveState();elements=[];selIds=[];bgColor='transparent';elCtr=0;_dirty=false;
   canvas.style.background=bgColor;
   document.getElementById('project-name').value='';
   render();renderPanel();renderTimeline();closeFilDropdown();toast('Nyt projekt','ok');
@@ -1679,12 +1680,19 @@ function saveProject(){
   const data=JSON.stringify({version:3,elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,projectName:name},null,2);
   try{const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},200);}
   catch(err){const uri='data:application/json;charset=utf-8,'+encodeURIComponent(data);const a=document.createElement('a');a.href=uri;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>document.body.removeChild(a),200);}
-  _addRecent(name||'Unavngivet');toast('Projekt gemt','ok');
+  _addRecent(name||'Unavngivet');_dirty=false;toast('Projekt gemt','ok');
 }
+function leaveEditor(url){
+  if(_dirty&&!confirm('Du har ikke-gemte ændringer.\n\nEr du sikker på at du vil forlade editoren?'))return;
+  _dirty=false;window.location.href=url;
+}
+window.addEventListener('beforeunload',e=>{
+  if(_dirty){e.preventDefault();e.returnValue='';}
+});
 function loadProject(ev){
   const file=ev.target.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=e=>{try{const d=JSON.parse(e.target.result);elements=d.elements||[];bgColor=d.bgColor||'transparent';elCtr=d.elCtr||elements.length;transitionOnUpdate=d.transitionOnUpdate??true;if(d.smartTickerSettings)Object.assign(smartTickerSettings,d.smartTickerSettings);if(d.projectName){document.getElementById('project-name').value=d.projectName;_addRecent(d.projectName);}canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];updUndoBtns();render();renderPanel();renderTimeline();toast('Projekt indlæst','ok');}catch{toast('Ugyldig projektfil');}};
+  reader.onload=e=>{try{const d=JSON.parse(e.target.result);elements=d.elements||[];bgColor=d.bgColor||'transparent';elCtr=d.elCtr||elements.length;transitionOnUpdate=d.transitionOnUpdate??true;if(d.smartTickerSettings)Object.assign(smartTickerSettings,d.smartTickerSettings);if(d.projectName){document.getElementById('project-name').value=d.projectName;_addRecent(d.projectName);}canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];_dirty=false;updUndoBtns();render();renderPanel();renderTimeline();toast('Projekt indlæst','ok');}catch{toast('Ugyldig projektfil');}};
   reader.readAsText(file);ev.target.value='';
 }
 
