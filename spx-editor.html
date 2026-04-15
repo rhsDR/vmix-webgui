@@ -44,7 +44,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 #undo-info{font-size:10px;color:var(--text3);font-family:var(--mono);min-width:24px;}
 
 /* MAIN LAYOUT */
-#app{display:flex;flex-direction:column;height:calc(100vh - 34px - 36px - 24px);}
+#app{display:flex;flex-direction:column;height:calc(100vh - 34px - 52px - 24px);}
 #app-main{display:flex;flex:1;overflow:hidden;}
 
 /* LEFT TOOLBAR */
@@ -176,11 +176,24 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 
 /* CONTEXT BAR */
 #ribbon{position:relative;}
-#ribbon-bar{height:36px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;overflow:hidden;}
-.rb-pane{display:flex;align-items:center;gap:4px;width:100%;}
+#ribbon-bar{height:52px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:stretch;padding:0;gap:0;flex-shrink:0;overflow:hidden;}
+.rb-pane{display:flex;align-items:center;gap:4px;width:100%;padding:0 8px;}
+/* GT Designer-style ribbon groups */
+.rb-grp{display:flex;flex-direction:column;border-right:1px solid var(--border);padding:5px 8px 0;flex-shrink:0;align-items:center;min-width:0;}
+.rb-grp-row{display:flex;align-items:flex-end;gap:4px;flex:1;padding-bottom:3px;}
+.rb-grp-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:500;white-space:nowrap;padding:2px 0 3px;text-align:center;border-top:1px solid var(--border);width:100%;}
+.rb-field{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.rf-lbl{font-size:9px;color:var(--text3);line-height:1;white-space:nowrap;cursor:ew-resize;user-select:none;}
+.rf-lbl:hover{color:var(--text2);}
+.rf-lbl.no-scrub{cursor:default;}
+/* Anchor grid */
+.anchor-grid{display:grid;grid-template-columns:repeat(3,13px);grid-template-rows:repeat(3,13px);gap:2px;}
+.ag-dot{border-radius:2px;border:1px solid var(--border2);background:var(--surface3);cursor:pointer;transition:all .1s;}
+.ag-dot:hover{background:var(--border2);}
+.ag-dot.active{background:var(--accent);border-color:var(--accent);}
 
 /* FIL DROPDOWN */
-#fil-dropdown{position:absolute;top:70px;left:0;width:460px;background:var(--surface);border:1px solid var(--border2);border-top:none;border-radius:0 0 8px 0;z-index:600;display:none;box-shadow:6px 10px 30px rgba(0,0,0,.6);}
+#fil-dropdown{position:absolute;top:86px;left:0;width:460px;background:var(--surface);border:1px solid var(--border2);border-top:none;border-radius:0 0 8px 0;z-index:600;display:none;box-shadow:6px 10px 30px rgba(0,0,0,.6);}
 #fil-dropdown.open{display:flex;}
 .fd-left{width:200px;padding:8px 0;border-right:1px solid var(--border);flex-shrink:0;}
 .fd-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;font-size:12px;color:var(--text2);transition:background .1s;user-select:none;}
@@ -682,6 +695,7 @@ function mkEl(type,p={}){
     gradientDir:p.gradientDir??null,
     gradientStop:p.gradientStop??0,
     opacity:p.opacity??1,borderRadius:p.borderRadius??0,
+    anchor:p.anchor??'tl',
     locked:false,visible:true,
     spxField:p.spxField??(type==='text'),
     fieldLabel:p.fieldLabel??('Felt '+elCtr),
@@ -798,40 +812,83 @@ function _elForRibbon(){
   if(!selIds.length||selIds.length>1)return null;
   return elements.find(x=>x.id===selIds[0])||null;
 }
+const ANCHOR_ORIGIN={tl:'top left',tc:'top center',tr:'top right',ml:'center left',mc:'center center',mr:'center right',bl:'bottom left',bc:'bottom center',br:'bottom right'};
+function _anchorGrid(el){
+  const rows=[['tl','tc','tr'],['ml','mc','mr'],['bl','bc','br']];
+  return`<div class="anchor-grid">${rows.map(r=>r.map(a=>`<div class="ag-dot${(el.anchor||'tl')===a?' active':''}" title="${ANCHOR_ORIGIN[a]}" onclick="setAnchor('${a}')"></div>`).join('')).join('')}</div>`;
+}
+function setAnchor(a){const el=_elForRibbon();if(!el)return;saveState();el.anchor=a;renderRibbonBar();}
 function _renderRibbonFormat(){
   const pane=document.getElementById('rb-format');if(!pane)return;
   const el=_elForRibbon();
-  if(!el){pane.innerHTML='<span class="cb-hint">Vælg et element for at redigere</span>';return;}
-  if(selIds.length>1){pane.innerHTML=`<span class="cb-hint">${selIds.length} elementer valgt</span>`;return;}
+  if(!el){pane.innerHTML='<span class="cb-hint" style="padding:0 12px">Vælg et element for at redigere</span>';return;}
+  if(selIds.length>1){pane.innerHTML=`<span class="cb-hint" style="padding:0 12px">${selIds.length} elementer valgt</span>`;return;}
   const isText=el.type==='text',isTicker=el.type==='ticker',isRect=el.type==='rect',isLine=el.type==='line',isImg=el.type==='image';
-  let h=`<span class="cb-lbl scrub-lbl" data-for="cb-x">X</span><input class="cb-inp" id="cb-x" type="number" value="${Math.round(el.x)}">
-    <span class="cb-lbl scrub-lbl" data-for="cb-y">Y</span><input class="cb-inp" id="cb-y" type="number" value="${Math.round(el.y)}">
-    <span class="cb-sep"></span>
-    <span class="cb-lbl scrub-lbl" data-for="cb-w">W</span><input class="cb-inp" id="cb-w" type="number" value="${Math.round(el.w)}" data-min="2">
-    <span class="cb-lbl scrub-lbl" data-for="cb-h">H</span><input class="cb-inp" id="cb-h" type="number" value="${Math.round(el.h)}" data-min="2">
-    <span class="cb-sep"></span>
-    <span class="cb-lbl scrub-lbl" data-for="cb-op">Opacity</span><input class="cb-inp sm" id="cb-op" type="number" value="${Math.round(el.opacity*100)}" data-min="0" data-max="100"><span class="cb-lbl" style="margin-left:-2px">%</span>`;
+  const fld=(lbl,id,w,extra='')=>`<div class="rb-field"><span class="rf-lbl scrub-lbl" data-for="${id}">${lbl}</span><input class="cb-inp" id="${id}" type="number" style="width:${w}px" ${extra}></div>`;
+  let h=`
+  <div class="rb-grp">
+    <div class="rb-grp-row">
+      ${fld('X','cb-x',48,`value="${Math.round(el.x)}"`)}
+      ${fld('Y','cb-y',48,`value="${Math.round(el.y)}"`)}
+    </div><div class="rb-grp-lbl">Position</div>
+  </div>
+  <div class="rb-grp">
+    <div class="rb-grp-row">
+      ${fld('B','cb-w',48,`value="${Math.round(el.w)}" data-min="2"`)}
+      ${fld('H','cb-h',48,`value="${Math.round(el.h)}" data-min="2"`)}
+    </div><div class="rb-grp-lbl">Størrelse</div>
+  </div>
+  <div class="rb-grp">
+    <div class="rb-grp-row">
+      ${fld('%','cb-op',38,`value="${Math.round(el.opacity*100)}" data-min="0" data-max="100"`)}
+    </div><div class="rb-grp-lbl">Opacity</div>
+  </div>`;
   if(isText||isTicker){
-    h+=`<span class="cb-sep"></span>
-    <select class="cb-sel" id="cb-font" style="width:120px">${FONTS.map(f=>`<option value="${f}"${f===el.fontFamily?' selected':''}>${f}</option>`).join('')}</select>
-    <span class="cb-lbl scrub-lbl" data-for="cb-fs" data-min="1" style="min-width:0">px</span><input class="cb-inp sm" id="cb-fs" type="number" value="${el.fontSize}" data-min="1">
-    <select class="cb-sel" id="cb-fw" style="width:105px">${fwfsOpts(el)}</select>
-    <span class="cb-sep"></span>
-    <input type="color" class="cb-color" id="cb-color" value="${el.color}" title="Tekstfarve">`;
-    if(isText)h+=`<button class="cb-btn${(el.textAlign||'left')==='left'?' active':''}" onclick="setTextAlign('left')">&#8676;</button>
-    <button class="cb-btn${(el.textAlign||'left')==='center'?' active':''}" onclick="setTextAlign('center')">&#8644;</button>
-    <button class="cb-btn${(el.textAlign||'left')==='right'?' active':''}" onclick="setTextAlign('right')">&#8677;</button>
-    <span class="cb-sep"></span>
-    <input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}" title="Baggrund">`;
+    h+=`
+  <div class="rb-grp">
+    <div class="rb-grp-row">
+      <div class="rb-field"><span class="rf-lbl no-scrub">Skrift</span><select class="cb-sel" id="cb-font" style="width:110px">${FONTS.map(f=>`<option value="${f}"${f===el.fontFamily?' selected':''}>${f}</option>`).join('')}</select></div>
+      ${fld('px','cb-fs',38,`value="${el.fontSize}" data-min="1"`)}
+      <div class="rb-field"><span class="rf-lbl no-scrub">Stil</span><select class="cb-sel" id="cb-fw" style="width:95px">${fwfsOpts(el)}</select></div>
+    </div><div class="rb-grp-lbl">Typografi</div>
+  </div>
+  <div class="rb-grp">
+    <div class="rb-grp-row">
+      <div class="rb-field"><span class="rf-lbl no-scrub">Tekst</span><input type="color" class="cb-color" id="cb-color" value="${el.color}"></div>
+      ${isText?`<div class="rb-field"><span class="rf-lbl no-scrub">Bg</span><input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}"></div>`:''}
+      ${isText?`<div class="rb-field" style="gap:2px"><span class="rf-lbl no-scrub">Just.</span><div style="display:flex;gap:2px"><button class="cb-btn${(el.textAlign||'left')==='left'?' active':''}" onclick="setTextAlign('left')">&#8676;</button><button class="cb-btn${(el.textAlign||'left')==='center'?' active':''}" onclick="setTextAlign('center')">&#8644;</button><button class="cb-btn${(el.textAlign||'left')==='right'?' active':''}" onclick="setTextAlign('right')">&#8677;</button></div></div>`:''}
+    </div><div class="rb-grp-lbl">Farve</div>
+  </div>`;
   }
-  if(isRect)h+=`<span class="cb-sep"></span>
-    <input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}" title="Fyld">
-    <span class="cb-lbl scrub-lbl" data-for="cb-br" data-min="0">R</span><input class="cb-inp sm" id="cb-br" type="number" value="${el.borderRadius}" data-min="0">`;
-  if(isLine)h+=`<span class="cb-sep"></span>
-    <input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:el.color}" title="Farve">`;
-  if(isImg)h+=`<span class="cb-sep"></span>
-    <select class="cb-sel" id="cb-fit"><option value="contain"${el.objectFit==='contain'?' selected':''}>Contain</option><option value="cover"${el.objectFit==='cover'?' selected':''}>Cover</option><option value="fill"${el.objectFit==='fill'?' selected':''}>Fill</option><option value="none"${el.objectFit==='none'?' selected':''}>None</option></select>`;
-  h+=`<span class="cb-sep"></span><span class="cb-lbl">Navn</span><input class="cb-inp wide" id="cb-name" value="${el.name.replace(/"/g,'&quot;')}">`;
+  if(isRect)h+=`
+  <div class="rb-grp">
+    <div class="rb-grp-row">
+      <div class="rb-field"><span class="rf-lbl no-scrub">Fyld</span><input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}"></div>
+      ${fld('R','cb-br',38,`value="${el.borderRadius}" data-min="0"`)}
+    </div><div class="rb-grp-lbl">Rektangel</div>
+  </div>`;
+  if(isLine)h+=`
+  <div class="rb-grp">
+    <div class="rb-grp-row">
+      <div class="rb-field"><span class="rf-lbl no-scrub">Farve</span><input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:el.color}"></div>
+    </div><div class="rb-grp-lbl">Linje</div>
+  </div>`;
+  if(isImg)h+=`
+  <div class="rb-grp">
+    <div class="rb-grp-row">
+      <div class="rb-field"><span class="rf-lbl no-scrub">Fit</span><select class="cb-sel" id="cb-fit" style="width:70px"><option value="contain"${el.objectFit==='contain'?' selected':''}>Contain</option><option value="cover"${el.objectFit==='cover'?' selected':''}>Cover</option><option value="fill"${el.objectFit==='fill'?' selected':''}>Fill</option><option value="none"${el.objectFit==='none'?' selected':''}>None</option></select></div>
+    </div><div class="rb-grp-lbl">Billede</div>
+  </div>`;
+  h+=`
+  <div class="rb-grp">
+    <div class="rb-grp-row">
+      <div class="rb-field"><span class="rf-lbl no-scrub">Navn</span><input class="cb-inp" id="cb-name" style="width:110px" value="${el.name.replace(/"/g,'&quot;')}"></div>
+    </div><div class="rb-grp-lbl">Lag</div>
+  </div>
+  <div class="rb-grp" style="border-right:none">
+    <div class="rb-grp-row">${_anchorGrid(el)}</div>
+    <div class="rb-grp-lbl">Anchor</div>
+  </div>`;
   pane.innerHTML=h;
   _bindCtxBar(el);
 }
