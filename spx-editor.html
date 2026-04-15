@@ -44,7 +44,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 #undo-info{font-size:10px;color:var(--text3);font-family:var(--mono);min-width:24px;}
 
 /* MAIN LAYOUT */
-#app{display:flex;flex-direction:column;height:calc(100vh - 34px - 52px - 24px);}
+#app{display:flex;flex-direction:column;height:calc(100vh - 34px - 60px - 24px);}
 #app-main{display:flex;flex:1;overflow:hidden;}
 
 /* LEFT TOOLBAR */
@@ -187,14 +187,14 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 
 /* CONTEXT BAR */
 #ribbon{position:relative;}
-#ribbon-bar{height:52px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:stretch;padding:0;gap:0;flex-shrink:0;overflow:hidden;}
+#ribbon-bar{height:60px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:stretch;padding:0;gap:0;flex-shrink:0;overflow:hidden;}
 .rb-pane{display:flex;align-items:center;gap:4px;width:100%;padding:0 8px;}
 /* GT Designer-style ribbon groups */
-.rb-grp{display:flex;flex-direction:column;border-right:1px solid var(--border);padding:5px 8px 0;flex-shrink:0;align-items:center;min-width:0;}
-.rb-grp-row{display:flex;align-items:flex-end;gap:4px;flex:1;padding-bottom:3px;}
-.rb-grp-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:500;white-space:nowrap;padding:2px 0 3px;text-align:center;border-top:1px solid var(--border);width:100%;}
+.rb-grp{display:flex;flex-direction:column;border-right:1px solid var(--border);padding:6px 10px 0;flex-shrink:0;align-items:center;min-width:0;}
+.rb-grp-row{display:flex;align-items:flex-end;gap:5px;flex:1;padding-bottom:4px;}
+.rb-grp-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:500;white-space:nowrap;padding:3px 0 3px;text-align:center;border-top:1px solid var(--border);width:100%;}
 .rb-field{display:flex;flex-direction:column;align-items:center;gap:2px;}
-.rf-lbl{font-size:9px;color:var(--text3);line-height:1;white-space:nowrap;cursor:ew-resize;user-select:none;}
+.rf-lbl{font-size:10px;color:var(--text3);line-height:1;white-space:nowrap;cursor:ew-resize;user-select:none;}
 .rf-lbl:hover{color:var(--text2);}
 .rf-lbl.no-scrub{cursor:default;}
 /* Anchor grid */
@@ -275,6 +275,15 @@ body.scrubbing{cursor:ew-resize!important;user-select:none;}
 /* IMPORT MODAL */
 #import-modal{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000;display:none;align-items:center;justify-content:center;}
 #import-modal.open{display:flex;}
+#help-modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;display:none;align-items:flex-start;justify-content:flex-end;padding:58px 8px 0 0;}
+#help-modal.open{display:flex;}
+#help-box{background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:260px;max-height:calc(100vh - 70px);overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.5);}
+#help-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 9px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text);position:sticky;top:0;background:var(--surface);z-index:1;}
+#help-body{padding:8px 0 12px;display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.hk-section{padding:6px 14px 10px;}
+.hk-title{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:5px;}
+.hk-row{display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:11px;color:var(--text2);}
+.hk-row .kbd{font-size:9px;white-space:nowrap;}
 #import-box{background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:480px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.7);}
 #import-box h2{font-size:14px;font-weight:600;padding:16px 18px 12px;border-bottom:1px solid var(--border);color:var(--text);}
 #import-scroll{flex:1;overflow-y:auto;padding:14px 18px;}
@@ -369,6 +378,7 @@ html.theme-kold{
     <button class="tb-btn" onclick="previewAnim()">&#9654; Preview</button>
     <button class="tb-btn primary" id="btn-st-export" style="display:none" onclick="exportSmartTicker()">&#11014; Smart Ticker</button>
     <button class="tb-btn primary" id="btn-spx-export" onclick="exportSPX()">&#11014; Eksportér</button>
+    <button class="tb-btn icon" onclick="document.getElementById('help-modal').classList.toggle('open')" title="Genvejstaster" style="font-size:13px;font-weight:700;width:26px">?</button>
   </div>
   <div id="ribbon-bar">
     <!-- project-name, load-inp, html-inp, ttype kept hidden for JS references -->
@@ -529,6 +539,60 @@ html.theme-kold{
 
 <div id="toast"></div>
 <div id="ctx"></div>
+<div id="help-modal">
+  <div id="help-box">
+    <div id="help-header">
+      <span>Genvejstaster</span>
+      <button onclick="document.getElementById('help-modal').classList.remove('open')" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;line-height:1;padding:2px 6px">✕</button>
+    </div>
+    <div id="help-body">
+      <div class="hk-section">
+        <div class="hk-title">Værktøjer</div>
+        <div class="hk-row"><span class="kbd">V</span><span>Vælg</span></div>
+        <div class="hk-row"><span class="kbd">T</span><span>Tekst</span></div>
+        <div class="hk-row"><span class="kbd">R</span><span>Rektangel</span></div>
+        <div class="hk-row"><span class="kbd">L</span><span>Linje</span></div>
+        <div class="hk-row"><span class="kbd">I</span><span>Billede</span></div>
+      </div>
+      <div class="hk-section">
+        <div class="hk-title">Redigér</div>
+        <div class="hk-row"><span class="kbd">Del</span><span>Slet valgt</span></div>
+        <div class="hk-row"><span class="kbd">Ctrl+D</span><span>Dupliker</span></div>
+        <div class="hk-row"><span class="kbd">Ctrl+C</span><span>Kopier</span></div>
+        <div class="hk-row"><span class="kbd">Ctrl+V</span><span>Indsæt</span></div>
+        <div class="hk-row"><span class="kbd">Ctrl+A</span><span>Vælg alle</span></div>
+        <div class="hk-row"><span class="kbd">Esc</span><span>Fravælg</span></div>
+      </div>
+      <div class="hk-section">
+        <div class="hk-title">Historik</div>
+        <div class="hk-row"><span class="kbd">Ctrl+Z</span><span>Fortryd</span></div>
+        <div class="hk-row"><span class="kbd">Ctrl+Y</span><span>Gentag</span></div>
+      </div>
+      <div class="hk-section">
+        <div class="hk-title">Fil</div>
+        <div class="hk-row"><span class="kbd">Ctrl+S</span><span>Gem projekt</span></div>
+      </div>
+      <div class="hk-section">
+        <div class="hk-title">Flyt valgt</div>
+        <div class="hk-row"><span class="kbd">↑ ↓ ← →</span><span>1 px</span></div>
+        <div class="hk-row"><span class="kbd">Shift + pil</span><span>10 px</span></div>
+      </div>
+      <div class="hk-section">
+        <div class="hk-title">Canvas</div>
+        <div class="hk-row"><span class="kbd">Ctrl+0</span><span>Reset zoom</span></div>
+        <div class="hk-row"><span class="kbd">Ctrl++</span><span>Zoom ind</span></div>
+        <div class="hk-row"><span class="kbd">Ctrl+−</span><span>Zoom ud</span></div>
+        <div class="hk-row"><span class="kbd">Space + træk</span><span>Pan canvas</span></div>
+        <div class="hk-row"><span class="kbd">G</span><span>Vis/skjul grid</span></div>
+      </div>
+      <div class="hk-section">
+        <div class="hk-title">Keyframes</div>
+        <div class="hk-row"><span class="kbd">Dbl-klik TL</span><span>Tilføj keyframe</span></div>
+        <div class="hk-row"><span class="kbd">Del</span><span>Slet valgt keyframe</span></div>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="import-modal">
   <div id="import-box">
     <h2 id="import-title">Indlæs SPX template</h2>
@@ -1651,13 +1715,7 @@ function selFromLayer(id){selIds=[id];render();switchTab('props');}
 function renderPropsTab(){
   const body=document.getElementById('pbody');
   if(!selIds.length){
-    body.innerHTML=`<div class="empty-hint">Klik på et element for at redigere det.<br><br>
-      <span class="kbd">V</span> Vælg &nbsp; <span class="kbd">T</span> Tekst<br>
-      <span class="kbd">R</span> Rektangel &nbsp; <span class="kbd">L</span> Linje &nbsp; <span class="kbd">I</span> Billede<br>
-      <span class="kbd">Del</span> Slet &nbsp; <span class="kbd">Ctrl+D</span> Dupliker<br>
-      <span class="kbd">Ctrl+C</span> Kopier &nbsp; <span class="kbd">Ctrl+V</span> Indsæt<br>
-      <span class="kbd">Ctrl+Z</span> Fortryd &nbsp; <span class="kbd">Ctrl+Y</span> Gentag<br>
-      <span class="kbd">Ctrl+A</span> Vælg alle &nbsp; <span class="kbd">Esc</span> Fravælg</div>`;
+    body.innerHTML=`<div class="empty-hint">Klik på et element for at redigere det.</div>`;
     return;
   }
   if(selIds.length>1){
@@ -2583,6 +2641,7 @@ function showImportModal(imported,importedBg,filename,warnings,spxCount){
 
 function applyImport(els,bg){saveState();elements=els;bgColor=bg;canvas.style.background=bgColor;selIds=[];document.getElementById('import-modal').classList.remove('open');render();renderPanel();renderTimeline();toast(`${els.length} elementer indlæst`,'ok');}
 document.getElementById('import-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+document.getElementById('help-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 
 calcScale();canvas.style.background=bgColor;render();renderPanel();renderTimeline();updUndoBtns();
 new ResizeObserver(()=>renderTimeline()).observe(document.getElementById('tl-track'));
