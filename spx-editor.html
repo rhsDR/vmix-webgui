@@ -258,6 +258,8 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
       SPX <em>Editor</em>
     </div>
     <div class="tb-sep" style="margin:0 6px"></div>
+    <button class="tb-btn back" style="height:24px;font-size:11px" onclick="window.location.href='projects.html'">&#8592; Projekter</button>
+    <div class="tb-sep" style="margin:0 4px"></div>
     <button class="rt active" id="rt-fil" onclick="setRibbonTab('fil')">Fil</button>
     <button class="rt" id="rt-edit" onclick="setRibbonTab('edit')">Redigér</button>
     <button class="rt" id="rt-format" onclick="setRibbonTab('format')">Format</button>
@@ -278,8 +280,6 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
   </div>
   <div id="ribbon-bar">
     <div id="rb-fil" class="rb-pane">
-      <button class="tb-btn back" onclick="window.location.href='projects.html'">&#8592; Projekter</button>
-      <div class="tb-sep"></div>
       <input type="text" id="project-name" placeholder="Projektnavn..." title="Projektnavn">
       <button class="tb-btn icon" title="Gem (Ctrl+S)" onclick="saveProject()">&#128190;</button>
       <button class="tb-btn icon" title="Åbn projekt" onclick="document.getElementById('load-inp').click()">&#128193;</button>
