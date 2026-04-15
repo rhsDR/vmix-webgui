@@ -1061,7 +1061,7 @@ function renderPropsTab(){
       ${el.type==='rect'?`<div class="prow"><span class="plbl">Afrunding</span><input class="pi sm" type="number" id="p-br" value="${el.borderRadius}" min="0"></div>
       <div class="prow"><span class="plbl">Gradient</span>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
-          ${[null,'→','←','↓','↑','↔','↕'].map(d=>`<button class="achip${(el.gradientDir??null)===d?' active':''}" style="padding:4px 7px;font-size:13px" onclick="setGradientDir(${d===null?'null':JSON.stringify(d)})">${d===null?'●':d}</button>`).join('')}
+          ${[null,'→','←','↓','↑','↔','↕'].map(d=>`<button class="achip${(el.gradientDir??null)===d?' active':''}" style="padding:4px 7px;font-size:13px" onclick="setGradientDir(${d===null?'null':`'${d}'`})">${d===null?'●':d}</button>`).join('')}
         </div>
       </div>
       ${el.gradientDir?`<div class="prow"><span class="plbl">${el.gradientDir==='↔'||el.gradientDir==='↕'?'Fade bredde':'Fade fra'}</span>
