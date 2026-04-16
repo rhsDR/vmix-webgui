@@ -111,7 +111,7 @@ export default async function handler(req, res) {
           json[`K${s}_lok`]   = r.lokation    || '';
           json[`K${s}_vmc`]   = r.vmixcall    || '';
           json[`K${s}_oA`]       = r.on_air             || false;
-          json[`K${s}_samf`]     = h1 && h2 ? `${h1} ${r.hold1_score || 0} - ${r.hold2_score || 0} ${h2}` : '';
+          json[`K${s}_samf`]     = r.on_air && h1 && h2 ? `${h1} ${r.hold1_score || 0} - ${r.hold2_score || 0} ${h2}` : '';
           json[`K${s}_card_t`]   = r.last_card_type      || '';
           json[`K${s}_card_p`]   = r.last_card_player     || '';
           json[`K${s}_card_min`] = r.last_card_min        || '';
