@@ -138,6 +138,9 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 .li-name{flex:1;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .li.sel .li-name{color:var(--text);}
 .li-name-edit{flex:1;font-size:11px;background:var(--bg3);color:var(--text);border:1px solid var(--acc);border-radius:3px;padding:0 4px;height:20px;outline:none;min-width:0;width:100%;}
+.li.drop-above{border-top:2px solid var(--acc);}
+.li.drop-below{border-bottom:2px solid var(--acc);}
+.li{cursor:grab;}.li.dragging{opacity:.4;}
 .li-acts{display:flex;gap:2px;opacity:0;flex-shrink:0;}
 .li:hover .li-acts{opacity:1;}
 .la{width:18px;height:18px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px;}
@@ -464,12 +467,11 @@ html.theme-kold{
     <div class="tl-sep"></div>
     <button class="tl-btn" id="tool-text" onclick="setTool('text')"><span class="tl-tip">Tekst (T)</span>T<span class="tl-lbl">Tekst</span></button>
     <button class="tl-btn" id="tool-rect" onclick="setTool('rect')"><span class="tl-tip">Rektangel (R)</span>&#9645;<span class="tl-lbl">Rect</span></button>
+    <button class="tl-btn" id="tool-circle" onclick="setTool('circle')"><span class="tl-tip">Cirkel (C)</span>&#9675;<span class="tl-lbl">Cirkel</span></button>
     <button class="tl-btn" id="tool-line" onclick="setTool('line')"><span class="tl-tip">Linje (L)</span>&#8212;<span class="tl-lbl">Linje</span></button>
     <button class="tl-btn" id="tool-ticker" onclick="setTool('ticker')"><span class="tl-tip">Ticker (K)</span>&#9656;&#9656;<span class="tl-lbl">Ticker</span></button>
     <button class="tl-btn" id="tool-image" onclick="document.getElementById('img-file-inp').click()"><span class="tl-tip">Billede (I)</span>&#9974;<span class="tl-lbl">Billede</span></button>
     <input type="file" id="img-file-inp" accept="image/*" style="display:none" onchange="importImageFile(event)">
-    <div class="tl-sep"></div>
-    <button class="tl-btn" onclick="duplicateSel()"><span class="tl-tip">Dupliker (Ctrl+D)</span>&#8711;<span class="tl-lbl">Kopi</span></button>
     <div class="tl-sep"></div>
     <button class="tl-btn" onclick="alignSel('left')"><span class="tl-tip">Justér venstre</span>&#8676;<span class="tl-lbl">V.stl</span></button>
     <button class="tl-btn" onclick="alignSel('hcenter')"><span class="tl-tip">Centrér horisontalt</span>&#8660;<span class="tl-lbl">H.ctr</span></button>
@@ -1537,6 +1539,7 @@ canvas.addEventListener('mousedown',e=>{
   let el;
   if(tool==='text')el=mkEl('text',{x:snap(x),y:snap(y)});
   if(tool==='rect')el=mkEl('rect',{x:snap(x),y:snap(y)});
+  if(tool==='circle')el=mkEl('rect',{x:snap(x),y:snap(y),w:120,h:120,borderRadius:9999,name:'Cirkel'});
   if(tool==='line')el=mkEl('line',{x:snap(x),y:snap(y),w:300,h:4,bgColor:'#e8593c'});
   if(tool==='ticker')el=mkEl('ticker',{x:0,y:snap(y),w:1920,h:50,text:'Første nyhed  •  Anden nyhed  •  Tredje nyhed',fontSize:24,fontWeight:'400',color:'#ffffff',bgColor:'rgba(10,10,12,0.88)',name:'Ticker',spxField:true,fieldLabel:'Ticker tekst (adskil med |)'});
   if(el){saveState();elements.push(el);selIds=[el.id];setTool('select');render();renderPanel();}
@@ -1572,6 +1575,7 @@ document.addEventListener('keydown',e=>{
     if(e.key==='v'||e.key==='V'){setTool('select');return;}
     if(e.key==='t'||e.key==='T'){setTool('text');return;}
     if(e.key==='r'||e.key==='R'){setTool('rect');return;}
+    if(e.key==='c'||e.key==='C'){setTool('circle');return;}
     if(e.key==='l'||e.key==='L'){setTool('line');return;}
     if(e.key==='k'||e.key==='K'){setTool('ticker');return;}
     if(e.key==='i'||e.key==='I'){document.getElementById('img-file-inp').click();return;}
@@ -1609,7 +1613,7 @@ function setTool(t){
   tool=t;
   document.querySelectorAll('.tl-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tool-'+t)?.classList.add('active');
-  canvas.style.cursor=t==='select'?'default':t==='ticker'?'cell':'crosshair';
+  canvas.style.cursor=t==='select'?'default':t==='ticker'?'cell':t==='image'?'default':'crosshair';
 }
 function importImageFile(ev){
   const file=ev.target.files[0];if(!file)return;
@@ -2183,10 +2187,9 @@ function updLayersList(){
   const scroll=document.createElement('div');scroll.className='li-scroll';
   list.appendChild(scroll);
 
-  const revEls=[...elements].reverse();
   const seenGids=new Set();
 
-  revEls.forEach(el=>{
+  elements.forEach(el=>{
     // Group header (once per group)
     if(el.groupId&&!seenGids.has(el.groupId)){
       seenGids.add(el.groupId);
@@ -2225,8 +2228,27 @@ function updLayersList(){
     if(gc)row.style.cssText=`border-left:3px solid ${gc};padding-left:${el.groupId?'18px':'6px'};`;
     row.draggable=true;
     row.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',String(el.id));row.classList.add('dragging');});
-    row.addEventListener('dragend',()=>row.classList.remove('dragging'));
-    const icon=el.type==='text'?'T':el.type==='ticker'?'▶▶':el.type==='rect'?'▭':el.type==='image'?'🖼':'—';
+    row.addEventListener('dragend',()=>{row.classList.remove('dragging');document.querySelectorAll('.li').forEach(r=>r.classList.remove('drop-above','drop-below'));});
+    row.addEventListener('dragover',e=>{
+      e.preventDefault();
+      const mid=row.getBoundingClientRect().top+row.getBoundingClientRect().height/2;
+      document.querySelectorAll('.li').forEach(r=>r.classList.remove('drop-above','drop-below'));
+      row.classList.add(e.clientY<mid?'drop-above':'drop-below');
+    });
+    row.addEventListener('dragleave',()=>row.classList.remove('drop-above','drop-below'));
+    row.addEventListener('drop',e=>{
+      e.preventDefault();
+      document.querySelectorAll('.li').forEach(r=>r.classList.remove('drop-above','drop-below'));
+      const dragId=parseInt(e.dataTransfer.getData('text/plain'));
+      if(dragId===el.id)return;
+      const fromIdx=elements.findIndex(x=>x.id===dragId);
+      const toIdx=elements.findIndex(x=>x.id===el.id);
+      if(fromIdx<0||toIdx<0)return;
+      const mid=row.getBoundingClientRect().top+row.getBoundingClientRect().height/2;
+      const insertIdx=e.clientY<mid?toIdx:toIdx+1;
+      moveLayerToIndex(fromIdx,insertIdx);
+    });
+    const icon=el.type==='text'?'T':el.type==='ticker'?'▶▶':el.type==='rect'?(el.borderRadius>=9999?'○':'▭'):el.type==='image'?'🖼':'—';
     const swBg=el.type==='image'?(el.src?'transparent':'rgba(255,255,255,.1)'):el.type==='text'?el.color:el.type==='ticker'?el.color:_bgCss(el);
     const swEx=el.type==='image'&&el.src?`;background-image:url(${el.src});background-size:cover;background-position:center`:'';
     const li=document.createElement('span');li.className='li-icon';li.textContent=icon;
@@ -2244,9 +2266,7 @@ function updLayersList(){
     const acts=document.createElement('div');acts.className='li-acts';
     const vb=document.createElement('button');vb.className='la';vb.textContent=el.visible?'👁':'🚫';vb.onclick=e=>{e.stopPropagation();toggleVis(el.id);};
     const lb=document.createElement('button');lb.className='la';lb.textContent=el.locked?'🔒':'🔓';lb.onclick=e=>{e.stopPropagation();toggleLock(el.id);};
-    const ub=document.createElement('button');ub.className='la';ub.textContent='↑';ub.onclick=e=>{e.stopPropagation();moveLayer(el.id,'up');};
-    const db=document.createElement('button');db.className='la';db.textContent='↓';db.onclick=e=>{e.stopPropagation();moveLayer(el.id,'down');};
-    acts.appendChild(vb);acts.appendChild(lb);acts.appendChild(ub);acts.appendChild(db);
+    acts.appendChild(vb);acts.appendChild(lb);
     row.appendChild(li);row.appendChild(sw);row.appendChild(ln);row.appendChild(acts);
     row.onclick=e=>selFromLayer(e,el.id);
     scroll.appendChild(row);
