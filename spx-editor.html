@@ -1076,7 +1076,7 @@ function _renderRibbonFormat(){
     <div class="rb-grp-row">${_anchorGrid(el)}</div>
     <div class="rb-grp-lbl">Anchor</div>
   </div>
-  ${_wipeRibbonGrps(el)}`;
+  `;
   pane.innerHTML=h;
   _bindCtxBar(el);
 }
@@ -1116,6 +1116,7 @@ function _renderRibbonAnim(){
     <span class="cb-lbl scrub-lbl" data-for="rb-aodl" data-step="0.05" data-min="0">Delay</span><input class="cb-inp sm" id="rb-aodl" type="number" value="${el.animOutDelay??0}" step="0.05" data-step="0.05" data-min="0">
     <span class="cb-lbl scrub-lbl" data-for="rb-aodur" data-step="0.05" data-min="0.05">Dur</span><input class="cb-inp sm" id="rb-aodur" type="number" value="${el.animOutDuration??0.3}" step="0.05" data-step="0.05" data-min="0.05">
     <span class="cb-sep"></span>
+    ${_wipeRibbonGrps(el)}
     <button class="tb-btn" onclick="previewAnim()">&#9654; Preview</button>`;
   const cbn=(id,fn)=>{const inp=document.getElementById(id);if(inp){inp.addEventListener('input',e=>{fn(parseFloat(e.target.value)||0);render();});inp.addEventListener('change',()=>saveState());}};
   const cbs=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('change',e=>{saveState();fn(e.target.value);renderTimeline();});};
