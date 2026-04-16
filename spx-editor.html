@@ -2887,7 +2887,9 @@ return `(function(){
       setTimeout(function(){if(isPlaying)startCycle();},estimateInDur()+200);
     };
     window.runAnimationOUT=function(){
-      isPlaying=false;stopCycle();if(oOUT)oOUT();
+      isPlaying=false;stopCycle();
+      fields.forEach(function(f){var el=document.getElementById(f.target);if(el){el.style.opacity='';el.style.transform='';el.style.transition='';}});
+      if(oOUT)oOUT();
     };
   }
   function estimateInDur(){
@@ -2931,6 +2933,7 @@ return `(function(){
     el.style.transition='opacity '+TRANS_MS+'ms ease,transform '+TRANS_MS+'ms ease';
     applyOut(el,t);
     setTimeout(function(){
+      if(!isPlaying){el.style.opacity='';el.style.transform='';el.style.transition='';return;}
       el.textContent=text;applyInStart(el,t);el.offsetHeight;
       el.style.transition='opacity '+TRANS_MS+'ms ease,transform '+TRANS_MS+'ms ease';
       el.style.opacity='1';el.style.transform='none';
