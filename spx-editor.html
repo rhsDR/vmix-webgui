@@ -801,6 +801,8 @@ function mkEl(type,p={}){
     fontStyle:p.fontStyle??'normal',
     autoWidth:p.autoWidth??false,
     widthBindEl:p.widthBindEl??null,
+    widthOffset:p.widthOffset??0,
+    xOffset:p.xOffset??0,
     groupId:p.groupId??null,
     crop:p.crop??{t:0,r:0,b:0,l:0},
     name:p.name??(type==='text'?'Tekst':type==='rect'?'Rektangel':'Linje'),
@@ -1105,6 +1107,19 @@ function groupSel(){
   sels.forEach(el=>el.groupId=gid);
   render();renderPanel();toast('Gruppe oprettet ('+sels.length+' elementer)');
 }
+function recalibrateBind(){
+  const el=elements.find(x=>x.id===selIds[0]);if(!el||el.widthBindEl==null)return;
+  saveState();
+  const wb=String(el.widthBindEl);
+  if(wb.startsWith('grp:')){
+    const gid=wb.slice(4);const members=elements.filter(x=>x.groupId===gid);
+    if(members.length){const minX=Math.min(...members.map(x=>x.x));const maxX=Math.max(...members.map(x=>x.x+x.w));el.widthOffset=el.w-(maxX-minX);el.xOffset=el.x-minX;}
+  }else{
+    const src=elements.find(x=>x.id==el.widthBindEl);
+    if(src){el.widthOffset=el.w-src.w;el.xOffset=el.x-src.x;}
+  }
+  toast('Kalibreret');
+}
 function resetCrop(){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.crop={t:0,r:0,b:0,l:0};render();renderPanel();}
 function ungroupSel(){
   const sels=elements.filter(x=>selIds.includes(x.id));
@@ -1156,17 +1171,18 @@ function render(){
   elements.forEach(el=>{
     if(el.type==='rect'&&el.widthBindEl!=null){
       const wb=String(el.widthBindEl);
+      const wo=el.widthOffset??0,xo=el.xOffset??0;
       if(wb.startsWith('grp:')){
         const gid=wb.slice(4);
         const members=elements.filter(e=>e.groupId===gid&&e.visible!==false);
         if(members.length){
           const minX=Math.min(...members.map(e=>e.x));
           const maxX=Math.max(...members.map(e=>e.x+e.w));
-          el.x=minX;el.w=Math.max(1,maxX-minX);
+          el.x=minX+xo;el.w=Math.max(1,(maxX-minX)+wo);
         }
       }else{
         const src=elements.find(e=>e.id==el.widthBindEl);
-        if(src)el.w=src.w;
+        if(src){el.w=Math.max(1,src.w+wo);el.x=src.x+xo;}
       }
     }
   });
@@ -1821,7 +1837,7 @@ function renderPropsTab(){
           ${[null,'→','←','↓','↑','↔','↕'].map(d=>`<button class="achip${(el.gradientDir??null)===d?' active':''}" style="padding:4px 7px;font-size:13px" onclick="setGradientDir(${d===null?'null':`'${d}'`})">${d===null?'●':d}</button>`).join('')}
         </div>
       </div>
-      <div class="prow"><span class="plbl">Følg tekst</span>
+      <div class="prow" style="flex-wrap:wrap;gap:4px"><span class="plbl">Følg tekst</span>
         <select class="pi" id="p-widthbind" style="flex:1">
           <option value="">— ingen —</option>
           ${(()=>{
@@ -1835,6 +1851,7 @@ function renderPropsTab(){
             return singles.map(e=>`<option value="${e.id}"${el.widthBindEl==e.id?' selected':''}>${e.name}</option>`).join('')+(grpOpts.length?'<option disabled>─────────</option>'+grpOpts.join(''):'');
           })()}
         </select>
+        ${el.widthBindEl!=null?`<button class="achip" onclick="recalibrateBind()" title="Gem ny relativ position fra aktuel placering" style="white-space:nowrap">⟳ Kalibrér</button>`:''}
       </div>
       ${el.gradientDir?(()=>{
         const stops=_getStops(el);
@@ -1963,7 +1980,20 @@ function renderPropsTab(){
   const pofit=document.getElementById('p-obj-fit');if(pofit)pofit.addEventListener('change',e=>{el.objectFit=e.target.value;render();});
   const plka=document.getElementById('p-lock-aspect');if(plka)plka.addEventListener('change',e=>{el.lockAspect=e.target.checked;});
   const paw=document.getElementById('p-autowidth');if(paw)paw.addEventListener('change',e=>{el.autoWidth=e.target.checked;render();});
-  const pwb=document.getElementById('p-widthbind');if(pwb)pwb.addEventListener('change',e=>{const v=e.target.value;el.widthBindEl=v?(v.startsWith('grp:')?v:parseInt(v)):null;render();});
+  const pwb=document.getElementById('p-widthbind');if(pwb)pwb.addEventListener('change',e=>{
+    const v=e.target.value;
+    if(!v){el.widthBindEl=null;el.widthOffset=0;el.xOffset=0;render();return;}
+    el.widthBindEl=v.startsWith('grp:')?v:parseInt(v);
+    // Calibrate offset from current state
+    if(v.startsWith('grp:')){
+      const gid=v.slice(4);const members=elements.filter(x=>x.groupId===gid);
+      if(members.length){const minX=Math.min(...members.map(x=>x.x));const maxX=Math.max(...members.map(x=>x.x+x.w));el.widthOffset=el.w-(maxX-minX);el.xOffset=el.x-minX;}
+    }else{
+      const src=elements.find(x=>x.id==parseInt(v));
+      if(src){el.widthOffset=el.w-src.w;el.xOffset=el.x-src.x;}
+    }
+    render();
+  });
   const tbp=document.getElementById('p-txt-bgc'),tbhx=document.getElementById('p-txt-bgc-hex');
   if(tbp){tbp.addEventListener('input',e=>{el.bgColor=e.target.value;if(tbhx)tbhx.value=e.target.value;render();});}
   if(tbhx){tbhx.addEventListener('input',e=>{const v=e.target.value.trim();el.bgColor=(v===''||v==='transparent')?'transparent':v;if(tbp&&/^#[0-9a-fA-F]{6}$/.test(v))tbp.value=v;render();});}
