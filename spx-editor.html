@@ -919,12 +919,9 @@ function _wipeRibbonGrps(el){
   const inActive=el.animation==='wipe';
   const roOut=resolveAnimOut(el);const outActive=roOut==='wipe';
   const dis=s=>`style="${s?'':'opacity:.32;pointer-events:none'}"`;
-  const vDir=d=>d==='↑'||d==='↓';
   const btn=(icon,active,onclick,title='')=>`<button class="tb-btn icon${active?' active-wipe':''}" onclick="${onclick}" title="${title}" style="min-width:26px;padding:0 5px">${icon}</button>`;
   function dirBtns(curDir,setter){
-    const vIcon=curDir==='↑'?'↑':curDir==='↓'?'↓':'↕';
-    const vNext=curDir==='↑'?'↓':'↑';
-    return btn('←',curDir==='←',`${setter}('←')`,'Venstre')+btn('→',curDir==='→',`${setter}('→')`,'Højre')+btn(vIcon,vDir(curDir),`${setter}('${vNext}')`,curDir==='↑'?'Skift til ↓':curDir==='↓'?'Skift til ↑':'Op/Ned');
+    return btn('←',curDir==='←',`${setter}('←')`,'Venstre')+btn('→',curDir==='→',`${setter}('→')`,'Højre')+btn('↑',curDir==='↑',`${setter}('↑')`,'Op (nedefra)')+btn('↓',curDir==='↓',`${setter}('↓')`,'Ned (oppefra)');
   }
   const inDir=el.wipeDir||'→';
   const outDir=el.wipeDirOut||(inActive?inDir:'→');
