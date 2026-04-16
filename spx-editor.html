@@ -802,6 +802,7 @@ function mkEl(type,p={}){
     autoWidth:p.autoWidth??false,
     widthBindEl:p.widthBindEl??null,
     groupId:p.groupId??null,
+    crop:p.crop??{t:0,r:0,b:0,l:0},
     name:p.name??(type==='text'?'Tekst':type==='rect'?'Rektangel':'Linje'),
     keyframes:p.keyframes??[],
   };
@@ -1104,6 +1105,7 @@ function groupSel(){
   sels.forEach(el=>el.groupId=gid);
   render();renderPanel();toast('Gruppe oprettet ('+sels.length+' elementer)');
 }
+function resetCrop(){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.crop={t:0,r:0,b:0,l:0};render();renderPanel();}
 function ungroupSel(){
   const sels=elements.filter(x=>selIds.includes(x.id));
   const gid=sels.find(x=>x.groupId)?.groupId;if(!gid)return;
@@ -1230,6 +1232,8 @@ function render(){
         div.innerHTML='<span style="font-size:'+Math.round(14*scale)+'px;color:rgba(255,255,255,.3)">🖼</span>';
       }
     }
+    // Apply crop
+    const cr=el.crop;if(cr&&(cr.t||cr.r||cr.b||cr.l)){div.style.clipPath=`inset(${cr.t*scale}px ${cr.r*scale}px ${cr.b*scale}px ${cr.l*scale}px)`;}
     const brd=document.createElement('div');brd.className='el-border';div.appendChild(brd);
     const lk=document.createElement('div');lk.className='el-lock';lk.textContent='🔒';div.appendChild(lk);
     const db=document.createElement('div');db.className='el-del';db.textContent='×';
@@ -1902,6 +1906,15 @@ function renderPropsTab(){
       </div>
       <div class="prow"><span class="plbl">Opacity</span><input class="pi sm" type="number" id="p-op" value="${Math.round(el.opacity*100)}" min="0" max="100"><span style="font-size:10px;color:var(--text3)">%</span></div>
     </div>
+    <div class="psec"><div class="psec-title">Beskæring</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div class="prow" style="justify-content:space-between"><span class="plbl">Top</span><input class="pi sm" type="number" id="p-cr-t" value="${el.crop?.t??0}" min="0"></div>
+        <div class="prow" style="justify-content:space-between"><span class="plbl">Højre</span><input class="pi sm" type="number" id="p-cr-r" value="${el.crop?.r??0}" min="0"></div>
+        <div class="prow" style="justify-content:space-between"><span class="plbl">Bund</span><input class="pi sm" type="number" id="p-cr-b" value="${el.crop?.b??0}" min="0"></div>
+        <div class="prow" style="justify-content:space-between"><span class="plbl">Venstre</span><input class="pi sm" type="number" id="p-cr-l" value="${el.crop?.l??0}" min="0"></div>
+      </div>
+      <div class="prow" style="margin-top:2px"><button class="achip" onclick="resetCrop()" style="width:100%;justify-content:center">Nulstil</button></div>
+    </div>
     <div class="psec"><div class="psec-title">Animation ind</div>
       <div class="achip-grid">${ANIMS.map(a=>`<button class="achip${el.animation===a?' active':''}" onclick="setAnim('in','${a}')">${ANIM_LBL[a]}</button>`).join('')}</div>
       <div class="pg2">
@@ -1931,6 +1944,7 @@ function renderPropsTab(){
   b('p-op','opacity',v=>parseFloat(v)/100);b('p-br','borderRadius',parseFloat);
   b('p-delay','animDelay',parseFloat);b('p-dur','animDuration',parseFloat);
   b('p-out-delay','animOutDelay',parseFloat);b('p-out-dur','animOutDuration',parseFloat);
+  ['t','r','b','l'].forEach(side=>{const ci=document.getElementById('p-cr-'+side);if(ci)ci.addEventListener('input',e=>{if(!el.crop)el.crop={t:0,r:0,b:0,l:0};el.crop[side]=Math.max(0,parseInt(e.target.value)||0);render();});});
   b('p-name','name',null,()=>updLayersList());b('p-flbl','fieldLabel');
   const cp=document.getElementById('p-col'),chx=document.getElementById('p-col-hex');
   if(cp){cp.addEventListener('input',e=>{el.color=e.target.value;if(chx)chx.value=e.target.value;render();});}
@@ -2111,6 +2125,7 @@ function exportSPX_CSS(){
       if(el.type==='rect')css+=`background:${_bgCss(el)};border-radius:${el.borderRadius}px;`;
       if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
       if(el.type==='image')css+=`overflow:hidden;`;
+      {const cr=el.crop;if(cr&&(cr.t||cr.r||cr.b||cr.l))css+=`clip-path:inset(${cr.t}px ${cr.r}px ${cr.b}px ${cr.l}px);`;}
       css+=`animation:${id}-kf ${kfDur.toFixed(2)}s ease-in-out ${kfDelay.toFixed(2)}s both;}\n`;
       css+=`@keyframes ${id}-kf{\n${kfRules}\n}\n`;
     }else{
@@ -2119,6 +2134,7 @@ function exportSPX_CSS(){
       if(el.type==='rect')css+=`background:${_bgCss(el)};border-radius:${el.borderRadius}px;`;
       if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
       if(el.type==='image')css+=`overflow:hidden;`;
+      {const cr=el.crop;if(cr&&(cr.t||cr.r||cr.b||cr.l))css+=`clip-path:inset(${cr.t}px ${cr.r}px ${cr.b}px ${cr.l}px);`;}
       if(a!=='none')css+=outState;css+='}\n';
       const ao=resolveAnimOut(el);const outDur=el.animOutDuration??0.3;const outDelay=el.animOutDelay??0;
       const outTo=_cssAnimOutTo(ao);
@@ -2185,6 +2201,7 @@ function exportSPX_GSAP(){
     if(el.type==='rect')css+=`background:${_bgCss(el)};border-radius:${el.borderRadius}px;`;
     if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
     if(el.type==='image')css+=`overflow:hidden;`;
+    {const cr=el.crop;if(cr&&(cr.t||cr.r||cr.b||cr.l))css+=`clip-path:inset(${cr.t}px ${cr.r}px ${cr.b}px ${cr.l}px);`;}
     if(el.animation==='fade')css+='opacity:0;';
     else if(el.animation==='slide-left')css+='opacity:0;transform:translateX(-60px);';
     else if(el.animation==='slide-right')css+='opacity:0;transform:translateX(60px);';
