@@ -612,6 +612,7 @@ html.theme-kold{
 <script>
 const CW=1920,CH=1080;
 let scale=1,canvasZoom=1,tool='select',elements=[],selIds=[],elCtr=0;
+let _scPreviewEl=null; // {id, text} — preview override for Score Cycle test
 let dragging=false,dragOff=[],resizing=false,resEl=null,resHandle='',resStart={};
 let boxSel=false,boxStart={};
 let undoStack=[],redoStack=[],clipboard=[];
@@ -635,7 +636,8 @@ let smartTickerSettings={
 };
 let scoreCycleSettings={
   enabled:false,target:'',projectId:'',displayDuration:5,refreshInterval:60,
-  transition:'fade',pluginPath:'/templates/dr/score_cycle.js'
+  transition:'fade',pluginPath:'/templates/dr/score_cycle.js',
+  dataField:'',dataLabel:'',previewText:''
 };
 
 const FONTS=['DM Sans','Inter','Lato','Poppins','Nunito','Source Sans 3','PT Sans','Barlow','Barlow Condensed','Oswald','Roboto Condensed','Montserrat','Raleway','Exo 2','Kanit','Rajdhani','Teko','Bebas Neue','Anton','Playfair Display','Georgia','Courier New'];
@@ -1191,6 +1193,7 @@ function render(){
   const stIdx=previewBreaking&&document.getElementById('ttype').value==='smart_ticker'?elements.map(e=>e.id):[null,null,null,null];
   const stS=smartTickerSettings;
   function _stColor(el,prop){
+    if(prop==='text'&&_scPreviewEl&&_scPreviewEl.id===el.id)return _scPreviewEl.text;
     const i=stIdx.indexOf(el.id);
     if(i===0&&prop==='bgColor')return stS.breakingBg;
     if(i===1&&prop==='bgColor')return stS.breakingLabelBg;
@@ -1764,6 +1767,8 @@ function renderPluginTab(){
         </select>
       </div>
       <div class="prow"><span class="plbl">Projekt ID</span><input class="pi" id="sc-pid" value="${scoreCycleSettings.projectId}" placeholder="c2b06b16-..." style="font-size:10px"></div>
+      <div class="prow"><span class="plbl">API felt</span><input class="pi" id="sc-field" value="${scoreCycleSettings.dataField}" placeholder="fx K1_score eller T1_txt" style="font-size:11px"></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4">Skriv det felt fra API-svaret der skal vises. Tomt = plugin bruger sin standard.</div>
     </div>
     <div class="psec" id="sc-body2" style="${scoreCycleSettings.enabled?'':'opacity:.45;pointer-events:none'}">
       <div class="psec-title">Timing</div>
@@ -1773,6 +1778,15 @@ function renderPluginTab(){
     <div class="psec" id="sc-body3" style="${scoreCycleSettings.enabled?'':'opacity:.45;pointer-events:none'}">
       <div class="psec-title">Overgangsanimation</div>
       <select class="pi" id="sc-trans" style="width:100%;margin-bottom:4px;font-size:12px">${transOpts}</select>
+    </div>
+    <div class="psec" id="sc-body5" style="${scoreCycleSettings.enabled?'':'opacity:.45;pointer-events:none'}">
+      <div class="psec-title">Forhåndsvis i editor</div>
+      <div class="prow" style="gap:6px">
+        <input class="pi" id="sc-preview" value="${scoreCycleSettings.previewText}" placeholder="fx Brøndby 2 - 1 FC K..." style="flex:1;font-size:11px">
+        <button class="tb-btn" onclick="scPreviewApply()" title="Vis teksten i canvas">Vis</button>
+        <button class="tb-btn" onclick="scPreviewReset()" title="Nulstil til original tekst">✕</button>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4">Skriv en testtekst og klik Vis for at se den i canvas.</div>
     </div>
     <div class="psec" id="sc-body4" style="${scoreCycleSettings.enabled?'':'opacity:.45;pointer-events:none'}">
       <div class="psec-title">Avanceret</div>
@@ -1784,12 +1798,23 @@ function renderPluginTab(){
     scEnabled.addEventListener('change',e=>{
       scoreCycleSettings.enabled=e.target.checked;
       const dim=e.target.checked?'':'opacity:.45;pointer-events:none';
-      ['sc-body','sc-body2','sc-body3','sc-body4'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.cssText=dim;});
+      ['sc-body','sc-body2','sc-body3','sc-body4','sc-body5'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.cssText=dim;});
       saveState();
     });
   }
   const scBind=(id,key,isNum)=>{const el=document.getElementById(id);if(el)el.addEventListener('input',e=>{scoreCycleSettings[key]=isNum?parseFloat(e.target.value)||scoreCycleSettings[key]:e.target.value;saveState();});};
-  scBind('sc-target','target');scBind('sc-pid','projectId');scBind('sc-dur','displayDuration',true);scBind('sc-ref','refreshInterval',true);scBind('sc-trans','transition');scBind('sc-path','pluginPath');
+  scBind('sc-target','target');scBind('sc-pid','projectId');scBind('sc-field','dataField');scBind('sc-dur','displayDuration',true);scBind('sc-ref','refreshInterval',true);scBind('sc-trans','transition');scBind('sc-path','pluginPath');scBind('sc-preview','previewText');
+}
+
+function scPreviewApply(){
+  const targetId=scoreCycleSettings.target;const txt=scoreCycleSettings.previewText;
+  if(!targetId||!txt){toast('Vælg target og skriv en testtekst');return;}
+  const el=elements.find(x=>'el'+x.id===targetId);
+  if(!el){toast('Target element ikke fundet');return;}
+  _scPreviewEl={id:el.id,text:txt};render();toast('Forhåndsvisning aktiv');
+}
+function scPreviewReset(){
+  _scPreviewEl=null;render();toast('Forhåndsvisning nulstillet');
 }
 
 function _getStops(el){
@@ -2448,7 +2473,7 @@ function exportSPX_CSS(){
   const _updateFn=transitionOnUpdate
     ?`${_cleanFn}\nvar _spxVisible=false;\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}\nfunction runTemplateUpdate(data){_updateContent(data);function _apply(){setTimeout(runAnimationIN,50);}if(_spxVisible){runAnimationOUT();setTimeout(_apply,${_maxOutMs});}else{_apply();}}\nwindow.onSpxUpdate=function(data){_updateContent(data);};${extraJS}`
     :`${_cleanFn}\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}\nfunction runTemplateUpdate(data){_updateContent(data);setTimeout(runAnimationIN,50);}\nwindow.onSpxUpdate=function(data){_updateContent(data);};${extraJS}`;
-  const _scScript=(scoreCycleSettings.enabled&&scoreCycleSettings.target)?`<script>\nwindow.ScoreCycle={\n  target:'${scoreCycleSettings.target}',\n  projectId:'${scoreCycleSettings.projectId}',\n  displayDuration:${scoreCycleSettings.displayDuration},\n  refreshInterval:${scoreCycleSettings.refreshInterval},\n  transition:'${scoreCycleSettings.transition}'\n};\n<\/script>\n<script src="${scoreCycleSettings.pluginPath}"><\/script>`:'';
+  const _scScript=(scoreCycleSettings.enabled&&scoreCycleSettings.target)?`<script>\nwindow.ScoreCycle={\n  target:'${scoreCycleSettings.target}',\n  projectId:'${scoreCycleSettings.projectId}',\n  displayDuration:${scoreCycleSettings.displayDuration},\n  refreshInterval:${scoreCycleSettings.refreshInterval},\n  transition:'${scoreCycleSettings.transition}'${scoreCycleSettings.dataField?`,\n  dataField:'${scoreCycleSettings.dataField}'`:''}\n};\n<\/script>\n<script src="${scoreCycleSettings.pluginPath}"><\/script>`:'';
   _downloadHTML(_buildHTML(fontUrl,css+tickerCSS,htmlLines,fieldDefs,tname,
     _updateFn,
     `function runAnimationIN(){_spxVisible=true;\n${playLines.join('\n')}\n}`,
@@ -2547,7 +2572,7 @@ function exportSPX_GSAP(){
   const _gUpdateFn=transitionOnUpdate
     ?`${_gCleanFn}\nvar _spxVisible=false;\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}\nfunction runTemplateUpdate(data){_updateContent(data);function _apply(){setTimeout(runAnimationIN,50);}if(_spxVisible){runAnimationOUT();setTimeout(_apply,${_gMaxOutMs});}else{_apply();}}\nwindow.onSpxUpdate=function(data){_updateContent(data);};${gExtraJS}`
     :`${_gCleanFn}\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}\nfunction runTemplateUpdate(data){_updateContent(data);setTimeout(runAnimationIN,50);}\nwindow.onSpxUpdate=function(data){_updateContent(data);};${gExtraJS}`;
-  const _scScriptG=(scoreCycleSettings.enabled&&scoreCycleSettings.target)?`<script>\nwindow.ScoreCycle={\n  target:'${scoreCycleSettings.target}',\n  projectId:'${scoreCycleSettings.projectId}',\n  displayDuration:${scoreCycleSettings.displayDuration},\n  refreshInterval:${scoreCycleSettings.refreshInterval},\n  transition:'${scoreCycleSettings.transition}'\n};\n<\/script>\n<script src="${scoreCycleSettings.pluginPath}"><\/script>`:'';
+  const _scScriptG=(scoreCycleSettings.enabled&&scoreCycleSettings.target)?`<script>\nwindow.ScoreCycle={\n  target:'${scoreCycleSettings.target}',\n  projectId:'${scoreCycleSettings.projectId}',\n  displayDuration:${scoreCycleSettings.displayDuration},\n  refreshInterval:${scoreCycleSettings.refreshInterval},\n  transition:'${scoreCycleSettings.transition}'${scoreCycleSettings.dataField?`,\n  dataField:'${scoreCycleSettings.dataField}'`:''}\n};\n<\/script>\n<script src="${scoreCycleSettings.pluginPath}"><\/script>`:'';
   _downloadHTML(_buildHTML(fontUrl,css+gTickerCSS,htmlLines,fieldDefs,tname,
     _gUpdateFn,
     `function runAnimationIN(){_spxVisible=true;\n${_buildGSAPPlay(elements)}\n}`,
