@@ -635,9 +635,9 @@ let smartTickerSettings={
   apiUrl:'',apiInterval:15
 };
 let scoreCycleSettings={
-  enabled:false,target:'',projectId:'',displayDuration:5,refreshInterval:60,
+  enabled:false,projectId:'',displayDuration:5,refreshInterval:60,
   transition:'fade',pluginPath:'/templates/dr/score_cycle.js',
-  dataField:'',dataLabel:'',previewText:''
+  fields:[],apiKeys:[],previewText:'',previewTarget:''
 };
 
 const FONTS=['DM Sans','Inter','Lato','Poppins','Nunito','Source Sans 3','PT Sans','Barlow','Barlow Condensed','Oswald','Roboto Condensed','Montserrat','Raleway','Exo 2','Kanit','Rajdhani','Teko','Bebas Neue','Anton','Playfair Display','Georgia','Courier New'];
@@ -1750,67 +1750,144 @@ function renderCanvasTab(){
 
 function renderPluginTab(){
   const textEls=elements.filter(e=>e.type==='text');
-  const targetOpts=textEls.map(e=>`<option value="el${e.id}"${scoreCycleSettings.target==='el'+e.id?' selected':''}>${e.name}</option>`).join('');
+  const dim=scoreCycleSettings.enabled?'':'opacity:.45;pointer-events:none';
   const transOpts=[['fade','Fade'],['slide-up','Slide op'],['slide-down','Slide ned'],['slide-left','Slide venstre'],['slide-right','Slide højre'],['cut','Cut']].map(([v,l])=>`<option value="${v}"${scoreCycleSettings.transition===v?' selected':''}>${l}</option>`).join('');
+  // Build field rows
+  const fields=scoreCycleSettings.fields||[];
+  const apiKeys=scoreCycleSettings.apiKeys||[];
+  function _fieldOpts(cur){
+    let opts=`<option value="">— vælg felt —</option>`;
+    if(apiKeys.length){opts+=apiKeys.map(k=>`<option value="${k}"${cur===k?' selected':''}>${k}</option>`).join('');}
+    else if(cur){opts+=`<option value="${cur}" selected>${cur}</option>`;}
+    return opts;
+  }
+  function _targetOpts(cur){
+    return`<option value="">— vælg element —</option>`+textEls.map(e=>`<option value="el${e.id}"${cur==='el'+e.id?' selected':''}>${e.name}</option>`).join('');
+  }
+  const fieldRows=fields.map((f,i)=>`
+    <div class="sc-field-row" data-idx="${i}" style="display:flex;align-items:center;gap:5px;margin-bottom:6px;">
+      <select class="pi sc-fld-field" data-idx="${i}" style="flex:1;font-size:11px;min-width:0">${_fieldOpts(f.field)}</select>
+      <span style="color:var(--text3);font-size:11px;flex-shrink:0">→</span>
+      <select class="pi sc-fld-target" data-idx="${i}" style="flex:1;font-size:11px;min-width:0">${_targetOpts(f.target)}</select>
+      <button class="tb-btn icon" onclick="scRemoveField(${i})" title="Fjern" style="flex-shrink:0">✕</button>
+    </div>`).join('');
+  const previewTargetOpts=`<option value="">— vælg element —</option>`+textEls.map(e=>`<option value="el${e.id}"${scoreCycleSettings.previewTarget==='el'+e.id?' selected':''}>${e.name}</option>`).join('');
   document.getElementById('pbody').innerHTML=`
     <div class="psec">
-      <div class="psec-title" style="color:#f5c400;font-size:13px">⚽ Score Cycle</div>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.5">Henter kampresultater fra API og cycler dem automatisk i et valgt tekstelement.</div>
+      <div class="psec-title" style="color:#f5c400">⚽ Score Cycle</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:10px;line-height:1.55">
+        <b style="color:var(--text2)">Hvad gør dette plugin?</b><br>
+        Score Cycle henter kampdata fra et eksternt API og viser dem automatisk i dine tekstelementer – det cycler automatisk og opdaterer live under udsendelsen.<br><br>
+        <b style="color:var(--text2)">Sådan bruges det:</b><br>
+        1. Opret et projekt på <em>vmix-control.vercel.app</em> og kopiér dit Projekt ID.<br>
+        2. Klik <em>Hent felter</em> for at se hvilke felter API'et returnerer.<br>
+        3. Tilknyt hvert felt til det tekstelement der skal vise det.<br>
+        4. Eksportér skabelonen – pluginnet starter automatisk.
+      </div>
       <label class="pchk"><input type="checkbox" id="sc-enabled" ${scoreCycleSettings.enabled?'checked':''}>Aktiver plugin ved eksport</label>
     </div>
-    <div class="psec" id="sc-body" style="${scoreCycleSettings.enabled?'':'opacity:.45;pointer-events:none'}">
-      <div class="psec-title">Data</div>
-      <div class="prow"><span class="plbl">Target element</span>
-        <select class="pi" id="sc-target" style="flex:1;font-size:11px">
-          <option value="">— vælg —</option>
-          ${targetOpts}
-        </select>
+    <div class="psec" id="sc-body" style="${dim}">
+      <div class="psec-title">Projekt</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:7px;line-height:1.4">
+        <b style="color:var(--text2)">Projekt ID</b> – det unikke ID fra vmix-control.vercel.app. Bruges til at hente kampdata fra API'et.
       </div>
-      <div class="prow"><span class="plbl">Projekt ID</span><input class="pi" id="sc-pid" value="${scoreCycleSettings.projectId}" placeholder="c2b06b16-..." style="font-size:10px"></div>
-      <div class="prow"><span class="plbl">API felt</span><input class="pi" id="sc-field" value="${scoreCycleSettings.dataField}" placeholder="fx K1_score eller T1_txt" style="font-size:11px"></div>
-      <div style="font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4">Skriv det felt fra API-svaret der skal vises. Tomt = plugin bruger sin standard.</div>
+      <div class="prow" style="gap:6px">
+        <input class="pi" id="sc-pid" value="${scoreCycleSettings.projectId}" placeholder="c2b06b16-..." style="flex:1;font-size:10px">
+        <button class="tb-btn" id="sc-fetch-btn" onclick="scFetchApiKeys()" title="Hent feltnavne fra API">Hent felter</button>
+      </div>
+      ${apiKeys.length?`<div style="font-size:10px;color:var(--green);margin-top:3px">✓ ${apiKeys.length} felter hentet fra API</div>`:`<div style="font-size:10px;color:var(--text3);margin-top:3px">Klik "Hent felter" for at se tilgængelige feltnavne fra din JSON.</div>`}
     </div>
-    <div class="psec" id="sc-body2" style="${scoreCycleSettings.enabled?'':'opacity:.45;pointer-events:none'}">
+    <div class="psec" id="sc-body2" style="${dim}">
+      <div class="psec-title">Felt → Element tilknytning</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.4">
+        <b style="color:var(--text2)">API felt</b> – feltnavn fra JSON-svaret, fx <code style="background:rgba(255,255,255,.07);padding:1px 4px;border-radius:3px">K1_score</code> eller <code style="background:rgba(255,255,255,.07);padding:1px 4px;border-radius:3px">T1_txt</code>.<br>
+        <b style="color:var(--text2)">Element</b> – det tekstelement i skabelonen der skal vise værdien.
+      </div>
+      <div id="sc-fields-list">${fieldRows}</div>
+      <button class="tb-btn" onclick="scAddField()" style="width:100%;justify-content:center;margin-top:2px">＋ Tilføj felt</button>
+    </div>
+    <div class="psec" id="sc-body3" style="${dim}">
       <div class="psec-title">Timing</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:7px;line-height:1.4">
+        <b style="color:var(--text2)">Visningstid</b> – hvor mange sekunder hvert felt vises, før pluginnet skifter til det næste.<br>
+        <b style="color:var(--text2)">Refresh</b> – hvor ofte der hentes nye data fra API'et (minimum 10 sek).
+      </div>
       <div class="prow"><span class="plbl">Visningstid (sek)</span><input class="pi sm" type="number" id="sc-dur" value="${scoreCycleSettings.displayDuration}" min="1" max="60"></div>
       <div class="prow"><span class="plbl">Refresh (sek)</span><input class="pi sm" type="number" id="sc-ref" value="${scoreCycleSettings.refreshInterval}" min="10" max="600"></div>
     </div>
-    <div class="psec" id="sc-body3" style="${scoreCycleSettings.enabled?'':'opacity:.45;pointer-events:none'}">
+    <div class="psec" id="sc-body4" style="${dim}">
       <div class="psec-title">Overgangsanimation</div>
-      <select class="pi" id="sc-trans" style="width:100%;margin-bottom:4px;font-size:12px">${transOpts}</select>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:7px;line-height:1.4">Hvilken animation der bruges når teksten skifter til næste felt.</div>
+      <select class="pi" id="sc-trans" style="width:100%;font-size:12px">${transOpts}</select>
     </div>
-    <div class="psec" id="sc-body5" style="${scoreCycleSettings.enabled?'':'opacity:.45;pointer-events:none'}">
+    <div class="psec" id="sc-body5" style="${dim}">
       <div class="psec-title">Forhåndsvis i editor</div>
-      <div class="prow" style="gap:6px">
-        <input class="pi" id="sc-preview" value="${scoreCycleSettings.previewText}" placeholder="fx Brøndby 2 - 1 FC K..." style="flex:1;font-size:11px">
-        <button class="tb-btn" onclick="scPreviewApply()" title="Vis teksten i canvas">Vis</button>
-        <button class="tb-btn" onclick="scPreviewReset()" title="Nulstil til original tekst">✕</button>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:7px;line-height:1.4">Skriv en testtekst og vælg hvilket element der skal vise den. Påvirker <em>ikke</em> den gemte skabelon.</div>
+      <div class="prow" style="gap:5px;margin-bottom:6px">
+        <select class="pi" id="sc-prev-target" style="flex:1;font-size:11px">${previewTargetOpts}</select>
       </div>
-      <div style="font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4">Skriv en testtekst og klik Vis for at se den i canvas.</div>
+      <div class="prow" style="gap:5px">
+        <input class="pi" id="sc-preview" value="${scoreCycleSettings.previewText}" placeholder="fx Brøndby 2 - 1 FC K..." style="flex:1;font-size:11px">
+        <button class="tb-btn" onclick="scPreviewApply()" title="Vis i canvas">Vis</button>
+        <button class="tb-btn" onclick="scPreviewReset()" title="Nulstil">✕</button>
+      </div>
     </div>
-    <div class="psec" id="sc-body4" style="${scoreCycleSettings.enabled?'':'opacity:.45;pointer-events:none'}">
+    <div class="psec" id="sc-body6" style="${dim}">
       <div class="psec-title">Avanceret</div>
-      <div class="prow"><span class="plbl">Plugin sti</span><input class="pi" id="sc-path" value="${scoreCycleSettings.pluginPath}" style="font-size:10px"></div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:7px;line-height:1.4"><b style="color:var(--text2)">Plugin sti</b> – placering af score_cycle.js på SPX-serveren. Ændr kun hvis du har en tilpasset installation.</div>
+      <div class="prow"><input class="pi" id="sc-path" value="${scoreCycleSettings.pluginPath}" style="font-size:10px"></div>
     </div>`;
   // Bindings
   const scEnabled=document.getElementById('sc-enabled');
   if(scEnabled){
     scEnabled.addEventListener('change',e=>{
       scoreCycleSettings.enabled=e.target.checked;
-      const dim=e.target.checked?'':'opacity:.45;pointer-events:none';
-      ['sc-body','sc-body2','sc-body3','sc-body4','sc-body5'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.cssText=dim;});
+      const d2=e.target.checked?'':'opacity:.45;pointer-events:none';
+      ['sc-body','sc-body2','sc-body3','sc-body4','sc-body5','sc-body6'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.cssText=d2;});
       saveState();
     });
   }
   const scBind=(id,key,isNum)=>{const el=document.getElementById(id);if(el)el.addEventListener('input',e=>{scoreCycleSettings[key]=isNum?parseFloat(e.target.value)||scoreCycleSettings[key]:e.target.value;saveState();});};
-  scBind('sc-target','target');scBind('sc-pid','projectId');scBind('sc-field','dataField');scBind('sc-dur','displayDuration',true);scBind('sc-ref','refreshInterval',true);scBind('sc-trans','transition');scBind('sc-path','pluginPath');scBind('sc-preview','previewText');
+  scBind('sc-pid','projectId');scBind('sc-dur','displayDuration',true);scBind('sc-ref','refreshInterval',true);scBind('sc-trans','transition');scBind('sc-path','pluginPath');scBind('sc-preview','previewText');scBind('sc-prev-target','previewTarget');
+  // Field row bindings
+  document.querySelectorAll('.sc-fld-field').forEach(sel=>{sel.addEventListener('change',e=>{const i=parseInt(sel.dataset.idx);scoreCycleSettings.fields[i].field=e.target.value;saveState();});});
+  document.querySelectorAll('.sc-fld-target').forEach(sel=>{sel.addEventListener('change',e=>{const i=parseInt(sel.dataset.idx);scoreCycleSettings.fields[i].target=e.target.value;saveState();});});
+}
+
+function scAddField(){
+  if(!scoreCycleSettings.fields)scoreCycleSettings.fields=[];
+  scoreCycleSettings.fields.push({field:'',target:''});
+  saveState();renderPluginTab();
+}
+function scRemoveField(i){
+  scoreCycleSettings.fields.splice(i,1);
+  saveState();renderPluginTab();
+}
+async function scFetchApiKeys(){
+  const pid=scoreCycleSettings.projectId.trim();
+  if(!pid){toast('Indtast Projekt ID først');return;}
+  const btn=document.getElementById('sc-fetch-btn');
+  if(btn){btn.textContent='Henter…';btn.disabled=true;}
+  try{
+    const url=`https://vmix-control.vercel.app/api/vmix/${pid}`;
+    const res=await fetch(url);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    const obj=Array.isArray(data)?data[0]:data;
+    scoreCycleSettings.apiKeys=obj?Object.keys(obj):[];
+    saveState();renderPluginTab();
+    toast(`${scoreCycleSettings.apiKeys.length} felter hentet`,'ok');
+  }catch(err){
+    if(btn){btn.textContent='Hent felter';btn.disabled=false;}
+    toast('Kunne ikke hente felter: '+err.message);
+  }
 }
 
 function scPreviewApply(){
-  const targetId=scoreCycleSettings.target;const txt=scoreCycleSettings.previewText;
-  if(!targetId||!txt){toast('Vælg target og skriv en testtekst');return;}
+  const targetId=scoreCycleSettings.previewTarget;const txt=scoreCycleSettings.previewText;
+  if(!targetId||!txt){toast('Vælg element og skriv en testtekst');return;}
   const el=elements.find(x=>'el'+x.id===targetId);
-  if(!el){toast('Target element ikke fundet');return;}
+  if(!el){toast('Element ikke fundet');return;}
   _scPreviewEl={id:el.id,text:txt};render();toast('Forhåndsvisning aktiv');
 }
 function scPreviewReset(){
@@ -2328,7 +2405,11 @@ window.addEventListener('beforeunload',e=>{
 function loadProject(ev){
   const file=ev.target.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=e=>{try{const d=JSON.parse(e.target.result);elements=d.elements||[];bgColor=d.bgColor||'transparent';elCtr=d.elCtr||elements.length;transitionOnUpdate=d.transitionOnUpdate??true;if(d.smartTickerSettings)Object.assign(smartTickerSettings,d.smartTickerSettings);if(d.scoreCycleSettings)Object.assign(scoreCycleSettings,d.scoreCycleSettings);if(d.projectName){document.getElementById('project-name').value=d.projectName;_addRecent(d.projectName);}canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];_dirty=false;selKf=null;
+  reader.onload=e=>{try{const d=JSON.parse(e.target.result);elements=d.elements||[];bgColor=d.bgColor||'transparent';elCtr=d.elCtr||elements.length;transitionOnUpdate=d.transitionOnUpdate??true;if(d.smartTickerSettings)Object.assign(smartTickerSettings,d.smartTickerSettings);if(d.scoreCycleSettings){Object.assign(scoreCycleSettings,d.scoreCycleSettings);
+      if(!scoreCycleSettings.fields){scoreCycleSettings.fields=[];const ot=scoreCycleSettings.target,of=scoreCycleSettings.dataField;if(ot||of)scoreCycleSettings.fields.push({field:of||'',target:ot||''});}
+      if(!scoreCycleSettings.apiKeys)scoreCycleSettings.apiKeys=[];
+      delete scoreCycleSettings.target;delete scoreCycleSettings.dataField;delete scoreCycleSettings.dataLabel;}
+    if(d.projectName){document.getElementById('project-name').value=d.projectName;_addRecent(d.projectName);}canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];_dirty=false;selKf=null;
     // Migrate: ensure keyframes + gradientStops exist
     elements.forEach(el=>{if(!el.keyframes)el.keyframes=[];
       if(el.gradientDir&&!el.gradientStops)el.gradientStops=_getStops(el);});
@@ -2473,7 +2554,8 @@ function exportSPX_CSS(){
   const _updateFn=transitionOnUpdate
     ?`${_cleanFn}\nvar _spxVisible=false;\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}\nfunction runTemplateUpdate(data){_updateContent(data);function _apply(){setTimeout(runAnimationIN,50);}if(_spxVisible){runAnimationOUT();setTimeout(_apply,${_maxOutMs});}else{_apply();}}\nwindow.onSpxUpdate=function(data){_updateContent(data);};${extraJS}`
     :`${_cleanFn}\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}\nfunction runTemplateUpdate(data){_updateContent(data);setTimeout(runAnimationIN,50);}\nwindow.onSpxUpdate=function(data){_updateContent(data);};${extraJS}`;
-  const _scScript=(scoreCycleSettings.enabled&&scoreCycleSettings.target)?`<script>\nwindow.ScoreCycle={\n  target:'${scoreCycleSettings.target}',\n  projectId:'${scoreCycleSettings.projectId}',\n  displayDuration:${scoreCycleSettings.displayDuration},\n  refreshInterval:${scoreCycleSettings.refreshInterval},\n  transition:'${scoreCycleSettings.transition}'${scoreCycleSettings.dataField?`,\n  dataField:'${scoreCycleSettings.dataField}'`:''}\n};\n<\/script>\n<script src="${scoreCycleSettings.pluginPath}"><\/script>`:'';
+  const _scFields=(scoreCycleSettings.fields||[]).filter(f=>f.field&&f.target);
+  const _scScript=(scoreCycleSettings.enabled&&_scFields.length)?`<script>\nwindow.ScoreCycle={\n  projectId:'${scoreCycleSettings.projectId}',\n  displayDuration:${scoreCycleSettings.displayDuration},\n  refreshInterval:${scoreCycleSettings.refreshInterval},\n  transition:'${scoreCycleSettings.transition}',\n  dataFields:${JSON.stringify(_scFields)}\n};\n<\/script>\n<script src="${scoreCycleSettings.pluginPath}"><\/script>`:'';
   _downloadHTML(_buildHTML(fontUrl,css+tickerCSS,htmlLines,fieldDefs,tname,
     _updateFn,
     `function runAnimationIN(){_spxVisible=true;\n${playLines.join('\n')}\n}`,
@@ -2572,7 +2654,8 @@ function exportSPX_GSAP(){
   const _gUpdateFn=transitionOnUpdate
     ?`${_gCleanFn}\nvar _spxVisible=false;\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}\nfunction runTemplateUpdate(data){_updateContent(data);function _apply(){setTimeout(runAnimationIN,50);}if(_spxVisible){runAnimationOUT();setTimeout(_apply,${_gMaxOutMs});}else{_apply();}}\nwindow.onSpxUpdate=function(data){_updateContent(data);};${gExtraJS}`
     :`${_gCleanFn}\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}\nfunction runTemplateUpdate(data){_updateContent(data);setTimeout(runAnimationIN,50);}\nwindow.onSpxUpdate=function(data){_updateContent(data);};${gExtraJS}`;
-  const _scScriptG=(scoreCycleSettings.enabled&&scoreCycleSettings.target)?`<script>\nwindow.ScoreCycle={\n  target:'${scoreCycleSettings.target}',\n  projectId:'${scoreCycleSettings.projectId}',\n  displayDuration:${scoreCycleSettings.displayDuration},\n  refreshInterval:${scoreCycleSettings.refreshInterval},\n  transition:'${scoreCycleSettings.transition}'${scoreCycleSettings.dataField?`,\n  dataField:'${scoreCycleSettings.dataField}'`:''}\n};\n<\/script>\n<script src="${scoreCycleSettings.pluginPath}"><\/script>`:'';
+  const _gScFields=(scoreCycleSettings.fields||[]).filter(f=>f.field&&f.target);
+  const _scScriptG=(scoreCycleSettings.enabled&&_gScFields.length)?`<script>\nwindow.ScoreCycle={\n  projectId:'${scoreCycleSettings.projectId}',\n  displayDuration:${scoreCycleSettings.displayDuration},\n  refreshInterval:${scoreCycleSettings.refreshInterval},\n  transition:'${scoreCycleSettings.transition}',\n  dataFields:${JSON.stringify(_gScFields)}\n};\n<\/script>\n<script src="${scoreCycleSettings.pluginPath}"><\/script>`:'';
   _downloadHTML(_buildHTML(fontUrl,css+gTickerCSS,htmlLines,fieldDefs,tname,
     _gUpdateFn,
     `function runAnimationIN(){_spxVisible=true;\n${_buildGSAPPlay(elements)}\n}`,
