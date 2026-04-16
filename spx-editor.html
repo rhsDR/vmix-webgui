@@ -125,10 +125,14 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 .kbd{display:inline-block;background:var(--surface3);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;font-family:var(--mono);font-size:10px;color:var(--text2);}
 
 /* LAYERS */
-#layers-list{padding:6px;}
+#layers-list{padding:0;display:flex;flex-direction:column;}
+#layers-list .li-scroll{padding:6px;flex:1;overflow-y:auto;}
 .li{display:flex;align-items:center;gap:5px;padding:5px 7px;border-radius:4px;cursor:pointer;border:1px solid transparent;margin-bottom:2px;transition:background .1s;}
 .li:hover{background:var(--surface2);}
 .li.sel{background:var(--surface2);border-color:var(--border2);}
+.li.drop-target{background:rgba(232,89,60,.15)!important;border-color:var(--accent)!important;}
+.li.dragging{opacity:.35;}
+.li-grp-hdr{background:rgba(0,0,0,.2);font-size:11px;}
 .li-icon{font-size:11px;width:14px;text-align:center;flex-shrink:0;color:var(--text3);}
 .li-swatch{width:12px;height:12px;border-radius:2px;flex-shrink:0;border:1px solid rgba(255,255,255,.12);}
 .li-name{flex:1;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -136,6 +140,7 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 .li-acts{display:flex;gap:2px;opacity:0;flex-shrink:0;}
 .li:hover .li-acts{opacity:1;}
 .la{width:18px;height:18px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px;}
+#li-toolbar{display:flex;gap:4px;padding:5px 8px;border-bottom:1px solid var(--border);align-items:center;min-height:36px;flex-shrink:0;}
 .la:hover{background:var(--surface3);color:var(--text);}
 
 /* STATUS BAR */
@@ -1905,20 +1910,94 @@ function _bgCss(el,colorOverride){
 function _rgba2hex(c){try{const d=document.createElement('div');d.style.color=c;document.body.appendChild(d);const rgb=getComputedStyle(d).color;document.body.removeChild(d);const m=rgb.match(/\d+/g);if(!m||m.length<3)return'#000000';return'#'+[m[0],m[1],m[2]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('');}catch{return'#000000';}}
 
 function renderLayersTab(){document.getElementById('pbody').innerHTML='<div id="layers-list"></div>';updLayersList();}
+function selAllInGroup(gid){selIds=elements.filter(x=>x.groupId===gid).map(x=>x.id);render();renderPanel();}
 function updLayersList(){
   const list=document.getElementById('layers-list');if(!list)return;
-  list.innerHTML=[...elements].reverse().map(el=>`
-    <div class="li${selIds.includes(el.id)?' sel':''}${el.locked?' locked':''}" onclick="selFromLayer(event,${el.id})" style="${el.groupId?'border-left:3px solid '+_groupColor(el.groupId)+';padding-left:5px':''}">
-      <span class="li-icon">${el.type==='text'?'T':el.type==='ticker'?'▶▶':el.type==='rect'?'▭':el.type==='image'?'🖼':'—'}</span>
-      <span class="li-swatch" style="background:${el.type==='image'?(el.src?'transparent':'rgba(255,255,255,.1)'):el.type==='text'?el.color:el.type==='ticker'?el.color:_bgCss(el)}${el.type==='image'&&el.src?';background-image:url('+el.src+');background-size:cover;background-position:center':''}"></span>
-      <span class="li-name">${el.name}</span>
-      <div class="li-acts">
-        <button class="la" onclick="event.stopPropagation();toggleVis(${el.id})">${el.visible?'👁':'🚫'}</button>
-        <button class="la" onclick="event.stopPropagation();toggleLock(${el.id})">${el.locked?'🔒':'🔓'}</button>
-        <button class="la" onclick="event.stopPropagation();moveLayer(${el.id},'up')">↑</button>
-        <button class="la" onclick="event.stopPropagation();moveLayer(${el.id},'down')">↓</button>
-      </div>
-    </div>`).join('');
+  list.innerHTML='';
+
+  // --- Toolbar ---
+  const _sels=elements.filter(x=>selIds.includes(x.id));
+  const _gids=[...new Set(_sels.filter(x=>x.groupId).map(x=>x.groupId))];
+  const canGroup=selIds.length>=2&&(_gids.length<=1);
+  const canUngroup=_gids.length>=1;
+  const tb=document.createElement('div');tb.id='li-toolbar';
+  if(canGroup){
+    const b=document.createElement('button');b.className='tb-btn';b.style.cssText='flex:1;justify-content:center;font-size:11px;height:24px;';
+    b.textContent='⊞ Gruppér valgte';b.onclick=groupSel;tb.appendChild(b);
+  }
+  if(canUngroup){
+    const b=document.createElement('button');b.className='tb-btn';b.style.cssText='flex:1;justify-content:center;font-size:11px;height:24px;';
+    b.textContent='⊟ Opløs';b.onclick=ungroupSel;tb.appendChild(b);
+  }
+  if(!canGroup&&!canUngroup){
+    const h=document.createElement('span');h.style.cssText='font-size:10px;color:var(--text3);';
+    h.textContent='Ctrl+klik for multi-valg';tb.appendChild(h);
+  }
+  list.appendChild(tb);
+
+  // --- Layer rows ---
+  const scroll=document.createElement('div');scroll.className='li-scroll';
+  list.appendChild(scroll);
+
+  const revEls=[...elements].reverse();
+  const seenGids=new Set();
+
+  revEls.forEach(el=>{
+    // Group header (once per group)
+    if(el.groupId&&!seenGids.has(el.groupId)){
+      seenGids.add(el.groupId);
+      const gc=_groupColor(el.groupId);
+      const gMembers=elements.filter(x=>x.groupId===el.groupId);
+      const allSel=gMembers.length>0&&gMembers.every(x=>selIds.includes(x.id));
+      const hdr=document.createElement('div');
+      hdr.className='li li-grp-hdr'+(allSel?' sel':'');
+      hdr.dataset.groupid=el.groupId;
+      hdr.style.cssText=`border-left:3px solid ${gc};padding-left:6px;`;
+      const ic=document.createElement('span');ic.textContent='⊞';ic.style.cssText=`color:${gc};font-size:12px;flex-shrink:0;`;
+      const nm=document.createElement('span');nm.className='li-name';nm.textContent='Gruppe';nm.style.color='var(--text2)';
+      const ct=document.createElement('span');ct.textContent=gMembers.length+' lag';ct.style.cssText='font-size:10px;color:var(--text3);flex-shrink:0;margin-right:4px;';
+      const acts=document.createElement('div');acts.className='li-acts';
+      const ub=document.createElement('button');ub.className='la';ub.title='Opløs gruppe';ub.textContent='⊟';
+      ub.onclick=e=>{e.stopPropagation();selIds=gMembers.map(x=>x.id);ungroupSel();};
+      acts.appendChild(ub);
+      hdr.appendChild(ic);hdr.appendChild(nm);hdr.appendChild(ct);hdr.appendChild(acts);
+      hdr.onclick=()=>selAllInGroup(el.groupId);
+      // Drop target: drag element onto group header to add to group
+      hdr.addEventListener('dragover',e=>{e.preventDefault();hdr.classList.add('drop-target');});
+      hdr.addEventListener('dragleave',()=>hdr.classList.remove('drop-target'));
+      hdr.addEventListener('drop',e=>{
+        e.preventDefault();hdr.classList.remove('drop-target');
+        const dragId=parseInt(e.dataTransfer.getData('text/plain'));
+        const dragEl=elements.find(x=>x.id===dragId);
+        if(dragEl&&dragEl.groupId!==el.groupId){saveState();dragEl.groupId=el.groupId;render();renderPanel();}
+      });
+      scroll.appendChild(hdr);
+    }
+
+    // Element row
+    const gc=el.groupId?_groupColor(el.groupId):null;
+    const row=document.createElement('div');
+    row.className='li'+(selIds.includes(el.id)?' sel':'')+(el.locked?' locked':'');
+    if(gc)row.style.cssText=`border-left:3px solid ${gc};padding-left:${el.groupId?'18px':'6px'};`;
+    row.draggable=true;
+    row.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',String(el.id));row.classList.add('dragging');});
+    row.addEventListener('dragend',()=>row.classList.remove('dragging'));
+    const icon=el.type==='text'?'T':el.type==='ticker'?'▶▶':el.type==='rect'?'▭':el.type==='image'?'🖼':'—';
+    const swBg=el.type==='image'?(el.src?'transparent':'rgba(255,255,255,.1)'):el.type==='text'?el.color:el.type==='ticker'?el.color:_bgCss(el);
+    const swEx=el.type==='image'&&el.src?`;background-image:url(${el.src});background-size:cover;background-position:center`:'';
+    const li=document.createElement('span');li.className='li-icon';li.textContent=icon;
+    const sw=document.createElement('span');sw.className='li-swatch';sw.style.cssText=`background:${swBg}${swEx};`;
+    const ln=document.createElement('span');ln.className='li-name';ln.textContent=el.name;
+    const acts=document.createElement('div');acts.className='li-acts';
+    const vb=document.createElement('button');vb.className='la';vb.textContent=el.visible?'👁':'🚫';vb.onclick=e=>{e.stopPropagation();toggleVis(el.id);};
+    const lb=document.createElement('button');lb.className='la';lb.textContent=el.locked?'🔒':'🔓';lb.onclick=e=>{e.stopPropagation();toggleLock(el.id);};
+    const ub=document.createElement('button');ub.className='la';ub.textContent='↑';ub.onclick=e=>{e.stopPropagation();moveLayer(el.id,'up');};
+    const db=document.createElement('button');db.className='la';db.textContent='↓';db.onclick=e=>{e.stopPropagation();moveLayer(el.id,'down');};
+    acts.appendChild(vb);acts.appendChild(lb);acts.appendChild(ub);acts.appendChild(db);
+    row.appendChild(li);row.appendChild(sw);row.appendChild(ln);row.appendChild(acts);
+    row.onclick=e=>selFromLayer(e,el.id);
+    scroll.appendChild(row);
+  });
 }
 function selFromLayer(e,id){
   const eg=elements.find(x=>x.id===id);
