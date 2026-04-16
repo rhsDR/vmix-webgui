@@ -1780,9 +1780,10 @@ function renderPluginTab(){
       scoreCycleSettings.enabled=e.target.checked;
       const dim=e.target.checked?'':'opacity:.45;pointer-events:none';
       ['sc-body','sc-body2','sc-body3','sc-body4'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.cssText=dim;});
+      saveState();
     });
   }
-  const scBind=(id,key,isNum)=>{const el=document.getElementById(id);if(el)el.addEventListener('input',e=>{scoreCycleSettings[key]=isNum?parseFloat(e.target.value)||scoreCycleSettings[key]:e.target.value;});};
+  const scBind=(id,key,isNum)=>{const el=document.getElementById(id);if(el)el.addEventListener('input',e=>{scoreCycleSettings[key]=isNum?parseFloat(e.target.value)||scoreCycleSettings[key]:e.target.value;saveState();});};
   scBind('sc-target','target');scBind('sc-pid','projectId');scBind('sc-dur','displayDuration',true);scBind('sc-ref','refreshInterval',true);scBind('sc-trans','transition');scBind('sc-path','pluginPath');
 }
 
