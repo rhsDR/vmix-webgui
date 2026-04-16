@@ -137,6 +137,7 @@ input[type=color].pc{width:26px;height:24px;border:1px solid var(--border2);bord
 .li-swatch{width:12px;height:12px;border-radius:2px;flex-shrink:0;border:1px solid rgba(255,255,255,.12);}
 .li-name{flex:1;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .li.sel .li-name{color:var(--text);}
+.li-name-edit{flex:1;font-size:11px;background:var(--bg3);color:var(--text);border:1px solid var(--acc);border-radius:3px;padding:0 4px;height:20px;outline:none;min-width:0;width:100%;}
 .li-acts{display:flex;gap:2px;opacity:0;flex-shrink:0;}
 .li:hover .li-acts{opacity:1;}
 .la{width:18px;height:18px;border:none;background:transparent;color:var(--text3);cursor:pointer;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:11px;}
@@ -2231,6 +2232,15 @@ function updLayersList(){
     const li=document.createElement('span');li.className='li-icon';li.textContent=icon;
     const sw=document.createElement('span');sw.className='li-swatch';sw.style.cssText=`background:${swBg}${swEx};`;
     const ln=document.createElement('span');ln.className='li-name';ln.textContent=el.name;
+    ln.addEventListener('dblclick',e=>{
+      e.stopPropagation();
+      const inp=document.createElement('input');
+      inp.className='li-name-edit';inp.value=el.name;
+      ln.replaceWith(inp);inp.focus();inp.select();
+      const commit=()=>{const v=inp.value.trim();if(v)el.name=v;saveState();updLayersList&&updLayersList();};
+      inp.addEventListener('blur',commit);
+      inp.addEventListener('keydown',e2=>{if(e2.key==='Enter'){inp.blur();}else if(e2.key==='Escape'){inp.removeEventListener('blur',commit);updLayersList&&updLayersList();}});
+    });
     const acts=document.createElement('div');acts.className='li-acts';
     const vb=document.createElement('button');vb.className='la';vb.textContent=el.visible?'👁':'🚫';vb.onclick=e=>{e.stopPropagation();toggleVis(el.id);};
     const lb=document.createElement('button');lb.className='la';lb.textContent=el.locked?'🔒':'🔓';lb.onclick=e=>{e.stopPropagation();toggleLock(el.id);};
