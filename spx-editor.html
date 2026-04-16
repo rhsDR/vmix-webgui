@@ -644,6 +644,7 @@ let scoreCycleSettings={
   transition:'fade',pluginPath:'/templates/dr/score_cycle.js',
   fields:[],apiKeys:[],previewText:'',previewTarget:''
 };
+let customFonts=[];
 
 const FONTS=['DM Sans','Inter','Lato','Poppins','Nunito','Source Sans 3','PT Sans','Barlow','Barlow Condensed','Oswald','Roboto Condensed','Montserrat','Raleway','Exo 2','Kanit','Rajdhani','Teko','Bebas Neue','Anton','Playfair Display','Georgia','Courier New'];
 const FWFS=[['300-normal','Light'],['300-italic','Light Italic'],['400-normal','Regular'],['400-italic','Italic'],['500-normal','Medium'],['500-italic','Medium Italic'],['600-normal','Semibold'],['600-italic','Semibold Italic'],['700-normal','Bold'],['700-italic','Bold Italic']];
@@ -1732,6 +1733,17 @@ function renderCanvasTab(){
     </div>
     <div class="psec"><div class="psec-title">Opløsning</div>
       <div style="font-size:11px;color:var(--text3)">1920 × 1080 px (HD 1080)</div>
+    </div>
+    <div class="psec"><div class="psec-title">Brugerdefinerede fonte</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:6px;line-height:1.5">Upload .ttf/.woff2/.otf — embeddes direkte i templaten. Brug fontnavnet i font-feltet på elementet.</div>
+      ${customFonts.length?customFonts.map((f,i)=>`
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="font-size:12px;flex:1;font-family:'${f.name}'">${f.name}</span>
+          <span style="font-size:10px;color:var(--text3)">${f.format}</span>
+          <button class="tb-btn icon" style="padding:0 5px;font-size:11px" onclick="removeCustomFont(${i})" title="Fjern">✕</button>
+        </div>`).join(''):'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">Ingen fonte tilføjet</div>'}
+      <button class="tb-btn" style="width:100%;justify-content:center" onclick="document.getElementById('font-file-inp').click()">+ Tilføj font</button>
+      <input type="file" id="font-file-inp" accept=".ttf,.woff,.woff2,.otf" style="display:none" onchange="addCustomFont(this.files[0]);this.value=''">
     </div>`;
   // Smart Ticker bindings
   function stBind(id,key,isColor,elIdx,elProp){
@@ -2562,7 +2574,7 @@ function _projFilename(ext){
 }
 function saveProject(){
   const name=document.getElementById('project-name').value.trim();
-  const data=JSON.stringify({version:3,elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings,projectName:name},null,2);
+  const data=JSON.stringify({version:3,elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings,customFonts,projectName:name},null,2);
   try{const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},200);}
   catch(err){const uri='data:application/json;charset=utf-8,'+encodeURIComponent(data);const a=document.createElement('a');a.href=uri;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>document.body.removeChild(a),200);}
   _addRecent(name||'Unavngivet');_dirty=false;toast('Projekt gemt','ok');
@@ -2581,6 +2593,7 @@ function loadProject(ev){
       if(!scoreCycleSettings.fields){scoreCycleSettings.fields=[];const ot=scoreCycleSettings.target,of=scoreCycleSettings.dataField;if(ot||of)scoreCycleSettings.fields.push({field:of||'',target:ot||''});}
       if(!scoreCycleSettings.apiKeys)scoreCycleSettings.apiKeys=[];
       delete scoreCycleSettings.target;delete scoreCycleSettings.dataField;delete scoreCycleSettings.dataLabel;}
+    if(d.customFonts){customFonts=d.customFonts;_injectCustomFonts();}
     if(d.projectName){document.getElementById('project-name').value=d.projectName;_addRecent(d.projectName);}canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];_dirty=false;selKf=null;
     // Migrate: ensure keyframes + gradientStops exist
     elements.forEach(el=>{if(!el.keyframes)el.keyframes=[];
@@ -2589,6 +2602,36 @@ function loadProject(ev){
   reader.readAsText(file);ev.target.value='';
 }
 
+function _injectCustomFonts(){
+  let s=document.getElementById('custom-fonts-style');
+  if(!s){s=document.createElement('style');s.id='custom-fonts-style';document.head.appendChild(s);}
+  s.textContent=customFonts.map(f=>`@font-face{font-family:'${f.name}';src:url('${f.dataUrl}') format('${f.format}');}`).join('\n');
+}
+function _customFontCSS(){
+  return customFonts.map(f=>`@font-face{font-family:'${f.name}';src:url('data:font/${f.format};base64,${f.base64}') format('${f.format}');}`).join('\n');
+}
+function addCustomFont(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const dataUrl=e.target.result;
+    const base64=dataUrl.split(',')[1];
+    const ext=file.name.split('.').pop().toLowerCase();
+    const format=ext==='woff2'?'woff2':ext==='woff'?'woff':ext==='otf'?'opentype':'truetype';
+    const name=file.name.replace(/\.[^.]+$/,'');
+    customFonts.push({name,format,base64,dataUrl});
+    _injectCustomFonts();
+    _dirty=true;
+    if(currentTab==='canvas')renderCanvasTab();
+    toast(`Font "${name}" tilføjet — brug navnet i font-feltet`,'ok');
+  };
+  reader.readAsDataURL(file);
+}
+function removeCustomFont(i){
+  customFonts.splice(i,1);
+  _injectCustomFonts();
+  _dirty=true;
+  renderCanvasTab();
+}
 function updSmartTickerUI(){
   const isST=document.getElementById('ttype').value==='smart_ticker';
   document.getElementById('btn-st-export').style.display=isST?'':'none';
@@ -2996,13 +3039,14 @@ function _buildHTML(fontUrl,css,htmlLines,fieldDefs,tname,updateFn,animInFn,anim
 <html>
 <head>
 <meta charset="UTF-8">
-<link href="${fontUrl}" rel="stylesheet">
+${fontUrl?`<link href="${fontUrl}" rel="stylesheet">`:''}
 ${extraHead}
 <script src="/templates/softpix/Template_Pack_1.3/js/spx_interface.js"><\/script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
 #hiddenSpxData{display:none;}
+${_customFontCSS()}
 ${css}
 </style>
 </head>
