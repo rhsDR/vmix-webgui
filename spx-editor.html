@@ -30,6 +30,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .tb-btn:hover{background:var(--surface3);color:var(--text);border-color:var(--border2);}
 .tb-btn:disabled{opacity:.3;cursor:default;}
 .tb-btn.icon{width:28px;padding:0;justify-content:center;font-size:14px;}
+.tb-btn.active-wipe{background:var(--accent);color:#fff;border-color:var(--accent);}
 .tb-btn.primary{background:var(--accent);border-color:transparent;color:#fff;font-weight:500;}
 .tb-btn.primary:hover{background:var(--accent2);}
 .tb-btn.back{border-color:#f97316;color:#f97316;}
@@ -914,6 +915,28 @@ function _elForRibbon(){
   return elements.find(x=>x.id===selIds[0])||null;
 }
 const ANCHOR_ORIGIN={tl:'left top',tc:'center top',tr:'right top',ml:'left center',mc:'center center',mr:'right center',bl:'left bottom',bc:'center bottom',br:'right bottom'};
+function _wipeRibbonGrps(el){
+  const inActive=el.animation==='wipe';
+  const roOut=resolveAnimOut(el);const outActive=roOut==='wipe';
+  const dis=s=>`style="${s?'':'opacity:.32;pointer-events:none'}"`;
+  const vDir=d=>d==='↑'||d==='↓';
+  const btn=(icon,active,onclick,title='')=>`<button class="tb-btn icon${active?' active-wipe':''}" onclick="${onclick}" title="${title}" style="min-width:26px;padding:0 5px">${icon}</button>`;
+  function dirBtns(curDir,setter){
+    const vIcon=curDir==='↑'?'↑':curDir==='↓'?'↓':'↕';
+    const vNext=curDir==='↑'?'↓':'↑';
+    return btn('←',curDir==='←',`${setter}('←')`,'Venstre')+btn('→',curDir==='→',`${setter}('→')`,'Højre')+btn(vIcon,vDir(curDir),`${setter}('${vNext}')`,curDir==='↑'?'Skift til ↓':curDir==='↓'?'Skift til ↑':'Op/Ned');
+  }
+  const inDir=el.wipeDir||'→';
+  const outDir=el.wipeDirOut||(inActive?inDir:'→');
+  return`<div class="rb-grp" ${dis(inActive)}>
+    <div class="rb-grp-row">${dirBtns(inDir,'setWipeDir')}</div>
+    <div class="rb-grp-lbl">Wipe IN</div>
+  </div>
+  <div class="rb-grp" style="border-right:none;${outActive?'':'opacity:.32;pointer-events:none'}">
+    <div class="rb-grp-row">${btn('↔',!el.wipeDirOut,"setWipeDirOut(null)",'Auto spejl')}${dirBtns(el.wipeDirOut||'','setWipeDirOut')}</div>
+    <div class="rb-grp-lbl">Wipe UD</div>
+  </div>`;
+}
 function _anchorGrid(el){
   const rows=[['tl','tc','tr'],['ml','mc','mr'],['bl','bc','br']];
   return`<div class="anchor-grid">${rows.map(r=>r.map(a=>`<div class="ag-dot${(el.anchor||'tl')===a?' active':''}" title="${ANCHOR_ORIGIN[a]}" onclick="setAnchor('${a}')"></div>`).join('')).join('')}</div>`;
@@ -1039,7 +1062,8 @@ function _renderRibbonFormat(){
   <div class="rb-grp" style="border-right:none">
     <div class="rb-grp-row">${_anchorGrid(el)}</div>
     <div class="rb-grp-lbl">Anchor</div>
-  </div>`;
+  </div>
+  ${_wipeRibbonGrps(el)}`;
   pane.innerHTML=h;
   _bindCtxBar(el);
 }
@@ -1304,10 +1328,26 @@ function render(){
   applyScrubState();
 }
 
-function _wipeInClip(dir,p){const pct=((1-p)*100).toFixed(1);if(dir==='←')return`inset(0 0 0 ${pct}%)`;if(dir==='↓')return`inset(${pct}% 0 0 0)`;if(dir==='↑')return`inset(0 0 ${pct}% 0)`;return`inset(0 ${pct}% 0 0)`;}
-function _wipeOutClip(dir,p){const pct=(p*100).toFixed(1);if(dir==='←')return`inset(0 ${pct}% 0 0)`;if(dir==='↓')return`inset(0 0 ${pct}% 0)`;if(dir==='↑')return`inset(${pct}% 0 0 0)`;return`inset(0 0 0 ${pct}%)`;}
-function _wipeHidden(dir){if(dir==='←')return'inset(0 0 0 100%)';if(dir==='↓')return'inset(100% 0 0 0)';if(dir==='↑')return'inset(0 0 100% 0)';return'inset(0 100% 0 0)';}
-function _wipeHiddenOut(dir){if(dir==='←')return'inset(0 100% 0 0)';if(dir==='↓')return'inset(0 0 100% 0)';if(dir==='↑')return'inset(100% 0 0 0)';return'inset(0 0 0 100%)';}
+function _wipeInClip(dir,p){const pct=((1-p)*100).toFixed(1);
+  if(dir==='←')return`inset(0 0 0 ${pct}%)`;   // reveals from right
+  if(dir==='↑')return`inset(${pct}% 0 0 0)`;   // clips top → reveals bottom first → bottom-to-top ↑
+  if(dir==='↓')return`inset(0 0 ${pct}% 0)`;   // clips bottom → reveals top first → top-to-bottom ↓
+  return`inset(0 ${pct}% 0 0)`;}                // → default: reveals from left
+function _wipeOutClip(dir,p){const pct=(p*100).toFixed(1);
+  if(dir==='←')return`inset(0 ${pct}% 0 0)`;
+  if(dir==='↑')return`inset(0 0 ${pct}% 0)`;   // exits upward: clip grows from bottom
+  if(dir==='↓')return`inset(${pct}% 0 0 0)`;   // exits downward: clip grows from top
+  return`inset(0 0 0 ${pct}%)`;}
+function _wipeHidden(dir){
+  if(dir==='←')return'inset(0 0 0 100%)';
+  if(dir==='↑')return'inset(100% 0 0 0)';       // hidden: top clipped 100%
+  if(dir==='↓')return'inset(0 0 100% 0)';       // hidden: bottom clipped 100%
+  return'inset(0 100% 0 0)';}
+function _wipeHiddenOut(dir){
+  if(dir==='←')return'inset(0 100% 0 0)';
+  if(dir==='↑')return'inset(0 0 100% 0)';       // exits upward: fully clipped from bottom
+  if(dir==='↓')return'inset(100% 0 0 0)';       // exits downward: fully clipped from top
+  return'inset(0 0 0 100%)';}
 function _scrubEaseIn(p,a){
   if(a==='wipe'||a==='reveal')return p<0.5?2*p*p:1-Math.pow(-2*p+2,2)/2; // power2.inOut
   if(a==='scale'){const c=2.5942;let v=p<0.5?(Math.pow(2*p,2)*((c+1)*2*p-c))/2:(Math.pow(2*p-2,2)*((c+1)*(2*p-2)+c)+2)/2;return Math.min(1.05,v);} // back.out
