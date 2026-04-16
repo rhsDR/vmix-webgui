@@ -1908,7 +1908,7 @@ function renderLayersTab(){document.getElementById('pbody').innerHTML='<div id="
 function updLayersList(){
   const list=document.getElementById('layers-list');if(!list)return;
   list.innerHTML=[...elements].reverse().map(el=>`
-    <div class="li${selIds.includes(el.id)?' sel':''}${el.locked?' locked':''}" onclick="selFromLayer(${el.id})" style="${el.groupId?'border-left:3px solid '+_groupColor(el.groupId)+';padding-left:5px':''}">
+    <div class="li${selIds.includes(el.id)?' sel':''}${el.locked?' locked':''}" onclick="selFromLayer(event,${el.id})" style="${el.groupId?'border-left:3px solid '+_groupColor(el.groupId)+';padding-left:5px':''}">
       <span class="li-icon">${el.type==='text'?'T':el.type==='ticker'?'▶▶':el.type==='rect'?'▭':el.type==='image'?'🖼':'—'}</span>
       <span class="li-swatch" style="background:${el.type==='image'?(el.src?'transparent':'rgba(255,255,255,.1)'):el.type==='text'?el.color:el.type==='ticker'?el.color:_bgCss(el)}${el.type==='image'&&el.src?';background-image:url('+el.src+');background-size:cover;background-position:center':''}"></span>
       <span class="li-name">${el.name}</span>
@@ -1920,7 +1920,19 @@ function updLayersList(){
       </div>
     </div>`).join('');
 }
-function selFromLayer(id){const eg=elements.find(x=>x.id===id);const gg=eg?.groupId;selIds=gg?elements.filter(x=>x.groupId===gg).map(x=>x.id):[id];render();switchTab('props');}
+function selFromLayer(e,id){
+  const eg=elements.find(x=>x.id===id);
+  const gg=eg?.groupId;
+  const ids=gg?elements.filter(x=>x.groupId===gg).map(x=>x.id):[id];
+  if(e.ctrlKey||e.metaKey){
+    const allIn=ids.every(i=>selIds.includes(i));
+    selIds=allIn?selIds.filter(i=>!ids.includes(i)):[...new Set([...selIds,...ids])];
+  }else{
+    selIds=ids;
+  }
+  render();
+  if(selIds.length===1)switchTab('props');else renderPanel();
+}
 
 function renderPropsTab(){
   const body=document.getElementById('pbody');
