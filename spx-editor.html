@@ -493,6 +493,7 @@ html.theme-kold{
       <button class="ptab active" id="tab-props" onclick="switchTab('props')">Egenskaber</button>
       <button class="ptab" id="tab-layers" onclick="switchTab('layers')">Lag</button>
       <button class="ptab" id="tab-canvas" onclick="switchTab('canvas')">Canvas</button>
+      <button class="ptab" id="tab-plugin" onclick="switchTab('plugin')">Plugin</button>
     </div>
     <div id="pbody"></div>
   </div>
@@ -626,6 +627,10 @@ let smartTickerSettings={
   breakingBg:'#eab308',breakingLabelBg:'#dc2626',breakingLabelText:'BREAKING',breakingTextColor:'#111111',
   apiUrl:'',apiInterval:15
 };
+let scoreCycleSettings={
+  enabled:false,target:'',projectId:'',displayDuration:5,refreshInterval:60,
+  transition:'fade',pluginPath:'/templates/dr/score_cycle.js'
+};
 
 const FONTS=['DM Sans','Inter','Lato','Poppins','Nunito','Source Sans 3','PT Sans','Barlow','Barlow Condensed','Oswald','Roboto Condensed','Montserrat','Raleway','Exo 2','Kanit','Rajdhani','Teko','Bebas Neue','Anton','Playfair Display','Georgia','Courier New'];
 const FWFS=[['300-normal','Light'],['300-italic','Light Italic'],['400-normal','Regular'],['400-italic','Italic'],['500-normal','Medium'],['500-italic','Medium Italic'],['600-normal','Semibold'],['600-italic','Semibold Italic'],['700-normal','Bold'],['700-italic','Bold Italic']];
@@ -737,25 +742,27 @@ function snapEdges(pos,size,anchors){
 }
 
 function saveState(){
-  undoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings}));
+  undoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings}));
   if(undoStack.length>60)undoStack.shift();
   redoStack=[];updUndoBtns();_dirty=true;
 }
 function undo(){
   if(!undoStack.length)return;
-  redoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings}));
+  redoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings}));
   const s=JSON.parse(undoStack.pop());
   elements=s.elements;bgColor=s.bgColor;elCtr=s.elCtr;transitionOnUpdate=s.transitionOnUpdate??true;
   if(s.smartTickerSettings)Object.assign(smartTickerSettings,s.smartTickerSettings);
+  if(s.scoreCycleSettings)Object.assign(scoreCycleSettings,s.scoreCycleSettings);
   canvas.style.background=bgColor;selIds=[];
   render();renderPanel();updUndoBtns();
 }
 function redo(){
   if(!redoStack.length)return;
-  undoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings}));
+  undoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings}));
   const s=JSON.parse(redoStack.pop());
   elements=s.elements;bgColor=s.bgColor;elCtr=s.elCtr;transitionOnUpdate=s.transitionOnUpdate??true;
   if(s.smartTickerSettings)Object.assign(smartTickerSettings,s.smartTickerSettings);
+  if(s.scoreCycleSettings)Object.assign(scoreCycleSettings,s.scoreCycleSettings);
   canvas.style.background=bgColor;selIds=[];
   render();renderPanel();updUndoBtns();
 }
@@ -1603,7 +1610,7 @@ function updStatus(){
 }
 
 function switchTab(t){currentTab=t;document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+t).classList.add('active');renderPanel();}
-function renderPanel(){if(currentTab==='layers'){renderLayersTab();}else if(currentTab==='canvas'){renderCanvasTab();}else{renderPropsTab();}renderRibbonBar();}
+function renderPanel(){if(currentTab==='layers'){renderLayersTab();}else if(currentTab==='canvas'){renderCanvasTab();}else if(currentTab==='plugin'){renderPluginTab();}else{renderPropsTab();}renderRibbonBar();}
 
 function renderCanvasTab(){
   document.getElementById('pbody').innerHTML=`
@@ -1662,6 +1669,52 @@ function renderCanvasTab(){
   stBind('st-btc','breakingTextColor',true);
   const url=document.getElementById('st-url');if(url)url.addEventListener('input',e=>{smartTickerSettings.apiUrl=e.target.value;});
   const ivl=document.getElementById('st-ivl');if(ivl)ivl.addEventListener('input',e=>{smartTickerSettings.apiInterval=parseFloat(e.target.value)||15;});
+}
+
+function renderPluginTab(){
+  const textEls=elements.filter(e=>e.type==='text');
+  const targetOpts=textEls.map(e=>`<option value="el${e.id}"${scoreCycleSettings.target==='el'+e.id?' selected':''}>${e.name}</option>`).join('');
+  const transOpts=[['fade','Fade'],['slide-up','Slide op'],['slide-down','Slide ned'],['slide-left','Slide venstre'],['slide-right','Slide højre'],['cut','Cut']].map(([v,l])=>`<option value="${v}"${scoreCycleSettings.transition===v?' selected':''}>${l}</option>`).join('');
+  document.getElementById('pbody').innerHTML=`
+    <div class="psec">
+      <div class="psec-title" style="color:#f5c400;font-size:13px">⚽ Score Cycle</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px;line-height:1.5">Henter kampresultater fra API og cycler dem automatisk i et valgt tekstelement.</div>
+      <label class="pchk"><input type="checkbox" id="sc-enabled" ${scoreCycleSettings.enabled?'checked':''}>Aktiver plugin ved eksport</label>
+    </div>
+    <div class="psec" id="sc-body" style="${scoreCycleSettings.enabled?'':'opacity:.45;pointer-events:none'}">
+      <div class="psec-title">Data</div>
+      <div class="prow"><span class="plbl">Target element</span>
+        <select class="pi" id="sc-target" style="flex:1;font-size:11px">
+          <option value="">— vælg —</option>
+          ${targetOpts}
+        </select>
+      </div>
+      <div class="prow"><span class="plbl">Projekt ID</span><input class="pi" id="sc-pid" value="${scoreCycleSettings.projectId}" placeholder="c2b06b16-..." style="font-size:10px"></div>
+    </div>
+    <div class="psec" id="sc-body2" style="${scoreCycleSettings.enabled?'':'opacity:.45;pointer-events:none'}">
+      <div class="psec-title">Timing</div>
+      <div class="prow"><span class="plbl">Visningstid (sek)</span><input class="pi sm" type="number" id="sc-dur" value="${scoreCycleSettings.displayDuration}" min="1" max="60"></div>
+      <div class="prow"><span class="plbl">Refresh (sek)</span><input class="pi sm" type="number" id="sc-ref" value="${scoreCycleSettings.refreshInterval}" min="10" max="600"></div>
+    </div>
+    <div class="psec" id="sc-body3" style="${scoreCycleSettings.enabled?'':'opacity:.45;pointer-events:none'}">
+      <div class="psec-title">Overgangsanimation</div>
+      <select class="pi" id="sc-trans" style="width:100%;margin-bottom:4px;font-size:12px">${transOpts}</select>
+    </div>
+    <div class="psec" id="sc-body4" style="${scoreCycleSettings.enabled?'':'opacity:.45;pointer-events:none'}">
+      <div class="psec-title">Avanceret</div>
+      <div class="prow"><span class="plbl">Plugin sti</span><input class="pi" id="sc-path" value="${scoreCycleSettings.pluginPath}" style="font-size:10px"></div>
+    </div>`;
+  // Bindings
+  const scEnabled=document.getElementById('sc-enabled');
+  if(scEnabled){
+    scEnabled.addEventListener('change',e=>{
+      scoreCycleSettings.enabled=e.target.checked;
+      const dim=e.target.checked?'':'opacity:.45;pointer-events:none';
+      ['sc-body','sc-body2','sc-body3','sc-body4'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.cssText=dim;});
+    });
+  }
+  const scBind=(id,key,isNum)=>{const el=document.getElementById(id);if(el)el.addEventListener('input',e=>{scoreCycleSettings[key]=isNum?parseFloat(e.target.value)||scoreCycleSettings[key]:e.target.value;});};
+  scBind('sc-target','target');scBind('sc-pid','projectId');scBind('sc-dur','displayDuration',true);scBind('sc-ref','refreshInterval',true);scBind('sc-trans','transition');scBind('sc-path','pluginPath');
 }
 
 function _getStops(el){
@@ -2072,7 +2125,7 @@ function _projFilename(ext){
 }
 function saveProject(){
   const name=document.getElementById('project-name').value.trim();
-  const data=JSON.stringify({version:3,elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,projectName:name},null,2);
+  const data=JSON.stringify({version:3,elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings,projectName:name},null,2);
   try{const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},200);}
   catch(err){const uri='data:application/json;charset=utf-8,'+encodeURIComponent(data);const a=document.createElement('a');a.href=uri;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>document.body.removeChild(a),200);}
   _addRecent(name||'Unavngivet');_dirty=false;toast('Projekt gemt','ok');
@@ -2087,7 +2140,7 @@ window.addEventListener('beforeunload',e=>{
 function loadProject(ev){
   const file=ev.target.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=e=>{try{const d=JSON.parse(e.target.result);elements=d.elements||[];bgColor=d.bgColor||'transparent';elCtr=d.elCtr||elements.length;transitionOnUpdate=d.transitionOnUpdate??true;if(d.smartTickerSettings)Object.assign(smartTickerSettings,d.smartTickerSettings);if(d.projectName){document.getElementById('project-name').value=d.projectName;_addRecent(d.projectName);}canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];_dirty=false;selKf=null;
+  reader.onload=e=>{try{const d=JSON.parse(e.target.result);elements=d.elements||[];bgColor=d.bgColor||'transparent';elCtr=d.elCtr||elements.length;transitionOnUpdate=d.transitionOnUpdate??true;if(d.smartTickerSettings)Object.assign(smartTickerSettings,d.smartTickerSettings);if(d.scoreCycleSettings)Object.assign(scoreCycleSettings,d.scoreCycleSettings);if(d.projectName){document.getElementById('project-name').value=d.projectName;_addRecent(d.projectName);}canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];_dirty=false;selKf=null;
     // Migrate: ensure keyframes + gradientStops exist
     elements.forEach(el=>{if(!el.keyframes)el.keyframes=[];
       if(el.gradientDir&&!el.gradientStops)el.gradientStops=_getStops(el);});
@@ -2203,11 +2256,12 @@ function exportSPX_CSS(){
   const _updateFn=transitionOnUpdate
     ?`${_cleanFn}\nvar _spxVisible=false;\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}\nfunction runTemplateUpdate(data){_updateContent(data);function _apply(){setTimeout(runAnimationIN,50);}if(_spxVisible){runAnimationOUT();setTimeout(_apply,${_maxOutMs});}else{_apply();}}\nwindow.onSpxUpdate=function(data){_updateContent(data);};${extraJS}`
     :`${_cleanFn}\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}\nfunction runTemplateUpdate(data){_updateContent(data);setTimeout(runAnimationIN,50);}\nwindow.onSpxUpdate=function(data){_updateContent(data);};${extraJS}`;
+  const _scScript=(scoreCycleSettings.enabled&&scoreCycleSettings.target)?`<script>\nwindow.ScoreCycle={\n  target:'${scoreCycleSettings.target}',\n  projectId:'${scoreCycleSettings.projectId}',\n  displayDuration:${scoreCycleSettings.displayDuration},\n  refreshInterval:${scoreCycleSettings.refreshInterval},\n  transition:'${scoreCycleSettings.transition}'\n};\n<\/script>\n<script src="${scoreCycleSettings.pluginPath}"><\/script>`:'';
   _downloadHTML(_buildHTML(fontUrl,css+tickerCSS,htmlLines,fieldDefs,tname,
     _updateFn,
     `function runAnimationIN(){_spxVisible=true;\n${playLines.join('\n')}\n}`,
     `function runAnimationOUT(){_spxVisible=false;\n${stopLines.join('\n')}\n}`,
-    hiddenDivLines.join('\n')
+    hiddenDivLines.join('\n'),'',_scScript
   ),_projFilename('.html'));
   toast('CSS template downloadet!','ok');
 }
@@ -2272,12 +2326,13 @@ function exportSPX_GSAP(){
   const _gUpdateFn=transitionOnUpdate
     ?`${_gCleanFn}\nvar _spxVisible=false;\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}\nfunction runTemplateUpdate(data){_updateContent(data);function _apply(){setTimeout(runAnimationIN,50);}if(_spxVisible){runAnimationOUT();setTimeout(_apply,${_gMaxOutMs});}else{_apply();}}\nwindow.onSpxUpdate=function(data){_updateContent(data);};${gExtraJS}`
     :`${_gCleanFn}\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}\nfunction runTemplateUpdate(data){_updateContent(data);setTimeout(runAnimationIN,50);}\nwindow.onSpxUpdate=function(data){_updateContent(data);};${gExtraJS}`;
+  const _scScriptG=(scoreCycleSettings.enabled&&scoreCycleSettings.target)?`<script>\nwindow.ScoreCycle={\n  target:'${scoreCycleSettings.target}',\n  projectId:'${scoreCycleSettings.projectId}',\n  displayDuration:${scoreCycleSettings.displayDuration},\n  refreshInterval:${scoreCycleSettings.refreshInterval},\n  transition:'${scoreCycleSettings.transition}'\n};\n<\/script>\n<script src="${scoreCycleSettings.pluginPath}"><\/script>`:'';
   _downloadHTML(_buildHTML(fontUrl,css+gTickerCSS,htmlLines,fieldDefs,tname,
     _gUpdateFn,
     `function runAnimationIN(){_spxVisible=true;\n${_buildGSAPPlay(elements)}\n}`,
     `function runAnimationOUT(){_spxVisible=false;\n${_buildGSAPStop(elements)}\n}`,
     hiddenDivLines.join('\n'),
-    gsapTag
+    gsapTag,_scScriptG
   ),_projFilename('_gsap.html'));
   toast('GSAP template downloadet!','ok');
 }
@@ -2334,7 +2389,7 @@ function _buildGSAPStop(els){
   return lines.join('\n');
 }
 
-function _buildHTML(fontUrl,css,htmlLines,fieldDefs,tname,updateFn,animInFn,animOutFn,hiddenDivs='',extraHead=''){
+function _buildHTML(fontUrl,css,htmlLines,fieldDefs,tname,updateFn,animInFn,animOutFn,hiddenDivs='',extraHead='',pluginScript=''){
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -2365,6 +2420,7 @@ ${fieldDefs}
   ]
 };
 <\/script>
+${pluginScript}
 </body>
 </html>`;
 }
