@@ -924,7 +924,6 @@ function _wipeRibbonGrps(el){
     return btn('←',curDir==='←',`${setter}('←')`,'Venstre')+btn('→',curDir==='→',`${setter}('→')`,'Højre')+btn('↑',curDir==='↑',`${setter}('↑')`,'Op (nedefra)')+btn('↓',curDir==='↓',`${setter}('↓')`,'Ned (oppefra)');
   }
   const inDir=el.wipeDir||'→';
-  const outDir=el.wipeDirOut||(inActive?inDir:'→');
   return`<div class="rb-grp" ${dis(inActive)}>
     <div class="rb-grp-row">${dirBtns(inDir,'setWipeDir')}</div>
     <div class="rb-grp-lbl">Wipe IN</div>
@@ -971,12 +970,17 @@ function _renderRibbonFormat(){
   if(selIds.length>1){
     selKf=null;
     const _sels=elements.filter(x=>selIds.includes(x.id));
-    const _allGid=_sels.every(x=>x.groupId&&x.groupId===_sels[0].groupId);
-    const _anyGid=_sels.some(x=>x.groupId);
+    const _gids=[...new Set(_sels.filter(x=>x.groupId).map(x=>x.groupId))];
+    const _allSameGrp=_sels.every(x=>x.groupId)&&_gids.length===1;   // alle i samme gruppe
+    const _noneGrp=_sels.every(x=>!x.groupId);                        // ingen grupperede
+    const _mixedSameGrp=_gids.length===1&&!_noneGrp&&!_allSameGrp;   // én gruppe + løse elementer
+    const _multiGrp=_gids.length>1;                                    // elementer fra flere grupper
     pane.innerHTML=`<div class="rb-pane" style="gap:8px">
       <span class="cb-hint">${selIds.length} elementer valgt</span>
-      ${!_anyGid?`<button class="tb-btn" onclick="groupSel()">⊞ Gruppér</button>`:''}
-      ${_allGid?`<button class="tb-btn" onclick="ungroupSel()">⊟ Opløs gruppe</button>`:''}
+      ${_noneGrp?`<button class="tb-btn" onclick="groupSel()">⊞ Gruppér</button>`:''}
+      ${_mixedSameGrp?`<button class="tb-btn" onclick="groupSel()">⊞ Tilføj til gruppe</button>`:''}
+      ${(_allSameGrp||_mixedSameGrp)?`<button class="tb-btn" onclick="ungroupSel()">⊟ Opløs gruppe</button>`:''}
+      ${_multiGrp?`<button class="tb-btn" onclick="ungroupSel()">⊟ Opløs grupper</button>`:''}
     </div>`;
     return;
   }
@@ -1132,13 +1136,15 @@ function _groupColor(gid){const p=['#3b82f6','#22c55e','#f59e0b','#a855f7','#e85
 function groupSel(){
   if(selIds.length<2){toast('Vælg mindst 2 elementer');return;}
   const sels=elements.filter(x=>selIds.includes(x.id));
-  if(sels.some(x=>x.groupId)){toast('Elementer er allerede i en gruppe');return;}
-  saveState();const gid='grp'+(++elCtr);
+  const existingGids=[...new Set(sels.filter(x=>x.groupId).map(x=>x.groupId))];
+  if(existingGids.length>1){toast('Elementer tilhører forskellige grupper');return;}
+  saveState();
+  const gid=existingGids[0]||'grp'+(++elCtr);
   sels.forEach(el=>el.groupId=gid);
-  render();renderPanel();toast('Gruppe oprettet ('+sels.length+' elementer)');
+  render();renderPanel();toast(existingGids[0]?'Tilføjet til gruppe':'Gruppe oprettet ('+sels.length+' elementer)');
 }
-function setWipeDir(d){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.wipeDir=d;renderPanel();}
-function setWipeDirOut(d){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.wipeDirOut=d||null;renderPanel();}
+function setWipeDir(d){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.wipeDir=d;render();renderPanel();}
+function setWipeDirOut(d){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.wipeDirOut=d||null;render();renderPanel();}
 function recalibrateBind(){
   const el=elements.find(x=>x.id===selIds[0]);if(!el||el.widthBindEl==null)return;
   saveState();
@@ -1155,9 +1161,11 @@ function recalibrateBind(){
 function resetCrop(){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.crop={t:0,r:0,b:0,l:0};render();renderPanel();}
 function ungroupSel(){
   const sels=elements.filter(x=>selIds.includes(x.id));
-  const gid=sels.find(x=>x.groupId)?.groupId;if(!gid)return;
-  saveState();elements.filter(x=>x.groupId===gid).forEach(el=>el.groupId=null);
-  render();renderPanel();toast('Gruppe opløst');
+  const gids=[...new Set(sels.filter(x=>x.groupId).map(x=>x.groupId))];
+  if(!gids.length)return;
+  saveState();
+  gids.forEach(gid=>elements.filter(x=>x.groupId===gid).forEach(el=>el.groupId=null));
+  render();renderPanel();toast('Gruppe'+(gids.length>1?'r':'')+ ' opløst');
 }
 /* ── END RIBBON ──────────────────────────────────── */
 function togglePanel(){
@@ -1610,14 +1618,30 @@ function importImageFile(ev){
   reader.readAsDataURL(file);ev.target.value='';
 }
 
+function _resolveGroupIds(copies){
+  // If all members of an original group are copied together, give copies a new shared groupId; otherwise clear it
+  const gidMap={};
+  copies.forEach(c=>{if(c.groupId){if(!gidMap[c.groupId])gidMap[c.groupId]=[];gidMap[c.groupId].push(c);}});
+  Object.values(gidMap).forEach(grp=>{
+    const copyIds=new Set(grp.map(c=>c.id));
+    // origIds: original elements in this group — exclude the newly added copies
+    const origIds=elements.filter(x=>x.groupId===grp[0].groupId&&!copyIds.has(x.id)).map(x=>x.id);
+    const allCopied=origIds.length>0&&origIds.every(id=>grp.some(c=>c._srcId===id));
+    const newGid=allCopied?'grp'+(++elCtr):null;
+    grp.forEach(c=>{c.groupId=newGid;delete c._srcId;});
+  });
+  copies.forEach(c=>delete c._srcId);
+}
 function duplicateSel(){
-  if(!selIds.length)return;saveState();const newIds=[];
-  selIds.forEach(id=>{const el=elements.find(x=>x.id===id);if(!el)return;const c=JSON.parse(JSON.stringify(el));c.id=++elCtr;c.x+=20;c.y+=20;c.name+=' kopi';elements.push(c);newIds.push(c.id);});
+  if(!selIds.length)return;saveState();const newIds=[];const copies=[];
+  selIds.forEach(id=>{const el=elements.find(x=>x.id===id);if(!el)return;const c=JSON.parse(JSON.stringify(el));c._srcId=el.id;c.id=++elCtr;c.x+=20;c.y+=20;c.name+=' kopi';elements.push(c);newIds.push(c.id);copies.push(c);});
+  _resolveGroupIds(copies);
   selIds=newIds;render();renderPanel();toast('Kopieret');
 }
 function pasteSel(){
-  if(!clipboard.length)return;saveState();const newIds=[];
-  clipboard.forEach(el=>{const c=JSON.parse(JSON.stringify(el));c.id=++elCtr;c.x+=20;c.y+=20;elements.push(c);newIds.push(c.id);});
+  if(!clipboard.length)return;saveState();const newIds=[];const copies=[];
+  clipboard.forEach(el=>{const c=JSON.parse(JSON.stringify(el));c._srcId=el.id;c.id=++elCtr;c.x+=20;c.y+=20;elements.push(c);newIds.push(c.id);copies.push(c);});
+  _resolveGroupIds(copies);
   selIds=newIds;render();renderPanel();toast(newIds.length+' indsat');
 }
 
@@ -2032,7 +2056,7 @@ function renderPropsTab(){
     </div>
     <div class="psec"><div class="psec-title">Animation ind</div>
       <div class="achip-grid">${ANIMS.map(a=>`<button class="achip${el.animation===a?' active':''}" onclick="setAnim('in','${a}')">${ANIM_LBL[a]}</button>`).join('')}</div>
-      ${el.animation==='wipe'?`<div class="prow"><span class="plbl">Retning</span><div style="display:flex;gap:4px">${['→','←','↓','↑'].map(d=>`<button class="achip${(el.wipeDir||'→')===d?' active':''}" onclick="setWipeDir('${d}')">${d}</button>`).join('')}</div></div>`:''}
+      ${el.animation==='wipe'?`<div class="prow"><span class="plbl">Retning</span><div style="display:flex;gap:4px">${['←','→','↑','↓'].map(d=>`<button class="achip${(el.wipeDir||'→')===d?' active':''}" onclick="setWipeDir('${d}')">${d}</button>`).join('')}</div></div>`:''}
       <div class="pg2">
         <div><label>Forsinkelse (s)</label><input class="pi" type="number" id="p-delay" value="${el.animDelay}" step="0.05" min="0"></div>
         <div><label>Varighed (s)</label><input class="pi" type="number" id="p-dur" value="${el.animDuration}" step="0.05" min="0.1"></div>
@@ -2040,7 +2064,7 @@ function renderPropsTab(){
     </div>
     <div class="psec"><div class="psec-title">Animation ud</div>
       <div class="achip-grid">${ANIMS_OUT.map(a=>`<button class="achip${(el.animOut||'auto')===a?' active':''}" onclick="setAnim('out','${a}')">${ANIM_OUT_LBL[a]}</button>`).join('')}</div>
-      ${(()=>{const ro=resolveAnimOut(el);return ro==='wipe'?`<div class="prow"><span class="plbl">Retning</span><div style="display:flex;gap:4px"><button class="achip${!el.wipeDirOut?' active':''}" onclick="setWipeDirOut(null)">↔ Auto</button>${['→','←','↓','↑'].map(d=>`<button class="achip${el.wipeDirOut===d?' active':''}" onclick="setWipeDirOut('${d}')">${d}</button>`).join('')}</div></div>`:''})()}
+      ${(()=>{const ro=resolveAnimOut(el);return ro==='wipe'?`<div class="prow"><span class="plbl">Retning</span><div style="display:flex;gap:4px"><button class="achip${!el.wipeDirOut?' active':''}" onclick="setWipeDirOut(null)">↔ Auto</button>${['←','→','↑','↓'].map(d=>`<button class="achip${el.wipeDirOut===d?' active':''}" onclick="setWipeDirOut('${d}')">${d}</button>`).join('')}</div></div>`:''})()}
       <div class="pg2">
         <div><label>Forsinkelse (s)</label><input class="pi" type="number" id="p-out-delay" value="${el.animOutDelay??0}" step="0.05" min="0"></div>
         <div><label>Varighed (s)</label><input class="pi" type="number" id="p-out-dur" value="${el.animOutDuration??0.3}" step="0.05" min="0.05"></div>
