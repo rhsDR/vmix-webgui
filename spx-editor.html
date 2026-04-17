@@ -3359,42 +3359,47 @@ function renderTimeline(){
       selIds=[el.id];render();renderPanel();renderTimeline();
       scrubTo(kfTime);
     });
-    if(el.animation!=='none'){
-      const bx=Math.max(0,el.animDelay*pxPerS);const bw=Math.max(4,el.animDuration*pxPerS);
+    {
+      const aIn=el.animation;
+      const bx=Math.max(0,(el.animDelay||0)*pxPerS);
+      const bw=aIn!=='none'?Math.max(4,(el.animDuration||0.45)*pxPerS):16;
       const bar=document.createElement('div');bar.className='tl-bar'+(selIds.includes(el.id)?' sel':'');
-      bar.style.cssText=`left:${bx}px;width:${bw}px;background:${animColor[el.animation]||animColor.fade};opacity:0.8;`;
-      bar.textContent=bw>50?el.animation:'';bar.title=`IN: ${el.animation} · +${el.animDelay}s · ${el.animDuration}s`;
-      let dx0=null;
-      bar.addEventListener('mousedown',e=>{
-        e.stopPropagation();dx0=e.clientX;
-        if(!selIds.includes(el.id)){selIds=[el.id];}
-        render();renderPanel();
-        const targets=elements.filter(x=>selIds.includes(x.id)&&x.animation!=='none').map(x=>({el:x,d0:x.animDelay}));
-        const mv=ev=>{const dt=(ev.clientX-dx0)/pxPerS;targets.forEach(({el:e2,d0})=>{e2.animDelay=Math.max(0,parseFloat((d0+dt).toFixed(2)));});renderTimeline();renderPanel();};
-        const up=()=>{saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
-        document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
-      });
-      const resH=document.createElement('div');resH.style.cssText='position:absolute;right:0;top:0;width:7px;height:100%;cursor:e-resize;z-index:2;';
-      resH.addEventListener('mousedown',e=>{e.stopPropagation();const sx=e.clientX,sd=el.animDuration;
-        const mv=ev=>{el.animDuration=Math.max(0.05,parseFloat((sd+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};
-        const up=()=>{saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
-        document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
-      });
-      bar.appendChild(resH);row.appendChild(bar);
+      bar.style.cssText=`left:${bx}px;width:${bw}px;background:${animColor[aIn]||animColor.fade};opacity:${aIn==='none'?0.4:0.8};`;
+      bar.textContent=bw>50?aIn:'';bar.title=`IN: ${aIn}${aIn!=='none'?' · +'+el.animDelay+'s · '+el.animDuration+'s':''}`;
+      if(aIn!=='none'){
+        let dx0=null;
+        bar.addEventListener('mousedown',e=>{
+          e.stopPropagation();dx0=e.clientX;
+          if(!selIds.includes(el.id)){selIds=[el.id];}
+          render();renderPanel();
+          const targets=elements.filter(x=>selIds.includes(x.id)&&x.animation!=='none').map(x=>({el:x,d0:x.animDelay}));
+          const mv=ev=>{const dt=(ev.clientX-dx0)/pxPerS;targets.forEach(({el:e2,d0})=>{e2.animDelay=Math.max(0,parseFloat((d0+dt).toFixed(2)));});renderTimeline();renderPanel();};
+          const up=()=>{saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+          document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+        });
+        const resH=document.createElement('div');resH.style.cssText='position:absolute;right:0;top:0;width:7px;height:100%;cursor:e-resize;z-index:2;';
+        resH.addEventListener('mousedown',e=>{e.stopPropagation();const sx=e.clientX,sd=el.animDuration;
+          const mv=ev=>{el.animDuration=Math.max(0.05,parseFloat((sd+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};
+          const up=()=>{saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+          document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+        });
+        bar.appendChild(resH);
+      }
+      row.appendChild(bar);
       const ao=resolveAnimOut(el);
-      if(ao!=='none'){const outDur=el.animOutDuration??0.3;const outDelay=el.animOutDelay??0;const obx=outDelay>0?outDelay*pxPerS:bx+bw+6;const obw=Math.max(4,outDur*pxPerS);
-        const obar=document.createElement('div');
-        obar.className='tl-bar out'+(selIds.includes(el.id)?' sel':'');
-        obar.style.cssText=`left:${obx}px;width:${obw}px;background:${animColor[ao]||animColor.fade};`;
-        obar.title=`OUT: ${ao} · delay:${outDelay}s · ${outDur}s`;
+      const outDur=ao!=='none'?Math.max(0.05,el.animOutDuration??0.3):0;
+      const outDelay=el.animOutDelay??0;
+      const obx=ao!=='none'?(outDelay>0?outDelay*pxPerS:bx+bw+6):bx+bw+6;
+      const obw=ao!=='none'?Math.max(4,outDur*pxPerS):16;
+      const obar=document.createElement('div');
+      obar.className='tl-bar out'+(selIds.includes(el.id)?' sel':'');
+      obar.style.cssText=`left:${obx}px;width:${obw}px;background:${animColor[ao]||animColor.none};opacity:${ao==='none'?0.4:1};`;
+      obar.title=`OUT: ${ao}${ao!=='none'?' · delay:'+outDelay+'s · '+outDur+'s':''}`;
+      if(ao!=='none'){
         obar.addEventListener('mousedown',e=>{
           e.stopPropagation();const sx=e.clientX;let moved=false;
-          if(e.ctrlKey||e.metaKey){
-            if(selIds.includes(el.id))selIds=selIds.filter(i=>i!==el.id);
-            else selIds=[...selIds,el.id];
-          }else{
-            if(!selIds.includes(el.id))selIds=[el.id];
-          }
+          if(e.ctrlKey||e.metaKey){if(selIds.includes(el.id))selIds=selIds.filter(i=>i!==el.id);else selIds=[...selIds,el.id];}
+          else{if(!selIds.includes(el.id))selIds=[el.id];}
           render();renderPanel();renderTimeline();
           const targets=elements.filter(x=>selIds.includes(x.id)&&resolveAnimOut(x)!=='none').map(x=>({el:x,d0:x.animOutDelay??0}));
           const mv=ev=>{moved=true;const dt=(ev.clientX-sx)/pxPerS;targets.forEach(({el:e2,d0})=>{e2.animOutDelay=Math.max(0,parseFloat((d0+dt).toFixed(2)));});renderTimeline();renderPanel();};
@@ -3412,8 +3417,8 @@ function renderTimeline(){
           document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
         });
         obar.appendChild(oResH);
-        row.appendChild(obar);
       }
+      row.appendChild(obar);
     }
     // Keyframe diamonds
     if(el.keyframes&&el.keyframes.length){
