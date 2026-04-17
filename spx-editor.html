@@ -1590,7 +1590,9 @@ function applyScrubState(){
     if(!el.groupId||!_grpOff[el.groupId])return;
     const div=canvas.querySelector(`[data-id="${el.id}"]`);if(!div)return;
     const{a,ao,phase,p,ga:gga}=_grpOff[el.groupId];
-    const existOp=parseFloat(div.style.opacity)??1;
+    // 'none' elements have no first-pass reset — seed from base to avoid stale state
+    if(el.animation==='none'){div.style.opacity=el.opacity;div.style.transform='';}
+    const existOp=parseFloat(div.style.opacity)??el.opacity;
     const existTr=div.style.transform&&div.style.transform!=='none'?div.style.transform:'';
     if(phase==='pre'||phase==='in'){
       const pg=phase==='pre'?0:p;
