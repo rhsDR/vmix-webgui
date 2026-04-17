@@ -1466,6 +1466,35 @@ function _scrubEaseIn(p,a){
   if(a==='scale'){const c=2.5942;let v=p<0.5?(Math.pow(2*p,2)*((c+1)*2*p-c))/2:(Math.pow(2*p-2,2)*((c+1)*(2*p-2)+c)+2)/2;return Math.min(1.05,v);} // back.out
   return 1-Math.pow(1-p,3); // power3.out
 }
+// Group wipe/reveal helpers — clip each element using group bounding box for coherent animation
+function _grpRevealInClip(p,gb,el){
+  if(!gb)return`inset(${((1-p)*50).toFixed(1)}% 0)`;
+  const cy=(gb.t+gb.b)/2,h=(gb.b-gb.t)*p/2;
+  const ct=Math.max(0,(cy-h)-el.y*scale),cb=Math.max(0,(el.y+el.h)*scale-(cy+h));
+  return`inset(${ct.toFixed(1)}px 0 ${cb.toFixed(1)}px 0)`;
+}
+function _grpRevealOutClip(p,gb,el){
+  if(!gb)return`inset(${(p*50).toFixed(1)}% 0)`;
+  const cy=(gb.t+gb.b)/2,h=(gb.b-gb.t)*(1-p)/2;
+  const ct=Math.max(0,(cy-h)-el.y*scale),cb=Math.max(0,(el.y+el.h)*scale-(cy+h));
+  return`inset(${ct.toFixed(1)}px 0 ${cb.toFixed(1)}px 0)`;
+}
+function _grpWipeInClip(dir,p,gb,el){
+  if(!gb)return _wipeInClip(dir,p);
+  const el_t=el.y*scale,el_b=(el.y+el.h)*scale,el_l=el.x*scale,el_r=(el.x+el.w)*scale;
+  if(dir==='→'){const rv=gb.l+p*(gb.r-gb.l);return`inset(0 ${Math.max(0,el_r-rv).toFixed(1)}px 0 0)`;}
+  if(dir==='←'){const rl=gb.r-p*(gb.r-gb.l);return`inset(0 0 0 ${Math.max(0,rl-el_l).toFixed(1)}px)`;}
+  if(dir==='↓'){const rb=gb.t+p*(gb.b-gb.t);return`inset(0 0 ${Math.max(0,el_b-rb).toFixed(1)}px 0)`;}
+  const rt=gb.b-p*(gb.b-gb.t);return`inset(${Math.max(0,rt-el_t).toFixed(1)}px 0 0 0)`;
+}
+function _grpWipeOutClip(dir,p,gb,el){
+  if(!gb)return _wipeOutClip(dir,p);
+  const el_t=el.y*scale,el_b=(el.y+el.h)*scale,el_l=el.x*scale,el_r=(el.x+el.w)*scale;
+  if(dir==='→'){const rl=gb.l+p*(gb.r-gb.l);return`inset(0 0 0 ${Math.max(0,rl-el_l).toFixed(1)}px)`;}
+  if(dir==='←'){const rv=gb.r-p*(gb.r-gb.l);return`inset(0 ${Math.max(0,el_r-rv).toFixed(1)}px 0 0)`;}
+  if(dir==='↓'){const rt=gb.t+p*(gb.b-gb.t);return`inset(${Math.max(0,rt-el_t).toFixed(1)}px 0 0 0)`;}
+  const rb=gb.b-p*(gb.b-gb.t);return`inset(0 0 ${Math.max(0,el_b-rb).toFixed(1)}px 0)`;
+}
 function _applyInState(div,a,p,el){
   const op=el.opacity;const ao=ANCHOR_ORIGIN[el.anchor||'tl'];
   div.style.clipPath='';
@@ -1569,6 +1598,16 @@ function applyScrubState(){
     }
   });
   // Second pass: apply group animation offset on top of individual transforms
+  // Pre-compute group bounding boxes for pixel-accurate wipe/reveal clipping
+  const _grpBounds={};
+  elements.forEach(el=>{
+    if(!el.groupId)return;
+    const ga=groupAnimations[el.groupId];if(!ga||!ga.animation||ga.animation==='none')return;
+    if(!_grpBounds[el.groupId])_grpBounds[el.groupId]={t:Infinity,b:-Infinity,l:Infinity,r:-Infinity};
+    const gb=_grpBounds[el.groupId];
+    gb.t=Math.min(gb.t,el.y*scale);gb.b=Math.max(gb.b,(el.y+el.h)*scale);
+    gb.l=Math.min(gb.l,el.x*scale);gb.r=Math.max(gb.r,(el.x+el.w)*scale);
+  });
   const _grpOff={};const _sg=new Set();
   elements.forEach(el=>{
     if(!el.groupId||_sg.has(el.groupId))return;_sg.add(el.groupId);
@@ -1602,8 +1641,8 @@ function applyScrubState(){
       else if(a==='slide-up'){div.style.opacity=Math.min(existOp,pg);div.style.transform=`translateY(${Math.round((1-pg)*50*scale)}px) `+existTr;}
       else if(a==='slide-down'){div.style.opacity=Math.min(existOp,pg);div.style.transform=`translateY(${Math.round(-(1-pg)*50*scale)}px) `+existTr;}
       else if(a==='scale'){div.style.opacity=Math.min(existOp,pg);div.style.transform=`scale(${(0.8+0.2*pg).toFixed(3)}) `+existTr;}
-      else if(a==='wipe'){div.style.clipPath=_wipeInClip(gga.wipeDir||'→',pg);}
-      else if(a==='reveal'){div.style.clipPath=`inset(${((1-pg)*50).toFixed(1)}% 0)`;}
+      else if(a==='wipe'){div.style.clipPath=_grpWipeInClip(gga.wipeDir||'→',pg,_grpBounds[el.groupId],el);}
+      else if(a==='reveal'){div.style.clipPath=_grpRevealInClip(pg,_grpBounds[el.groupId],el);}
     }else if(phase==='out'||phase==='post'){
       if(ao==='fade'){div.style.opacity=Math.min(existOp,1-p);}
       else if(ao==='slide-right'){div.style.opacity=Math.min(existOp,1-p);div.style.transform=`translateX(${Math.round(p*30*scale)}px) `+existTr;}
@@ -1611,8 +1650,8 @@ function applyScrubState(){
       else if(ao==='slide-up'){div.style.opacity=Math.min(existOp,1-p);div.style.transform=`translateY(${Math.round(-p*30*scale)}px) `+existTr;}
       else if(ao==='slide-down'){div.style.opacity=Math.min(existOp,1-p);div.style.transform=`translateY(${Math.round(p*30*scale)}px) `+existTr;}
       else if(ao==='scale'){div.style.opacity=Math.min(existOp,1-p);div.style.transform=`scale(${(0.85+0.15*(1-p)).toFixed(3)}) `+existTr;}
-      else if(ao==='wipe'){div.style.clipPath=_wipeOutClip(gga.wipeDirOut||gga.wipeDir||'→',p);}
-      else if(ao==='reveal'){div.style.clipPath=`inset(${(p*50).toFixed(1)}% 0)`;}
+      else if(ao==='wipe'){div.style.clipPath=_grpWipeOutClip(gga.wipeDirOut||gga.wipeDir||'→',p,_grpBounds[el.groupId],el);}
+      else if(ao==='reveal'){div.style.clipPath=_grpRevealOutClip(p,_grpBounds[el.groupId],el);}
     }else{
       // show phase: clear any clip so element is fully visible
       div.style.clipPath='';
