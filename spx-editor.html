@@ -1167,7 +1167,7 @@ function _renderRibbonAnim(){
     <button class="tb-btn" onclick="previewAnim()">&#9654; Preview</button>`;
   const cbn=(id,fn)=>{const inp=document.getElementById(id);if(inp){inp.addEventListener('input',e=>{fn(parseFloat(e.target.value)||0);render();});inp.addEventListener('change',()=>saveState());}};
   const cbs=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('change',e=>{saveState();fn(e.target.value);renderTimeline();});};
-  cbs('rb-ain',v=>{el.animation=v;});cbs('rb-aout',v=>{el.animOut=v;});
+  cbs('rb-ain',v=>{el.animation=v;render();applyScrubState();});cbs('rb-aout',v=>{el.animOut=v;render();applyScrubState();});
   cbn('rb-adl',v=>{el.animDelay=v;});cbn('rb-adur',v=>{el.animDuration=v;});
   cbn('rb-aodl',v=>{el.animOutDelay=v;});cbn('rb-aodur',v=>{el.animOutDuration=v;});
 }
