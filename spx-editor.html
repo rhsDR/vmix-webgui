@@ -1742,8 +1742,12 @@ function renderCanvasTab(){
           <span style="font-size:10px;color:var(--text3)">${f.format}</span>
           <button class="tb-btn icon" style="padding:0 5px;font-size:11px" onclick="removeCustomFont(${i})" title="Fjern">✕</button>
         </div>`).join(''):'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">Ingen fonte tilføjet</div>'}
-      <button class="tb-btn" style="width:100%;justify-content:center" onclick="document.getElementById('font-file-inp').click()">+ Tilføj font</button>
+      <div style="display:flex;gap:4px">
+        <button class="tb-btn" style="flex:1;justify-content:center" onclick="document.getElementById('font-file-inp').click()">+ Tilføj font</button>
+        <button class="tb-btn" style="flex:1;justify-content:center" onclick="document.getElementById('font-pack-inp').click()" title="Importer en dr-fonts.json pakke">↓ Importer pakke</button>
+      </div>
       <input type="file" id="font-file-inp" accept=".ttf,.woff,.woff2,.otf" style="display:none" onchange="addCustomFont(this.files[0]);this.value=''">
+      <input type="file" id="font-pack-inp" accept=".json" style="display:none" onchange="importFontPack(this.files[0]);this.value=''">
     </div>`;
   // Smart Ticker bindings
   function stBind(id,key,isColor,elIdx,elProp){
@@ -2602,13 +2606,17 @@ function loadProject(ev){
   reader.readAsText(file);ev.target.value='';
 }
 
+function _fontFace(f,useDataUrl){
+  const src=useDataUrl?f.dataUrl:`data:font/${f.format};base64,${f.base64}`;
+  return `@font-face{font-family:'${f.name}';src:url('${src}') format('${f.format}');${f.weight?`font-weight:${f.weight};`:''}${f.style?`font-style:${f.style};`:''}}`;
+}
 function _injectCustomFonts(){
   let s=document.getElementById('custom-fonts-style');
   if(!s){s=document.createElement('style');s.id='custom-fonts-style';document.head.appendChild(s);}
-  s.textContent=customFonts.map(f=>`@font-face{font-family:'${f.name}';src:url('${f.dataUrl}') format('${f.format}');}`).join('\n');
+  s.textContent=customFonts.map(f=>_fontFace(f,true)).join('\n');
 }
 function _customFontCSS(){
-  return customFonts.map(f=>`@font-face{font-family:'${f.name}';src:url('data:font/${f.format};base64,${f.base64}') format('${f.format}');}`).join('\n');
+  return customFonts.map(f=>_fontFace(f,false)).join('\n');
 }
 function addCustomFont(file){
   const reader=new FileReader();
@@ -2625,6 +2633,25 @@ function addCustomFont(file){
     toast(`Font "${name}" tilføjet — brug navnet i font-feltet`,'ok');
   };
   reader.readAsDataURL(file);
+}
+function importFontPack(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const fonts=JSON.parse(e.target.result);
+      if(!Array.isArray(fonts))throw new Error();
+      let added=0;
+      fonts.forEach(f=>{
+        if(!f.name||!f.base64||!f.format)return;
+        const exists=customFonts.some(x=>x.name===f.name&&x.weight===f.weight&&x.style===f.style);
+        if(!exists){customFonts.push(f);added++;}
+      });
+      _injectCustomFonts();_dirty=true;
+      renderCanvasTab();
+      toast(`${added} fonte importeret`,'ok');
+    }catch{toast('Ugyldig font-pakke');}
+  };
+  reader.readAsText(file);
 }
 function removeCustomFont(i){
   customFonts.splice(i,1);
