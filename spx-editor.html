@@ -723,6 +723,8 @@ document.addEventListener('mousedown',e=>{
   const dd=document.getElementById('fil-dropdown');
   if(dd&&dd.classList.contains('open')&&!dd.contains(e.target)&&!document.getElementById('rt-fil').contains(e.target))closeFilDropdown();
 });
+// Restore custom fonts from localStorage
+try{const _sf=localStorage.getItem('spx_custom_fonts');if(_sf){const _ff=JSON.parse(_sf);if(Array.isArray(_ff)&&_ff.length){customFonts=_ff;_injectCustomFonts();}}}catch(e){}
 // Init ribbon to format tab
 setRibbonTab('format');
 // Canvas zoom via Ctrl+scroll
@@ -2645,7 +2647,7 @@ function loadProject(ev){
       if(!scoreCycleSettings.fields){scoreCycleSettings.fields=[];const ot=scoreCycleSettings.target,of=scoreCycleSettings.dataField;if(ot||of)scoreCycleSettings.fields.push({field:of||'',target:ot||''});}
       if(!scoreCycleSettings.apiKeys)scoreCycleSettings.apiKeys=[];
       delete scoreCycleSettings.target;delete scoreCycleSettings.dataField;delete scoreCycleSettings.dataLabel;}
-    if(d.customFonts){customFonts=d.customFonts;_injectCustomFonts();}
+    if(d.customFonts){customFonts=d.customFonts;_injectCustomFonts();_saveCustomFontsToStorage();}
     if(d.groupAnimations)groupAnimations=d.groupAnimations;
     if(d.projectName){document.getElementById('project-name').value=d.projectName;_addRecent(d.projectName);}canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];_dirty=false;selKf=null;
     // Migrate: ensure keyframes + gradientStops exist
@@ -2667,6 +2669,9 @@ function _injectCustomFonts(){
 function _customFontCSS(){
   return customFonts.map(f=>_fontFace(f,false)).join('\n');
 }
+function _saveCustomFontsToStorage(){
+  try{localStorage.setItem('spx_custom_fonts',JSON.stringify(customFonts));}catch(e){console.warn('Fonte for store til localStorage',e);}
+}
 function addCustomFont(file){
   const reader=new FileReader();
   reader.onload=e=>{
@@ -2676,7 +2681,7 @@ function addCustomFont(file){
     const format=ext==='woff2'?'woff2':ext==='woff'?'woff':ext==='otf'?'opentype':'truetype';
     const name=file.name.replace(/\.[^.]+$/,'');
     customFonts.push({name,format,base64,dataUrl});
-    _injectCustomFonts();
+    _injectCustomFonts();_saveCustomFontsToStorage();
     _dirty=true;
     renderPanel();
     toast(`Font "${name}" tilføjet — brug navnet i font-feltet`,'ok');
@@ -2695,7 +2700,7 @@ function importFontPack(file){
         const exists=customFonts.some(x=>x.name===f.name&&x.weight===f.weight&&x.style===f.style);
         if(!exists){customFonts.push(f);added++;}
       });
-      _injectCustomFonts();_dirty=true;
+      _injectCustomFonts();_saveCustomFontsToStorage();_dirty=true;
       renderPanel();
       toast(`${added} fonte importeret`,'ok');
     }catch{toast('Ugyldig font-pakke');}
@@ -2704,9 +2709,9 @@ function importFontPack(file){
 }
 function removeCustomFont(i){
   customFonts.splice(i,1);
-  _injectCustomFonts();
+  _injectCustomFonts();_saveCustomFontsToStorage();
   _dirty=true;
-  renderCanvasTab();
+  renderPanel();
 }
 function updSmartTickerUI(){
   const isST=document.getElementById('ttype').value==='smart_ticker';
