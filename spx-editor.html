@@ -3486,7 +3486,67 @@ function renderTimeline(){
   labels.innerHTML='';bars.innerHTML='';
   const animColor={fade:'#3b82f6','slide-left':'#22c55e','slide-right':'#22c55e','slide-up':'#22c55e','slide-down':'#22c55e',wipe:'#e8593c',reveal:'#f59e0b',scale:'#a855f7',none:'rgba(255,255,255,.12)'};
   const _tln=elements.length;
+  const _seenGrps=new Set();
   [...elements].reverse().forEach(el=>{
+    // Group animation row — inserted once, above first group member in display order
+    if(el.groupId&&!_seenGrps.has(el.groupId)){
+      const ga=groupAnimations[el.groupId];
+      if(ga&&ga.animation&&ga.animation!=='none'){
+        _seenGrps.add(el.groupId);
+        const gc=_groupColor(el.groupId);
+        const grpMembers=elements.filter(x=>x.groupId===el.groupId);
+        const allSel=grpMembers.every(x=>selIds.includes(x.id));
+        const glbl=document.createElement('div');
+        glbl.className='tl-label'+(allSel?' sel':'');
+        glbl.style.cssText=`border-left:3px solid ${gc};padding-left:6px;font-style:italic;opacity:.9;`;
+        glbl.textContent='⊞ Gruppe';glbl.title='Gruppe animation';
+        glbl.onclick=()=>{selIds=grpMembers.map(x=>x.id);render();renderPanel();renderTimeline();};
+        labels.appendChild(glbl);
+        const grow=document.createElement('div');grow.className='tl-row';grow.style.cssText=`width:${trackW}px;background:rgba(255,255,255,.03);border-left:2px solid ${gc};`;
+        // IN bar
+        const gbx=Math.max(0,(ga.animDelay||0)*pxPerS);
+        const gbw=Math.max(4,(ga.animDuration||0.45)*pxPerS);
+        const gbar=document.createElement('div');gbar.className='tl-bar'+(allSel?' sel':'');
+        gbar.style.cssText=`left:${gbx}px;width:${gbw}px;background:${gc};opacity:.7;border-radius:3px;`;
+        gbar.textContent=gbw>50?ga.animation:'';gbar.title=`Gruppe IN: ${ga.animation} · +${ga.animDelay||0}s · ${ga.animDuration||0.45}s`;
+        gbar.addEventListener('mousedown',e=>{
+          e.stopPropagation();const sx=e.clientX;const d0=ga.animDelay||0;let moved=false;
+          const mv=ev=>{moved=true;ga.animDelay=Math.max(0,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};
+          const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+          document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+        });
+        const gresH=document.createElement('div');gresH.style.cssText='position:absolute;right:0;top:0;width:7px;height:100%;cursor:e-resize;z-index:2;';
+        gresH.addEventListener('mousedown',e=>{e.stopPropagation();const sx=e.clientX;const d0=ga.animDuration||0.45;
+          const mv=ev=>{ga.animDuration=Math.max(0.05,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};
+          const up=()=>{saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+          document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+        });
+        gbar.appendChild(gresH);grow.appendChild(gbar);
+        // OUT bar
+        const resolvedOut=ga.animOut==='auto'?(({'slide-left':'slide-right','slide-right':'slide-left','slide-up':'slide-down','slide-down':'slide-up',wipe:'wipe',fade:'fade',scale:'scale'})[ga.animation]||ga.animation):ga.animOut||ga.animation;
+        const outDur=Math.max(0.05,ga.animOutDuration??0.3);
+        const outDelay=ga.animOutDelay??0;
+        const gobx=outDelay>0?outDelay*pxPerS:gbx+gbw+6;
+        const gobw=Math.max(4,outDur*pxPerS);
+        const gobar=document.createElement('div');gobar.className='tl-bar out'+(allSel?' sel':'');
+        gobar.style.cssText=`left:${gobx}px;width:${gobw}px;background:${gc};opacity:.45;border-radius:3px;`;
+        gobar.title=`Gruppe OUT: ${resolvedOut} · delay:${outDelay}s · ${outDur}s`;
+        gobar.addEventListener('mousedown',e=>{
+          e.stopPropagation();const sx=e.clientX;const d0=ga.animOutDelay??0;let moved=false;
+          const mv=ev=>{moved=true;ga.animOutDelay=Math.max(0,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};
+          const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+          document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+        });
+        const goResH=document.createElement('div');goResH.style.cssText='position:absolute;right:0;top:0;width:7px;height:100%;cursor:e-resize;z-index:2;';
+        goResH.addEventListener('mousedown',e=>{e.stopPropagation();const sx=e.clientX;const d0=ga.animOutDuration??0.3;
+          const mv=ev=>{ga.animOutDuration=Math.max(0.05,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};
+          const up=()=>{saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+          document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+        });
+        gobar.appendChild(goResH);grow.appendChild(gobar);
+        bars.appendChild(grow);
+      }
+    }
     const lbl=document.createElement('div');lbl.className='tl-label'+(selIds.includes(el.id)?' sel':'');lbl.textContent=el.name;lbl.title=el.name;lbl.dataset.idx=elements.indexOf(el);
     lbl.onclick=e=>{
       if(e.ctrlKey||e.metaKey){
