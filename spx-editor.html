@@ -2828,9 +2828,8 @@ function exportSPX_CSS(){
     const id='el'+el.id;const a=el.animation,dur=el.animDuration,delay=el.animDelay;
     const anchorOrigin=ANCHOR_ORIGIN[el.anchor||'tl']||'top left';
     const hasKf=(el.keyframes&&el.keyframes.length>=2);
-    const _grpOverride=_grpAnimElIds.has(el.id);
     let outState='',inState='';
-    if(!hasKf&&!_grpOverride){
+    if(!hasKf){
       if(a==='fade'){outState='opacity:0;';inState=`opacity:${el.opacity};transform:none;`;}
       else if(a==='slide-left'){outState='opacity:0;transform:translateX(-50px);';inState=`opacity:${el.opacity};transform:none;`;}
       else if(a==='slide-right'){outState='opacity:0;transform:translateX(50px);';inState=`opacity:${el.opacity};transform:none;`;}
@@ -2873,10 +2872,10 @@ function exportSPX_CSS(){
       if(a!=='none')css+=outState;css+='}\n';
       const ao=resolveAnimOut(el);const outDur=el.animOutDuration??0.3;const outDelay=el.animOutDelay??0;
       const outTo=_cssAnimOutTo(ao,el);
-      if(!_grpOverride&&a!=='none')css+=`#${id}.in{transition:opacity ${dur}s ease ${delay}s,transform ${dur}s cubic-bezier(0.22,1,0.36,1) ${delay}s,clip-path ${dur}s cubic-bezier(0.42,0,0.58,1) ${delay}s;${inState}}\n`;
-      if(!_grpOverride&&ao!=='none')css+=`#${id}.out{transition:opacity ${outDur}s ease-in ${outDelay}s,transform ${outDur}s ease-in ${outDelay}s,clip-path ${outDur}s ease-in ${outDelay}s;${outTo}}\n`;
+      if(a!=='none')css+=`#${id}.in{transition:opacity ${dur}s ease ${delay}s,transform ${dur}s cubic-bezier(0.22,1,0.36,1) ${delay}s,clip-path ${dur}s cubic-bezier(0.42,0,0.58,1) ${delay}s;${inState}}\n`;
+      if(ao!=='none')css+=`#${id}.out{transition:opacity ${outDur}s ease-in ${outDelay}s,transform ${outDur}s ease-in ${outDelay}s,clip-path ${outDur}s ease-in ${outDelay}s;${outTo}}\n`;
     }
-    if(!_grpOverride&&!hasKf&&a!=='none'&&el.type!=='ticker'){playLines.push(`  document.getElementById('${id}').classList.remove('out');document.getElementById('${id}').classList.add('in');`);stopLines.push(`  document.getElementById('${id}').classList.remove('in');document.getElementById('${id}').classList.add('out');`);}
+    if(!hasKf&&a!=='none'&&el.type!=='ticker'){playLines.push(`  document.getElementById('${id}').classList.remove('out');document.getElementById('${id}').classList.add('in');`);stopLines.push(`  document.getElementById('${id}').classList.remove('in');document.getElementById('${id}').classList.add('out');`);}
     if(el.type==='ticker'){
       const sep=el.tickerSep||'  •  ';
       if(el.spxField){elHtml[el.id]=`  <div id="${id}"><div id="${id}-inner" class="ticker-inner"></div></div>`;updateLines.push(`  (function(){var t=clean((data&&data.f${fIdx}!=null)?String(data.f${fIdx}):document.getElementById('f${fIdx}').innerText);var items=t.split('|').map(function(s){return s.trim();}).filter(Boolean);var txt=items.join('${sep}');var full=txt+'${sep}'+txt;var w=document.getElementById('${id}');if(w&&w._tickerUpdate){w._tickerUpdate(full);}else{var inn=document.getElementById('${id}-inner');if(inn)inn.textContent=full;}})();`);hiddenDivLines.push(`  <div id="f${fIdx}"></div>`);fIdx++;}
@@ -2988,6 +2987,7 @@ function exportSPX_GSAP(){
   const _gCustomFontNames=new Set(customFonts.map(f=>f.name));
   const fonts=[...new Set(elements.map(e=>e.fontFamily||'DM Sans'))].filter(f=>!_gCustomFontNames.has(f));
   const fontUrl=fonts.length?`https://fonts.googleapis.com/css2?${fonts.map(f=>`family=${f.replace(/ /g,'+')}`).join('&')}&display=swap`:'';
+  const _grpAnimElIds=new Set(elements.filter(e=>e.groupId&&groupAnimations[e.groupId]?.animation&&groupAnimations[e.groupId].animation!=='none').map(e=>e.id));
   let css='',elHtml={},htmlLines=[],updateLines=[],hiddenDivLines=[];let fIdx=0;
   elements.forEach(el=>{
     const id='el'+el.id;
@@ -3062,7 +3062,6 @@ function exportSPX_GSAP(){
   elements.filter(e=>e.type==='text'&&e.apiUrl).forEach(el=>{const id='el'+el.id;const apiIvl=Math.max(5,el.apiInterval||30);gTextApiJS+=`(function(){var url=${JSON.stringify(el.apiUrl)};var tpl=${JSON.stringify(el.apiTemplate||'')};var ivl=${apiIvl};function stripHtml(s){return s.replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');}function fetchAndUpdate(){fetch(url).then(function(r){return r.json();}).then(function(data){var obj=Array.isArray(data)?data[0]:data;var text=tpl.replace(/\\{(\\w+)\\}/g,function(_,k){return obj[k]!==undefined?stripHtml(String(obj[k])):'';});var el=document.getElementById('${id}');if(el)el.textContent=text;}).catch(function(){});}fetchAndUpdate();setInterval(fetchAndUpdate,ivl*1000);})();\n`;});
   const gExtraJS=(gTickerInitJS+gTextApiJS)?`\ndocument.addEventListener('DOMContentLoaded',function(){\n${gTickerInitJS+gTextApiJS}});`:'';
   const gsapTag='<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>';
-  const _grpAnimElIds=new Set(elements.filter(e=>e.groupId&&groupAnimations[e.groupId]?.animation&&groupAnimations[e.groupId].animation!=='none').map(e=>e.id));
   let _grpGsapPlay='',_grpGsapStop='';
   {const _seenGA=new Set();
   elements.forEach(el=>{
@@ -3106,8 +3105,8 @@ function exportSPX_GSAP(){
   const _scScriptG=(scoreCycleSettings.enabled&&_gScFields.length)?`<script>\nwindow.ScoreCycle={\n  projectId:'${scoreCycleSettings.projectId}',\n  displayDuration:${scoreCycleSettings.displayDuration},\n  refreshInterval:${scoreCycleSettings.refreshInterval},\n  transition:'${scoreCycleSettings.transition}',\n  dataFields:${JSON.stringify(_gScFields)}\n};\n<\/script>\n<script>\n${_scPluginSrc()}\n<\/script>`:'';
   _downloadHTML(_buildHTML(fontUrl,css+gTickerCSS,htmlLines,fieldDefs,tname,
     _gUpdateFn,
-    `function runAnimationIN(){_spxVisible=true;\n${_buildGSAPPlay(elements.filter(e=>!_grpAnimElIds.has(e.id)))}${_grpGsapPlay}\n}`,
-    `function runAnimationOUT(){_spxVisible=false;\n${_buildGSAPStop(elements.filter(e=>!_grpAnimElIds.has(e.id)))}${_grpGsapStop}\n}`,
+    `function runAnimationIN(){_spxVisible=true;\n${_buildGSAPPlay(elements)}${_grpGsapPlay}\n}`,
+    `function runAnimationOUT(){_spxVisible=false;\n${_buildGSAPStop(elements)}${_grpGsapStop}\n}`,
     hiddenDivLines.join('\n'),
     gsapTag,_scScriptG
   ),_projFilename('_gsap.html'));
