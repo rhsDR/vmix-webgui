@@ -448,16 +448,10 @@ html.theme-kold{
       <div class="fd-sep"></div>
       <div class="fd-item" onclick="exportSPX();closeFilDropdown()"><span class="fd-icon">⬆</span><span>Eksportér SPX .html</span></div>
       <div class="fd-sep"></div>
-      <div style="padding:6px 14px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <select id="ttype-vis" style="flex:1;min-width:0;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:11px;padding:3px 6px;outline:none;cursor:pointer" onchange="document.getElementById('ttype').value=this.value;document.getElementById('ttype-top').value=this.value;updSmartTickerUI()">
-          <option value="lower_third">Lower Third</option>
-          <option value="ticker">Ticker / Crawl</option>
-          <option value="smart_ticker">&#9889; Smart Ticker</option>
-          <option value="credit">Credit</option>
-          <option value="fullscreen">Fullscreen Title</option>
-        </select>
-        <button class="tb-btn" style="height:26px;font-size:11px" onclick="loadPreset();closeFilDropdown()">&#9203; Preset</button>
-      </div>
+      <div class="fd-item" onclick="document.getElementById('fd-font-file').click();closeFilDropdown()"><span class="fd-icon">🔤</span><span>Tilføj font</span></div>
+      <div class="fd-item" onclick="document.getElementById('fd-font-pack').click();closeFilDropdown()"><span class="fd-icon">⬇</span><span>Importer font-pakke (.json)</span></div>
+      <input type="file" id="fd-font-file" accept=".ttf,.woff,.woff2,.otf" style="display:none" onchange="addCustomFont(this.files[0]);this.value=''">
+      <input type="file" id="fd-font-pack" accept=".json" style="display:none" onchange="importFontPack(this.files[0]);this.value=''">
     </div>
     <div class="fd-right">
       <div class="fd-section-title">Seneste projekter</div>
