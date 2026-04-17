@@ -2331,15 +2331,6 @@ function updLayersList(){
       acts.appendChild(ub);
       hdr.appendChild(ic);hdr.appendChild(nm);hdr.appendChild(ct);hdr.appendChild(acts);
       hdr.onclick=()=>selAllInGroup(el.groupId);
-      // Drop target: drag element onto group header to add to group
-      hdr.addEventListener('dragover',e=>{e.preventDefault();hdr.classList.add('drop-target');});
-      hdr.addEventListener('dragleave',()=>hdr.classList.remove('drop-target'));
-      hdr.addEventListener('drop',e=>{
-        e.preventDefault();hdr.classList.remove('drop-target');
-        const dragId=parseInt(e.dataTransfer.getData('text/plain'));
-        const dragEl=elements.find(x=>x.id===dragId);
-        if(dragEl&&dragEl.groupId!==el.groupId){saveState();dragEl.groupId=el.groupId;render();renderPanel();}
-      });
       scroll.appendChild(hdr);
     }
 
@@ -2348,27 +2339,28 @@ function updLayersList(){
     const row=document.createElement('div');
     row.className='li'+(selIds.includes(el.id)?' sel':'')+(el.locked?' locked':'');
     if(gc)row.style.cssText=`border-left:3px solid ${gc};padding-left:${el.groupId?'18px':'6px'};`;
-    row.draggable=true;
-    row.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',String(el.id));row.classList.add('dragging');});
-    row.addEventListener('dragend',()=>{row.classList.remove('dragging');document.querySelectorAll('.li').forEach(r=>r.classList.remove('drop-above','drop-below'));});
-    row.addEventListener('dragover',e=>{
-      e.preventDefault();
-      const mid=row.getBoundingClientRect().top+row.getBoundingClientRect().height/2;
-      document.querySelectorAll('.li').forEach(r=>r.classList.remove('drop-above','drop-below'));
-      row.classList.add(e.clientY<mid?'drop-above':'drop-below');
-    });
-    row.addEventListener('dragleave',()=>row.classList.remove('drop-above','drop-below'));
-    row.addEventListener('drop',e=>{
-      e.preventDefault();
-      document.querySelectorAll('.li').forEach(r=>r.classList.remove('drop-above','drop-below'));
-      const dragId=parseInt(e.dataTransfer.getData('text/plain'));
-      if(dragId===el.id)return;
-      const fromIdx=elements.findIndex(x=>x.id===dragId);
-      const toIdx=elements.findIndex(x=>x.id===el.id);
-      if(fromIdx<0||toIdx<0)return;
-      const mid=row.getBoundingClientRect().top+row.getBoundingClientRect().height/2;
-      const insertIdx=e.clientY<mid?toIdx:toIdx+1;
-      moveLayerToIndex(fromIdx,insertIdx);
+    row.addEventListener('mousedown',e=>{
+      if(e.button!==0||e.target.closest('.la,.li-name-edit'))return;
+      let dragging=false;const fromIdx=elements.findIndex(x=>x.id===el.id);let toIdx=fromIdx;
+      const rows=()=>[...scroll.querySelectorAll('.li:not(.li-grp-hdr)')];
+      const mv=ev=>{
+        if(!dragging&&Math.abs(ev.clientY-e.clientY)>4){dragging=true;row.classList.add('dragging');}
+        if(!dragging)return;
+        const all=rows();all.forEach(r=>r.classList.remove('drop-above','drop-below'));
+        let found=null;
+        all.forEach((r,i)=>{const rc=r.getBoundingClientRect();
+          if(ev.clientY>=rc.top&&ev.clientY<rc.top+rc.height/2)found={i,pos:'above'};
+          else if(ev.clientY>=rc.top+rc.height/2&&ev.clientY<rc.bottom)found={i,pos:'below'};
+        });
+        if(found){all[found.i].classList.add(found.pos==='above'?'drop-above':'drop-below');
+          toIdx=found.pos==='above'?found.i:found.i+1;}
+      };
+      const up=()=>{
+        document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+        scroll.querySelectorAll('.li').forEach(r=>r.classList.remove('dragging','drop-above','drop-below'));
+        if(dragging&&toIdx!==fromIdx)moveLayerToIndex(fromIdx,toIdx);
+      };
+      document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
     });
     const icon=el.type==='text'?'T':el.type==='ticker'?'▶▶':el.type==='rect'?(el.borderRadius>=9999?'○':'▭'):el.type==='image'?'🖼':'—';
     const swBg=el.type==='image'?(el.src?'transparent':'rgba(255,255,255,.1)'):el.type==='text'?el.color:el.type==='ticker'?el.color:_bgCss(el);
