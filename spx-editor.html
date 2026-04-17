@@ -1588,6 +1588,7 @@ function applyScrubState(){
   });
   elements.forEach(el=>{
     if(!el.groupId||!_grpOff[el.groupId])return;
+    if(el.animation==='none')return;
     const div=canvas.querySelector(`[data-id="${el.id}"]`);if(!div)return;
     const{a,ao,phase,p,ga:gga}=_grpOff[el.groupId];
     const existOp=parseFloat(div.style.opacity)??1;
@@ -3129,6 +3130,7 @@ function exportSPX_CSS(){
     if(!el.groupId||_seenGA.has(el.groupId))return;
     const ga=groupAnimations[el.groupId];
     if(!ga||ga.animation==='none')return;
+    if(!elements.some(e=>e.groupId===el.groupId&&e.animation!=='none'))return;
     _seenGA.add(el.groupId);
     const gid=`grp-${el.groupId}`;
     const dur=ga.animDuration,delay=ga.animDelay;
@@ -3150,22 +3152,27 @@ function exportSPX_CSS(){
     playLines.push(`  document.getElementById('${gid}').classList.remove('out');document.getElementById('${gid}').classList.add('in');`);
     stopLines.push(`  document.getElementById('${gid}').classList.remove('in');document.getElementById('${gid}').classList.add('out');`);
   });}
-  // Assemble htmlLines: wrap group members in container divs
+  // Assemble htmlLines: wrap animated group members; 'none' members go standalone at correct z-position
   {const _seenGrp=new Set();
   elements.forEach(el=>{
     if(el.groupId){
-      if(!_seenGrp.has(el.groupId)){
-        _seenGrp.add(el.groupId);
-        const gm=elements.filter(e=>e.groupId===el.groupId);
-        htmlLines.push(`  <div id="grp-${el.groupId}">`);
-        gm.forEach(m=>{if(elHtml[m.id]!==undefined)htmlLines.push(elHtml[m.id]);});
-        htmlLines.push(`  </div>`);
+      if(el.animation==='none'){
+        // No individual animation — place outside wrapper so it's always visible
+        if(elHtml[el.id]!==undefined)htmlLines.push(elHtml[el.id]);
+      }else{
+        if(!_seenGrp.has(el.groupId)){
+          _seenGrp.add(el.groupId);
+          const gm=elements.filter(e=>e.groupId===el.groupId&&e.animation!=='none');
+          htmlLines.push(`  <div id="grp-${el.groupId}">`);
+          gm.forEach(m=>{if(elHtml[m.id]!==undefined)htmlLines.push(elHtml[m.id]);});
+          htmlLines.push(`  </div>`);
+        }
       }
     }else{
       if(elHtml[el.id]!==undefined)htmlLines.push(elHtml[el.id]);
     }
   });
-  const _grpIds=[...new Set(elements.filter(e=>e.groupId).map(e=>e.groupId))];
+  const _grpIds=[...new Set(elements.filter(e=>e.groupId&&e.animation!=='none').map(e=>e.groupId))];
   if(_grpIds.length)css+=`[id^="grp-"]{position:absolute;inset:0;}\n`;}
   // widthBindEl: generate runtime update so rects follow text width in exported template
   elements.filter(e=>e.type==='rect'&&e.widthBindEl!=null).forEach(rectEl=>{
@@ -3255,22 +3262,26 @@ function exportSPX_GSAP(){
     else if(el.type==='image'){elHtml[el.id]=`  <div id="${id}">${el.src?`<img src="${el.src}" style="width:100%;height:100%;object-fit:${el.objectFit||'contain'};display:block;">`:''}</div>`;}
     else{elHtml[el.id]=`  <div id="${id}"${isLT&&el.type==='text'?' class="lt-text"':''}>${el.type==='text'?el.text:''}</div>`;}
   });
-  // Assemble htmlLines: wrap group members in container divs
+  // Assemble htmlLines: wrap animated group members; 'none' members go standalone at correct z-position
   {const _seenGrp=new Set();
   elements.forEach(el=>{
     if(el.groupId){
-      if(!_seenGrp.has(el.groupId)){
-        _seenGrp.add(el.groupId);
-        const gm=elements.filter(e=>e.groupId===el.groupId);
-        htmlLines.push(`  <div id="grp-${el.groupId}">`);
-        gm.forEach(m=>{if(elHtml[m.id]!==undefined)htmlLines.push(elHtml[m.id]);});
-        htmlLines.push(`  </div>`);
+      if(el.animation==='none'){
+        if(elHtml[el.id]!==undefined)htmlLines.push(elHtml[el.id]);
+      }else{
+        if(!_seenGrp.has(el.groupId)){
+          _seenGrp.add(el.groupId);
+          const gm=elements.filter(e=>e.groupId===el.groupId&&e.animation!=='none');
+          htmlLines.push(`  <div id="grp-${el.groupId}">`);
+          gm.forEach(m=>{if(elHtml[m.id]!==undefined)htmlLines.push(elHtml[m.id]);});
+          htmlLines.push(`  </div>`);
+        }
       }
     }else{
       if(elHtml[el.id]!==undefined)htmlLines.push(elHtml[el.id]);
     }
   });
-  const _grpIds=[...new Set(elements.filter(e=>e.groupId).map(e=>e.groupId))];
+  const _grpIds=[...new Set(elements.filter(e=>e.groupId&&e.animation!=='none').map(e=>e.groupId))];
   if(_grpIds.length)css+=`[id^="grp-"]{position:absolute;inset:0;}\n`;}
   // widthBindEl: runtime update so rects follow text width in exported GSAP template
   elements.filter(e=>e.type==='rect'&&e.widthBindEl!=null).forEach(rectEl=>{
@@ -3308,6 +3319,7 @@ function exportSPX_GSAP(){
     if(!el.groupId||_seenGA.has(el.groupId))return;
     const ga=groupAnimations[el.groupId];
     if(!ga||ga.animation==='none')return;
+    if(!elements.some(e=>e.groupId===el.groupId&&e.animation!=='none'))return;
     _seenGA.add(el.groupId);
     const gsel=`'#grp-${el.groupId}'`;
     const dur=ga.animDuration??0.45,delay=ga.animDelay??0;
