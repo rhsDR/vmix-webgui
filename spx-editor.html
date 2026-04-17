@@ -1584,12 +1584,12 @@ function applyScrubState(){
     else if(ao2==='none'||t<=outStart){phase='show';p=1;}
     else if(t<=outStart+outDur){phase='out';p=(t-outStart)/outDur;p=p*p;}
     else{phase='post';p=1;}
-    _grpOff[el.groupId]={a,ao:ao2,phase,p};
+    _grpOff[el.groupId]={a,ao:ao2,phase,p,ga};
   });
   elements.forEach(el=>{
     if(!el.groupId||!_grpOff[el.groupId])return;
     const div=canvas.querySelector(`[data-id="${el.id}"]`);if(!div)return;
-    const{a,ao,phase,p}=_grpOff[el.groupId];
+    const{a,ao,phase,p,ga:gga}=_grpOff[el.groupId];
     const existOp=parseFloat(div.style.opacity)??1;
     const existTr=div.style.transform&&div.style.transform!=='none'?div.style.transform:'';
     if(phase==='pre'||phase==='in'){
@@ -1600,6 +1600,8 @@ function applyScrubState(){
       else if(a==='slide-up'){div.style.opacity=Math.min(existOp,pg);div.style.transform=`translateY(${Math.round((1-pg)*50*scale)}px) `+existTr;}
       else if(a==='slide-down'){div.style.opacity=Math.min(existOp,pg);div.style.transform=`translateY(${Math.round(-(1-pg)*50*scale)}px) `+existTr;}
       else if(a==='scale'){div.style.opacity=Math.min(existOp,pg);div.style.transform=`scale(${(0.8+0.2*pg).toFixed(3)}) `+existTr;}
+      else if(a==='wipe'){if(!div.style.clipPath)div.style.clipPath=_wipeInClip(gga.wipeDir||'→',pg);}
+      else if(a==='reveal'){const c=((1-pg)*50).toFixed(1);if(!div.style.clipPath)div.style.clipPath=`inset(${c}% 0)`;}
     }else if(phase==='out'||phase==='post'){
       if(ao==='fade'){div.style.opacity=Math.min(existOp,1-p);}
       else if(ao==='slide-right'){div.style.opacity=Math.min(existOp,1-p);div.style.transform=`translateX(${Math.round(p*30*scale)}px) `+existTr;}
@@ -1607,6 +1609,8 @@ function applyScrubState(){
       else if(ao==='slide-up'){div.style.opacity=Math.min(existOp,1-p);div.style.transform=`translateY(${Math.round(-p*30*scale)}px) `+existTr;}
       else if(ao==='slide-down'){div.style.opacity=Math.min(existOp,1-p);div.style.transform=`translateY(${Math.round(p*30*scale)}px) `+existTr;}
       else if(ao==='scale'){div.style.opacity=Math.min(existOp,1-p);div.style.transform=`scale(${(0.85+0.15*(1-p)).toFixed(3)}) `+existTr;}
+      else if(ao==='wipe'){if(!div.style.clipPath)div.style.clipPath=_wipeOutClip(gga.wipeDirOut||gga.wipeDir||'→',p);}
+      else if(ao==='reveal'){const c=(p*50).toFixed(1);if(!div.style.clipPath)div.style.clipPath=`inset(${c}% 0)`;}
     }
   });
 }
@@ -2587,19 +2591,34 @@ function selFromLayer(e,id){
   if(selIds.length===1)switchTab('props');else renderPanel();
 }
 
+function setGrpWipeDir(dir){const gid=_selGroupId();if(!gid)return;saveState();_grpAnim(gid).wipeDir=dir;renderPanel();renderTimeline();}
+function setGrpWipeDirOut(dir){const gid=_selGroupId();if(!gid)return;saveState();_grpAnim(gid).wipeDirOut=dir||null;renderPanel();renderTimeline();}
 function _grpAnimHTML(gid){
   const ga=_grpAnim(gid);
   const gc=_groupColor(gid);
   const ainSel=ANIMS.map(a=>`<option value="${a}"${ga.animation===a?' selected':''}>${ANIM_LBL[a]}</option>`).join('');
   const aoutSel=ANIMS_OUT.map(a=>`<option value="${a}"${(ga.animOut||'auto')===a?' selected':''}>${ANIM_OUT_LBL[a]}</option>`).join('');
+  const wipeInActive=ga.animation==='wipe';
+  const resolvedOut=ga.animOut==='auto'?(({'slide-left':'slide-right','slide-right':'slide-left','slide-up':'slide-down','slide-down':'slide-up',wipe:'wipe',fade:'fade',scale:'scale'})[ga.animation]||ga.animation):(ga.animOut||ga.animation);
+  const wipeOutActive=resolvedOut==='wipe';
+  const dirBtn=(icon,cur,setter,val)=>`<button class="tb-btn icon${cur===val?' active-wipe':''}" onclick="${setter}('${val}')" style="flex:1;padding:3px 0">${icon}</button>`;
+  const wipeInBtns=`<div style="display:flex;gap:3px;margin-top:4px;opacity:${wipeInActive?1:.3};pointer-events:${wipeInActive?'auto':'none'}">
+    ${dirBtn('←',ga.wipeDir||'→','setGrpWipeDir','←')}${dirBtn('→',ga.wipeDir||'→','setGrpWipeDir','→')}${dirBtn('↑',ga.wipeDir||'→','setGrpWipeDir','↑')}${dirBtn('↓',ga.wipeDir||'→','setGrpWipeDir','↓')}
+  </div>`;
+  const wipeOutBtns=`<div style="display:flex;gap:3px;margin-top:4px;opacity:${wipeOutActive?1:.3};pointer-events:${wipeOutActive?'auto':'none'}">
+    <button class="tb-btn icon${!ga.wipeDirOut?' active-wipe':''}" onclick="setGrpWipeDirOut(null)" style="flex:1;padding:3px 0" title="Auto spejl">↔</button>
+    ${dirBtn('←',ga.wipeDirOut||'','setGrpWipeDirOut','←')}${dirBtn('→',ga.wipeDirOut||'','setGrpWipeDirOut','→')}${dirBtn('↑',ga.wipeDirOut||'','setGrpWipeDirOut','↑')}${dirBtn('↓',ga.wipeDirOut||'','setGrpWipeDirOut','↓')}
+  </div>`;
   return `<div class="psec"><div class="psec-title" style="border-left:3px solid ${gc};padding-left:7px">⊞ Gruppe</div>
     <div class="prow" style="margin-bottom:4px"><input class="pi" id="pg-name" value="${(ga.name||'').replace(/"/g,'&quot;')}" placeholder="Gruppenavn…" style="flex:1;font-weight:600"></div>
     <div class="prow"><span class="plbl">IND</span><select class="pi" id="pg-ain" style="flex:1">${ainSel}</select></div>
+    ${wipeInBtns}
     <div class="pg2">
       <div><label>Forsinkelse (s)</label><input class="pi" type="number" id="pg-adl" value="${ga.animDelay}" step="0.05" min="0"></div>
       <div><label>Varighed (s)</label><input class="pi" type="number" id="pg-adur" value="${ga.animDuration}" step="0.05" min="0.05"></div>
     </div>
     <div class="prow"><span class="plbl">UD</span><select class="pi" id="pg-aout" style="flex:1">${aoutSel}</select></div>
+    ${wipeOutBtns}
     <div class="pg2">
       <div><label>Forsinkelse (s)</label><input class="pi" type="number" id="pg-aodl" value="${ga.animOutDelay??0}" step="0.05" min="0"></div>
       <div><label>Varighed (s)</label><input class="pi" type="number" id="pg-aodur" value="${ga.animOutDuration??0.3}" step="0.05" min="0.05"></div>
@@ -2608,7 +2627,7 @@ function _grpAnimHTML(gid){
 }
 function _bindGrpAnimPanel(gid){
   const ga=_grpAnim(gid);
-  const cbs=(id,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener('change',e=>{saveState();fn(e.target.value);renderTimeline();});};
+  const cbs=(id,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener('change',e=>{saveState();fn(e.target.value);renderPanel();renderTimeline();});};
   const cbn=(id,fn)=>{const el=document.getElementById(id);if(el){el.addEventListener('input',e=>{fn(parseFloat(e.target.value)||0);});el.addEventListener('change',()=>{saveState();renderTimeline();});}};
   const cbt=(id,fn)=>{const el=document.getElementById(id);if(el){el.addEventListener('input',e=>{fn(e.target.value);renderTimeline();});el.addEventListener('change',()=>{saveState();});}};
   cbt('pg-name',v=>{ga.name=v;});
@@ -3122,6 +3141,7 @@ function exportSPX_CSS(){
     else if(ga.animation==='slide-up'){outState='opacity:0;transform:translateY(40px);';inState='opacity:1;transform:none;';}
     else if(ga.animation==='slide-down'){outState='opacity:0;transform:translateY(-40px);';inState='opacity:1;transform:none;';}
     else if(ga.animation==='wipe'){outState=`clip-path:${_wipeHidden(ga.wipeDir||'→')};opacity:1;`;inState='clip-path:inset(0 0 0 0);opacity:1;';}
+    else if(ga.animation==='reveal'){outState='clip-path:inset(50% 0);opacity:1;';inState='clip-path:inset(0% 0);opacity:1;';}
     else if(ga.animation==='scale'){outState='opacity:0;transform:scale(0.8);';inState='opacity:1;transform:none;';}
     const outTo=_cssAnimOutTo(ao,{wipeDir:ga.wipeDir||'→',wipeDirOut:ga.wipeDirOut||null});
     css+=`#${gid}{${outState}}\n`;
@@ -3298,6 +3318,7 @@ function exportSPX_GSAP(){
     else if(a==='slide-up'){css+=`#grp-${el.groupId}{opacity:0;}\n`;_grpGsapPlay+=`  gsap.set(${gsel},{opacity:0,y:50});\n  tl.to(${gsel},{opacity:1,y:0,duration:${dur},ease:'power3.out'},${delay});\n`;}
     else if(a==='slide-down'){css+=`#grp-${el.groupId}{opacity:0;}\n`;_grpGsapPlay+=`  gsap.set(${gsel},{opacity:0,y:-50});\n  tl.to(${gsel},{opacity:1,y:0,duration:${dur},ease:'power3.out'},${delay});\n`;}
     else if(a==='wipe'){css+=`#grp-${el.groupId}{clip-path:${_wipeHidden(ga.wipeDir||'→')};}\n`;_grpGsapPlay+=`  tl.fromTo(${gsel},{clipPath:'${_wipeHidden(ga.wipeDir||'→')}',immediateRender:true},{clipPath:'inset(0 0 0 0)',duration:${dur},ease:'power2.inOut'},${delay});\n`;}
+    else if(a==='reveal'){css+=`#grp-${el.groupId}{clip-path:inset(50% 0);}\n`;_grpGsapPlay+=`  tl.fromTo(${gsel},{clipPath:'inset(50% 0)',immediateRender:true},{clipPath:'inset(0% 0)',duration:${dur},ease:'power2.inOut'},${delay});\n`;}
     else if(a==='scale'){css+=`#grp-${el.groupId}{opacity:0;}\n`;_grpGsapPlay+=`  gsap.set(${gsel},{opacity:0,scale:0.8});\n  tl.to(${gsel},{opacity:1,scale:1,duration:${dur},ease:'back.out(1.4)'},${delay});\n`;}
     const ao=resolveAnimOut({animation:ga.animation,animOut:ga.animOut||'auto',wipeDir:ga.wipeDir||'→'});
     if(ao!=='none'){const outDur=ga.animOutDuration??0.3,outDelay=ga.animOutDelay??0;
@@ -3307,6 +3328,7 @@ function exportSPX_GSAP(){
       else if(ao==='slide-up')_grpGsapStop+=`  tl.to(${gsel},{opacity:0,y:-30,duration:${outDur},ease:'power2.in'},${outDelay});\n`;
       else if(ao==='slide-down')_grpGsapStop+=`  tl.to(${gsel},{opacity:0,y:30,duration:${outDur},ease:'power2.in'},${outDelay});\n`;
       else if(ao==='wipe')_grpGsapStop+=`  tl.to(${gsel},{clipPath:'${_wipeHiddenOut(ga.wipeDirOut||ga.wipeDir||'→')}',duration:${outDur},ease:'power2.in'},${outDelay});\n`;
+      else if(ao==='reveal')_grpGsapStop+=`  tl.to(${gsel},{clipPath:'inset(50% 0)',duration:${outDur},ease:'power2.in'},${outDelay});\n`;
       else if(ao==='scale')_grpGsapStop+=`  tl.to(${gsel},{opacity:0,scale:0.85,duration:${outDur},ease:'power2.in'},${outDelay});\n`;
     }
   });}
