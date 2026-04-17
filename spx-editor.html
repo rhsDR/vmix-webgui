@@ -105,7 +105,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 #pbody::-webkit-scrollbar{width:3px;}
 #pbody::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 .psec{padding:11px 13px;border-bottom:1px solid var(--border);}
-.psec-title{font-size:10px;font-weight:600;letter-spacing:.07em;color:var(--text2);text-transform:uppercase;margin:-11px -13px 10px;padding:6px 13px 5px;background:rgba(0,0,0,.28);border-bottom:1px solid var(--border);}
+.psec-title{font-size:10px;font-weight:600;letter-spacing:.07em;color:var(--text2);text-transform:uppercase;margin:-11px -13px 10px;padding:6px 13px 5px;background:rgba(0,0,0,.28);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;}
+.psec-title .psec-arrow{font-size:9px;opacity:.6;transition:transform .15s;flex-shrink:0;}
+.psec.collapsed>.psec-title .psec-arrow{transform:rotate(-90deg);}
+.psec.collapsed>*:not(.psec-title){display:none!important;}
+.lag-sel-hdr{padding:7px 12px;background:rgba(255,255,255,.05);border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text1);display:flex;align-items:center;gap:6px;flex-shrink:0;}
 .prow{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
 .plbl{font-size:11px;color:var(--text2);flex-shrink:0;min-width:56px;}
 input.pi,select.pi,textarea.pi{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:11px;padding:4px 7px;width:100%;outline:none;transition:border .15s;}
@@ -646,6 +650,7 @@ let scoreCycleSettings={
 };
 let customFonts=[];
 let groupAnimations={};
+let _collapsedSections=new Set();
 
 const FONTS=['DM Sans','Inter','Lato','Poppins','Nunito','Source Sans 3','PT Sans','Barlow','Barlow Condensed','Oswald','Roboto Condensed','Montserrat','Raleway','Exo 2','Kanit','Rajdhani','Teko','Bebas Neue','Anton','Playfair Display','Georgia','Courier New'];
 function _allFonts(){const custom=[...new Set(customFonts.map(f=>f.name))];return[...new Set([...custom,...FONTS])].sort((a,b)=>a.localeCompare(b,'da'));}
@@ -1854,6 +1859,7 @@ function renderCanvasTab(){
   stBind('st-btc','breakingTextColor',true);
   const url=document.getElementById('st-url');if(url)url.addEventListener('input',e=>{smartTickerSettings.apiUrl=e.target.value;});
   const ivl=document.getElementById('st-ivl');if(ivl)ivl.addEventListener('input',e=>{smartTickerSettings.apiInterval=parseFloat(e.target.value)||15;});
+  _bindCollapsible(document.getElementById('pbody'));
 }
 
 function renderPluginTab(){
@@ -2284,6 +2290,21 @@ function updLayersList(){
   }
   list.appendChild(tb);
 
+  // --- Selected element name header ---
+  if(selIds.length===1){
+    const selEl=elements.find(x=>x.id===selIds[0]);
+    if(selEl){
+      const hdr=document.createElement('div');hdr.className='lag-sel-hdr';
+      const typeIcon=selEl.type==='text'?'T':selEl.type==='ticker'?'▶▶':selEl.type==='rect'?(selEl.borderRadius>=9999?'○':'▭'):selEl.type==='image'?'🖼':'—';
+      const ic=document.createElement('span');ic.textContent=typeIcon;ic.style.cssText='font-size:10px;opacity:.45;flex-shrink:0;font-family:var(--mono);';
+      const nm=document.createElement('span');nm.textContent=selEl.name;nm.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      const gc=selEl.groupId?_groupColor(selEl.groupId):null;
+      if(gc){const dot=document.createElement('span');dot.style.cssText=`width:7px;height:7px;border-radius:50%;background:${gc};flex-shrink:0;`;hdr.appendChild(dot);}
+      hdr.appendChild(ic);hdr.appendChild(nm);
+      list.appendChild(hdr);
+    }
+  }
+
   // --- Layer rows ---
   const scroll=document.createElement('div');scroll.className='li-scroll';
   list.appendChild(scroll);
@@ -2604,8 +2625,26 @@ function renderPropsTab(){
   const tbp=document.getElementById('p-txt-bgc'),tbhx=document.getElementById('p-txt-bgc-hex');
   if(tbp){tbp.addEventListener('input',e=>{el.bgColor=e.target.value;if(tbhx)tbhx.value=e.target.value;render();});}
   if(tbhx){tbhx.addEventListener('input',e=>{const v=e.target.value.trim();el.bgColor=(v===''||v==='transparent')?'transparent':v;if(tbp&&/^#[0-9a-fA-F]{6}$/.test(v))tbp.value=v;render();});}
+  _bindCollapsible(body);
 }
 
+function _bindCollapsible(container){
+  container.querySelectorAll('.psec-title').forEach(title=>{
+    if(title.dataset.bound)return;
+    title.dataset.bound='1';
+    const arr=document.createElement('span');arr.className='psec-arrow';arr.textContent='▾';
+    title.appendChild(arr);
+    const psec=title.parentElement;
+    const key=title.textContent.replace('▾','').replace('▸','').trim();
+    if(_collapsedSections.has(key))psec.classList.add('collapsed');
+    title.addEventListener('click',()=>{
+      const k=title.textContent.replace('▾','').replace('▸','').trim();
+      psec.classList.toggle('collapsed');
+      if(psec.classList.contains('collapsed'))_collapsedSections.add(k);
+      else _collapsedSections.delete(k);
+    });
+  });
+}
 function pickFont(f){const el=elements.find(x=>x.id===selIds[0]);if(el){saveState();el.fontFamily=f;render();renderPanel();}document.getElementById('font-list')?.classList.remove('open');}
 document.addEventListener('click',e=>{if(!e.target.closest('.fp-wrap'))document.getElementById('font-list')?.classList.remove('open');});
 function setTextAlign(a){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.textAlign=a;render();renderPanel();}
