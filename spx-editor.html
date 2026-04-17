@@ -2681,8 +2681,9 @@ function exportSPX_CSS(){
   const fieldDefsArr=spxEls.map((e,i)=>`    {"field":"f${i}","ftype":"${e.type==='ticker'?'textarea':'textfield'}","title":"${e.fieldLabel}","value":"${e.text.replace(/"/g,'\\"')}"}`);
   if(isLT)fieldDefsArr.push('    {"field":"f'+spxEls.length+'","ftype":"dropdown","title":"Placering","value":"venstre","items":[{"text":"Venstre side","value":"venstre"},{"text":"H\\u00f8jre side","value":"h\\u00f8jre"}]}');
   const fieldDefs=fieldDefsArr.join(',\n');
-  const fonts=[...new Set(elements.map(e=>e.fontFamily||'DM Sans'))];
-  const fontUrl=`https://fonts.googleapis.com/css2?${fonts.map(f=>`family=${f.replace(/ /g,'+')}`).join('&')}&display=swap`;
+  const _customFontNames=new Set(customFonts.map(f=>f.name));
+  const fonts=[...new Set(elements.map(e=>e.fontFamily||'DM Sans'))].filter(f=>!_customFontNames.has(f));
+  const fontUrl=fonts.length?`https://fonts.googleapis.com/css2?${fonts.map(f=>`family=${f.replace(/ /g,'+')}`).join('&')}&display=swap`:'';
   let css='',playLines=[],stopLines=[],updateLines=[],elHtml={},htmlLines=[],hiddenDivLines=[];let fIdx=0;
   elements.forEach(el=>{
     const id='el'+el.id;const a=el.animation,dur=el.animDuration,delay=el.animDelay;
@@ -2818,8 +2819,9 @@ function exportSPX_GSAP(){
   const fieldDefsArr=spxEls.map((e,i)=>`    {"field":"f${i}","ftype":"${e.type==='ticker'?'textarea':'textfield'}","title":"${e.fieldLabel}","value":"${e.text.replace(/"/g,'\\"')}"}`);
   if(isLT)fieldDefsArr.push('    {"field":"f'+spxEls.length+'","ftype":"dropdown","title":"Placering","value":"venstre","items":[{"text":"Venstre side","value":"venstre"},{"text":"H\\u00f8jre side","value":"h\\u00f8jre"}]}');
   const fieldDefs=fieldDefsArr.join(',\n');
-  const fonts=[...new Set(elements.map(e=>e.fontFamily||'DM Sans'))];
-  const fontUrl=`https://fonts.googleapis.com/css2?${fonts.map(f=>`family=${f.replace(/ /g,'+')}`).join('&')}&display=swap`;
+  const _gCustomFontNames=new Set(customFonts.map(f=>f.name));
+  const fonts=[...new Set(elements.map(e=>e.fontFamily||'DM Sans'))].filter(f=>!_gCustomFontNames.has(f));
+  const fontUrl=fonts.length?`https://fonts.googleapis.com/css2?${fonts.map(f=>`family=${f.replace(/ /g,'+')}`).join('&')}&display=swap`:'';
   let css='',elHtml={},htmlLines=[],updateLines=[],hiddenDivLines=[];let fIdx=0;
   elements.forEach(el=>{
     const id='el'+el.id;
