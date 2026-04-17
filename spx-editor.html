@@ -1068,6 +1068,13 @@ function _renderRibbonFormat(){
     </div><div class="rb-grp-lbl">Farve</div>
   </div>`;
   }
+  if(isText){h+=`
+  <div class="rb-grp">
+    <div class="rb-grp-row">
+      ${fld('em','rb-ls',42,`value="${(el.letterSpacing||0).toFixed(2)}" step="0.01"`)}
+      ${fld('lh','rb-lh',42,`value="${el.lineHeight||''}" step="0.05" placeholder="auto"`)}
+    </div><div class="rb-grp-lbl">Afstand</div>
+  </div>`;}
   if(isRect)h+=`
   <div class="rb-grp">
     <div class="rb-grp-row">
@@ -1123,6 +1130,8 @@ function _bindCtxBar(el){
   cbn('cb-br',v=>{el.borderRadius=Math.max(0,v);});
   cb('cb-name',v=>{el.name=v;updLayersList&&updLayersList();});
   cb('cb-fit',v=>{el.objectFit=v;});
+  cbn('rb-ls',v=>{el.letterSpacing=v;});
+  const _lhInp=document.getElementById('rb-lh');if(_lhInp){_lhInp.addEventListener('input',e=>{el.lineHeight=parseFloat(e.target.value)||null;render();renderPanel();});_lhInp.addEventListener('change',()=>saveState());}
   const cc=document.getElementById('cb-color');if(cc)cc.addEventListener('input',e=>{el.color=e.target.value;render();renderPanel();});
   const cbg=document.getElementById('cb-bgc');if(cbg)cbg.addEventListener('input',e=>{el.bgColor=e.target.value;render();renderPanel();});
 }
