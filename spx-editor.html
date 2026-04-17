@@ -645,6 +645,7 @@ let scoreCycleSettings={
   fields:[],apiKeys:[],previewText:'',previewTarget:''
 };
 let customFonts=[];
+let groupAnimations={};
 
 const FONTS=['DM Sans','Inter','Lato','Poppins','Nunito','Source Sans 3','PT Sans','Barlow','Barlow Condensed','Oswald','Roboto Condensed','Montserrat','Raleway','Exo 2','Kanit','Rajdhani','Teko','Bebas Neue','Anton','Playfair Display','Georgia','Courier New'];
 function _allFonts(){const custom=[...new Set(customFonts.map(f=>f.name))];return[...new Set([...custom,...FONTS])].sort((a,b)=>a.localeCompare(b,'da'));}
@@ -928,6 +929,19 @@ function _elForRibbon(){
   if(!selIds.length||selIds.length>1)return null;
   return elements.find(x=>x.id===selIds[0])||null;
 }
+function _selGroupId(){
+  if(!selIds.length)return null;
+  const sels=elements.filter(x=>selIds.includes(x.id));
+  const gid=sels[0]?.groupId;
+  if(!gid||!sels.every(x=>x.groupId===gid))return null;
+  const allMembers=elements.filter(x=>x.groupId===gid);
+  if(allMembers.length!==sels.length)return null;
+  return gid;
+}
+function _grpAnim(gid){
+  if(!groupAnimations[gid])groupAnimations[gid]={animation:'none',animDelay:0,animDuration:0.45,animOut:'auto',animOutDelay:0,animOutDuration:0.3,wipeDir:'→',wipeDirOut:null};
+  return groupAnimations[gid];
+}
 const ANCHOR_ORIGIN={tl:'left top',tc:'center top',tr:'right top',ml:'left center',mc:'center center',mr:'right center',bl:'left bottom',bc:'center bottom',br:'right bottom'};
 function _wipeRibbonGrps(el){
   const inActive=el.animation==='wipe';
@@ -1103,6 +1117,30 @@ function _bindCtxBar(el){
 }
 function _renderRibbonAnim(){
   const pane=document.getElementById('rb-anim');if(!pane)return;
+  const gid=_selGroupId();
+  if(gid){
+    const ga=_grpAnim(gid);
+    const ainSel=ANIMS.map(a=>`<option value="${a}"${ga.animation===a?' selected':''}>${ANIM_LBL[a]}</option>`).join('');
+    const aoutSel=ANIMS_OUT.map(a=>`<option value="${a}"${(ga.animOut||'auto')===a?' selected':''}>${ANIM_OUT_LBL[a]}</option>`).join('');
+    pane.innerHTML=`
+      <span class="cb-lbl" style="font-weight:600;color:var(--accent)">⊞ GRUPPE</span>
+      <span class="cb-sep"></span>
+      <span class="cb-lbl" style="font-weight:600;color:var(--text2)">IND</span>
+      <select class="cb-sel" id="rb-gain" style="width:100px">${ainSel}</select>
+      <span class="cb-lbl scrub-lbl" data-for="rb-gadl" data-step="0.05" data-min="0">Delay</span><input class="cb-inp sm" id="rb-gadl" type="number" value="${ga.animDelay}" step="0.05" data-step="0.05" data-min="0">
+      <span class="cb-lbl scrub-lbl" data-for="rb-gadur" data-step="0.05" data-min="0.05">Dur</span><input class="cb-inp sm" id="rb-gadur" type="number" value="${ga.animDuration}" step="0.05" data-step="0.05" data-min="0.05">
+      <span class="cb-sep"></span>
+      <span class="cb-lbl" style="font-weight:600;color:var(--text2)">UD</span>
+      <select class="cb-sel" id="rb-gaout" style="width:100px">${aoutSel}</select>
+      <span class="cb-lbl scrub-lbl" data-for="rb-gaodl" data-step="0.05" data-min="0">Delay</span><input class="cb-inp sm" id="rb-gaodl" type="number" value="${ga.animOutDelay??0}" step="0.05" data-step="0.05" data-min="0">
+      <span class="cb-lbl scrub-lbl" data-for="rb-gaodur" data-step="0.05" data-min="0.05">Dur</span><input class="cb-inp sm" id="rb-gaodur" type="number" value="${ga.animOutDuration??0.3}" step="0.05" data-step="0.05" data-min="0.05">`;
+    const cbn=(id,fn)=>{const inp=document.getElementById(id);if(inp){inp.addEventListener('input',e=>{fn(parseFloat(e.target.value)||0);});inp.addEventListener('change',()=>{saveState();renderTimeline();});}};
+    const cbs=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('change',e=>{saveState();fn(e.target.value);renderTimeline();});};
+    cbs('rb-gain',v=>{ga.animation=v;});cbs('rb-gaout',v=>{ga.animOut=v;});
+    cbn('rb-gadl',v=>{ga.animDelay=v;});cbn('rb-gadur',v=>{ga.animDuration=v;});
+    cbn('rb-gaodl',v=>{ga.animOutDelay=v;});cbn('rb-gaodur',v=>{ga.animOutDuration=v;});
+    return;
+  }
   const el=_elForRibbon();
   if(!el){pane.innerHTML='<span class="cb-hint">Vælg et element for at angive animation</span>';return;}
   const ainSel=ANIMS.map(a=>`<option value="${a}"${el.animation===a?' selected':''}>${ANIM_LBL[a]}</option>`).join('');
@@ -1128,16 +1166,33 @@ function _renderRibbonAnim(){
 }
 function _renderRibbonData(){
   const pane=document.getElementById('rb-data');if(!pane)return;
+  const fontNames=[...new Set(customFonts.map(f=>f.name))];
+  const fontBadges=fontNames.length?fontNames.map(n=>`<span style="font-size:10px;background:var(--surface3);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;font-family:'${n}'">${n}</span>`).join(' '):'<span style="font-size:10px;color:var(--text3)">Ingen</span>';
   const el=_elForRibbon();
-  if(!el){pane.innerHTML='<span class="cb-hint">Vælg et element for at konfigurere data</span>';return;}
-  pane.innerHTML=`
+  const dataHTML=el?`
     <label class="cb-lbl" style="cursor:pointer"><input type="checkbox" id="rb-spx" ${el.spxField?'checked':''} style="accent-color:var(--accent);margin-right:4px">SPX felt</label>
     <input class="cb-inp wide" id="rb-flbl" value="${el.fieldLabel||''}" placeholder="Felt-label" ${el.spxField?'':'style="opacity:.4"'}>
     <span class="cb-sep"></span>
     <span class="cb-lbl">API URL</span><input class="cb-inp" id="rb-url" style="width:220px" value="${el.apiUrl||''}" placeholder="https://...">
     <span class="cb-lbl">Interval</span><input class="cb-inp sm" id="rb-ivl" type="number" value="${el.apiInterval??30}" min="5" max="300">
     <span class="cb-lbl" style="margin-left:-2px">s</span>
-    <span class="cb-lbl">Skabelon</span><input class="cb-inp wide" id="rb-tpl" value="${el.apiTemplate||''}" placeholder="{feltnavn}">`;
+    <span class="cb-lbl">Skabelon</span><input class="cb-inp wide" id="rb-tpl" value="${el.apiTemplate||''}" placeholder="{feltnavn}">
+    <span class="cb-sep"></span>`:'';
+  pane.innerHTML=`${dataHTML}
+    <span class="cb-lbl" style="color:var(--text2)">Fonte:</span>${fontBadges}
+    <button class="tb-btn" onclick="document.getElementById('rb-font-file').click()">+ Tilføj font</button>
+    <button class="tb-btn" onclick="document.getElementById('rb-font-pack').click()">↓ Font-pakke</button>
+    <input type="file" id="rb-font-file" accept=".ttf,.woff,.woff2,.otf" style="display:none" onchange="addCustomFont(this.files[0]);this.value=''">
+    <input type="file" id="rb-font-pack" accept=".json" style="display:none" onchange="importFontPack(this.files[0]);this.value=''">`;
+  if(!el)return;
+  const cb=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('input',e=>fn(e.target.value));};
+  const spx=document.getElementById('rb-spx');
+  if(spx)spx.addEventListener('change',e=>{el.spxField=e.target.checked;const flbl=document.getElementById('rb-flbl');if(flbl)flbl.style.opacity=e.target.checked?'1':'.4';renderPanel();});
+  cb('rb-flbl',v=>{el.fieldLabel=v;renderPanel();});
+  cb('rb-url',v=>{el.apiUrl=v;});
+  cb('rb-ivl',v=>{el.apiInterval=parseFloat(v)||30;});
+  cb('rb-tpl',v=>{el.apiTemplate=v;});
+}
   const cb=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('input',e=>fn(e.target.value));};
   const spx=document.getElementById('rb-spx');
   if(spx)spx.addEventListener('change',e=>{el.spxField=e.target.checked;const flbl=document.getElementById('rb-flbl');if(flbl)flbl.style.opacity=e.target.checked?'1':'.4';renderPanel();});
@@ -2579,7 +2634,7 @@ function _projFilename(ext){
 }
 function saveProject(){
   const name=document.getElementById('project-name').value.trim();
-  const data=JSON.stringify({version:3,elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings,customFonts,projectName:name},null,2);
+  const data=JSON.stringify({version:3,elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings,customFonts,groupAnimations,projectName:name},null,2);
   try{const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},200);}
   catch(err){const uri='data:application/json;charset=utf-8,'+encodeURIComponent(data);const a=document.createElement('a');a.href=uri;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>document.body.removeChild(a),200);}
   _addRecent(name||'Unavngivet');_dirty=false;toast('Projekt gemt','ok');
@@ -2599,6 +2654,7 @@ function loadProject(ev){
       if(!scoreCycleSettings.apiKeys)scoreCycleSettings.apiKeys=[];
       delete scoreCycleSettings.target;delete scoreCycleSettings.dataField;delete scoreCycleSettings.dataLabel;}
     if(d.customFonts){customFonts=d.customFonts;_injectCustomFonts();}
+    if(d.groupAnimations)groupAnimations=d.groupAnimations;
     if(d.projectName){document.getElementById('project-name').value=d.projectName;_addRecent(d.projectName);}canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];_dirty=false;selKf=null;
     // Migrate: ensure keyframes + gradientStops exist
     elements.forEach(el=>{if(!el.keyframes)el.keyframes=[];
@@ -2630,7 +2686,7 @@ function addCustomFont(file){
     customFonts.push({name,format,base64,dataUrl});
     _injectCustomFonts();
     _dirty=true;
-    if(currentTab==='canvas')renderCanvasTab();
+    renderPanel();
     toast(`Font "${name}" tilføjet — brug navnet i font-feltet`,'ok');
   };
   reader.readAsDataURL(file);
@@ -2648,7 +2704,7 @@ function importFontPack(file){
         if(!exists){customFonts.push(f);added++;}
       });
       _injectCustomFonts();_dirty=true;
-      renderCanvasTab();
+      renderPanel();
       toast(`${added} fonte importeret`,'ok');
     }catch{toast('Ugyldig font-pakke');}
   };
@@ -2686,12 +2742,14 @@ function exportSPX_CSS(){
   const fonts=[...new Set(elements.map(e=>e.fontFamily||'DM Sans'))].filter(f=>!_customFontNames.has(f));
   const fontUrl=fonts.length?`https://fonts.googleapis.com/css2?${fonts.map(f=>`family=${f.replace(/ /g,'+')}`).join('&')}&display=swap`:'';
   let css='',playLines=[],stopLines=[],updateLines=[],elHtml={},htmlLines=[],hiddenDivLines=[];let fIdx=0;
+  const _grpAnimElIds=new Set(elements.filter(e=>e.groupId&&groupAnimations[e.groupId]?.animation&&groupAnimations[e.groupId].animation!=='none').map(e=>e.id));
   elements.forEach(el=>{
     const id='el'+el.id;const a=el.animation,dur=el.animDuration,delay=el.animDelay;
     const anchorOrigin=ANCHOR_ORIGIN[el.anchor||'tl']||'top left';
     const hasKf=(el.keyframes&&el.keyframes.length>=2);
+    const _grpOverride=_grpAnimElIds.has(el.id);
     let outState='',inState='';
-    if(!hasKf){
+    if(!hasKf&&!_grpOverride){
       if(a==='fade'){outState='opacity:0;';inState=`opacity:${el.opacity};transform:none;`;}
       else if(a==='slide-left'){outState='opacity:0;transform:translateX(-50px);';inState=`opacity:${el.opacity};transform:none;`;}
       else if(a==='slide-right'){outState='opacity:0;transform:translateX(50px);';inState=`opacity:${el.opacity};transform:none;`;}
@@ -2734,9 +2792,10 @@ function exportSPX_CSS(){
       if(a!=='none')css+=outState;css+='}\n';
       const ao=resolveAnimOut(el);const outDur=el.animOutDuration??0.3;const outDelay=el.animOutDelay??0;
       const outTo=_cssAnimOutTo(ao,el);
-      if(a!=='none')css+=`#${id}.in{transition:opacity ${dur}s ease ${delay}s,transform ${dur}s cubic-bezier(0.22,1,0.36,1) ${delay}s,clip-path ${dur}s cubic-bezier(0.42,0,0.58,1) ${delay}s;${inState}}\n`;
-      if(ao!=='none')css+=`#${id}.out{transition:opacity ${outDur}s ease-in ${outDelay}s,transform ${outDur}s ease-in ${outDelay}s,clip-path ${outDur}s ease-in ${outDelay}s;${outTo}}\n`;
+      if(!_grpOverride&&a!=='none')css+=`#${id}.in{transition:opacity ${dur}s ease ${delay}s,transform ${dur}s cubic-bezier(0.22,1,0.36,1) ${delay}s,clip-path ${dur}s cubic-bezier(0.42,0,0.58,1) ${delay}s;${inState}}\n`;
+      if(!_grpOverride&&ao!=='none')css+=`#${id}.out{transition:opacity ${outDur}s ease-in ${outDelay}s,transform ${outDur}s ease-in ${outDelay}s,clip-path ${outDur}s ease-in ${outDelay}s;${outTo}}\n`;
     }
+    if(!_grpOverride&&!hasKf&&a!=='none'&&el.type!=='ticker'){playLines.push(`  document.getElementById('${id}').classList.remove('out');document.getElementById('${id}').classList.add('in');`);stopLines.push(`  document.getElementById('${id}').classList.remove('in');document.getElementById('${id}').classList.add('out');`);}
     if(el.type==='ticker'){
       const sep=el.tickerSep||'  •  ';
       if(el.spxField){elHtml[el.id]=`  <div id="${id}"><div id="${id}-inner" class="ticker-inner"></div></div>`;updateLines.push(`  (function(){var t=clean((data&&data.f${fIdx}!=null)?String(data.f${fIdx}):document.getElementById('f${fIdx}').innerText);var items=t.split('|').map(function(s){return s.trim();}).filter(Boolean);var txt=items.join('${sep}');var full=txt+'${sep}'+txt;var w=document.getElementById('${id}');if(w&&w._tickerUpdate){w._tickerUpdate(full);}else{var inn=document.getElementById('${id}-inner');if(inn)inn.textContent=full;}})();`);hiddenDivLines.push(`  <div id="f${fIdx}"></div>`);fIdx++;}
@@ -2744,8 +2803,33 @@ function exportSPX_CSS(){
     }else if(el.type==='text'&&el.spxField){elHtml[el.id]=`  <div id="${id}"${isLT?' class="lt-text"':''}>${el.text}</div>`;updateLines.push(`  document.getElementById('${id}').innerHTML=clean((data&&data.f${fIdx}!=null)?String(data.f${fIdx}):document.getElementById('f${fIdx}').innerText);`);hiddenDivLines.push(`  <div id="f${fIdx}"></div>`);fIdx++;}
     else if(el.type==='image'){elHtml[el.id]=`  <div id="${id}">${el.src?`<img src="${el.src}" style="width:100%;height:100%;object-fit:${el.objectFit||'contain'};display:block;">`:''}</div>`;}
     else{elHtml[el.id]=`  <div id="${id}"${isLT&&el.type==='text'?' class="lt-text"':''}>${el.type==='text'?el.text:''}</div>`;}
-    if(!hasKf&&a!=='none'&&el.type!=='ticker'){playLines.push(`  document.getElementById('${id}').classList.remove('out');document.getElementById('${id}').classList.add('in');`);stopLines.push(`  document.getElementById('${id}').classList.remove('in');document.getElementById('${id}').classList.add('out');`);}
   });
+  // Gruppe-animationer: tilføj CSS + play/stop for gruppe-wrapper divs
+  {const _seenGA=new Set();
+  elements.forEach(el=>{
+    if(!el.groupId||_seenGA.has(el.groupId))return;
+    const ga=groupAnimations[el.groupId];
+    if(!ga||ga.animation==='none')return;
+    _seenGA.add(el.groupId);
+    const gid=`grp-${el.groupId}`;
+    const dur=ga.animDuration,delay=ga.animDelay;
+    const ao=resolveAnimOut({animation:ga.animation,animOut:ga.animOut||'auto',wipeDir:ga.wipeDir||'→'});
+    const outDur=ga.animOutDuration??0.3,outDelay=ga.animOutDelay??0;
+    let outState='',inState='';
+    if(ga.animation==='fade'){outState='opacity:0;';inState='opacity:1;transform:none;';}
+    else if(ga.animation==='slide-left'){outState='opacity:0;transform:translateX(-50px);';inState='opacity:1;transform:none;';}
+    else if(ga.animation==='slide-right'){outState='opacity:0;transform:translateX(50px);';inState='opacity:1;transform:none;';}
+    else if(ga.animation==='slide-up'){outState='opacity:0;transform:translateY(40px);';inState='opacity:1;transform:none;';}
+    else if(ga.animation==='slide-down'){outState='opacity:0;transform:translateY(-40px);';inState='opacity:1;transform:none;';}
+    else if(ga.animation==='wipe'){outState=`clip-path:${_wipeHidden(ga.wipeDir||'→')};opacity:1;`;inState='clip-path:inset(0 0 0 0);opacity:1;';}
+    else if(ga.animation==='scale'){outState='opacity:0;transform:scale(0.8);';inState='opacity:1;transform:none;';}
+    const outTo=_cssAnimOutTo(ao,{wipeDir:ga.wipeDir||'→',wipeDirOut:ga.wipeDirOut||null});
+    css+=`#${gid}{${outState}}\n`;
+    css+=`#${gid}.in{transition:opacity ${dur}s ease ${delay}s,transform ${dur}s cubic-bezier(0.22,1,0.36,1) ${delay}s,clip-path ${dur}s cubic-bezier(0.42,0,0.58,1) ${delay}s;${inState}}\n`;
+    if(ao!=='none')css+=`#${gid}.out{transition:opacity ${outDur}s ease-in ${outDelay}s,transform ${outDur}s ease-in ${outDelay}s,clip-path ${outDur}s ease-in ${outDelay}s;${outTo}}\n`;
+    playLines.push(`  document.getElementById('${gid}').classList.remove('out');document.getElementById('${gid}').classList.add('in');`);
+    stopLines.push(`  document.getElementById('${gid}').classList.remove('in');document.getElementById('${gid}').classList.add('out');`);
+  });}
   // Assemble htmlLines: wrap group members in container divs
   {const _seenGrp=new Set();
   elements.forEach(el=>{
@@ -2897,7 +2981,37 @@ function exportSPX_GSAP(){
   elements.filter(e=>e.type==='text'&&e.apiUrl).forEach(el=>{const id='el'+el.id;const apiIvl=Math.max(5,el.apiInterval||30);gTextApiJS+=`(function(){var url=${JSON.stringify(el.apiUrl)};var tpl=${JSON.stringify(el.apiTemplate||'')};var ivl=${apiIvl};function stripHtml(s){return s.replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');}function fetchAndUpdate(){fetch(url).then(function(r){return r.json();}).then(function(data){var obj=Array.isArray(data)?data[0]:data;var text=tpl.replace(/\\{(\\w+)\\}/g,function(_,k){return obj[k]!==undefined?stripHtml(String(obj[k])):'';});var el=document.getElementById('${id}');if(el)el.textContent=text;}).catch(function(){});}fetchAndUpdate();setInterval(fetchAndUpdate,ivl*1000);})();\n`;});
   const gExtraJS=(gTickerInitJS+gTextApiJS)?`\ndocument.addEventListener('DOMContentLoaded',function(){\n${gTickerInitJS+gTextApiJS}});`:'';
   const gsapTag='<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>';
-  const _gMaxOutMs=Math.round((elements.reduce((m,el)=>{const od=el.animOutDelay??0;const dur=el.animOutDuration??0.3;return Math.max(m,od+dur);},0)+0.1)*1000);
+  const _grpAnimElIds=new Set(elements.filter(e=>e.groupId&&groupAnimations[e.groupId]?.animation&&groupAnimations[e.groupId].animation!=='none').map(e=>e.id));
+  let _grpGsapPlay='',_grpGsapStop='';
+  {const _seenGA=new Set();
+  elements.forEach(el=>{
+    if(!el.groupId||_seenGA.has(el.groupId))return;
+    const ga=groupAnimations[el.groupId];
+    if(!ga||ga.animation==='none')return;
+    _seenGA.add(el.groupId);
+    const gsel=`'#grp-${el.groupId}'`;
+    const dur=ga.animDuration??0.45,delay=ga.animDelay??0;
+    const a=ga.animation;
+    if(a==='fade'){css+=`#grp-${el.groupId}{opacity:0;}\n`;_grpGsapPlay+=`  gsap.set(${gsel},{opacity:0});\n  tl.to(${gsel},{opacity:1,duration:${dur},ease:'power3.out'},${delay});\n`;}
+    else if(a==='slide-left'){css+=`#grp-${el.groupId}{opacity:0;}\n`;_grpGsapPlay+=`  gsap.set(${gsel},{opacity:0,x:-60});\n  tl.to(${gsel},{opacity:1,x:0,duration:${dur},ease:'power3.out'},${delay});\n`;}
+    else if(a==='slide-right'){css+=`#grp-${el.groupId}{opacity:0;}\n`;_grpGsapPlay+=`  gsap.set(${gsel},{opacity:0,x:60});\n  tl.to(${gsel},{opacity:1,x:0,duration:${dur},ease:'power3.out'},${delay});\n`;}
+    else if(a==='slide-up'){css+=`#grp-${el.groupId}{opacity:0;}\n`;_grpGsapPlay+=`  gsap.set(${gsel},{opacity:0,y:50});\n  tl.to(${gsel},{opacity:1,y:0,duration:${dur},ease:'power3.out'},${delay});\n`;}
+    else if(a==='slide-down'){css+=`#grp-${el.groupId}{opacity:0;}\n`;_grpGsapPlay+=`  gsap.set(${gsel},{opacity:0,y:-50});\n  tl.to(${gsel},{opacity:1,y:0,duration:${dur},ease:'power3.out'},${delay});\n`;}
+    else if(a==='wipe'){css+=`#grp-${el.groupId}{clip-path:${_wipeHidden(ga.wipeDir||'→')};}\n`;_grpGsapPlay+=`  tl.fromTo(${gsel},{clipPath:'${_wipeHidden(ga.wipeDir||'→')}',immediateRender:true},{clipPath:'inset(0 0 0 0)',duration:${dur},ease:'power2.inOut'},${delay});\n`;}
+    else if(a==='scale'){css+=`#grp-${el.groupId}{opacity:0;}\n`;_grpGsapPlay+=`  gsap.set(${gsel},{opacity:0,scale:0.8});\n  tl.to(${gsel},{opacity:1,scale:1,duration:${dur},ease:'back.out(1.4)'},${delay});\n`;}
+    const ao=resolveAnimOut({animation:ga.animation,animOut:ga.animOut||'auto',wipeDir:ga.wipeDir||'→'});
+    if(ao!=='none'){const outDur=ga.animOutDuration??0.3,outDelay=ga.animOutDelay??0;
+      if(ao==='fade')_grpGsapStop+=`  tl.to(${gsel},{opacity:0,duration:${outDur},ease:'power2.in'},${outDelay});\n`;
+      else if(ao==='slide-left')_grpGsapStop+=`  tl.to(${gsel},{opacity:0,x:-30,duration:${outDur},ease:'power2.in'},${outDelay});\n`;
+      else if(ao==='slide-right')_grpGsapStop+=`  tl.to(${gsel},{opacity:0,x:30,duration:${outDur},ease:'power2.in'},${outDelay});\n`;
+      else if(ao==='slide-up')_grpGsapStop+=`  tl.to(${gsel},{opacity:0,y:-30,duration:${outDur},ease:'power2.in'},${outDelay});\n`;
+      else if(ao==='slide-down')_grpGsapStop+=`  tl.to(${gsel},{opacity:0,y:30,duration:${outDur},ease:'power2.in'},${outDelay});\n`;
+      else if(ao==='wipe')_grpGsapStop+=`  tl.to(${gsel},{clipPath:'${_wipeHiddenOut(ga.wipeDirOut||ga.wipeDir||'→')}',duration:${outDur},ease:'power2.in'},${outDelay});\n`;
+      else if(ao==='scale')_grpGsapStop+=`  tl.to(${gsel},{opacity:0,scale:0.85,duration:${outDur},ease:'power2.in'},${outDelay});\n`;
+    }
+  });}
+  const _grpAnimMaxOut=[...new Set(elements.filter(e=>_grpAnimElIds.has(e.id)).map(e=>e.groupId))].reduce((m,gid)=>{const ga=groupAnimations[gid];return Math.max(m,(ga.animOutDelay??0)+(ga.animOutDuration??0.3));},0);
+  const _gMaxOutMs=Math.round((Math.max(elements.filter(e=>!_grpAnimElIds.has(e.id)).reduce((m,el)=>{const od=el.animOutDelay??0;const dur=el.animOutDuration??0.3;return Math.max(m,od+dur);},0),_grpAnimMaxOut)+0.1)*1000);
   const _gSpxGrpObj={};elements.filter(e=>e.groupId).forEach(e=>{if(!_gSpxGrpObj[e.groupId])_gSpxGrpObj[e.groupId]=[];_gSpxGrpObj[e.groupId].push('el'+e.id);});
   const _gCleanFn=`function clean(v){return(!v||v==='$NA')?'':String(v).trim();}${Object.keys(_gSpxGrpObj).length?('\nwindow.SPXGroups='+JSON.stringify(_gSpxGrpObj)+';'):''}`;
   const _gApiCfgsArr=elements.filter(e=>e.type==='text'&&e.apiUrl).map(el=>({elId:'el'+el.id,url:el.apiUrl,tpl:el.apiTemplate||''}));
@@ -2911,8 +3025,8 @@ function exportSPX_GSAP(){
   const _scScriptG=(scoreCycleSettings.enabled&&_gScFields.length)?`<script>\nwindow.ScoreCycle={\n  projectId:'${scoreCycleSettings.projectId}',\n  displayDuration:${scoreCycleSettings.displayDuration},\n  refreshInterval:${scoreCycleSettings.refreshInterval},\n  transition:'${scoreCycleSettings.transition}',\n  dataFields:${JSON.stringify(_gScFields)}\n};\n<\/script>\n<script>\n${_scPluginSrc()}\n<\/script>`:'';
   _downloadHTML(_buildHTML(fontUrl,css+gTickerCSS,htmlLines,fieldDefs,tname,
     _gUpdateFn,
-    `function runAnimationIN(){_spxVisible=true;\n${_buildGSAPPlay(elements)}\n}`,
-    `function runAnimationOUT(){_spxVisible=false;\n${_buildGSAPStop(elements)}\n}`,
+    `function runAnimationIN(){_spxVisible=true;\n${_buildGSAPPlay(elements.filter(e=>!_grpAnimElIds.has(e.id)))}${_grpGsapPlay}\n}`,
+    `function runAnimationOUT(){_spxVisible=false;\n${_buildGSAPStop(elements.filter(e=>!_grpAnimElIds.has(e.id)))}${_grpGsapStop}\n}`,
     hiddenDivLines.join('\n'),
     gsapTag,_scScriptG
   ),_projFilename('_gsap.html'));
