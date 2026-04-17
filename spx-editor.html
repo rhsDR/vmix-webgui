@@ -767,27 +767,29 @@ function snapEdges(pos,size,anchors){
 }
 
 function saveState(){
-  undoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings}));
+  undoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings,groupAnimations}));
   if(undoStack.length>60)undoStack.shift();
   redoStack=[];updUndoBtns();_dirty=true;
 }
 function undo(){
   if(!undoStack.length)return;
-  redoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings}));
+  redoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings,groupAnimations}));
   const s=JSON.parse(undoStack.pop());
   elements=s.elements;bgColor=s.bgColor;elCtr=s.elCtr;transitionOnUpdate=s.transitionOnUpdate??true;
   if(s.smartTickerSettings)Object.assign(smartTickerSettings,s.smartTickerSettings);
   if(s.scoreCycleSettings)Object.assign(scoreCycleSettings,s.scoreCycleSettings);
+  groupAnimations=s.groupAnimations||{};
   canvas.style.background=bgColor;selIds=[];
   render();renderPanel();updUndoBtns();
 }
 function redo(){
   if(!redoStack.length)return;
-  undoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings}));
+  undoStack.push(JSON.stringify({elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings,groupAnimations}));
   const s=JSON.parse(redoStack.pop());
   elements=s.elements;bgColor=s.bgColor;elCtr=s.elCtr;transitionOnUpdate=s.transitionOnUpdate??true;
   if(s.smartTickerSettings)Object.assign(smartTickerSettings,s.smartTickerSettings);
   if(s.scoreCycleSettings)Object.assign(scoreCycleSettings,s.scoreCycleSettings);
+  groupAnimations=s.groupAnimations||{};
   canvas.style.background=bgColor;selIds=[];
   render();renderPanel();updUndoBtns();
 }
@@ -918,7 +920,7 @@ function loadRecentProject(idx){
 }
 function newProject(){
   if(_dirty&&!confirm('Nyt projekt?\n\nDu har ikke-gemte ændringer — de vil gå tabt.'))return;
-  saveState();elements=[];selIds=[];bgColor='transparent';elCtr=0;_dirty=false;
+  saveState();elements=[];selIds=[];bgColor='transparent';elCtr=0;groupAnimations={};_dirty=false;
   canvas.style.background=bgColor;
   document.getElementById('project-name').value='';
   render();renderPanel();renderTimeline();closeFilDropdown();toast('Nyt projekt','ok');
@@ -2747,7 +2749,7 @@ function loadProject(ev){
       if(!scoreCycleSettings.apiKeys)scoreCycleSettings.apiKeys=[];
       delete scoreCycleSettings.target;delete scoreCycleSettings.dataField;delete scoreCycleSettings.dataLabel;}
     if(d.customFonts){customFonts=d.customFonts;_injectCustomFonts();_saveCustomFontsToStorage();}
-    if(d.groupAnimations)groupAnimations=d.groupAnimations;
+    groupAnimations=d.groupAnimations||{};
     if(d.projectName){document.getElementById('project-name').value=d.projectName;_addRecent(d.projectName);}canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];_dirty=false;selKf=null;
     // Migrate: ensure keyframes + gradientStops exist
     elements.forEach(el=>{if(!el.keyframes)el.keyframes=[];
