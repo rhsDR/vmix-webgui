@@ -2290,26 +2290,6 @@ function updLayersList(){
   }
   list.appendChild(tb);
 
-  // --- Selected element name header ---
-  if(selIds.length===1){
-    const selEl=elements.find(x=>x.id===selIds[0]);
-    if(selEl){
-      const hdr=document.createElement('div');hdr.className='lag-sel-hdr';
-      const typeIcon=selEl.type==='text'?'T':selEl.type==='ticker'?'▶▶':selEl.type==='rect'?(selEl.borderRadius>=9999?'○':'▭'):selEl.type==='image'?'🖼':'—';
-      const ic=document.createElement('span');ic.textContent=typeIcon;ic.style.cssText='font-size:10px;opacity:.45;flex-shrink:0;font-family:var(--mono);';
-      const gc=selEl.groupId?_groupColor(selEl.groupId):null;
-      if(gc){const dot=document.createElement('span');dot.style.cssText=`width:7px;height:7px;border-radius:50%;background:${gc};flex-shrink:0;`;hdr.appendChild(dot);}
-      hdr.appendChild(ic);
-      const inp=document.createElement('input');
-      inp.value=selEl.name;
-      inp.style.cssText='flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text1);font-size:12px;font-weight:600;font-family:inherit;padding:0;cursor:text;';
-      inp.addEventListener('change',()=>{const v=inp.value.trim();if(v){selEl.name=v;saveState();}else inp.value=selEl.name;});
-      inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.value=selEl.name;inp.blur();}});
-      hdr.appendChild(inp);
-      list.appendChild(hdr);
-    }
-  }
-
   // --- Layer rows ---
   const scroll=document.createElement('div');scroll.className='li-scroll';
   list.appendChild(scroll);
@@ -2448,6 +2428,7 @@ function renderPropsTab(){
   }
   const el=elements.find(x=>x.id===selIds[0]);if(!el)return;
   body.innerHTML=`
+    <div class="psec" style="padding:8px 12px"><input class="pi" id="p-name" value="${el.name.replace(/"/g,'&quot;')}" placeholder="Navn" style="width:100%;font-weight:600"></div>
     ${el.type==='text'?`<div class="psec"><div class="psec-title">Tekst</div>
       <div style="margin-bottom:7px"><input class="pi" id="p-txt" value="${el.text.replace(/"/g,'&quot;')}"></div>
       <div class="fp-wrap"><input class="pi" id="p-font-inp" value="${el.fontFamily}" readonly style="cursor:pointer" onclick="document.getElementById('font-list').classList.toggle('open')">
@@ -2553,7 +2534,6 @@ function renderPropsTab(){
       <input class="pi" id="p-api-tpl" value="${el.apiTemplate||''}" placeholder="${el.type==='ticker'?'{ticker_normal}':'{K1_n} {K1_score}'}">
       ${(el._apiFields||[]).length?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:5px">${(el._apiFields).map(k=>`<button class="tb-btn" style="font-size:10px" onclick="canvasApiFieldInsert('${k}')">{${k}}</button>`).join('')}</div>`:''}
     </div>
-    <div class="psec"><div class="psec-title">Navn</div><input class="pi" id="p-name" value="${el.name}"></div>
     <div class="psec"><div class="psec-title">Position & størrelse</div>
       <div class="pg2">
         <div><label>X</label><input class="pi" type="number" id="p-x" value="${Math.round(el.x)}"></div>
