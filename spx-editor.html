@@ -1171,14 +1171,19 @@ function _renderRibbonData(){
   const fontNames=[...new Set(customFonts.map(f=>f.name))];
   const fontBadges=fontNames.length?fontNames.map(n=>`<span style="font-size:10px;background:var(--surface3);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;font-family:'${n}'">${n}</span>`).join(' '):'<span style="font-size:10px;color:var(--text3)">Ingen</span>';
   const el=_elForRibbon();
+  const _apiFields=el?._apiFields||[];
+  const fieldBadges=_apiFields.length?_apiFields.map(k=>`<button class="tb-btn" style="font-size:10px;padding:1px 5px" onclick="apiFieldInsert('${k}')">{${k}}</button>`).join(''):'';
   const dataHTML=el?`
     <label class="cb-lbl" style="cursor:pointer"><input type="checkbox" id="rb-spx" ${el.spxField?'checked':''} style="accent-color:var(--accent);margin-right:4px">SPX felt</label>
     <input class="cb-inp wide" id="rb-flbl" value="${el.fieldLabel||''}" placeholder="Felt-label" ${el.spxField?'':'style="opacity:.4"'}>
     <span class="cb-sep"></span>
-    <span class="cb-lbl">API URL</span><input class="cb-inp" id="rb-url" style="width:220px" value="${el.apiUrl||''}" placeholder="https://...">
+    <span class="cb-lbl">API URL</span><input class="cb-inp" id="rb-url" style="width:200px" value="${el.apiUrl||''}" placeholder="https://...">
+    <button class="tb-btn" id="rb-url-fetch" title="Hent felter fra API">⟳</button>
     <span class="cb-lbl">Interval</span><input class="cb-inp sm" id="rb-ivl" type="number" value="${el.apiInterval??30}" min="5" max="300">
     <span class="cb-lbl" style="margin-left:-2px">s</span>
+    <span class="cb-sep"></span>
     <span class="cb-lbl">Skabelon</span><input class="cb-inp wide" id="rb-tpl" value="${el.apiTemplate||''}" placeholder="{feltnavn}">
+    ${fieldBadges}
     <span class="cb-sep"></span>`:'';
   pane.innerHTML=`${dataHTML}
     <span class="cb-lbl" style="color:var(--text2)">Fonte:</span>${fontBadges}
@@ -1194,6 +1199,28 @@ function _renderRibbonData(){
   cb('rb-url',v=>{el.apiUrl=v;});
   cb('rb-ivl',v=>{el.apiInterval=parseFloat(v)||30;});
   cb('rb-tpl',v=>{el.apiTemplate=v;});
+  const fetchBtn=document.getElementById('rb-url-fetch');
+  if(fetchBtn)fetchBtn.addEventListener('click',()=>{
+    const url=(document.getElementById('rb-url')||{}).value||el.apiUrl;
+    if(!url){toast('Ingen URL');return;}
+    fetchBtn.textContent='…';fetchBtn.disabled=true;
+    fetch(url).then(r=>r.json()).then(data=>{
+      const obj=Array.isArray(data)?data[0]:data;
+      if(!obj||typeof obj!=='object')throw new Error();
+      el._apiFields=Object.keys(obj);
+      renderRibbonBar();
+      toast(`${el._apiFields.length} felter fundet`,'ok');
+    }).catch(()=>{toast('Kunne ikke hente API');fetchBtn.textContent='⟳';fetchBtn.disabled=false;});
+  });
+}
+function apiFieldInsert(key){
+  const tpl=document.getElementById('rb-tpl');if(!tpl)return;
+  const v=tpl.value,s=tpl.selectionStart,e2=tpl.selectionEnd;
+  const ins=`{${key}}`;
+  tpl.value=v.slice(0,s)+ins+v.slice(e2);
+  tpl.selectionStart=tpl.selectionEnd=s+ins.length;
+  tpl.dispatchEvent(new Event('input'));
+  tpl.focus();
 }
 function copySel(){if(selIds.length){clipboard=selIds.map(id=>JSON.parse(JSON.stringify(elements.find(x=>x.id===id)))).filter(Boolean);toast(clipboard.length+' kopieret');}}
 function _groupColor(gid){const p=['#3b82f6','#22c55e','#f59e0b','#a855f7','#e8593c','#06b6d4','#ec4899'];let h=0;for(let i=0;i<gid.length;i++)h=(h*31+gid.charCodeAt(i))>>>0;return p[h%p.length];}
