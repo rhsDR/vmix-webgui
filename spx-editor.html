@@ -1193,14 +1193,6 @@ function _renderRibbonData(){
   cb('rb-ivl',v=>{el.apiInterval=parseFloat(v)||30;});
   cb('rb-tpl',v=>{el.apiTemplate=v;});
 }
-  const cb=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('input',e=>fn(e.target.value));};
-  const spx=document.getElementById('rb-spx');
-  if(spx)spx.addEventListener('change',e=>{el.spxField=e.target.checked;const flbl=document.getElementById('rb-flbl');if(flbl)flbl.style.opacity=e.target.checked?'1':'.4';renderPanel();});
-  cb('rb-flbl',v=>{el.fieldLabel=v;renderPanel();});
-  cb('rb-url',v=>{el.apiUrl=v;});
-  cb('rb-ivl',v=>{el.apiInterval=parseFloat(v)||30;});
-  cb('rb-tpl',v=>{el.apiTemplate=v;});
-}
 function copySel(){if(selIds.length){clipboard=selIds.map(id=>JSON.parse(JSON.stringify(elements.find(x=>x.id===id)))).filter(Boolean);toast(clipboard.length+' kopieret');}}
 function _groupColor(gid){const p=['#3b82f6','#22c55e','#f59e0b','#a855f7','#e8593c','#06b6d4','#ec4899'];let h=0;for(let i=0;i<gid.length;i++)h=(h*31+gid.charCodeAt(i))>>>0;return p[h%p.length];}
 function groupSel(){
