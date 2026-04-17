@@ -943,8 +943,6 @@ function _selGroupId(){
   const sels=elements.filter(x=>selIds.includes(x.id));
   const gid=sels[0]?.groupId;
   if(!gid||!sels.every(x=>x.groupId===gid))return null;
-  const allMembers=elements.filter(x=>x.groupId===gid);
-  if(allMembers.length!==sels.length)return null;
   return gid;
 }
 function _grpAnim(gid){
@@ -2402,6 +2400,31 @@ function selFromLayer(e,id){
   if(selIds.length===1)switchTab('props');else renderPanel();
 }
 
+function _grpAnimHTML(gid){
+  const ga=_grpAnim(gid);
+  const ainSel=ANIMS.map(a=>`<option value="${a}"${ga.animation===a?' selected':''}>${ANIM_LBL[a]}</option>`).join('');
+  const aoutSel=ANIMS_OUT.map(a=>`<option value="${a}"${(ga.animOut||'auto')===a?' selected':''}>${ANIM_OUT_LBL[a]}</option>`).join('');
+  return `<div class="psec"><div class="psec-title">⊞ Gruppe animation</div>
+    <div class="prow"><span class="plbl">IND</span><select class="pi" id="pg-ain" style="flex:1">${ainSel}</select></div>
+    <div class="pg2">
+      <div><label>Forsinkelse (s)</label><input class="pi" type="number" id="pg-adl" value="${ga.animDelay}" step="0.05" min="0"></div>
+      <div><label>Varighed (s)</label><input class="pi" type="number" id="pg-adur" value="${ga.animDuration}" step="0.05" min="0.05"></div>
+    </div>
+    <div class="prow"><span class="plbl">UD</span><select class="pi" id="pg-aout" style="flex:1">${aoutSel}</select></div>
+    <div class="pg2">
+      <div><label>Forsinkelse (s)</label><input class="pi" type="number" id="pg-aodl" value="${ga.animOutDelay??0}" step="0.05" min="0"></div>
+      <div><label>Varighed (s)</label><input class="pi" type="number" id="pg-aodur" value="${ga.animOutDuration??0.3}" step="0.05" min="0.05"></div>
+    </div>
+  </div>`;
+}
+function _bindGrpAnimPanel(gid){
+  const ga=_grpAnim(gid);
+  const cbs=(id,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener('change',e=>{saveState();fn(e.target.value);renderTimeline();});};
+  const cbn=(id,fn)=>{const el=document.getElementById(id);if(el){el.addEventListener('input',e=>{fn(parseFloat(e.target.value)||0);});el.addEventListener('change',()=>{saveState();renderTimeline();});}};
+  cbs('pg-ain',v=>{ga.animation=v;});cbs('pg-aout',v=>{ga.animOut=v;});
+  cbn('pg-adl',v=>{ga.animDelay=v;});cbn('pg-adur',v=>{ga.animDuration=v;});
+  cbn('pg-aodl',v=>{ga.animOutDelay=v;});cbn('pg-aodur',v=>{ga.animOutDuration=v;});
+}
 function renderPropsTab(){
   const body=document.getElementById('pbody');
   if(!selIds.length){
@@ -2409,8 +2432,12 @@ function renderPropsTab(){
     return;
   }
   if(selIds.length>1){
+    const _mgid=_selGroupId();
     body.innerHTML=`<div class="psec"><div class="psec-title">${selIds.length} valgt</div>
-      ${['left','hcenter','right','top','vcenter','bottom'].map(d=>`<button class="tb-btn" style="width:100%;justify-content:center;margin-bottom:5px" onclick="alignSel('${d}')">${{left:'Justér venstre',hcenter:'Centrér horisontalt',right:'Justér højre',top:'Justér top',vcenter:'Centrér vertikalt',bottom:'Justér bund'}[d]}</button>`).join('')}</div>`;
+      ${['left','hcenter','right','top','vcenter','bottom'].map(d=>`<button class="tb-btn" style="width:100%;justify-content:center;margin-bottom:5px" onclick="alignSel('${d}')">${{left:'Justér venstre',hcenter:'Centrér horisontalt',right:'Justér højre',top:'Justér top',vcenter:'Centrér vertikalt',bottom:'Justér bund'}[d]}</button>`).join('')}</div>
+      ${_mgid?_grpAnimHTML(_mgid):''}`;
+    if(_mgid)_bindGrpAnimPanel(_mgid);
+    _bindCollapsible(body);
     return;
   }
   const el=elements.find(x=>x.id===selIds[0]);if(!el)return;
@@ -2555,6 +2582,7 @@ function renderPropsTab(){
         <div><label>Varighed (s)</label><input class="pi" type="number" id="p-out-dur" value="${el.animOutDuration??0.3}" step="0.05" min="0.05"></div>
       </div>
     </div>
+    ${el.groupId?_grpAnimHTML(el.groupId):''}
     ${el.type==='text'?`<div class="psec"><div class="psec-title">SPX felt</div>
       <label class="pchk"><input type="checkbox" id="p-spx" ${el.spxField?'checked':''}>Redigerbart i SPX-panel</label>
       <div id="p-spx-extra" style="${el.spxField?'':'display:none'}">
@@ -2619,6 +2647,7 @@ function renderPropsTab(){
   const tbp=document.getElementById('p-txt-bgc'),tbhx=document.getElementById('p-txt-bgc-hex');
   if(tbp){tbp.addEventListener('input',e=>{el.bgColor=e.target.value;if(tbhx)tbhx.value=e.target.value;render();});}
   if(tbhx){tbhx.addEventListener('input',e=>{const v=e.target.value.trim();el.bgColor=(v===''||v==='transparent')?'transparent':v;if(tbp&&/^#[0-9a-fA-F]{6}$/.test(v))tbp.value=v;render();});}
+  if(el.groupId)_bindGrpAnimPanel(el.groupId);
   _bindCollapsible(body);
 }
 
