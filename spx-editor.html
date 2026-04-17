@@ -511,6 +511,7 @@ html.theme-kold{
       <button class="ptab" id="tab-layers" onclick="switchTab('layers')">Lag</button>
       <button class="ptab" id="tab-canvas" onclick="switchTab('canvas')">Canvas</button>
       <button class="ptab" id="tab-plugin" onclick="switchTab('plugin')">Plugin</button>
+      <button class="ptab" id="tab-help" onclick="switchTab('help')">Hjælp</button>
     </div>
     <div id="pbody"></div>
   </div>
@@ -1787,7 +1788,7 @@ function updStatus(){
 }
 
 function switchTab(t){currentTab=t;document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+t).classList.add('active');renderPanel();}
-function renderPanel(){if(currentTab==='layers'){renderLayersTab();}else if(currentTab==='canvas'){renderCanvasTab();}else if(currentTab==='plugin'){renderPluginTab();}else{renderPropsTab();}renderRibbonBar();}
+function renderPanel(){if(currentTab==='layers'){renderLayersTab();}else if(currentTab==='canvas'){renderCanvasTab();}else if(currentTab==='plugin'){renderPluginTab();}else if(currentTab==='help'){renderHelpTab();}else{renderPropsTab();}renderRibbonBar();}
 
 function renderCanvasTab(){
   document.getElementById('pbody').innerHTML=`
@@ -1970,6 +1971,162 @@ function renderPluginTab(){
   // Field row bindings
   document.querySelectorAll('.sc-fld-field').forEach(sel=>{sel.addEventListener('change',e=>{const i=parseInt(sel.dataset.idx);scoreCycleSettings.fields[i].field=e.target.value;saveState();});});
   document.querySelectorAll('.sc-fld-target').forEach(sel=>{sel.addEventListener('change',e=>{const i=parseInt(sel.dataset.idx);scoreCycleSettings.fields[i].target=e.target.value;saveState();});});
+}
+
+function renderHelpTab(){
+  const sections=[
+    {id:'h-start',title:'Kom i gang',icon:'▶',body:`
+      <p>SPX Editor lader dig bygge grafiske overlay-templates til SPX GC og vMix. Vælg et værktøj i toolbar'en øverst, klik på canvas for at tilføje et element, og brug højrepanelet til at redigere det.</p>
+      <h4>Grundlæggende workflow</h4>
+      <ol>
+        <li><b>Tilføj elementer</b> — klik på T (tekst), ▭ (boks), eller brug Import billede i toolbar'en.</li>
+        <li><b>Placér &amp; størrelse</b> — træk elementet på canvas; brug håndtagene til at ændre størrelse.</li>
+        <li><b>Sæt animation</b> — vælg IND- og UD-animation i Egenskaber-fanen eller via ribbonbaren øverst.</li>
+        <li><b>Eksportér</b> — klik <b>Eksportér</b> øverst til højre og vælg CSS eller GSAP.</li>
+      </ol>
+    `},
+    {id:'h-elements',title:'Elementer',icon:'▭',body:`
+      <h4>Tekst</h4>
+      <p>Dobbeltklik på et tekstelement for at redigere teksten direkte på canvas. I Egenskaber kan du ændre skrifttype, størrelse, farve, justering og teksteffekter. Brug <code>{{feltnavn}}</code> til at indsætte dynamiske data fra SPX.</p>
+      <h4>Boks</h4>
+      <p>En farveboks der kan bruges til baggrunde og dekorationer. Understøtter solid farve, gradient og wipe-animationer.</p>
+      <h4>Billede</h4>
+      <p>Importér PNG/JPG/SVG via toolbar'ens billedknap eller træk-og-slip på canvas. Billedet indlejres som base64 i den eksporterede fil.</p>
+      <h4>Smart Ticker</h4>
+      <p>Et rullende tekstbånd. Konfigureres via Plugin-fanen → Smart Ticker. Understøtter breaking-tilstand med farvesskift.</p>
+    `},
+    {id:'h-anim',title:'Animationer',icon:'◈',body:`
+      <p>Hvert element kan have sin egen IND- og UD-animation. Animationerne afspilles når SPX kalder <code>runAnimationIN()</code> / <code>runAnimationOUT()</code>.</p>
+      <h4>Animationstyper (IND)</h4>
+      <ul>
+        <li><b>Ingen</b> — ingen animation, elementet er synligt fra start.</li>
+        <li><b>Fade</b> — toner ind fra gennemsigtigt.</li>
+        <li><b>Slide op/ned/venstre/højre</b> — glider ind fra en retning.</li>
+        <li><b>Scale</b> — vokser ind fra 0.</li>
+        <li><b>Wipe</b> — afslører elementet med et vipe-klip.</li>
+        <li><b>Reveal</b> — afslører tekst med et overliggende klip.</li>
+      </ul>
+      <h4>UD-animation</h4>
+      <p>Standard er <b>Auto</b> (omvendt af IND). Du kan vælge en specifik UD-animation uafhængigt af IND.</p>
+      <h4>Forsinkelse og varighed</h4>
+      <p>Sæt <b>Forsinkelse</b> til at forsinke et elements start (sekunder), og <b>Varighed</b> til at styre animationshastigheden. Justér disse i Egenskaber-fanen eller ved at trække animationsbjælken i tidslinjen.</p>
+      <h4>Keyframe-animation</h4>
+      <p>Avanceret: Klik <b>+ Keyframe</b> i ribbonbaren for at optage elementets position/størrelse på et bestemt tidspunkt. Elementer med keyframes animerer langs den optagne bane i stedet for standard-animationen.</p>
+      <h4>Forhåndsvisning</h4>
+      <p>Brug <b>▶ Afspil</b>-knappen i tidslinjen for at se animationerne på canvas, eller klik <b>Forhåndsvis</b> på et enkelt element i Egenskaber.</p>
+    `},
+    {id:'h-groups',title:'Grupper og gruppe-animation',icon:'⊞',body:`
+      <h4>Hvad er grupper?</h4>
+      <p>Du kan samle flere elementer i en gruppe så de deler én fælles animation oveni deres individuelle animationer. Det er nyttigt når du vil have et helt grafisk kompleks — f.eks. en boks + tekst — til at glide ind samlet.</p>
+
+      <h4>Opret en gruppe</h4>
+      <ol>
+        <li>Vælg de elementer du vil gruppere — hold <b>Shift</b> og klik på hvert element på canvas, eller vælg dem i Lag-panelet.</li>
+        <li>Klik <b>⊞ Grupper</b> i ribbonbaren (vises når to eller flere elementer er valgt), eller brug højrekliksmenuen på canvas → <em>Grupper valgte</em>.</li>
+        <li>Elementerne er nu markeret med en farvet gruppe-indikator i Lag-panelet og i tidslinjen.</li>
+      </ol>
+
+      <h4>Indstil gruppe-animation</h4>
+      <ol>
+        <li>Vælg ét eller flere elementer fra samme gruppe.</li>
+        <li>I <b>Egenskaber</b>-fanen vises sektionen <em>⊞ Gruppe animation</em> nederst.</li>
+        <li>Vælg IND-animation (f.eks. <em>Slide højre</em>), sæt forsinkelse og varighed.</li>
+        <li>Vælg UD-animation (standard Auto spejler IND).</li>
+      </ol>
+      <p><b>Bemærk:</b> Gruppe-animationen kører <em>samtidig</em> med elementernes individuelle animationer. De to lag adderes — gruppe-animationen flyttes hele gruppen, individuelle animationer kører inden i gruppen.</p>
+
+      <h4>Fjern gruppe</h4>
+      <p>Vælg elementer fra gruppen og klik <b>Opdel gruppe</b> i ribbonbaren. Gruppe-animationen slettes automatisk.</p>
+
+      <h4>Grupper i tidslinjen</h4>
+      <p>Gruppe-animationsbaren vises som en bred bjælke der spænder over alle gruppens elementer. Træk i bjælken for at forskyde gruppens animation. Individuelle bjælker kan stadig flyttes uafhængigt inden for gruppen.</p>
+
+      <h4>Typisk brug</h4>
+      <ul>
+        <li><b>Lower third:</b> Bag-boks og navn-tekst i én gruppe med <em>Slide op</em> som gruppe-animation. Teksten har sin egen <em>Fade</em> med lidt forsinkelse.</li>
+        <li><b>Score-overlay:</b> Tre scorebokse i én gruppe der <em>Fade</em>r ind samlet; hvert tal har <em>Scale</em> med stigende forsinkelse.</li>
+      </ul>
+    `},
+    {id:'h-timeline',title:'Tidslinjen',icon:'⏱',body:`
+      <p>Tidslinjen vises under canvas og giver overblik over alle elementers animationstiming.</p>
+      <h4>Navigation</h4>
+      <ul>
+        <li>Træk i <b>afspilhovedet</b> (den røde linje) for at scrube gennem animationen.</li>
+        <li>Klik <b>▶</b> for at afspille hele animationen på canvas.</li>
+        <li>Brug musehjulet på tidslinjen for at zoome ind/ud på tidslinjen.</li>
+      </ul>
+      <h4>Redigér timing direkte</h4>
+      <ul>
+        <li><b>Træk en bjælke</b> for at ændre elementets forsinkelse.</li>
+        <li><b>Træk i bjælkens højre kant</b> for at ændre varighed.</li>
+        <li><b>Ctrl+klik</b> på bjælker eller rækker for at multi-vælge — flyt herefter alle valgte elementer på én gang.</li>
+      </ul>
+      <h4>Lag-rækkefølge</h4>
+      <p>Rækkefølgen i tidslinjen matcher canvas: øverste række = øverste lag. Træk i rækkens etiket for at ændre lag-rækkefølgen.</p>
+    `},
+    {id:'h-export',title:'Eksport (CSS og GSAP)',icon:'⬇',body:`
+      <p>Klik <b>Eksportér</b> i toolbar'en og vælg tilstand:</p>
+      <h4>CSS-tilstand</h4>
+      <p>Genererer en HTML-fil med CSS-transitions. Simpelt og bredt understøttet. Egnet til de fleste lower-thirds og grafikker uden kompleks keyframe-animation.</p>
+      <h4>GSAP-tilstand</h4>
+      <p>Genererer en HTML-fil med GSAP-tweens. Kræver at GSAP er tilgængeligt på SPX-serveren. Giver jævnere animationer og bedre kontrol over easing. Anbefales til komplekse templates med mange lag.</p>
+      <h4>Hvad eksporteres?</h4>
+      <ul>
+        <li>Alle elementer med position, størrelse, farve og tekst.</li>
+        <li>Indlejrede billeder som base64.</li>
+        <li>Brugerdefinerede fonte som base64 (hvis importeret via Canvas-fanen).</li>
+        <li>Animations-CSS eller GSAP-tweens for hvert element og gruppe.</li>
+        <li>Keyframe-animationer (kun GSAP).</li>
+        <li>Score Cycle plugin-kode (hvis aktiveret i Plugin-fanen).</li>
+      </ul>
+    `},
+    {id:'h-canvas',title:'Canvas og projekt',icon:'⚙',body:`
+      <h4>Canvas-indstillinger</h4>
+      <p>I <b>Canvas</b>-fanen kan du ændre baggrundsfarve, aktivere gitter og snap, samt importere/eksportere brugerdefinerede fonte.</p>
+      <h4>Gem og åbn projekter</h4>
+      <p>Brug <b>Fil</b>-menuen (øverst til venstre) til at gemme projektet som <code>.spxeditor</code>-fil, åbne et gemt projekt, eller starte et nyt projekt. Nylige projekter vises direkte i Fil-menuen.</p>
+      <h4>Fortryd / Gentag</h4>
+      <p>Brug <b>Ctrl+Z</b> / <b>Ctrl+Y</b> (eller knapperne i toolbar'en) til at fortryde og gentage ændringer. Op til 60 trin gemmes i historikken.</p>
+      <h4>Import af eksisterende HTML</h4>
+      <p>Træk en eksisterende SPX HTML-template ind på canvas (eller brug Fil → Import HTML) for at importere og videreredigere den.</p>
+    `},
+  ];
+
+  let html=`<div style="padding:10px 8px;overflow-y:auto">`;
+  sections.forEach(s=>{
+    html+=`<div class="help-sec" style="margin-bottom:6px;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+      <button class="help-hdr" onclick="toggleHelp('${s.id}')" style="width:100%;display:flex;align-items:center;gap:7px;background:var(--bg2);border:none;padding:8px 10px;cursor:pointer;text-align:left;color:var(--text1);font-size:12px;font-weight:600">
+        <span style="font-size:14px;flex-shrink:0">${s.icon}</span>
+        <span style="flex:1">${s.title}</span>
+        <span id="${s.id}-arr" style="font-size:10px;color:var(--text3);transition:transform .15s">▶</span>
+      </button>
+      <div id="${s.id}-body" style="display:none;padding:10px 12px;font-size:12px;line-height:1.6;color:var(--text2)">${s.body}</div>
+    </div>`;
+  });
+  html+=`<div style="padding:8px 4px;color:var(--text3);font-size:11px;text-align:center">SPX Editor — brug Ctrl+Z for at fortryde</div></div>`;
+
+  // Inject scoped help styles once
+  if(!document.getElementById('help-style')){
+    const st=document.createElement('style');
+    st.id='help-style';
+    st.textContent=`
+      #pbody .help-sec h4{margin:10px 0 4px;font-size:12px;color:var(--text1);}
+      #pbody .help-sec p,#pbody .help-sec li{margin:3px 0;color:var(--text2);}
+      #pbody .help-sec ol,#pbody .help-sec ul{padding-left:16px;margin:4px 0;}
+      #pbody .help-sec code{background:var(--bg3);padding:1px 4px;border-radius:3px;font-size:11px;}
+      #pbody .help-hdr:hover{background:var(--bg3)!important;}
+    `;
+    document.head.appendChild(st);
+  }
+  document.getElementById('pbody').innerHTML=html;
+}
+function toggleHelp(id){
+  const body=document.getElementById(id+'-body');
+  const arr=document.getElementById(id+'-arr');
+  if(!body)return;
+  const open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  if(arr)arr.style.transform=open?'rotate(90deg)':'';
 }
 
 function scAddField(){
