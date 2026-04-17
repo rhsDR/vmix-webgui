@@ -1717,7 +1717,9 @@ document.addEventListener('mouseup',()=>{
 });
 canvas.addEventListener('mousedown',e=>{
   if(area.classList.contains('panning'))return;
-  if(e.target!==canvas&&e.target!==document.getElementById('sel-box'))return;
+  if(e.target!==canvas&&e.target!==document.getElementById('sel-box')){
+    if(tool==='select'||!canvas.contains(e.target))return;
+  }
   if(e.button===2)return;
   const r=canvas.getBoundingClientRect();
   const x=(e.clientX-r.left)/scale,y=(e.clientY-r.top)/scale;
