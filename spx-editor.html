@@ -2297,10 +2297,15 @@ function updLayersList(){
       const hdr=document.createElement('div');hdr.className='lag-sel-hdr';
       const typeIcon=selEl.type==='text'?'T':selEl.type==='ticker'?'▶▶':selEl.type==='rect'?(selEl.borderRadius>=9999?'○':'▭'):selEl.type==='image'?'🖼':'—';
       const ic=document.createElement('span');ic.textContent=typeIcon;ic.style.cssText='font-size:10px;opacity:.45;flex-shrink:0;font-family:var(--mono);';
-      const nm=document.createElement('span');nm.textContent=selEl.name;nm.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
       const gc=selEl.groupId?_groupColor(selEl.groupId):null;
       if(gc){const dot=document.createElement('span');dot.style.cssText=`width:7px;height:7px;border-radius:50%;background:${gc};flex-shrink:0;`;hdr.appendChild(dot);}
-      hdr.appendChild(ic);hdr.appendChild(nm);
+      hdr.appendChild(ic);
+      const inp=document.createElement('input');
+      inp.value=selEl.name;
+      inp.style.cssText='flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text1);font-size:12px;font-weight:600;font-family:inherit;padding:0;cursor:text;';
+      inp.addEventListener('change',()=>{const v=inp.value.trim();if(v){selEl.name=v;saveState();}else inp.value=selEl.name;});
+      inp.addEventListener('keydown',e=>{if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.value=selEl.name;inp.blur();}});
+      hdr.appendChild(inp);
       list.appendChild(hdr);
     }
   }
