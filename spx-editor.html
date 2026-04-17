@@ -2315,8 +2315,9 @@ function updLayersList(){
   list.appendChild(scroll);
 
   const seenGids=new Set();
+  const _n=elements.length;
 
-  elements.forEach(el=>{
+  [...elements].reverse().forEach(el=>{
     // Group header (once per group)
     if(el.groupId&&!seenGids.has(el.groupId)){
       seenGids.add(el.groupId);
@@ -2358,7 +2359,7 @@ function updLayersList(){
           else if(ev.clientY>=rc.top+rc.height/2&&ev.clientY<rc.bottom)found={i,pos:'below'};
         });
         if(found){all[found.i].classList.add(found.pos==='above'?'drop-above':'drop-below');
-          toIdx=found.pos==='above'?found.i:found.i+1;}
+          toIdx=found.pos==='above'?(_n-found.i):(_n-1-found.i);}
       };
       const up=()=>{
         document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
@@ -3345,7 +3346,8 @@ function renderTimeline(){
   for(let t=0;t<=totalS+step;t+=step){const x=Math.round(t*pxPerS);if(x>trackW+2)break;rctx.fillStyle='rgba(255,255,255,0.18)';rctx.fillRect(x,14,1,6);if(Math.abs(t/step-Math.round(t/step))<0.01&&Math.round(t/step)%2===0){rctx.fillStyle='rgba(255,255,255,0.35)';rctx.font='9px monospace';rctx.textAlign='center';rctx.fillText(t.toFixed(1)+'s',x,10);}}
   labels.innerHTML='';bars.innerHTML='';
   const animColor={fade:'#3b82f6','slide-left':'#22c55e','slide-right':'#22c55e','slide-up':'#22c55e','slide-down':'#22c55e',wipe:'#e8593c',reveal:'#f59e0b',scale:'#a855f7',none:'rgba(255,255,255,.12)'};
-  elements.forEach(el=>{
+  const _tln=elements.length;
+  [...elements].reverse().forEach(el=>{
     const lbl=document.createElement('div');lbl.className='tl-label'+(selIds.includes(el.id)?' sel':'');lbl.textContent=el.name;lbl.title=el.name;lbl.dataset.idx=elements.indexOf(el);
     lbl.onclick=e=>{
       if(e.ctrlKey||e.metaKey){
@@ -3366,7 +3368,7 @@ function renderTimeline(){
           if(e.clientY>=r.top&&e.clientY<r.top+r.height/2){found={i,pos:'above'};}
           else if(e.clientY>=r.top+r.height/2&&e.clientY<r.bottom){found={i,pos:'below'};}
         });
-        if(found){lastDrop=found;all[found.i].classList.add(found.pos==='above'?'drop-above':'drop-below');toIdx=found.pos==='above'?found.i:found.i+1;}
+        if(found){lastDrop=found;all[found.i].classList.add(found.pos==='above'?'drop-above':'drop-below');toIdx=found.pos==='above'?(_tln-found.i):(_tln-1-found.i);}
       };
       const up=()=>{
         lbl.classList.remove('dragging');
