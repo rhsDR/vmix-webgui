@@ -647,6 +647,7 @@ let scoreCycleSettings={
 let customFonts=[];
 
 const FONTS=['DM Sans','Inter','Lato','Poppins','Nunito','Source Sans 3','PT Sans','Barlow','Barlow Condensed','Oswald','Roboto Condensed','Montserrat','Raleway','Exo 2','Kanit','Rajdhani','Teko','Bebas Neue','Anton','Playfair Display','Georgia','Courier New'];
+function _allFonts(){const custom=[...new Set(customFonts.map(f=>f.name))];return[...new Set([...custom,...FONTS])].sort((a,b)=>a.localeCompare(b,'da'));}
 const FWFS=[['300-normal','Light'],['300-italic','Light Italic'],['400-normal','Regular'],['400-italic','Italic'],['500-normal','Medium'],['500-italic','Medium Italic'],['600-normal','Semibold'],['600-italic','Semibold Italic'],['700-normal','Bold'],['700-italic','Bold Italic']];
 function fwfsOpts(el){const cur=(el.fontWeight||'400')+'-'+(el.fontStyle||'normal');return FWFS.map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`).join('');}
 const ANIMS=['fade','slide-left','slide-right','slide-up','slide-down','wipe','reveal','scale','none'];
@@ -1029,7 +1030,7 @@ function _renderRibbonFormat(){
     h+=`
   <div class="rb-grp" style="${kf?.fontSize!=null?kfBorder:''}">
     <div class="rb-grp-row">
-      <div class="rb-field"><span class="rf-lbl no-scrub">Skrift</span><select class="cb-sel" id="cb-font" style="width:110px">${FONTS.map(f=>`<option value="${f}"${f===el.fontFamily?' selected':''}>${f}</option>`).join('')}</select></div>
+      <div class="rb-field"><span class="rf-lbl no-scrub">Skrift</span><select class="cb-sel" id="cb-font" style="width:110px">${_allFonts().map(f=>`<option value="${f}"${f===el.fontFamily?' selected':''}>${f}</option>`).join('')}</select></div>
       ${fld('px','cb-fs',38,`value="${kf?.fontSize!=null?Math.round(kf.fontSize):el.fontSize}" data-min="1"`)}
       <div class="rb-field"><span class="rf-lbl no-scrub">Stil</span><select class="cb-sel" id="cb-fw" style="width:95px">${fwfsOpts(el)}</select></div>
     </div><div class="rb-grp-lbl">${kf?.fontSize!=null?'<span style="color:var(--accent)">⬦ KF Typografi</span>':'Typografi'}</div>
@@ -2319,7 +2320,7 @@ function renderPropsTab(){
     ${el.type==='text'?`<div class="psec"><div class="psec-title">Tekst</div>
       <div style="margin-bottom:7px"><input class="pi" id="p-txt" value="${el.text.replace(/"/g,'&quot;')}"></div>
       <div class="fp-wrap"><input class="pi" id="p-font-inp" value="${el.fontFamily}" readonly style="cursor:pointer" onclick="document.getElementById('font-list').classList.toggle('open')">
-        <div id="font-list">${FONTS.map(f=>`<div class="fopt${f===el.fontFamily?' active':''}" style="font-family:'${f}'" onclick="pickFont('${f}')">${f}</div>`).join('')}</div></div>
+        <div id="font-list">${_allFonts().map(f=>`<div class="fopt${f===el.fontFamily?' active':''}" style="font-family:'${f}'" onclick="pickFont('${f}')">${f}</div>`).join('')}</div></div>
       <div class="pg2">
         <div><label>Størrelse</label><input class="pi" type="number" id="p-fs" value="${el.fontSize}"></div>
         <div><label>Vægt / Stil</label><select class="pi" id="p-fw">${fwfsOpts(el)}</select></div>
@@ -2384,7 +2385,7 @@ function renderPropsTab(){
     ${el.type==='ticker'?`<div class="psec"><div class="psec-title">Ticker tekst</div>
       <div style="margin-bottom:7px"><textarea class="pi" id="p-ticker-txt" rows="3" style="resize:vertical">${el.text}</textarea></div>
       <div class="fp-wrap"><input class="pi" id="p-font-inp" value="${el.fontFamily}" readonly style="cursor:pointer" onclick="document.getElementById('font-list').classList.toggle('open')">
-        <div id="font-list">${FONTS.map(f=>`<div class="fopt${f===el.fontFamily?' active':''}" style="font-family:'${f}'" onclick="pickFont('${f}')">${f}</div>`).join('')}</div></div>
+        <div id="font-list">${_allFonts().map(f=>`<div class="fopt${f===el.fontFamily?' active':''}" style="font-family:'${f}'" onclick="pickFont('${f}')">${f}</div>`).join('')}</div></div>
       <div class="pg2">
         <div><label>Størrelse</label><input class="pi" type="number" id="p-fs" value="${el.fontSize}"></div>
         <div><label>Vægt / Stil</label><select class="pi" id="p-fw">${fwfsOpts(el)}</select></div>
