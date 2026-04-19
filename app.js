@@ -197,6 +197,14 @@ async function copyText(text) {
   }
 }
 
+// ── FLASH SAVED ───────────────────────────────────────────────
+function flashSaved(el, color = 'blue') {
+  if (!el) return;
+  const cls = 'flash-saved-' + color;
+  el.classList.add(cls);
+  el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+}
+
 // ── TITLE CASE ────────────────────────────────────────────────
 function toTitleCase(str) {
   return str.replace(/\b\w/g, c => c.toUpperCase());
@@ -212,19 +220,6 @@ function titleCaseInput(el, buf, key) {
 // ── STAMDATA ──────────────────────────────────────────────────
 let stamdataRaw = [];
 
-async function loadStamdata() {
-  const rows = await sbGet('dropdowns?select=*&order=orden.asc');
-  stamdataRaw = rows;
-  renderStamdataSection('kommentator', 'sdKommList', r => ({
-    label: r.lang, kort: null, apiNavn: null, id: r.id
-  }));
-  renderStamdataSection('hold', 'sdHoldList', r => ({
-    label: r.lang, kort: r.kort, apiNavn: r.api_navn || '', id: r.id
-  }));
-  renderStamdataSection('lokation', 'sdLokList', r => ({
-    label: r.lang, kort: null, apiNavn: null, id: r.id
-  }));
-}
 
 function renderStamdataSection(type, listId, mapper) {
   const list = document.getElementById(listId);
@@ -327,11 +322,7 @@ async function addStamdataItem(type, lang, kort, apiNavn = null) {
   const body = { type, lang: lang.trim(), orden };
   if (kort !== null) body.kort = kort.trim();
   if (apiNavn) body.api_navn = apiNavn;
-  await fetch(SB_URL + '/rest/v1/dropdowns', {
-    method: 'POST',
-    headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
-    body: JSON.stringify(body)
-  });
+  await sbPost('dropdowns', body);
   await refreshDropdowns();
 }
 
@@ -1180,8 +1171,7 @@ async function saveSubRow(i) {
   try {
     await sbPatch('subs?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { navn: s.navn, titel: s.titel });
     toast('Gemt ✓', 'ok');
-    const el = document.getElementById('sub-' + i);
-    if (el) { el.classList.add('flash-saved'); el.addEventListener('animationend', () => el.classList.remove('flash-saved'), { once: true }); }
+    flashSaved(document.getElementById('sub-' + i), 'blue');
   } catch { toast('Fejl ved gem', 'err'); }
   finally { s.savePending = false; }
 }
@@ -1197,8 +1187,7 @@ async function saveVmixCallRow(i) {
   try {
     await sbPatch('vmix_calls?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { navn: c.navn, titel: c.titel, link: c.link });
     toast('Gemt ✓', 'ok');
-    const el = document.getElementById('vcall-' + i);
-    if (el) { el.classList.add('flash-saved'); el.addEventListener('animationend', () => el.classList.remove('flash-saved'), { once: true }); }
+    flashSaved(document.getElementById('vcall-' + i), 'purple');
     // Synk link til kamp slot
     if (i < 6 && kampe[i]) {
       kampe[i].vmixcall     = c.link;

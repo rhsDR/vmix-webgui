@@ -762,8 +762,8 @@
       35%  { box-shadow: 0 0 0 4px rgba(168,85,247,0.5); border-color: rgba(168,85,247,0.7); }
       100% { box-shadow: 0 0 0 0px rgba(168,85,247,0),   border-color: var(--card-border); }
     }
-    .sub-row.flash-saved            { animation: flash-blue   0.7s ease-out; }
-    .sub-row.vmix-call-row.flash-saved { animation: flash-purple 0.7s ease-out; }
+    .sub-row.flash-saved-blue   { animation: flash-blue   0.7s ease-out; }
+    .sub-row.flash-saved-purple { animation: flash-purple 0.7s ease-out; }
     .sub-num {
       font-size: 11px;
       font-weight: 700;
