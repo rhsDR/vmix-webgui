@@ -2,8 +2,7 @@ import fs   from 'fs';
 import path from 'path';
 
 const API_BASE = 'https://v3.football.api-sports.io';
-const SB_URL   = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
-const SB_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
+import { SB_URL, SB_ANON } from './_supabase.js';
 
 async function getHoldMap() {
   try {
