@@ -1557,10 +1557,7 @@ async function init() {
     renderSubs();
     renderTickers();
     renderCredits();
-    stamdataRaw = await sbGet('dropdowns?select=*&order=orden.asc');
-    renderStamdataSection('kommentator', 'sdKommList', r => ({ label: r.lang, kort: null, apiNavn: null, id: r.id }));
-    renderStamdataSection('hold',        'sdHoldList', r => ({ label: r.lang, kort: r.kort, apiNavn: r.api_navn || '', id: r.id }));
-    renderStamdataSection('lokation',    'sdLokList',  r => ({ label: r.lang, kort: null, apiNavn: null, id: r.id }));
+    await refreshDropdowns();
     initStamdata();
     const loader = document.getElementById('pageLoader');
     loader.style.opacity = '0';
