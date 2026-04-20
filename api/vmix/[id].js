@@ -5,10 +5,6 @@ const HEADERS = {
   'Authorization': 'Bearer ' + SB_ANON
 };
 
-function dkEncode(str) {
-  return str || '';
-}
-
 
 async function sbGet(path) {
   const res = await fetch(SB_URL + '/rest/v1/' + path, { headers: HEADERS });
@@ -40,11 +36,11 @@ export default async function handler(req, res) {
     const tickerTail = ' &nbsp; &bull; &nbsp; ';
     const tickerBreaking = tickersRaw
       .filter(r => r.on_air && r.breaking && (r.overskrift || r.tekst))
-      .map(r => r.overskrift ? `<b>${dkEncode(r.overskrift.toUpperCase())}</b> &nbsp; ${dkEncode(r.tekst)}` : dkEncode(r.tekst))
+      .map(r => r.overskrift ? `<b>${r.overskrift.toUpperCase() || ''}</b> &nbsp; ${r.tekst || ''}` : r.tekst || '')
       .join(tickerSep);
     const tickerNormal = tickersRaw
       .filter(r => r.on_air && !r.breaking && (r.overskrift || r.tekst))
-      .map(r => r.overskrift ? `<b>${dkEncode(r.overskrift.toUpperCase())}</b> &nbsp; ${dkEncode(r.tekst)}` : dkEncode(r.tekst))
+      .map(r => r.overskrift ? `<b>${r.overskrift.toUpperCase() || ''}</b> &nbsp; ${r.tekst || ''}` : r.tekst || '')
       .join(tickerSep);
 
     const addTail = s => s ? s + tickerTail : s;

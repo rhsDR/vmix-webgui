@@ -6,6 +6,7 @@ export default async function handler(req, res) {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email mangler' });
 
+  const DEFAULT_PASSWORD = 'DR35203040';
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseUrl = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
 
@@ -35,7 +36,7 @@ export default async function handler(req, res) {
         'Authorization': 'Bearer ' + serviceKey,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ password: 'DR35203040' })
+      body: JSON.stringify({ password: DEFAULT_PASSWORD })
     });
 
     return res.status(200).json({ id: data.id, email: data.email });

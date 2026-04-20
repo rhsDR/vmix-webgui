@@ -96,7 +96,8 @@
     const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
     const SB_HEADERS = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Content-Type': 'application/json' };
 
-    const projektId = new URLSearchParams(window.location.search).get('p') || '';
+    const projektId  = new URLSearchParams(window.location.search).get('p') || '';
+    const pidFilter  = projektId ? '&projekt_id=eq.' + projektId : '';
 
     let animating = false;
     let creditsLoaded = false;
@@ -105,7 +106,6 @@
     async function pollTrigger() {
       if (animating) return;
       try {
-        const pidFilter = projektId ? '&projekt_id=eq.' + projektId : '';
         const rows = await fetch(SB_URL + '/rest/v1/settings?key=eq.credits_trigger&select=value' + pidFilter, { headers: SB_HEADERS }).then(r => r.json());
         if (rows[0] && rows[0].value === 'in') {
           playAnimation();
@@ -124,7 +124,6 @@
 
     async function loadCredits() {
       try {
-        const pidFilter = projektId ? '&projekt_id=eq.' + projektId : '';
         const [creditsRaw, settingsRaw] = await Promise.all([
           fetch(SB_URL + '/rest/v1/credits?select=*' + pidFilter, { headers: SB_HEADERS }).then(r => r.json()),
           fetch(SB_URL + '/rest/v1/settings?select=key,value' + pidFilter, { headers: SB_HEADERS }).then(r => r.json())
@@ -182,7 +181,6 @@
 
     async function resetTrigger() {
       try {
-        const pidFilter = projektId ? '&projekt_id=eq.' + projektId : '';
         await fetch(SB_URL + '/rest/v1/settings?key=eq.credits_trigger' + pidFilter, {
           method: 'PATCH',
           headers: SB_HEADERS,

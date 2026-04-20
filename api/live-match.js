@@ -33,17 +33,9 @@ function loadAllCached() {
   return all;
 }
 
-function loadCachedEvents(id) {
+function loadCachedFile(filename) {
   try {
-    const fp   = path.join(process.cwd(), 'api', 'data', `events_${id}.json`);
-    const data = JSON.parse(fs.readFileSync(fp, 'utf8'));
-    return Array.isArray(data.response) ? data : null;
-  } catch { return null; }
-}
-
-function loadCachedStats(id) {
-  try {
-    const fp   = path.join(process.cwd(), 'api', 'data', `stats_${id}.json`);
+    const fp   = path.join(process.cwd(), 'api', 'data', filename);
     const data = JSON.parse(fs.readFileSync(fp, 'utf8'));
     return Array.isArray(data.response) ? data : null;
   } catch { return null; }
@@ -80,8 +72,8 @@ export default async function handler(req, res) {
       // Slå op i cache først
       const cached_f = cached.find(f => f.fixture.id === id);
 
-      const cachedEvents = loadCachedEvents(id);
-      const cachedStats  = loadCachedStats(id);
+      const cachedEvents = loadCachedFile(`events_${id}.json`);
+      const cachedStats  = loadCachedFile(`stats_${id}.json`);
       const [fixtureRes, eventsRes, statsRes] = await Promise.all([
         cached_f
           ? Promise.resolve({ response: [cached_f] })
