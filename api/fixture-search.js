@@ -22,7 +22,8 @@ async function getHoldMap() {
 
 function mapHold(apiName, holdMap) {
   const m = holdMap[apiName];
-  return m ? { lang: m.lang, kort: m.kort } : { lang: apiName, kort: apiName.substring(0, 3).toUpperCase() };
+  if (!m) { console.warn('Hold ikke fundet i database:', apiName); return { lang: apiName, kort: apiName.substring(0, 3).toUpperCase() }; }
+  return { lang: m.lang, kort: m.kort };
 }
 
 function formatFixture(f, holdMap) {
