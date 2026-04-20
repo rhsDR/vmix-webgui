@@ -501,8 +501,10 @@
       await loadUsers();
       document.getElementById('loader').style.display = 'none';
 
-      await loadApiUrls();
-      await loadJsonRef();
+      const res = await fetch(SB_URL + '/rest/v1/projekter?select=id,navn,type,undertitel&order=orden.asc', { headers: sbHeaders() });
+      const projekter = await res.json();
+      loadApiUrls(projekter);
+      loadJsonRef(projekter);
       startPresence();
 
       document.getElementById('inviteBtn').addEventListener('click', inviteUser);
@@ -550,9 +552,7 @@
         .subscribe();
     }
 
-    async function loadJsonRef() {
-      const res = await fetch(SB_URL + '/rest/v1/projekter?select=id,navn,type&order=orden.asc', { headers: sbHeaders() });
-      const projekter = await res.json();
+    function loadJsonRef(projekter) {
       const container = document.getElementById('jsonRefList');
       container.innerHTML = '';
 
@@ -652,9 +652,7 @@
       });
     }
 
-    async function loadApiUrls() {
-      const res = await fetch(SB_URL + '/rest/v1/projekter?select=id,navn,undertitel&order=orden.asc', { headers: sbHeaders() });
-      const projekter = await res.json();
+    function loadApiUrls(projekter) {
       projekter.forEach(p => { projektNavne[p.id] = { navn: p.navn, undertitel: p.undertitel }; });
       const list = document.getElementById('apiList');
       list.innerHTML = '';
