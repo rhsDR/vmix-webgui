@@ -3795,7 +3795,12 @@ function renderTimeline(){
         if(e.ctrlKey||e.metaKey){if(selIds.includes(el.id))selIds=selIds.filter(i=>i!==el.id);else selIds=[...selIds,el.id];}
         else{if(!selIds.includes(el.id))selIds=[el.id];}
         render();renderPanel();renderTimeline();
-        const targets=elements.filter(x=>selIds.includes(x.id)).map(x=>({el:x,d0:x.animOutDelay??0}));
+        const targets=elements.filter(x=>selIds.includes(x.id)&&resolveAnimOut(x)!=='none').map(x=>{
+          // Når animOutDelay er 0 vises baren visuelt efter IN-baren — brug den position som startpunkt
+          const xBx=Math.max(0,x.animDelay*pxPerS),xBw=Math.max(4,x.animDuration*pxPerS);
+          const d0=(x.animOutDelay??0)>0?(x.animOutDelay??0):(xBx+xBw+6)/pxPerS;
+          return{el:x,d0};
+        });
         const mv=ev=>{moved=true;const dt=(ev.clientX-sx)/pxPerS;targets.forEach(({el:e2,d0})=>{e2.animOutDelay=Math.max(0,parseFloat((d0+dt).toFixed(2)));});renderTimeline();renderPanel();};
         const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
         document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
