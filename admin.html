@@ -462,6 +462,7 @@
   <script src="js/auth.js"></script>
   <script>
     let currentUser = null;
+    let accessToken = null;
     let projektNavne = {}; // id → navn + undertitel
 
     // Tab switching
@@ -491,6 +492,7 @@
       if (!session) return;
 
       currentUser = session.user;
+      accessToken = session.access_token;
       const admin = await isAdmin(currentUser.id);
       if (!admin) {
         window.location.href = 'projects.html';
@@ -670,7 +672,7 @@
     }
 
     async function loadUsers() {
-      const res = await fetch('/api/list-users');
+      const res = await fetch('/api/list-users', { headers: { 'Authorization': 'Bearer ' + accessToken } });
       const data = await res.json();
       if (data.error) { toast(data.error, 'err'); return; }
       renderUsers(data.users);
@@ -723,7 +725,7 @@
 
       const res = await fetch('/api/invite', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
         body: JSON.stringify({ email })
       });
       const data = await res.json();
@@ -766,7 +768,7 @@
       if (!confirm('Nulstil kode for ' + email + ' til DR35203040?')) return;
       const res = await fetch('/api/set-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
         body: JSON.stringify({ userId })
       });
       const data = await res.json();
@@ -778,7 +780,7 @@
       if (!confirm('Fjern ' + email + '?')) return;
       const res = await fetch('/api/delete-user', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
         body: JSON.stringify({ userId })
       });
       const data = await res.json();
