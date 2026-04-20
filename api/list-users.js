@@ -1,7 +1,10 @@
+import { requireAdmin } from './_auth.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  if (await requireAdmin(req, res)) return;
 
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseUrl = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';

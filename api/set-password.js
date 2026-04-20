@@ -1,5 +1,8 @@
+import { requireAdmin } from './_auth.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
+  if (await requireAdmin(req, res)) return;
 
   const { userId } = req.body || {};
   if (!userId) return res.status(400).json({ error: 'Mangler userId' });
