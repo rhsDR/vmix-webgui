@@ -4,6 +4,8 @@ import path from 'path';
 const API_BASE = 'https://v3.football.api-sports.io';
 import { SB_URL, SB_ANON } from './_supabase.js';
 
+const SB_HEADERS = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Content-Type': 'application/json' };
+
 async function getHoldMap() {
   try {
     const res  = await fetch(`${SB_URL}/rest/v1/dropdowns?type=eq.hold&select=lang,kort,api_navn`, { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON } });
@@ -41,6 +43,25 @@ function loadCachedFile(filename) {
   } catch { return null; }
 }
 
+async function loadSbCache(id) {
+  try {
+    const res  = await fetch(`${SB_URL}/rest/v1/fixture_cache?fixture_id=eq.${id}&select=events,stats`, { headers: SB_HEADERS });
+    const rows = await res.json();
+    if (!rows || !rows[0]) return { events: null, stats: null };
+    return { events: rows[0].events, stats: rows[0].stats };
+  } catch { return { events: null, stats: null }; }
+}
+
+async function saveSbCache(id, events, stats) {
+  try {
+    await fetch(`${SB_URL}/rest/v1/fixture_cache`, {
+      method:  'POST',
+      headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+      body:    JSON.stringify({ fixture_id: id, events, stats, updated_at: new Date().toISOString() })
+    });
+  } catch { /* ikke kritisk */ }
+}
+
 function extractStats(statsData) {
   if (!statsData) return null;
   const KEYS = ['Ball Possession', 'Shots on Goal', 'Total Shots', 'Corner Kicks', 'Fouls', 'Passes %'];
@@ -69,27 +90,36 @@ export default async function handler(req, res) {
 
   try {
     const results = await Promise.all(ids.map(async id => {
-      // Slå op i cache først
-      const cached_f = cached.find(f => f.fixture.id === id);
+      const cached_f  = cached.find(f => f.fixture.id === id);
+      const fileEvents = loadCachedFile(`events_${id}.json`);
+      const fileStats  = loadCachedFile(`stats_${id}.json`);
+      const sbCache    = (!fileEvents || !fileStats) ? await loadSbCache(id) : { events: null, stats: null };
 
-      const cachedEvents = loadCachedFile(`events_${id}.json`);
-      const cachedStats  = loadCachedFile(`stats_${id}.json`);
       const [fixtureRes, eventsRes, statsRes] = await Promise.all([
         cached_f
           ? Promise.resolve({ response: [cached_f] })
           : fetch(`${API_BASE}/fixtures?id=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] })),
-        cachedEvents
-          ? Promise.resolve(cachedEvents)
-          : fetch(`${API_BASE}/fixtures/events?fixture=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] })),
-        cachedStats
-          ? Promise.resolve(cachedStats)
-          : fetch(`${API_BASE}/fixtures/statistics?fixture=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] }))
+        fileEvents
+          ? Promise.resolve(fileEvents)
+          : sbCache.events
+            ? Promise.resolve({ response: sbCache.events })
+            : fetch(`${API_BASE}/fixtures/events?fixture=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] })),
+        fileStats
+          ? Promise.resolve(fileStats)
+          : sbCache.stats
+            ? Promise.resolve({ response: sbCache.stats })
+            : fetch(`${API_BASE}/fixtures/statistics?fixture=${id}`, { headers }).then(r => r.json()).catch(() => ({ response: [] }))
       ]);
 
       const f      = fixtureRes.response?.[0];
       const events = eventsRes.response || [];
 
       if (!f) return { id, error: 'Ikke fundet' };
+
+      // Gem i Supabase hvis data kom fra live API (ingen fil- eller sb-cache fandtes)
+      if (!fileEvents && !sbCache.events && events.length) {
+        saveSbCache(id, events, statsRes.response || []);
+      }
 
       const home = mapHold(f.teams.home.name, holdMap);
       const away = mapHold(f.teams.away.name, holdMap);
