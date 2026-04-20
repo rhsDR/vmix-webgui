@@ -137,6 +137,10 @@ input[type=color].pc{width:28px;height:26px;border:1px solid var(--border2);bord
 .li.drop-target{background:rgba(232,89,60,.15)!important;border-color:var(--accent)!important;}
 .li.dragging{opacity:.35;}
 .li-grp-hdr{background:rgba(0,0,0,.2);font-size:11px;}
+.li-grp-name{flex:1;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:text;border-radius:3px;padding:0 3px;transition:background .12s;}
+.li-grp-name:hover{background:rgba(255,255,255,.06);}
+.li-grp-name .edit-ic{opacity:0;font-size:9px;color:var(--text3);margin-left:4px;transition:opacity .12s;flex-shrink:0;}
+.li-grp-name:hover .edit-ic{opacity:1;}
 .li-icon{font-size:11px;width:14px;text-align:center;flex-shrink:0;color:var(--text3);}
 .li-swatch{width:12px;height:12px;border-radius:2px;flex-shrink:0;border:1px solid rgba(255,255,255,.12);}
 .li-name{flex:1;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -2566,24 +2570,25 @@ function updLayersList(){
       hdr.style.cssText=`border-left:3px solid ${gc};padding-left:6px;`;
       const ic=document.createElement('span');ic.textContent='⊞';ic.style.cssText=`color:${gc};font-size:12px;flex-shrink:0;`;
       const _gaName=(_grpAnim(el.groupId).name)||'';
-      const nm=document.createElement('span');nm.className='li-name';nm.textContent=_gaName||'Gruppe';nm.style.color=_gaName?'var(--text)':'var(--text2)';
-      nm.title='Dobbeltklik for at omdøbe gruppe';
-      nm.addEventListener('dblclick',e=>{
-        e.stopPropagation();
+      const nm=document.createElement('span');nm.className='li-grp-name';
+      nm.innerHTML=`<span style="color:${_gaName?'var(--text)':'var(--text2)'}">${_gaName||'Gruppe'}</span><span class="edit-ic">✎</span>`;
+      nm.title='Klik for at omdøbe gruppe';
+      function _startGrpRename(){
         const inp=document.createElement('input');
-        inp.className='li-name-edit';inp.value=_grpAnim(el.groupId).name||'';inp.placeholder='Gruppe';
+        inp.className='li-name-edit';inp.value=_grpAnim(el.groupId).name||'';inp.placeholder='Gruppenavn…';
         nm.replaceWith(inp);inp.focus();inp.select();
         const commit=()=>{saveState();_grpAnim(el.groupId).name=inp.value.trim();renderTimeline();updLayersList&&updLayersList();};
         inp.addEventListener('blur',commit);
         inp.addEventListener('keydown',e2=>{if(e2.key==='Enter'){inp.blur();}else if(e2.key==='Escape'){inp.removeEventListener('blur',commit);updLayersList&&updLayersList();}});
-      });
+      }
+      nm.addEventListener('click',e=>{e.stopPropagation();_startGrpRename();});
       const ct=document.createElement('span');ct.textContent=gMembers.length+' lag';ct.style.cssText='font-size:10px;color:var(--text3);flex-shrink:0;margin-right:4px;';
       const acts=document.createElement('div');acts.className='li-acts';
       const ub=document.createElement('button');ub.className='la';ub.title='Opløs gruppe';ub.textContent='⊟';
       ub.onclick=e=>{e.stopPropagation();selIds=gMembers.map(x=>x.id);ungroupSel();};
       acts.appendChild(ub);
       hdr.appendChild(ic);hdr.appendChild(nm);hdr.appendChild(ct);hdr.appendChild(acts);
-      hdr.onclick=e=>{if(!e.target.closest('.li-name,.li-name-edit,.la'))selAllInGroup(el.groupId);};
+      hdr.onclick=e=>{if(!e.target.closest('.li-grp-name,.li-name-edit,.la'))selAllInGroup(el.groupId);};
       scroll.appendChild(hdr);
     }
 
