@@ -76,23 +76,23 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 
 /* ELEMENTS */
 .el{position:absolute;cursor:move;user-select:none;}
-.el-border{position:absolute;inset:-1px;border:1px dashed rgba(232,89,60,.35);pointer-events:none;opacity:0;transition:opacity .1s;}
+.el-border{position:absolute;inset:0;border:1px dashed rgba(232,89,60,.35);pointer-events:none;opacity:0;transition:opacity .1s;}
 .el:hover .el-border{opacity:1;}
 .el.selected .el-border{border:2px solid var(--accent);opacity:1;}
 .el.locked .el-border{border-color:rgba(255,200,60,.5);}
 .el.locked{cursor:not-allowed;}
 .el-del{position:absolute;top:-10px;right:-10px;width:18px;height:18px;background:var(--accent);border-radius:50%;display:none;align-items:center;justify-content:center;font-size:11px;color:#fff;cursor:pointer;z-index:20;line-height:1;font-weight:700;}
 .el.selected .el-del{display:flex;}
-.rh{position:absolute;width:8px;height:8px;background:#fff;border:1.5px solid var(--accent);border-radius:2px;z-index:20;opacity:0;}
+.rh{position:absolute;width:6px;height:6px;background:#fff;border:1.5px solid var(--accent);border-radius:1px;z-index:20;opacity:0;}
 .el.selected .rh{opacity:1;}
-.rh-nw{left:-4px;top:-4px;cursor:nw-resize;}
-.rh-n{left:calc(50% - 4px);top:-4px;cursor:n-resize;}
-.rh-ne{right:-4px;top:-4px;cursor:ne-resize;}
-.rh-w{left:-4px;top:calc(50% - 4px);cursor:w-resize;}
-.rh-e{right:-4px;top:calc(50% - 4px);cursor:e-resize;}
-.rh-sw{left:-4px;bottom:-4px;cursor:sw-resize;}
-.rh-s{left:calc(50% - 4px);bottom:-4px;cursor:s-resize;}
-.rh-se{right:-4px;bottom:-4px;cursor:se-resize;}
+.rh-nw{left:-3px;top:-3px;cursor:nw-resize;}
+.rh-n{left:calc(50% - 3px);top:-3px;cursor:n-resize;}
+.rh-ne{right:-3px;top:-3px;cursor:ne-resize;}
+.rh-w{left:-3px;top:calc(50% - 3px);cursor:w-resize;}
+.rh-e{right:-3px;top:calc(50% - 3px);cursor:e-resize;}
+.rh-sw{left:-3px;bottom:-3px;cursor:sw-resize;}
+.rh-s{left:calc(50% - 3px);bottom:-3px;cursor:s-resize;}
+.rh-se{right:-3px;bottom:-3px;cursor:se-resize;}
 .el-lock{position:absolute;top:-9px;left:-9px;font-size:9px;opacity:0;pointer-events:none;}
 .el.locked .el-lock{opacity:.7;}
 
