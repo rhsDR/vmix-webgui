@@ -3454,7 +3454,7 @@ function exportSPX_CSS(){
     const _cGrpCy=Math.round((Math.min(..._cgm.map(e=>e.y))+Math.max(..._cgm.map(e=>e.y+e.h)))/2);
     const _cRevHide=`inset(${_cGrpCy}px 0 ${1080-_cGrpCy}px 0)`;
     const gid=`grp-${el.groupId}`;
-    const dur=ga.animDuration,delay=ga.animDelay;
+    const dur=ga.animDuration??0.45,delay=ga.animDelay??0;
     const ao=resolveAnimOut({animation:ga.animation,animOut:ga.animOut||'auto',wipeDir:ga.wipeDir||'→'});
     const outDur=ga.animOutDuration??0.3,outDelay=ga.animOutDelay??0;
     let outState='',inState='';
