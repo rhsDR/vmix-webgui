@@ -850,6 +850,7 @@ function mkEl(type,p={}){
     wipeDirOut:p.wipeDirOut??null,
     lockAspect:p.lockAspect??(type==='image'),
     textAlign:p.textAlign??'left',
+    verticalAlign:p.verticalAlign??'center',
     fontStyle:p.fontStyle??'normal',
     autoWidth:p.autoWidth??false,
     widthBindEl:p.widthBindEl??null,
@@ -1081,9 +1082,22 @@ function _renderRibbonFormat(){
     <div class="rb-grp-row">
       <div class="rb-field"><span class="rf-lbl no-scrub">Tekst</span><input type="color" class="cb-color" id="cb-color" value="${el.color}"></div>
       ${isText?`<div class="rb-field"><span class="rf-lbl no-scrub">Bg</span><input type="color" class="cb-color" id="cb-txt-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}"></div>`:''}
-      ${isText?`<div class="rb-field" style="gap:2px"><span class="rf-lbl no-scrub">Just.</span><div style="display:flex;gap:2px"><button class="cb-btn${(el.textAlign||'left')==='left'?' active':''}" onclick="setTextAlign('left')">&#8676;</button><button class="cb-btn${(el.textAlign||'left')==='center'?' active':''}" onclick="setTextAlign('center')">&#8644;</button><button class="cb-btn${(el.textAlign||'left')==='right'?' active':''}" onclick="setTextAlign('right')">&#8677;</button></div></div>`:''}
     </div><div class="rb-grp-lbl">Farve</div>
-  </div>`;
+  </div>
+  ${isText?`<div class="rb-grp">
+    <div class="rb-grp-row">
+      <div class="rb-field" style="gap:2px"><div style="display:flex;gap:2px">
+        <button class="cb-btn${(el.textAlign||'left')==='left'?' active':''}" title="Venstre" onclick="setTextAlign('left')">&#8676;</button>
+        <button class="cb-btn${(el.textAlign||'left')==='center'?' active':''}" title="Centrér" onclick="setTextAlign('center')">&#8644;</button>
+        <button class="cb-btn${(el.textAlign||'left')==='right'?' active':''}" title="Højre" onclick="setTextAlign('right')">&#8677;</button>
+        <span style="width:1px;background:var(--border2);margin:0 2px;align-self:stretch"></span>
+        <button class="cb-btn${(el.verticalAlign||'center')==='top'?' active':''}" title="Top" onclick="setVerticalAlign('top')">&#8673;</button>
+        <button class="cb-btn${(el.verticalAlign||'center')==='center'?' active':''}" title="Midt" onclick="setVerticalAlign('center')">&#8597;</button>
+        <button class="cb-btn${(el.verticalAlign||'center')==='bottom'?' active':''}" title="Bund" onclick="setVerticalAlign('bottom')">&#8675;</button>
+      </div></div>
+    </div><div class="rb-grp-lbl">Justering</div>
+  </div>`:''}
+  `;
   }
   if(isText){h+=`
   <div class="rb-grp">
@@ -1381,7 +1395,8 @@ function render(){
     div.dataset.id=el.id;
     div.style.cssText=`left:${el.x*scale}px;top:${el.y*scale}px;width:${el.w*scale}px;height:${el.h*scale}px;opacity:${el.opacity};transform-origin:${ANCHOR_ORIGIN[el.anchor||'tl']};`;
     if(el.type==='text'){
-      div.style.display='flex';div.style.alignItems='center';
+      div.style.display='flex';
+      const _va=el.verticalAlign||'center';div.style.alignItems=_va==='top'?'flex-start':_va==='bottom'?'flex-end':'center';
       const jc=el.textAlign==='center'?'center':el.textAlign==='right'?'flex-end':'flex-start';
       div.style.justifyContent=jc;
       div.style.color=_stColor(el,'color');
@@ -2786,6 +2801,8 @@ function renderPropsTab(){
       <div class="prow"><span class="plbl">Justering</span>
         <div style="display:flex;gap:4px">
           ${['left','center','right'].map(a=>`<button class="achip${(el.textAlign||'left')===a?' active':''}" title="${a==='left'?'Venstre':a==='center'?'Centrér':'Højre'}" onclick="setTextAlign('${a}')">${a==='left'?'&#8676;':a==='center'?'&#8644;':'&#8677;'}</button>`).join('')}
+          <span style="width:1px;background:var(--border2);margin:0 2px;align-self:stretch"></span>
+          ${['top','center','bottom'].map(a=>`<button class="achip${(el.verticalAlign||'center')===a?' active':''}" title="${a==='top'?'Top':a==='center'?'Midt':'Bund'}" onclick="setVerticalAlign('${a}')">${a==='top'?'&#8673;':a==='center'?'&#8597;':'&#8675;'}</button>`).join('')}
         </div>
       </div>
       <div class="prow"><span class="plbl">Farve</span><input type="color" class="pc" id="p-col" value="${el.color}"><input class="pi" id="p-col-hex" value="${el.color}"></div>
@@ -3007,6 +3024,7 @@ function _bindCollapsible(container){
 function pickFont(f){const el=elements.find(x=>x.id===selIds[0]);if(el){saveState();el.fontFamily=f;render();renderPanel();}document.getElementById('font-list')?.classList.remove('open');}
 document.addEventListener('click',e=>{if(!e.target.closest('.fp-wrap'))document.getElementById('font-list')?.classList.remove('open');});
 function setTextAlign(a){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.textAlign=a;render();renderPanel();}
+function setVerticalAlign(a){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.verticalAlign=a;render();renderPanel();}
 function setFontStyle(){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.fontStyle=el.fontStyle==='italic'?'normal':'italic';render();renderPanel();}
 function setAnim(dir,a){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;if(dir==='in')el.animation=a;else el.animOut=a;renderPanel();renderTimeline();}
 
@@ -3280,7 +3298,8 @@ function exportSPX(){if(!elements.length){toast('Ingen elementer');return;}if(ex
 
 function _textElCss(el){
   const jc=el.textAlign==='center'?'center':el.textAlign==='right'?'flex-end':'flex-start';
-  let s=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-style:${el.fontStyle||'normal'};font-family:'${el.fontFamily}',sans-serif;${el.letterSpacing?`letter-spacing:${el.letterSpacing}em;`:''}${el.lineHeight?`line-height:${el.lineHeight};`:''}white-space:nowrap;display:flex;align-items:center;justify-content:${jc};`;
+  const va=el.verticalAlign||'center';const ai=va==='top'?'flex-start':va==='bottom'?'flex-end':'center';
+  let s=`color:${el.color};font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-style:${el.fontStyle||'normal'};font-family:'${el.fontFamily}',sans-serif;${el.letterSpacing?`letter-spacing:${el.letterSpacing}em;`:''}${el.lineHeight?`line-height:${el.lineHeight};`:''}white-space:nowrap;display:flex;align-items:${ai};justify-content:${jc};`;
   if(el.bgColor&&el.bgColor!=='transparent')s+=`background:${el.bgColor};border-radius:${el.borderRadius||0}px;padding:0 8px;`;
   return s;
 }
