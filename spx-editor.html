@@ -1061,7 +1061,7 @@ function _renderRibbonFormat(){
   <div class="rb-grp">
     <div class="rb-grp-row">
       <div class="rb-field"><span class="rf-lbl no-scrub">Tekst</span><input type="color" class="cb-color" id="cb-color" value="${el.color}"></div>
-      ${isText?`<div class="rb-field"><span class="rf-lbl no-scrub">Bg</span><input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}"></div>`:''}
+      ${isText?`<div class="rb-field"><span class="rf-lbl no-scrub">Bg</span><input type="color" class="cb-color" id="cb-txt-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}"></div>`:''}
       ${isText?`<div class="rb-field" style="gap:2px"><span class="rf-lbl no-scrub">Just.</span><div style="display:flex;gap:2px"><button class="cb-btn${(el.textAlign||'left')==='left'?' active':''}" onclick="setTextAlign('left')">&#8676;</button><button class="cb-btn${(el.textAlign||'left')==='center'?' active':''}" onclick="setTextAlign('center')">&#8644;</button><button class="cb-btn${(el.textAlign||'left')==='right'?' active':''}" onclick="setTextAlign('right')">&#8677;</button></div></div>`:''}
     </div><div class="rb-grp-lbl">Farve</div>
   </div>`;
@@ -1076,14 +1076,14 @@ function _renderRibbonFormat(){
   if(isRect)h+=`
   <div class="rb-grp">
     <div class="rb-grp-row">
-      <div class="rb-field"><span class="rf-lbl no-scrub">Fyld</span><input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}"></div>
+      <div class="rb-field"><span class="rf-lbl no-scrub">Fyld</span><input type="color" class="cb-color" id="cb-rect-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:'#000000'}"></div>
       ${fld('R','cb-br',38,`value="${el.borderRadius}" data-min="0"`)}
     </div><div class="rb-grp-lbl">Rektangel</div>
   </div>`;
   if(isLine)h+=`
   <div class="rb-grp">
     <div class="rb-grp-row">
-      <div class="rb-field"><span class="rf-lbl no-scrub">Farve</span><input type="color" class="cb-color" id="cb-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:el.color}"></div>
+      <div class="rb-field"><span class="rf-lbl no-scrub">Farve</span><input type="color" class="cb-color" id="cb-line-bgc" value="${el.bgColor&&el.bgColor!=='transparent'?el.bgColor:el.color}"></div>
     </div><div class="rb-grp-lbl">Linje</div>
   </div>`;
   if(isImg)h+=`
@@ -1131,7 +1131,7 @@ function _bindCtxBar(el){
   cbn('rb-ls',v=>{el.letterSpacing=v;});
   const _lhInp=document.getElementById('rb-lh');if(_lhInp){_lhInp.addEventListener('input',e=>{el.lineHeight=parseFloat(e.target.value)||null;render();renderPanel();});_lhInp.addEventListener('change',()=>saveState());}
   const cc=document.getElementById('cb-color');if(cc)cc.addEventListener('input',e=>{el.color=e.target.value;render();renderPanel();});
-  const cbg=document.getElementById('cb-bgc');if(cbg)cbg.addEventListener('input',e=>{el.bgColor=e.target.value;render();renderPanel();});
+  ['cb-txt-bgc','cb-rect-bgc','cb-line-bgc'].forEach(cbid=>{const cbg=document.getElementById(cbid);if(cbg)cbg.addEventListener('input',e=>{el.bgColor=e.target.value;render();renderPanel();});});
 }
 function _renderRibbonAnim(){
   const pane=document.getElementById('rb-anim');if(!pane)return;
@@ -3835,7 +3835,8 @@ function renderTimeline(){
       const bw=Math.max(4,(el.animDuration||0.45)*pxPerS);
       const bar=document.createElement('div');bar.className='tl-bar'+(selIds.includes(el.id)?' sel':'');
       bar.style.cssText=`left:${bx}px;width:${bw}px;background:${animColor[aIn]||animColor.none};opacity:${aIn==='none'?0.35:0.8};`;
-      bar.textContent=bw>50?aIn:'';bar.title=`IN: ${aIn} · +${el.animDelay||0}s · ${el.animDuration||0.45}s`;
+      const _inLbl=aIn==='wipe'?`wipe ${el.wipeDir||'→'}`:aIn==='reveal'?'reveal':aIn;
+      bar.textContent=bw>50?_inLbl:'';bar.title=`IN: ${_inLbl} · +${el.animDelay||0}s · ${el.animDuration||0.45}s`;
       let dx0=null;
       bar.addEventListener('mousedown',e=>{
         e.stopPropagation();dx0=e.clientX;let moved=false;
@@ -3865,7 +3866,8 @@ function renderTimeline(){
       const obar=document.createElement('div');
       obar.className='tl-bar out'+(selIds.includes(el.id)?' sel':'');
       obar.style.cssText=`left:${obx}px;width:${obw}px;background:${animColor[ao]||animColor.none};opacity:${ao==='none'?0.35:1};`;
-      obar.title=`OUT: ${ao} · delay:${outDelay}s · ${outDur}s`;
+      const _outLbl=ao==='wipe'?`wipe ${el.wipeDirOut||el.wipeDir||'→'}`:ao;
+      obar.textContent=obw>50?_outLbl:'';obar.title=`OUT: ${_outLbl} · delay:${outDelay}s · ${outDur}s`;
       obar.addEventListener('mousedown',e=>{
         e.stopPropagation();const sx=e.clientX;let moved=false;
         if(e.ctrlKey||e.metaKey){if(selIds.includes(el.id))selIds=selIds.filter(i=>i!==el.id);else selIds=[...selIds,el.id];}
