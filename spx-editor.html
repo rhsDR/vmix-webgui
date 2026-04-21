@@ -3746,26 +3746,29 @@ function renderTimeline(){
         spanEl.style.cssText=`position:absolute;left:${mStart*pxPerS}px;width:${Math.max(4,(mEnd-mStart)*pxPerS)}px;top:50%;transform:translateY(-50%);height:4px;background:${gc};opacity:.25;border-radius:2px;pointer-events:none;`;
         grow.appendChild(spanEl);
       }
-      if(ga.animation&&ga.animation!=='none'){
+      {
+        const _noAnim=!ga.animation||ga.animation==='none';
         const gbx=Math.max(0,(ga.animDelay||0)*pxPerS);
         const gbw=Math.max(4,(ga.animDuration||0.45)*pxPerS);
         const gbar=document.createElement('div');gbar.className='tl-bar'+(allSel?' sel':'');
-        gbar.style.cssText=`left:${gbx}px;width:${gbw}px;background:${gc};opacity:.82;border-radius:3px;`;
-        gbar.textContent=gbw>50?ga.animation:'';gbar.title=`Gruppe IN: ${ga.animation} · +${ga.animDelay||0}s · ${ga.animDuration||0.45}s`;
+        gbar.style.cssText=`left:${gbx}px;width:${gbw}px;background:${gc};opacity:${_noAnim?.38:.82};border-radius:3px;${_noAnim?'border:1px dashed rgba(255,255,255,.2);':''}`;
+        gbar.textContent=gbw>50?(ga.animation||'none'):'';gbar.title=`Gruppe IN: ${ga.animation||'none'} · +${ga.animDelay||0}s · ${ga.animDuration||0.45}s`;
         gbar.addEventListener('mousedown',e=>{e.stopPropagation();const sx=e.clientX;const d0=ga.animDelay||0;let moved=false;const mv=ev=>{moved=true;ga.animDelay=Math.max(0,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
         const gresH=document.createElement('div');gresH.style.cssText='position:absolute;right:0;top:0;width:7px;height:100%;cursor:e-resize;z-index:2;';
         gresH.addEventListener('mousedown',e=>{e.stopPropagation();const sx=e.clientX;const d0=ga.animDuration||0.45;const mv=ev=>{ga.animDuration=Math.max(0.05,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};const up=()=>{saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
         gbar.appendChild(gresH);grow.appendChild(gbar);
-        const _gaOut=ga.animOut==='auto'?(({'slide-left':'slide-right','slide-right':'slide-left','slide-up':'slide-down','slide-down':'slide-up',wipe:'wipe',fade:'fade',scale:'scale'})[ga.animation]||ga.animation):(ga.animOut||ga.animation);
-        const gOutDur=Math.max(0.05,ga.animOutDuration??0.3),gOutDl=ga.animOutDelay??0;
-        const gobx=gOutDl>0?gOutDl*pxPerS:gbx+gbw+6,gobw=Math.max(4,gOutDur*pxPerS);
-        const gobar=document.createElement('div');gobar.className='tl-bar out'+(allSel?' sel':'');
-        gobar.style.cssText=`left:${gobx}px;width:${gobw}px;background:${gc};opacity:.42;border-radius:3px;`;
-        gobar.title=`Gruppe OUT: ${_gaOut} · delay:${gOutDl}s · ${gOutDur}s`;
-        gobar.addEventListener('mousedown',e=>{e.stopPropagation();const sx=e.clientX;const d0=(ga.animOutDelay??0)>0?(ga.animOutDelay??0):(gbx+gbw+6)/pxPerS;let moved=false;const mv=ev=>{moved=true;ga.animOutDelay=Math.max(0,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
-        const goResH=document.createElement('div');goResH.style.cssText='position:absolute;right:0;top:0;width:7px;height:100%;cursor:e-resize;z-index:2;';
-        goResH.addEventListener('mousedown',e=>{e.stopPropagation();const sx=e.clientX;const d0=ga.animOutDuration??0.3;const mv=ev=>{ga.animOutDuration=Math.max(0.05,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};const up=()=>{saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
-        gobar.appendChild(goResH);grow.appendChild(gobar);
+        {
+          const _gaOut=_noAnim?'none':(ga.animOut==='auto'?(({'slide-left':'slide-right','slide-right':'slide-left','slide-up':'slide-down','slide-down':'slide-up',wipe:'wipe',fade:'fade',scale:'scale'})[ga.animation]||ga.animation):(ga.animOut||ga.animation));
+          const gOutDur=Math.max(0.05,ga.animOutDuration??0.3),gOutDl=ga.animOutDelay??0;
+          const gobx=gOutDl>0?gOutDl*pxPerS:gbx+gbw+6,gobw=Math.max(4,gOutDur*pxPerS);
+          const gobar=document.createElement('div');gobar.className='tl-bar out'+(allSel?' sel':'');
+          gobar.style.cssText=`left:${gobx}px;width:${gobw}px;background:${gc};opacity:${_noAnim?.22:.42};border-radius:3px;${_noAnim?'border:1px dashed rgba(255,255,255,.15);':''}`;
+          gobar.title=`Gruppe OUT: ${_gaOut} · delay:${gOutDl}s · ${gOutDur}s`;
+          gobar.addEventListener('mousedown',e=>{e.stopPropagation();const sx=e.clientX;const d0=(ga.animOutDelay??0)>0?(ga.animOutDelay??0):(gbx+gbw+6)/pxPerS;let moved=false;const mv=ev=>{moved=true;ga.animOutDelay=Math.max(0,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
+          const goResH=document.createElement('div');goResH.style.cssText='position:absolute;right:0;top:0;width:7px;height:100%;cursor:e-resize;z-index:2;';
+          goResH.addEventListener('mousedown',e=>{e.stopPropagation();const sx=e.clientX;const d0=ga.animOutDuration??0.3;const mv=ev=>{ga.animOutDuration=Math.max(0.05,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};const up=()=>{saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
+          gobar.appendChild(goResH);grow.appendChild(gobar);
+        }
       }
       bars.appendChild(grow);
     }
