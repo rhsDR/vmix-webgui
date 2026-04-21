@@ -771,7 +771,7 @@ function drawGrid(){
 }
 function toggleGrid(){showGrid=!showGrid;drawGrid();document.getElementById('grid-btn').style.color=showGrid?'var(--accent)':'';}
 function toggleSnap(){snapOn=!snapOn;document.getElementById('snap-btn').style.color=snapOn?'var(--accent)':'';}
-function snap(v){return snapOn?Math.round(v/gridSz)*gridSz:Math.round(v);}
+function snap(v){return snapOn?Math.round(v/gridSz)*gridSz:v;}
 const EDGE_SNAP=8; // canvas pixels
 function snapEdges(pos,size,anchors){
   const s=snap(pos);
