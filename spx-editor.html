@@ -920,7 +920,8 @@ function _addRecent(name){
 function loadRecentProject(idx){
   const r=JSON.parse(localStorage.getItem('spx_recent')||'[]');
   if(!r[idx])return;
-  toast('Kan ikke genindlæse — brug Åbn projekt');
+  closeFilDropdown();
+  document.getElementById('load-inp').click();
 }
 function newProject(){
   if(_dirty&&!confirm('Nyt projekt?\n\nDu har ikke-gemte ændringer — de vil gå tabt.'))return;
@@ -1269,16 +1270,14 @@ function setWipeDir(d){const el=elements.find(x=>x.id===selIds[0]);if(!el)return
 function setWipeDirOut(d){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.wipeDirOut=d||null;render();renderPanel();}
 function setCharStepMode(m){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.charStepMode=m;renderPanel();renderRibbonBar();}
 function _csSteps(n,mode,count){
-  // Returns array of {t,show} where t=0..1 (time ratio), show=char count to reveal
-  if(mode==='one'||(!mode||mode==='irregular'&&false)){
-    // evenly spaced, 1 char at a time
-    return Array.from({length:n},(_,i)=>({t:i/Math.max(1,n),show:i+1}));
+  if(!n)return[];
+  if(mode==='one'){
+    return Array.from({length:n},(_,i)=>({t:i/n,show:i+1}));
   }
   if(mode==='multi'){
     const k=Math.max(1,count||3);const steps=Math.ceil(n/k);
     return Array.from({length:steps},(_,i)=>({t:i/Math.max(1,steps),show:Math.min(n,(i+1)*k)}));
   }
-  // irregular: use _WS_PTS
   return _WS_PTS.map(pt=>({t:pt[0],show:Math.round(pt[1]*n)}));
 }
 function recalibrateBind(){
@@ -2697,7 +2696,7 @@ function _grpAnimHTML(gid){
   const ainSel=ANIMS.map(a=>`<option value="${a}"${ga.animation===a?' selected':''}>${ANIM_LBL[a]}</option>`).join('');
   const aoutSel=ANIMS_OUT.map(a=>`<option value="${a}"${(ga.animOut||'auto')===a?' selected':''}>${ANIM_OUT_LBL[a]}</option>`).join('');
   const wipeInActive=ga.animation==='wipe'||ga.animation==='wipe-step';
-  const resolvedOut=ga.animOut==='auto'?(({'slide-left':'slide-right','slide-right':'slide-left','slide-up':'slide-down','slide-down':'slide-up',wipe:'wipe','wipe-step':'wipe-step',fade:'fade',scale:'scale'})[ga.animation]||ga.animation):(ga.animOut||ga.animation);
+  const resolvedOut=ga.animOut==='auto'?(({'slide-left':'slide-right','slide-right':'slide-left','slide-up':'slide-down','slide-down':'slide-up',wipe:'wipe','wipe-step':'wipe-step',reveal:'reveal',fade:'fade',scale:'scale'})[ga.animation]||ga.animation):(ga.animOut||ga.animation);
   const wipeOutActive=resolvedOut==='wipe'||resolvedOut==='wipe-step';
   const dirBtn=(icon,cur,setter,val)=>`<button class="tb-btn icon${cur===val?' active-wipe':''}" onclick="${setter}('${val}')" style="flex:1;padding:3px 0">${icon}</button>`;
   const wipeInBtns=`<div style="display:flex;gap:3px;margin-top:4px;opacity:${wipeInActive?1:.3};pointer-events:${wipeInActive?'auto':'none'}">
@@ -2938,7 +2937,7 @@ function renderPropsTab(){
       const obj=Array.isArray(data)?data[0]:data;
       if(!obj||typeof obj!=='object')throw new Error();
       el._apiFields=Object.keys(obj);
-      renderCanvasTab();
+      renderPanel();
       toast(`${el._apiFields.length} felter fundet`,'ok');
     }).catch(()=>{toast('Kunne ikke hente API');tapiFetch.textContent='⟳ Hent felter';tapiFetch.disabled=false;});
   });
@@ -3830,7 +3829,7 @@ function renderTimeline(){
         gresH.addEventListener('mousedown',e=>{e.stopPropagation();const sx=e.clientX;const d0=ga.animDuration||0.45;const mv=ev=>{ga.animDuration=Math.max(0.05,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};const up=()=>{saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
         gbar.appendChild(gresH);grow.appendChild(gbar);
         {
-          const _gaOut=_noAnim?'none':(ga.animOut==='auto'?(({'slide-left':'slide-right','slide-right':'slide-left','slide-up':'slide-down','slide-down':'slide-up',wipe:'wipe',fade:'fade',scale:'scale'})[ga.animation]||ga.animation):(ga.animOut||ga.animation));
+          const _gaOut=_noAnim?'none':(ga.animOut==='auto'?(({'slide-left':'slide-right','slide-right':'slide-left','slide-up':'slide-down','slide-down':'slide-up',wipe:'wipe','wipe-step':'wipe-step',reveal:'reveal',fade:'fade',scale:'scale'})[ga.animation]||ga.animation):(ga.animOut||ga.animation));
           const gOutDur=Math.max(0.05,ga.animOutDuration??0.3),gOutDl=ga.animOutDelay??0;
           const gobx=gOutDl>0?gOutDl*pxPerS:gbx+gbw+6,gobw=Math.max(4,gOutDur*pxPerS);
           const gobar=document.createElement('div');gobar.className='tl-bar out'+(allSel?' sel':'');
