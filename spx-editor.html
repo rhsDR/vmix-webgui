@@ -636,7 +636,7 @@ let _scPreviewEl=null; // {id, text} — preview override for Score Cycle test
 let dragging=false,dragOff=[],resizing=false,resEl=null,resHandle='',resStart={};
 let boxSel=false,boxStart={};
 let undoStack=[],redoStack=[],clipboard=[];
-let showGrid=false,snapOn=true,gridSz=20;
+let showGrid=false,snapOn=false,gridSz=4;
 let bgColor='transparent';
 let currentTab='props';
 let exportMode='css';
@@ -3173,7 +3173,8 @@ function _projFilename(ext){
 }
 function saveProject(){
   const name=document.getElementById('project-name').value.trim();
-  const data=JSON.stringify({version:3,elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings,customFonts,groupAnimations,projectName:name},null,2);
+  try{localStorage.setItem('spx_editor_prefs',JSON.stringify({snapOn,gridSz}));}catch(e){}
+  const data=JSON.stringify({version:3,elements,bgColor,elCtr,transitionOnUpdate,smartTickerSettings,scoreCycleSettings,customFonts,groupAnimations,projectName:name,tlFps},null,2);
   try{const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},200);}
   catch(err){const uri='data:application/json;charset=utf-8,'+encodeURIComponent(data);const a=document.createElement('a');a.href=uri;a.download=_projFilename('_spx.json');document.body.appendChild(a);a.click();setTimeout(()=>document.body.removeChild(a),200);}
   _addRecent(name||'Unavngivet');_dirty=false;toast('Projekt gemt','ok');
@@ -3194,7 +3195,9 @@ function loadProject(ev){
       delete scoreCycleSettings.target;delete scoreCycleSettings.dataField;delete scoreCycleSettings.dataLabel;}
     if(d.customFonts){customFonts=d.customFonts;_injectCustomFonts();_saveCustomFontsToStorage();}
     groupAnimations=d.groupAnimations||{};
-    if(d.projectName){document.getElementById('project-name').value=d.projectName;_addRecent(d.projectName);}canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];_dirty=false;selKf=null;
+    if(d.projectName){document.getElementById('project-name').value=d.projectName;_addRecent(d.projectName);}
+    if(d.tlFps){tlFps=d.tlFps;const sel=document.getElementById('tl-fps-sel');if(sel)sel.value=tlFps;}
+    canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];_dirty=false;selKf=null;
     // Migrate: ensure keyframes + gradientStops exist
     elements.forEach(el=>{if(!el.keyframes)el.keyframes=[];
       if(el.gradientDir&&!el.gradientStops)el.gradientStops=_getStops(el);});
@@ -4398,6 +4401,8 @@ document.getElementById('tl-scroll').addEventListener('scroll',function(){
 })();
 // Apply saved color theme (must run after const THEMES is declared)
 _applyTheme();
+// Restore editor prefs
+try{const _p=JSON.parse(localStorage.getItem('spx_editor_prefs')||'{}');if(_p.snapOn!=null)snapOn=_p.snapOn;if(_p.gridSz!=null)gridSz=_p.gridSz;const _sb=document.getElementById('snap-btn');if(_sb)_sb.style.color=snapOn?'var(--accent)':'';}catch(e){}
 
 /* ── SCRUB INPUT HANDLER ─────────────────────────── */
 (function(){
