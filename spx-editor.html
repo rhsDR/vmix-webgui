@@ -850,6 +850,7 @@ function mkEl(type,p={}){
     animOutDuration:p.animOutDuration??0.3,
     wipeDir:p.wipeDir??'→',
     wipeDirOut:p.wipeDirOut??null,
+    wipeFeather:p.wipeFeather??0,
     lockAspect:p.lockAspect??(type==='image'),
     textAlign:p.textAlign??'left',
     verticalAlign:p.verticalAlign??'center',
@@ -985,6 +986,7 @@ function _wipeRibbonGrps(el){
   const inDir=el.wipeDir||'→';
   return`<div class="rb-grp" ${dis(inActive)}>
     <div class="rb-grp-row">${dirBtns(inDir,'setWipeDir')}</div>
+    <div class="rb-grp-row" style="margin-top:3px"><span class="rf-lbl no-scrub">Feather</span><input class="cb-inp sm" id="rb-wipe-feather" type="number" value="${el.wipeFeather||0}" min="0" max="300" step="1" style="width:42px" oninput="setWipeFeather(this.value)"><span class="rf-lbl">px</span></div>
     <div class="rb-grp-lbl">Wipe IN</div>
   </div>
   <div class="rb-grp" style="border-right:none;${outActive?'':'opacity:.32;pointer-events:none'}">
@@ -1296,6 +1298,7 @@ function groupSel(){
 }
 function setWipeDir(d){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.wipeDir=d;render();renderPanel();}
 function setWipeDirOut(d){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.wipeDirOut=d||null;render();renderPanel();}
+function setWipeFeather(v){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.wipeFeather=Math.max(0,parseInt(v)||0);render();}
 function setCharStepMode(m){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.charStepMode=m;renderPanel();renderRibbonBar();}
 function _csSteps(n,mode,count){
   if(!n)return[];
@@ -1525,6 +1528,22 @@ function _wipeHiddenOut(dir){
   if(dir==='↑')return'inset(0 0 100% 0)';       // exits upward: fully clipped from bottom
   if(dir==='↓')return'inset(100% 0 0 0)';       // exits downward: fully clipped from top
   return'inset(0 0 0 100%)';}
+function _wipeInMask(dir,p,f,w,h){
+  // edge travels from -f to (dim+f) so element is fully hidden at p=0, fully visible at p=1
+  const ex=p*(w+2*f)-f, ey=p*(h+2*f)-f;
+  if(dir==='←')return`linear-gradient(to left,black ${(ex-f).toFixed(1)}px,transparent ${(ex+f).toFixed(1)}px)`;
+  if(dir==='↓')return`linear-gradient(to bottom,black ${(ey-f).toFixed(1)}px,transparent ${(ey+f).toFixed(1)}px)`;
+  if(dir==='↑')return`linear-gradient(to top,black ${(ey-f).toFixed(1)}px,transparent ${(ey+f).toFixed(1)}px)`;
+  return`linear-gradient(to right,black ${(ex-f).toFixed(1)}px,transparent ${(ex+f).toFixed(1)}px)`;
+}
+function _wipeOutMask(dir,p,f,w,h){
+  // edge travels from -f to (dim+f) — transparent on leading side, black on trailing side
+  const ex=p*(w+2*f)-f, ey=p*(h+2*f)-f;
+  if(dir==='←')return`linear-gradient(to left,transparent ${(ex-f).toFixed(1)}px,black ${(ex+f).toFixed(1)}px)`;
+  if(dir==='↑')return`linear-gradient(to top,transparent ${(ey-f).toFixed(1)}px,black ${(ey+f).toFixed(1)}px)`;
+  if(dir==='↓')return`linear-gradient(to bottom,transparent ${(ey-f).toFixed(1)}px,black ${(ey+f).toFixed(1)}px)`;
+  return`linear-gradient(to right,transparent ${(ex-f).toFixed(1)}px,black ${(ex+f).toFixed(1)}px)`;
+}
 function _scrubEaseIn(p,a){
   if(a==='wipe'||a==='reveal')return p<0.5?2*p*p:1-Math.pow(-2*p+2,2)/2; // power2.inOut
   if(a==='wipe-step'||a==='char-step')return p;
@@ -1563,14 +1582,14 @@ function _grpWipeOutClip(dir,p,gb,el){
 function _csHtml(text,revealCount,op){const chars=[...String(text||'')];return chars.map((c,i)=>{const esc=c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':c===' '?'&nbsp;':c;return`<span style="opacity:${i<revealCount?op:0}">${esc}</span>`;}).join('');}
 function _applyInState(div,a,p,el){
   const op=el.opacity;const ao=ANCHOR_ORIGIN[el.anchor||'tl'];
-  div.style.clipPath='';
+  div.style.clipPath='';div.style.mask=div.style.webkitMask='';
   if(a==='fade'){div.style.opacity=p*op;div.style.transform='none';}
   else if(a==='slide-left'){div.style.opacity=p*op;div.style.transform=`translateX(${(1-p)*-60*scale}px)`;}
   else if(a==='slide-right'){div.style.opacity=p*op;div.style.transform=`translateX(${(1-p)*60*scale}px)`;}
   else if(a==='slide-up'){div.style.opacity=p*op;div.style.transform=`translateY(${(1-p)*50*scale}px)`;}
   else if(a==='slide-down'){div.style.opacity=p*op;div.style.transform=`translateY(${(1-p)*-50*scale}px)`;}
-  else if(a==='wipe'){div.style.clipPath=_wipeInClip(el.wipeDir||'→',p);div.style.transform='none';div.style.opacity=op;}
-  else if(a==='wipe-step'){div.style.clipPath=_wipeInClip(el.wipeDir||'→',_wsQ(p));div.style.transform='none';div.style.opacity=op;}
+  else if(a==='wipe'){const f=el.wipeFeather||0;const dir=el.wipeDir||'→';if(f>0){div.style.mask=div.style.webkitMask=_wipeInMask(dir,p,f,div.offsetWidth,div.offsetHeight);}else{div.style.clipPath=_wipeInClip(dir,p);}div.style.transform='none';div.style.opacity=op;}
+  else if(a==='wipe-step'){const f=el.wipeFeather||0;const dir=el.wipeDir||'→';const q=_wsQ(p);if(f>0){div.style.mask=div.style.webkitMask=_wipeInMask(dir,q,f,div.offsetWidth,div.offsetHeight);}else{div.style.clipPath=_wipeInClip(dir,q);}div.style.transform='none';div.style.opacity=op;}
   else if(a==='char-step'){const n=[...(el.text||'')].length;const steps=_csSteps(n,el.charStepMode,el.charStepCount);let show=0;for(const s of steps){if(p>=s.t)show=s.show;}div.innerHTML=_csHtml(el.text||'',show,op);div.style.opacity='';div.style.clipPath='';div.style.transform='none';}
   else if(a==='reveal'){const c=((1-p)*50).toFixed(1);div.style.clipPath=`inset(${c}% 0)`;div.style.transform='none';div.style.opacity=op;}
   else if(a==='scale'){div.style.opacity=p*op;div.style.transform=`scale(${0.75+0.25*p})`;div.style.transformOrigin=ao;}
@@ -1578,14 +1597,14 @@ function _applyInState(div,a,p,el){
 function _applyOutState(div,ao2,p,el){
   // p=0 → fully visible, p=1 → fully out
   const op=el.opacity;const ao=ANCHOR_ORIGIN[el.anchor||'tl'];
-  div.style.clipPath='';
+  div.style.clipPath='';div.style.mask=div.style.webkitMask='';
   if(ao2==='fade'){div.style.opacity=(1-p)*op;div.style.transform='none';}
   else if(ao2==='slide-left'){div.style.opacity=(1-p)*op;div.style.transform=`translateX(${p*-40*scale}px)`;}
   else if(ao2==='slide-right'){div.style.opacity=(1-p)*op;div.style.transform=`translateX(${p*40*scale}px)`;}
   else if(ao2==='slide-up'){div.style.opacity=(1-p)*op;div.style.transform=`translateY(${p*-30*scale}px)`;}
   else if(ao2==='slide-down'){div.style.opacity=(1-p)*op;div.style.transform=`translateY(${p*30*scale}px)`;}
-  else if(ao2==='wipe'){div.style.clipPath=_wipeOutClip(el.wipeDirOut||el.wipeDir||'→',p);div.style.transform='none';div.style.opacity=op;}
-  else if(ao2==='wipe-step'){div.style.clipPath=_wipeOutClip(el.wipeDirOut||el.wipeDir||'→',_wsQ(p));div.style.transform='none';div.style.opacity=op;}
+  else if(ao2==='wipe'){const f=el.wipeFeather||0;const dir=el.wipeDirOut||el.wipeDir||'→';if(f>0){div.style.mask=div.style.webkitMask=_wipeOutMask(dir,p,f,div.offsetWidth,div.offsetHeight);}else{div.style.clipPath=_wipeOutClip(dir,p);}div.style.transform='none';div.style.opacity=op;}
+  else if(ao2==='wipe-step'){const f=el.wipeFeather||0;const dir=el.wipeDirOut||el.wipeDir||'→';const q=_wsQ(p);if(f>0){div.style.mask=div.style.webkitMask=_wipeOutMask(dir,q,f,div.offsetWidth,div.offsetHeight);}else{div.style.clipPath=_wipeOutClip(dir,q);}div.style.transform='none';div.style.opacity=op;}
   else if(ao2==='char-step'){const n=[...(el.text||'')].length;const steps=_csSteps(n,el.charStepMode,el.charStepCount);let hide=0;for(const s of steps){if(p>=s.t)hide=s.show;}div.innerHTML=_csHtml(el.text||'',Math.max(0,n-hide),op);div.style.opacity='';div.style.clipPath='';div.style.transform='none';}
   else if(ao2==='reveal'){const c=(p*50).toFixed(1);div.style.clipPath=`inset(${c}% 0)`;div.style.transform='none';div.style.opacity=op;}
   else if(ao2==='scale'){div.style.opacity=(1-p)*op;div.style.transform=`scale(${1-0.15*p})`;div.style.transformOrigin=ao;}
@@ -1700,7 +1719,7 @@ function applyScrubState(){
     const div=canvas.querySelector(`[data-id="${el.id}"]`);if(!div)return;
     const{a,ao,phase,p,ga:gga}=_grpOff[el.groupId];
     // 'none' elements have no first-pass reset — seed from base to avoid stale state
-    if(el.animation==='none'){div.style.opacity=el.opacity;div.style.transform='';div.style.clipPath='';}
+    if(el.animation==='none'){div.style.opacity=el.opacity;div.style.transform='';div.style.clipPath='';div.style.mask=div.style.webkitMask='';}
     const existOp=parseFloat(div.style.opacity)??el.opacity;
     const existTr=div.style.transform&&div.style.transform!=='none'?div.style.transform:'';
     if(phase==='pre'||phase==='in'){
@@ -1725,8 +1744,8 @@ function applyScrubState(){
       else if(ao==='wipe-step'){div.style.clipPath=_grpWipeOutClip(gga.wipeDirOut||gga.wipeDir||'→',_wsQ(p),_grpBounds[el.groupId],el);}
       else if(ao==='reveal'){div.style.clipPath=_grpRevealOutClip(p,_grpBounds[el.groupId],el);}
     }else{
-      // show phase: clear any clip so element is fully visible
-      div.style.clipPath='';
+      // show phase: clear any clip/mask so element is fully visible
+      div.style.clipPath='';div.style.mask=div.style.webkitMask='';
     }
   });
 }
@@ -2941,7 +2960,7 @@ function renderPropsTab(){
     </div>
     <div class="psec"><div class="psec-title">Animation ind</div>
       <div class="achip-grid">${ANIMS.map(a=>`<button class="achip${el.animation===a?' active':''}" onclick="setAnim('in','${a}')">${ANIM_LBL[a]}</button>`).join('')}</div>
-      ${(el.animation==='wipe'||el.animation==='wipe-step')?`<div class="prow"><span class="plbl">Retning</span><div style="display:flex;gap:4px">${['←','→','↑','↓'].map(d=>`<button class="achip${(el.wipeDir||'→')===d?' active':''}" onclick="setWipeDir('${d}')">${d}</button>`).join('')}</div></div>`:''}
+      ${(el.animation==='wipe'||el.animation==='wipe-step')?`<div class="prow"><span class="plbl">Retning</span><div style="display:flex;gap:4px">${['←','→','↑','↓'].map(d=>`<button class="achip${(el.wipeDir||'→')===d?' active':''}" onclick="setWipeDir('${d}')">${d}</button>`).join('')}</div></div><div class="prow"><span class="plbl">Feather</span><input class="pi sm" type="number" id="p-wipe-feather" value="${el.wipeFeather||0}" min="0" max="300" step="1" style="width:52px"><span style="font-size:10px;color:var(--text3);margin-left:4px">px</span></div>`:''}
       ${el.animation==='char-step'?`<div class="prow" style="gap:6px"><span class="plbl">Trin</span><div style="display:flex;gap:4px;flex-wrap:wrap">${[['irregular','Vilkårlig'],['one','1 ad gangen'],['multi','Antal']].map(([v,l])=>`<button class="achip${(el.charStepMode||'irregular')===v?' active':''}" onclick="setCharStepMode('${v}')">${l}</button>`).join('')}${(el.charStepMode||'irregular')==='multi'?`<input class="pi sm" type="number" id="p-csc" value="${el.charStepCount||3}" min="1" max="20" style="width:44px">`:''}</div></div>`:''}
       <div class="pg2">
         <div><label>Forsinkelse (s)</label><input class="pi" type="number" id="p-delay" value="${el.animDelay}" step="0.05" min="0"></div>
@@ -2950,7 +2969,7 @@ function renderPropsTab(){
     </div>
     <div class="psec"><div class="psec-title">Animation ud</div>
       <div class="achip-grid">${ANIMS_OUT.map(a=>`<button class="achip${(el.animOut||'auto')===a?' active':''}" onclick="setAnim('out','${a}')">${ANIM_OUT_LBL[a]}</button>`).join('')}</div>
-      ${(()=>{const ro=resolveAnimOut(el);return(ro==='wipe'||ro==='wipe-step')?`<div class="prow"><span class="plbl">Retning</span><div style="display:flex;gap:4px"><button class="achip${!el.wipeDirOut?' active':''}" onclick="setWipeDirOut(null)">↔ Auto</button>${['←','→','↑','↓'].map(d=>`<button class="achip${el.wipeDirOut===d?' active':''}" onclick="setWipeDirOut('${d}')">${d}</button>`).join('')}</div></div>`:''})()}
+      ${(()=>{const ro=resolveAnimOut(el);return(ro==='wipe'||ro==='wipe-step')?`<div class="prow"><span class="plbl">Retning</span><div style="display:flex;gap:4px"><button class="achip${!el.wipeDirOut?' active':''}" onclick="setWipeDirOut(null)">↔ Auto</button>${['←','→','↑','↓'].map(d=>`<button class="achip${el.wipeDirOut===d?' active':''}" onclick="setWipeDirOut('${d}')">${d}</button>`).join('')}</div></div><div class="prow"><span class="plbl">Feather</span><input class="pi sm" type="number" id="p-wipe-feather-out" value="${el.wipeFeather||0}" min="0" max="300" step="1" style="width:52px"><span style="font-size:10px;color:var(--text3);margin-left:4px">px</span></div>`:''})()}
       <div class="pg2">
         <div><label>Forsinkelse (s)</label><input class="pi" type="number" id="p-out-delay" value="${el.animOutDelay??0}" step="0.05" min="0"></div>
         <div><label>Varighed (s)</label><input class="pi" type="number" id="p-out-dur" value="${el.animOutDuration??0.3}" step="0.05" min="0.05"></div>
@@ -2974,6 +2993,8 @@ function renderPropsTab(){
   b('p-op','opacity',v=>parseFloat(v)/100);b('p-br','borderRadius',parseFloat);
   b('p-delay','animDelay',parseFloat);b('p-dur','animDuration',parseFloat);
   b('p-out-delay','animOutDelay',parseFloat);b('p-out-dur','animOutDuration',parseFloat);
+  {const wf=document.getElementById('p-wipe-feather');if(wf){wf.addEventListener('input',e=>{el.wipeFeather=Math.max(0,parseInt(e.target.value)||0);render();});wf.addEventListener('change',()=>saveState());}}
+  {const wfo=document.getElementById('p-wipe-feather-out');if(wfo){wfo.addEventListener('input',e=>{el.wipeFeather=Math.max(0,parseInt(e.target.value)||0);render();});wfo.addEventListener('change',()=>saveState());}}
   {const csc=document.getElementById('p-csc');if(csc)csc.addEventListener('input',e=>{el.charStepCount=Math.max(1,parseInt(e.target.value)||3);});csc&&csc.addEventListener('change',()=>saveState());}
   ['t','r','b','l'].forEach(side=>{const ci=document.getElementById('p-cr-'+side);if(ci)ci.addEventListener('input',e=>{if(!el.crop)el.crop={t:0,r:0,b:0,l:0};el.crop[side]=Math.max(0,parseInt(e.target.value)||0);render();});});
   b('p-name','name',null,()=>updLayersList());b('p-flbl','fieldLabel');
