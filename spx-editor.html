@@ -1430,12 +1430,17 @@ function render(){
       e.stopPropagation();
       if(el.locked){toast('Element er låst');return;}
       if(e.button===2)return;
+      const _prevSel=[...selIds];
       if(!e.shiftKey)selIds=[el.id];
       else if(!selIds.includes(el.id))selIds.push(el.id);
       else selIds=selIds.filter(i=>i!==el.id);
-      // Expand selection to whole group
+      // First click on group → select whole group; second click → isolate individual
       const gid=elements.find(x=>x.id===el.id)?.groupId;
-      if(gid)selIds=[...new Set([...selIds,...elements.filter(x=>x.groupId===gid).map(x=>x.id)])];
+      if(gid&&!e.shiftKey){
+        const _grpIds=elements.filter(x=>x.groupId===gid).map(x=>x.id);
+        const _wasGroupSel=_grpIds.every(i=>_prevSel.includes(i));
+        if(!_wasGroupSel)selIds=[...new Set([...selIds,..._grpIds])];
+      }
       render();renderPanel();
       dragging=true;
       dragOff=selIds.map(id=>{const e2=elements.find(x=>x.id===id);return{id,ox:e.clientX/scale-e2.x,oy:e.clientY/scale-e2.y};});
@@ -2645,14 +2650,10 @@ function updLayersList(){
   });
 }
 function selFromLayer(e,id){
-  const eg=elements.find(x=>x.id===id);
-  const gg=eg?.groupId;
-  const ids=gg?elements.filter(x=>x.groupId===gg).map(x=>x.id):[id];
   if(e.ctrlKey||e.metaKey){
-    const allIn=ids.every(i=>selIds.includes(i));
-    selIds=allIn?selIds.filter(i=>!ids.includes(i)):[...new Set([...selIds,...ids])];
+    selIds=selIds.includes(id)?selIds.filter(i=>i!==id):[...selIds,id];
   }else{
-    selIds=ids;
+    selIds=[id];
   }
   render();
   if(selIds.length===1)switchTab('props');else renderPanel();
