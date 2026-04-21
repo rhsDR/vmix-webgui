@@ -3740,13 +3740,15 @@ function renderTimeline(){
       grow.addEventListener('mousedown',e=>{if(e.target.closest('.tl-bar'))return;e.stopPropagation();selIds=grpMembers.map(x=>x.id);render();renderPanel();renderTimeline();});
       {
         const _noAnim=!ga.animation||ga.animation==='none';
-        const gbx=Math.max(0,(ga.animDelay||0)*pxPerS);
+        const _minMemberDelay=Math.min(...grpMembers.map(x=>x.animDelay||0));
+        const _grpDelay=(ga.animDelay||0)>0?(ga.animDelay||0):_minMemberDelay;
+        const gbx=Math.max(0,_grpDelay*pxPerS);
         const gbw=Math.max(4,(ga.animDuration||0.45)*pxPerS);
         const gbar=document.createElement('div');gbar.className='tl-bar'+(allSel?' sel':'');
         gbar.style.cssText=`left:${gbx}px;width:${gbw}px;background:${gc};opacity:${_noAnim?.38:.82};border-radius:3px;${_noAnim?'border:1px dashed rgba(255,255,255,.2);':''}`;
         gbar.textContent=gbw>50?(ga.animation||'none'):'';gbar.title=`Gruppe IN: ${ga.animation||'none'} · +${ga.animDelay||0}s · ${ga.animDuration||0.45}s`;
         gbar.addEventListener('dblclick',e=>{e.stopPropagation();if(expandedGroups.has(el.groupId))expandedGroups.delete(el.groupId);else expandedGroups.add(el.groupId);renderTimeline();});
-        gbar.addEventListener('mousedown',e=>{if(e.detail>1)return;e.stopPropagation();const sx=e.clientX;const d0=ga.animDelay||0;let moved=false;const mv=ev=>{moved=true;ga.animDelay=Math.max(0,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
+        gbar.addEventListener('mousedown',e=>{if(e.detail>1)return;e.stopPropagation();const sx=e.clientX;const d0=_grpDelay;let moved=false;const mv=ev=>{moved=true;ga.animDelay=Math.max(0,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
         const gresH=document.createElement('div');gresH.style.cssText='position:absolute;right:0;top:0;width:7px;height:100%;cursor:e-resize;z-index:2;';
         gresH.addEventListener('mousedown',e=>{e.stopPropagation();const sx=e.clientX;const d0=ga.animDuration||0.45;const mv=ev=>{ga.animDuration=Math.max(0.05,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};const up=()=>{saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
         gbar.appendChild(gresH);grow.appendChild(gbar);
