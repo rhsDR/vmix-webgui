@@ -527,6 +527,15 @@ html.theme-kold{
       <input type="range" id="tl-zoom-slider" min="1" max="10" value="3" step="0.5" oninput="tlZoom=parseFloat(this.value);document.getElementById('tl-zoom-val').textContent=tlZoom+'x';renderTimeline()">
       <span id="tl-zoom-val" style="font-size:10px;color:var(--text3);font-family:var(--mono);min-width:26px">3x</span>
     </div>
+    <div style="display:flex;align-items:center;gap:4px;margin-left:8px">
+      <span style="font-size:11px;color:var(--text3)">fps</span>
+      <select id="tl-fps-sel" style="background:var(--surface2);color:var(--text1);border:1px solid var(--border);border-radius:3px;font-size:11px;height:22px;padding:0 4px;cursor:pointer" onchange="tlFps=parseInt(this.value);renderTimeline()">
+        <option value="25" selected>25</option>
+        <option value="30">30</option>
+        <option value="50">50</option>
+        <option value="60">60</option>
+      </select>
+    </div>
     <button class="tb-btn" style="margin-left:8px;height:22px;font-size:11px" onclick="previewAnim()">&#9654; Alle</button>
     <button class="tb-btn" style="height:22px;font-size:11px" onclick="previewSelAnim()">&#9654; Valgte</button>
   </div>
@@ -637,6 +646,7 @@ let _dirty=false;
 let selKf=null; // {elId, kfIdx} — selected keyframe
 let _selGradStop=0; // selected gradient stop index
 let tlZoom=3;
+let tlFps=25;
 let scrubTime=null,isScrubbing=false,_arrowMoving=false;
 let transitionOnUpdate=true;
 let previewBreaking=false;
@@ -1702,6 +1712,8 @@ function applyScrubState(){
   });
 }
 
+function _snapZero(v){return v<(1/tlFps)*0.75?0:v;}
+
 function scrubTo(t){
   const track=document.getElementById('tl-track');if(!track)return;
   const totalS=TL_MAX_S/tlZoom;
@@ -1711,7 +1723,7 @@ function scrubTo(t){
   ph.style.display='block';
   ph.style.left=Math.round(scrubTime*pxPerS)+'px';
   ph.style.height='100%';
-  ph.dataset.t=scrubTime.toFixed(2)+'s';
+  ph.dataset.t='f'+Math.round(scrubTime*tlFps);
   applyScrubState();
 }
 
@@ -3787,8 +3799,20 @@ function renderTimeline(){
   const trackW=Math.max(200,track.offsetWidth);const totalS=TL_MAX_S/tlZoom;const pxPerS=trackW/totalS;
   ruler.width=trackW;ruler.height=20;ruler.style.width=trackW+'px';
   const rctx=ruler.getContext('2d');rctx.clearRect(0,0,trackW,20);
-  const step=totalS<=1?0.1:totalS<=2?0.25:0.5;
-  for(let t=0;t<=totalS+step;t+=step){const x=Math.round(t*pxPerS);if(x>trackW+2)break;rctx.fillStyle='rgba(255,255,255,0.18)';rctx.fillRect(x,14,1,6);if(Math.abs(t/step-Math.round(t/step))<0.01&&Math.round(t/step)%2===0){rctx.fillStyle='rgba(255,255,255,0.35)';rctx.font='9px monospace';rctx.textAlign='center';rctx.fillText(t.toFixed(1)+'s',x,10);}}
+  const totalFrames=totalS*tlFps;
+  const pxPerF=trackW/totalFrames;
+  // choose label interval so labels are at least ~40px apart
+  const rawInterval=40/pxPerF;
+  const niceIntervals=[1,2,5,10,25,50,100,200,250,500];
+  const labelInterval=niceIntervals.find(n=>n>=rawInterval)||niceIntervals[niceIntervals.length-1];
+  const tickInterval=labelInterval<=10?1:labelInterval<=50?5:10;
+  for(let f=0;f<=Math.ceil(totalFrames)+1;f+=tickInterval){
+    const x=Math.round(f*pxPerF);if(x>trackW+2)break;
+    const isLabel=f%labelInterval===0;
+    rctx.fillStyle=isLabel?'rgba(255,255,255,0.35)':'rgba(255,255,255,0.18)';
+    rctx.fillRect(x,isLabel?10:14,1,isLabel?10:6);
+    if(isLabel){rctx.fillStyle='rgba(255,255,255,0.35)';rctx.font='9px monospace';rctx.textAlign='center';rctx.fillText(String(f),x,9);}
+  }
   labels.innerHTML='';bars.innerHTML='';
   const animColor={fade:'#3b82f6','slide-left':'#22c55e','slide-right':'#22c55e','slide-up':'#22c55e','slide-down':'#22c55e',wipe:'#e8593c','wipe-step':'#e8593c','char-step':'#06b6d4',reveal:'#f59e0b',scale:'#a855f7',none:'rgba(255,255,255,.12)'};
   const _tln=elements.length;
@@ -3823,7 +3847,7 @@ function renderTimeline(){
         gbar.style.cssText=`left:${gbx}px;width:${gbw}px;background:${gc};opacity:${_noAnim?.38:.82};border-radius:3px;${_noAnim?'border:1px dashed rgba(255,255,255,.2);':''}`;
         gbar.textContent=gbw>50?(ga.animation||'none'):'';gbar.title=`Gruppe IN: ${ga.animation||'none'} · +${ga.animDelay||0}s · ${ga.animDuration||0.45}s`;
         gbar.addEventListener('dblclick',e=>{e.stopPropagation();if(expandedGroups.has(el.groupId))expandedGroups.delete(el.groupId);else expandedGroups.add(el.groupId);renderTimeline();});
-        gbar.addEventListener('mousedown',e=>{if(e.detail>1)return;e.stopPropagation();selIds=grpMembers.map(x=>x.id);render();renderPanel();const sx=e.clientX;const d0=_grpDelay;let moved=false;const mv=ev=>{moved=true;ga.animDelay=Math.max(0,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
+        gbar.addEventListener('mousedown',e=>{if(e.detail>1)return;e.stopPropagation();selIds=grpMembers.map(x=>x.id);render();renderPanel();const sx=e.clientX;const d0=_grpDelay;let moved=false;const mv=ev=>{moved=true;ga.animDelay=_snapZero(Math.max(0,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(3))));renderTimeline();renderPanel();};const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
         const gresH=document.createElement('div');gresH.style.cssText='position:absolute;right:0;top:0;width:7px;height:100%;cursor:e-resize;z-index:2;';
         gresH.addEventListener('mousedown',e=>{e.stopPropagation();const sx=e.clientX;const d0=ga.animDuration||0.45;const mv=ev=>{ga.animDuration=Math.max(0.05,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};const up=()=>{saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
         gbar.appendChild(gresH);grow.appendChild(gbar);
@@ -3834,7 +3858,7 @@ function renderTimeline(){
           const gobar=document.createElement('div');gobar.className='tl-bar out'+(allSel?' sel':'');
           gobar.style.cssText=`left:${gobx}px;width:${gobw}px;background:${gc};opacity:${_noAnim?.22:.42};border-radius:3px;${_noAnim?'border:1px dashed rgba(255,255,255,.15);':''}`;
           gobar.title=`Gruppe OUT: ${_gaOut} · delay:${gOutDl}s · ${gOutDur}s`;
-          gobar.addEventListener('mousedown',e=>{e.stopPropagation();selIds=grpMembers.map(x=>x.id);render();renderPanel();const sx=e.clientX;const d0=(ga.animOutDelay??0)>0?(ga.animOutDelay??0):(gbx+gbw+6)/pxPerS;let moved=false;const mv=ev=>{moved=true;ga.animOutDelay=Math.max(0,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
+          gobar.addEventListener('mousedown',e=>{e.stopPropagation();selIds=grpMembers.map(x=>x.id);render();renderPanel();const sx=e.clientX;const d0=(ga.animOutDelay??0)>0?(ga.animOutDelay??0):(gbx+gbw+6)/pxPerS;let moved=false;const mv=ev=>{moved=true;ga.animOutDelay=_snapZero(Math.max(0,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(3))));renderTimeline();renderPanel();};const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
           const goResH=document.createElement('div');goResH.style.cssText='position:absolute;right:0;top:0;width:7px;height:100%;cursor:e-resize;z-index:2;';
           goResH.addEventListener('mousedown',e=>{e.stopPropagation();const sx=e.clientX;const d0=ga.animOutDuration??0.3;const mv=ev=>{ga.animOutDuration=Math.max(0.05,parseFloat((d0+(ev.clientX-sx)/pxPerS).toFixed(2)));renderTimeline();renderPanel();};const up=()=>{saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);});
           gobar.appendChild(goResH);grow.appendChild(gobar);
@@ -3918,7 +3942,7 @@ function renderTimeline(){
         else if(!selIds.includes(el.id)){selIds=[el.id];}
         render();renderPanel();renderTimeline();
         const targets=elements.filter(x=>selIds.includes(x.id)).map(x=>({el:x,d0:x.animDelay||0}));
-        const mv=ev=>{moved=true;const dt=(ev.clientX-dx0)/pxPerS;targets.forEach(({el:e2,d0})=>{e2.animDelay=Math.max(0,parseFloat((d0+dt).toFixed(2)));});renderTimeline();renderPanel();};
+        const mv=ev=>{moved=true;const dt=(ev.clientX-dx0)/pxPerS;targets.forEach(({el:e2,d0})=>{e2.animDelay=_snapZero(Math.max(0,parseFloat((d0+dt).toFixed(3))));});renderTimeline();renderPanel();};
         const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
         document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
       });
@@ -3953,7 +3977,7 @@ function renderTimeline(){
           const d0=(x.animOutDelay??0)>0?(x.animOutDelay??0):(xBx+xBw+6)/pxPerS;
           return{el:x,d0};
         });
-        const mv=ev=>{moved=true;const dt=(ev.clientX-sx)/pxPerS;targets.forEach(({el:e2,d0})=>{e2.animOutDelay=Math.max(0,parseFloat((d0+dt).toFixed(2)));});renderTimeline();renderPanel();};
+        const mv=ev=>{moved=true;const dt=(ev.clientX-sx)/pxPerS;targets.forEach(({el:e2,d0})=>{e2.animOutDelay=_snapZero(Math.max(0,parseFloat((d0+dt).toFixed(3))));});renderTimeline();renderPanel();};
         const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
         document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
       });
