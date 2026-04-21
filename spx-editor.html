@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SPX Template Editor</title>
+<link rel="stylesheet" href="spx-fonts.css">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Lato:wght@300;400;700&family=Poppins:wght@300;400;500;600;700&family=Nunito:wght@300;400;600;700&family=Oswald:wght@400;600;700&family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500;600;700&family=Exo+2:wght@300;400;600;700&family=Rajdhani:wght@400;500;600;700&family=Teko:wght@400;500;600&family=Kanit:wght@300;400;500;700&family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;400;600;700&family=Raleway:wght@300;400;600;700&family=Anton&family=Roboto+Condensed:wght@300;400;700&family=Source+Sans+3:wght@300;400;600;700&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -666,7 +667,8 @@ let expandedGroups=new Set();
 let _collapsedSections=new Set();
 
 const FONTS=['DM Sans','Inter','Lato','Poppins','Nunito','Source Sans 3','PT Sans','Barlow','Barlow Condensed','Oswald','Roboto Condensed','Montserrat','Raleway','Exo 2','Kanit','Rajdhani','Teko','Bebas Neue','Anton','Playfair Display','Georgia','Courier New'];
-function _allFonts(){const custom=[...new Set(customFonts.map(f=>f.name))];return[...new Set([...custom,...FONTS])].sort((a,b)=>a.localeCompare(b,'da'));}
+const LOCAL_FONTS=['AXIS Extra Bold','Alibaba','Barlow','Barlow Condensed','Bauer Bodoni Std','Bungee Inline','DR Mono LB','DR Mono LL','DR Mono LM','DR Mono LR','DR Mono MI','DR Mono RI','DR Publik','DR Publik Condensed','Enreal','Euclid Circular A','Futura Std','Gotham Narrow','HUHEJ FONT','Helvetica','Isidora','Kapra Neue','Kunstuff','Lin Libertine','Noto Sans JP','Roboto','Streamster','Tungsten','World Athletics','World Athletics Headline'];
+function _allFonts(){const custom=[...new Set(customFonts.map(f=>f.name))];return[...new Set([...custom,...LOCAL_FONTS,...FONTS])].sort((a,b)=>a.localeCompare(b,'da'));}
 const FWFS=[['300-normal','Light'],['300-italic','Light Italic'],['400-normal','Regular'],['400-italic','Italic'],['500-normal','Medium'],['500-italic','Medium Italic'],['600-normal','Semibold'],['600-italic','Semibold Italic'],['700-normal','Bold'],['700-italic','Bold Italic']];
 function fwfsOpts(el){const cur=(el.fontWeight||'400')+'-'+(el.fontStyle||'normal');return FWFS.map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`).join('');}
 const ANIMS=['fade','slide-left','slide-right','slide-up','slide-down','wipe','wipe-step','char-step','reveal','scale','none'];

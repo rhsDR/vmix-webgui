@@ -1,0 +1,110 @@
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-Black.ttf') format('truetype');font-weight:900;font-style:normal;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-BlackItalic.ttf') format('truetype');font-weight:900;font-style:italic;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-Bold.ttf') format('truetype');font-weight:700;font-style:normal;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-ExtraBold.ttf') format('truetype');font-weight:800;font-style:normal;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-ExtraBoldItalic.ttf') format('truetype');font-weight:800;font-style:italic;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-ExtraLight.ttf') format('truetype');font-weight:200;font-style:normal;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-ExtraLightItalic.ttf') format('truetype');font-weight:200;font-style:italic;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-Italic.ttf') format('truetype');font-weight:400;font-style:italic;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-Light.ttf') format('truetype');font-weight:300;font-style:normal;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-LightItalic.ttf') format('truetype');font-weight:300;font-style:italic;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-Medium.ttf') format('truetype');font-weight:500;font-style:normal;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-MediumItalic.ttf') format('truetype');font-weight:500;font-style:italic;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-Regular.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-SemiBold.ttf') format('truetype');font-weight:600;font-style:normal;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-SemiBoldItalic.ttf') format('truetype');font-weight:600;font-style:italic;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-Thin.ttf') format('truetype');font-weight:100;font-style:normal;}
+@font-face{font-family:'Barlow';src:url('./fonts/Barlow-ThinItalic.ttf') format('truetype');font-weight:100;font-style:italic;}
+@font-face{font-family:'Barlow Condensed';src:url('./fonts/BarlowCondensed-Bold.ttf') format('truetype');font-weight:700;font-style:normal;}
+@font-face{font-family:'Barlow Condensed';src:url('./fonts/BarlowCondensed-Regular.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Bauer Bodoni Std';src:url('./fonts/BauerBodoniStd-Black.ttf') format('truetype');font-weight:900;font-style:normal;}
+@font-face{font-family:'Bauer Bodoni Std';src:url('./fonts/BauerBodoniStd-BlackCondensed.ttf') format('truetype');font-weight:900;font-style:normal;}
+@font-face{font-family:'Bauer Bodoni Std';src:url('./fonts/BauerBodoniStd-BlackItalic.ttf') format('truetype');font-weight:900;font-style:italic;}
+@font-face{font-family:'Bauer Bodoni Std';src:url('./fonts/BauerBodoniStd-Bold.ttf') format('truetype');font-weight:700;font-style:normal;}
+@font-face{font-family:'Bauer Bodoni Std';src:url('./fonts/BauerBodoniStd-BoldCondensed.ttf') format('truetype');font-weight:700;font-style:normal;}
+@font-face{font-family:'Bauer Bodoni Std';src:url('./fonts/BauerBodoniStd-BoldItalic.ttf') format('truetype');font-weight:700;font-style:italic;}
+@font-face{font-family:'Bauer Bodoni Std';src:url('./fonts/BauerBodoniStd-Roman.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Bauer Bodoni Std';src:url('./fonts/BauerBodoniStd-RomanItalic.ttf') format('truetype');font-weight:400;font-style:italic;}
+@font-face{font-family:'Bungee Inline';src:url('./fonts/BungeeInline-Regular.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'DR Mono LB';src:url('./fonts/DRMONOLB.ttf') format('truetype');font-weight:700;font-style:normal;}
+@font-face{font-family:'DR Mono LL';src:url('./fonts/DRMONOLL.ttf') format('truetype');font-weight:300;font-style:normal;}
+@font-face{font-family:'DR Mono LM';src:url('./fonts/DRMONOLM.ttf') format('truetype');font-weight:500;font-style:normal;}
+@font-face{font-family:'DR Mono LR';src:url('./fonts/DRMONOLR.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'DR Mono MI';src:url('./fonts/DRMONOMI.ttf') format('truetype');font-weight:500;font-style:italic;}
+@font-face{font-family:'DR Mono RI';src:url('./fonts/DRMONORI.ttf') format('truetype');font-weight:400;font-style:italic;}
+@font-face{font-family:'Gotham Narrow';src:url('./fonts/GothamNarrow-Ultra.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'HUHEJ FONT';src:url('./fonts/HUHEJ_FONT.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Helvetica';src:url('./fonts/HelveBol.ttf') format('truetype');font-weight:700;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_DR.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_I.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_R.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_RB.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_RBI.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_RI.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_RZ.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_RZI.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_aBL.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_aBS.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_aDRS.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_aRL.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_aS.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_aSI.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_aSZI.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Lin Libertine';src:url('./fonts/LinLibertine_aZL.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Roboto';src:url('./fonts/Roboto-Medium.ttf') format('truetype');font-weight:500;font-style:normal;}
+@font-face{font-family:'Roboto';src:url('./fonts/Roboto-Thin.ttf') format('truetype');font-weight:100;font-style:normal;}
+@font-face{font-family:'Streamster';src:url('./fonts/Streamster.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'lte50438';src:url('./fonts/lte50438.ttf') format('truetype');font-weight:400;font-style:normal;}
+@font-face{font-family:'AXIS Extra Bold';src:url('./fonts/AXIS Extra Bold 800.otf') format('opentype');font-weight:800;font-style:normal;}
+@font-face{font-family:'Alibaba';src:url('./fonts/Alibaba-PuHuiTi-Bold.otf') format('opentype');font-weight:700;font-style:normal;}
+@font-face{font-family:'Alibaba';src:url('./fonts/Alibaba-PuHuiTi-Medium.otf') format('opentype');font-weight:500;font-style:normal;}
+@font-face{font-family:'Alibaba';src:url('./fonts/Alibaba-PuHuiTi-Regular.otf') format('opentype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Bauer Bodoni Std';src:url('./fonts/Bauer Bodoni Std 1 Roman.otf') format('opentype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Bauer Bodoni Std';src:url('./fonts/BauerBodoniStd-Roman.otf') format('opentype');font-weight:400;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-Black.otf') format('opentype');font-weight:900;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-BlackItalic.otf') format('opentype');font-weight:900;font-style:italic;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-Bold.otf') format('opentype');font-weight:700;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-BoldItalic.otf') format('opentype');font-weight:700;font-style:italic;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-CondensedBlack.otf') format('opentype');font-weight:900;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-CondensedBlackItalic.otf') format('opentype');font-weight:900;font-style:italic;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-CondensedBold.otf') format('opentype');font-weight:700;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-CondensedBoldItalic.otf') format('opentype');font-weight:700;font-style:italic;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-CondensedLight.otf') format('opentype');font-weight:400;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-CondensedLightItalic.otf') format('opentype');font-weight:400;font-style:italic;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-CondensedRegular.otf') format('opentype');font-weight:400;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-CondensedRegularItalic.otf') format('opentype');font-weight:400;font-style:italic;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-CondensedSemiBold.otf') format('opentype');font-weight:600;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-CondensedSemiBoldItalic.otf') format('opentype');font-weight:600;font-style:italic;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-Italic.otf') format('opentype');font-weight:400;font-style:italic;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-Light.otf') format('opentype');font-weight:300;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-LightItalic.otf') format('opentype');font-weight:300;font-style:italic;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-Regular.otf') format('opentype');font-weight:400;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-SemiBold.otf') format('opentype');font-weight:600;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-SemiBoldItalic.otf') format('opentype');font-weight:600;font-style:italic;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-UltraCondensedBlack.otf') format('opentype');font-weight:900;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-UltraCondensedBlackItalic.otf') format('opentype');font-weight:900;font-style:italic;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-UltraCondensedBold.otf') format('opentype');font-weight:700;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-UltraCondensedBoldItalic.otf') format('opentype');font-weight:700;font-style:italic;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-UltraCondensedLight.otf') format('opentype');font-weight:400;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-UltraCondensedLightItalic.otf') format('opentype');font-weight:400;font-style:italic;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-UltraCondensedRegular.otf') format('opentype');font-weight:400;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-UltraCondensedRegularItalic.otf') format('opentype');font-weight:400;font-style:italic;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-UltraCondensedSemiBold.otf') format('opentype');font-weight:600;font-style:normal;}
+@font-face{font-family:'DR Publik';src:url('./fonts/DRPublik-UltraCondensedSemiBoldItalic.otf') format('opentype');font-weight:600;font-style:italic;}
+@font-face{font-family:'DR Publik Condensed';src:url('./fonts/DRPublikCondensed-BoldItalic.otf') format('opentype');font-weight:700;font-style:italic;}
+@font-face{font-family:'Enreal';src:url('./fonts/Enreal-Bold.otf') format('opentype');font-weight:700;font-style:normal;}
+@font-face{font-family:'Euclid Circular A';src:url('./fonts/EuclidCircularA-Light.otf') format('opentype');font-weight:300;font-style:normal;}
+@font-face{font-family:'Euclid Circular A';src:url('./fonts/EuclidCircularA-Medium.otf') format('opentype');font-weight:500;font-style:normal;}
+@font-face{font-family:'Futura Std';src:url('./fonts/FuturaStd-Medium.otf') format('opentype');font-weight:500;font-style:normal;}
+@font-face{font-family:'Isidora';src:url('./fonts/Isidora-Regular.otf') format('opentype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Kunstuff';src:url('./fonts/Kunstuff_Bold.otf') format('opentype');font-weight:700;font-style:normal;}
+@font-face{font-family:'Noto Sans JP';src:url('./fonts/NotoSansJP-Black.otf') format('opentype');font-weight:900;font-style:normal;}
+@font-face{font-family:'Noto Sans JP';src:url('./fonts/NotoSansJP-Light.otf') format('opentype');font-weight:300;font-style:normal;}
+@font-face{font-family:'Noto Sans JP';src:url('./fonts/NotoSansJP-Medium.otf') format('opentype');font-weight:500;font-style:normal;}
+@font-face{font-family:'Tungsten';src:url('./fonts/Tungsten-Light[2].otf') format('opentype');font-weight:300;font-style:normal;}
+@font-face{font-family:'Kapra Neue';src:url('./fonts/Typoforge Studio - Kapra Neue Bold.otf') format('opentype');font-weight:700;font-style:normal;}
+@font-face{font-family:'Kapra Neue';src:url('./fonts/Typoforge Studio - Kapra Neue Medium.otf') format('opentype');font-weight:500;font-style:normal;}
+@font-face{font-family:'World Athletics';src:url('./fonts/WorldAthletics-Bold.otf') format('opentype');font-weight:700;font-style:normal;}
+@font-face{font-family:'World Athletics';src:url('./fonts/WorldAthletics-Regular.otf') format('opentype');font-weight:400;font-style:normal;}
+@font-face{font-family:'World Athletics Headline';src:url('./fonts/WorldAthleticsHeadline.otf') format('opentype');font-weight:400;font-style:normal;}
