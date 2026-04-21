@@ -3801,19 +3801,28 @@ function renderTimeline(){
   const rctx=ruler.getContext('2d');rctx.clearRect(0,0,trackW,20);
   const totalFrames=totalS*tlFps;
   const pxPerF=trackW/totalFrames;
+  const pxPerS=trackW/totalS;
   // choose label interval so labels are at least ~40px apart
   const rawInterval=40/pxPerF;
   const niceIntervals=[1,2,5,10,25,50,100,200,250,500];
   const labelInterval=niceIntervals.find(n=>n>=rawInterval)||niceIntervals[niceIntervals.length-1];
   const tickInterval=labelInterval<=10?1:labelInterval<=50?5:10;
+  // second markers (full-height dim line through bars area)
+  for(let s=1;s<=Math.ceil(totalS);s++){
+    const x=Math.round(s*pxPerS);if(x>trackW+2)break;
+    rctx.fillStyle='rgba(255,255,255,0.07)';
+    rctx.fillRect(x,0,1,20);
+  }
   for(let f=0;f<=Math.ceil(totalFrames)+1;f+=tickInterval){
     const x=Math.round(f*pxPerF);if(x>trackW+2)break;
+    const isSec=f%tlFps===0&&f>0;
     const isLabel=f%labelInterval===0;
-    rctx.fillStyle=isLabel?'rgba(255,255,255,0.35)':'rgba(255,255,255,0.18)';
-    rctx.fillRect(x,isLabel?10:14,1,isLabel?10:6);
-    if(isLabel){rctx.fillStyle='rgba(255,255,255,0.35)';rctx.font='9px monospace';rctx.textAlign='center';rctx.fillText(String(f),x,9);}
+    rctx.fillStyle=isSec?'rgba(255,255,255,0.55)':isLabel?'rgba(255,255,255,0.35)':'rgba(255,255,255,0.18)';
+    rctx.fillRect(x,isSec?6:isLabel?10:14,1,isSec?14:isLabel?10:6);
+    if(isLabel){rctx.fillStyle=isSec?'rgba(255,255,255,0.6)':'rgba(255,255,255,0.35)';rctx.font=isSec?'bold 9px monospace':'9px monospace';rctx.textAlign='center';rctx.fillText(String(f),x,9);}
   }
   labels.innerHTML='';bars.innerHTML='';
+  for(let s=1;s<=Math.ceil(totalS);s++){const xl=document.createElement('div');xl.style.cssText=`position:absolute;left:${Math.round(s*pxPerS)}px;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.06);pointer-events:none;z-index:0;`;bars.appendChild(xl);}
   const animColor={fade:'#3b82f6','slide-left':'#22c55e','slide-right':'#22c55e','slide-up':'#22c55e','slide-down':'#22c55e',wipe:'#e8593c','wipe-step':'#e8593c','char-step':'#06b6d4',reveal:'#f59e0b',scale:'#a855f7',none:'rgba(255,255,255,.12)'};
   const _tln=elements.length;
   const _seenGrps=new Set();
