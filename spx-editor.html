@@ -76,7 +76,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 
 /* ELEMENTS */
 .el{position:absolute;cursor:move;user-select:none;}
-.el-border{position:absolute;inset:0;border:1px dashed rgba(232,89,60,.35);pointer-events:none;opacity:0;transition:opacity .1s;}
+.el-border{position:absolute;inset:0;box-sizing:border-box;border:1px dashed rgba(232,89,60,.35);pointer-events:none;opacity:0;transition:opacity .1s;}
 .el:hover .el-border{opacity:1;}
 .el.selected .el-border{border:2px solid var(--accent);opacity:1;}
 .el.locked .el-border{border-color:rgba(255,200,60,.5);}
