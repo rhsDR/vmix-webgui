@@ -3738,14 +3738,6 @@ function renderTimeline(){
       labels.appendChild(glbl);
       const grow=document.createElement('div');grow.className='tl-row';grow.style.cssText=`width:${trackW}px;border-left:2px solid ${gc};background:rgba(255,255,255,.02);`;
       grow.addEventListener('mousedown',e=>{if(e.target.closest('.tl-bar'))return;e.stopPropagation();selIds=grpMembers.map(x=>x.id);render();renderPanel();renderTimeline();});
-      // Always show a span bar covering the group's collective time range
-      {
-        const mStart=Math.min(...grpMembers.map(x=>x.animDelay||0));
-        const mEnd=Math.max(...grpMembers.map(x=>(x.animDelay||0)+(x.animDuration||0.45)));
-        const spanEl=document.createElement('div');
-        spanEl.style.cssText=`position:absolute;left:${mStart*pxPerS}px;width:${Math.max(4,(mEnd-mStart)*pxPerS)}px;top:50%;transform:translateY(-50%);height:4px;background:${gc};opacity:.25;border-radius:2px;pointer-events:none;`;
-        grow.appendChild(spanEl);
-      }
       {
         const _noAnim=!ga.animation||ga.animation==='none';
         const gbx=Math.max(0,(ga.animDelay||0)*pxPerS);
