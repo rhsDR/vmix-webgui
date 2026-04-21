@@ -948,6 +948,8 @@ function _selGroupId(){
   const sels=elements.filter(x=>selIds.includes(x.id));
   const gid=sels[0]?.groupId;
   if(!gid||!sels.every(x=>x.groupId===gid))return null;
+  const allMembers=elements.filter(x=>x.groupId===gid);
+  if(sels.length<allMembers.length)return null;
   return gid;
 }
 function _grpAnim(gid){
