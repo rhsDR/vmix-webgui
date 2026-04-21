@@ -101,8 +101,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .ptab{flex:1;height:34px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-family:var(--font);font-size:11px;font-weight:500;border-bottom:2px solid transparent;transition:all .15s;}
 .ptab:hover{color:var(--text2);}
 .ptab.active{color:var(--accent);border-bottom-color:var(--accent);}
-#pbody{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;padding-right:8px;}
-#pbody::-webkit-scrollbar{width:2px;}
+#pbody{flex:1;overflow-y:auto;overflow-x:hidden;padding-right:12px;}
+#pbody::-webkit-scrollbar{width:4px;}
+#pbody::-webkit-scrollbar-track{background:transparent;}
 #pbody::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 .psec{padding:14px 16px;border-bottom:1px solid var(--border);}
 .psec-title{font-size:10px;font-weight:600;letter-spacing:.07em;color:var(--text2);text-transform:uppercase;margin:-14px -16px 13px;padding:8px 16px 7px;background:rgba(0,0,0,.28);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;}
