@@ -1181,12 +1181,14 @@ function _renderRibbonAnim(){
     <span class="cb-lbl scrub-lbl" data-for="rb-aodur" data-step="0.05" data-min="0.05">Dur</span><input class="cb-inp sm" id="rb-aodur" type="number" value="${el.animOutDuration??0.3}" step="0.05" data-step="0.05" data-min="0.05">
     <span class="cb-sep"></span>
     ${_wipeRibbonGrps(el)}
+    ${el.animation==='char-step'?`<span class="cb-sep"></span><span class="cb-lbl">Trin</span>${[['irregular','Vilkårlig'],['one','1 ad gangen'],['multi','Antal']].map(([v,l])=>`<button class="tb-btn${(el.charStepMode||'irregular')===v?' active':''}" id="rb-csm-${v}" onclick="setCharStepMode('${v}')">${l}</button>`).join('')}${(el.charStepMode||'irregular')==='multi'?`<input class="cb-inp sm" id="rb-csc" type="number" value="${el.charStepCount||3}" min="1" max="20" style="width:44px">`:''}`:''}
     <button class="tb-btn" onclick="previewAnim()">&#9654; Preview</button>`;
   const cbn=(id,fn)=>{const inp=document.getElementById(id);if(inp){inp.addEventListener('input',e=>{fn(parseFloat(e.target.value)||0);render();});inp.addEventListener('change',()=>saveState());}};
-  const cbs=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('change',e=>{saveState();fn(e.target.value);renderTimeline();});};
+  const cbs=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('change',e=>{saveState();fn(e.target.value);renderTimeline();renderRibbonBar();});};
   cbs('rb-ain',v=>{el.animation=v;render();applyScrubState();});cbs('rb-aout',v=>{el.animOut=v;render();applyScrubState();});
   cbn('rb-adl',v=>{el.animDelay=v;});cbn('rb-adur',v=>{el.animDuration=v;});
   cbn('rb-aodl',v=>{el.animOutDelay=v;});cbn('rb-aodur',v=>{el.animOutDuration=v;});
+  {const rbc=document.getElementById('rb-csc');if(rbc){rbc.addEventListener('input',e=>{el.charStepCount=Math.max(1,parseInt(e.target.value)||3);});rbc.addEventListener('change',()=>saveState());}}
 }
 function _renderRibbonData(){
   const pane=document.getElementById('rb-data');if(!pane)return;
@@ -1265,7 +1267,7 @@ function groupSel(){
 }
 function setWipeDir(d){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.wipeDir=d;render();renderPanel();}
 function setWipeDirOut(d){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.wipeDirOut=d||null;render();renderPanel();}
-function setCharStepMode(m){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.charStepMode=m;renderPanel();}
+function setCharStepMode(m){const el=elements.find(x=>x.id===selIds[0]);if(!el)return;saveState();el.charStepMode=m;renderPanel();renderRibbonBar();}
 function _csSteps(n,mode,count){
   // Returns array of {t,show} where t=0..1 (time ratio), show=char count to reveal
   if(mode==='one'||(!mode||mode==='irregular'&&false)){
