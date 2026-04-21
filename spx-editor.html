@@ -101,10 +101,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 .ptab{flex:1;height:34px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-family:var(--font);font-size:11px;font-weight:500;border-bottom:2px solid transparent;transition:all .15s;}
 .ptab:hover{color:var(--text2);}
 .ptab.active{color:var(--accent);border-bottom-color:var(--accent);}
-#pbody{flex:1;overflow-y:auto;overflow-x:hidden;padding-right:12px;}
-#pbody::-webkit-scrollbar{width:4px;}
-#pbody::-webkit-scrollbar-track{background:transparent;}
-#pbody::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+#pbody{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;scrollbar-width:thin;}
+#pbody::-webkit-scrollbar{width:6px;}
+#pbody::-webkit-scrollbar-track{background:var(--surface);}
+#pbody::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
 .psec{padding:14px 16px;border-bottom:1px solid var(--border);}
 .psec-title{font-size:10px;font-weight:600;letter-spacing:.07em;color:var(--text2);text-transform:uppercase;margin:-14px -16px 13px;padding:8px 16px 7px;background:rgba(0,0,0,.28);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;}
 .psec-title .psec-arrow{font-size:9px;opacity:.6;transition:transform .15s;flex-shrink:0;}
@@ -1729,8 +1729,14 @@ function scrubTo(t){
 
 document.addEventListener('mousemove',e=>{
   if(dragging){
-    dragOff.forEach(({id,ox,oy})=>{const el=elements.find(x=>x.id===id);if(el){el.x=snapEdges(e.clientX/scale-ox,el.w,[0,960,1920]);el.y=snapEdges(e.clientY/scale-oy,el.h,[0,540,1080]);}});
-    render();return;
+    dragOff.forEach(({id,ox,oy})=>{
+      const el=elements.find(x=>x.id===id);if(!el)return;
+      el.x=snapEdges(e.clientX/scale-ox,el.w,[0,960,1920]);
+      el.y=snapEdges(e.clientY/scale-oy,el.h,[0,540,1080]);
+      const div=canvas.querySelector(`.el[data-id="${id}"]`);
+      if(div){div.style.left=el.x*scale+'px';div.style.top=el.y*scale+'px';}
+    });
+    return;
   }
   if(resizing&&resEl){
     const dx=(e.clientX-resStart.mx)/scale,dy=(e.clientY-resStart.my)/scale;
@@ -1765,7 +1771,9 @@ document.addEventListener('mousemove',e=>{
   }
 });
 document.addEventListener('mouseup',()=>{
+  const wasDragging=dragging;
   dragging=false;resizing=false;resEl=null;
+  if(wasDragging){render();renderPanel();}
   if(boxSel){boxSel=false;document.getElementById('sel-box').style.display='none';render();renderPanel();}
 });
 canvas.addEventListener('mousedown',e=>{
@@ -3338,7 +3346,7 @@ function exportSPX_CSS(){
       css+=`animation:${id}-kf ${kfDur.toFixed(2)}s ease-in-out ${kfDelay.toFixed(2)}s both;}\n`;
       css+=`@keyframes ${id}-kf{\n${kfRules}\n}\n`;
     }else{
-      css+=`#${id}{position:absolute;left:${el.x}px;top:${el.y}px;width:${aw};height:${el.h}px;opacity:${el.opacity};transform-origin:${anchorOrigin};`;
+      css+=`#${id}{position:absolute;left:${Math.round(el.x)}px;top:${Math.round(el.y)}px;width:${aw};height:${el.h}px;opacity:${el.opacity};transform-origin:${anchorOrigin};`;
       if(el.type==='text')css+=_textElCss(el);
       if(el.type==='rect')css+=`background:${_bgCss(el)};border-radius:${el.borderRadius}px;`;
       if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
@@ -3475,7 +3483,7 @@ function exportSPX_GSAP(){
     const id='el'+el.id;
     const gAnchorOrigin=ANCHOR_ORIGIN[el.anchor||'tl']||'top left';
     const gaw=el.autoWidth?'max-content':el.w+'px';
-    css+=`#${id}{position:absolute;left:${el.x}px;top:${el.y}px;width:${gaw};height:${el.h}px;transform-origin:${gAnchorOrigin};`;
+    css+=`#${id}{position:absolute;left:${Math.round(el.x)}px;top:${Math.round(el.y)}px;width:${gaw};height:${el.h}px;transform-origin:${gAnchorOrigin};`;
     if(el.type==='text')css+=_textElCss(el);
     if(el.type==='rect')css+=`background:${_bgCss(el)};border-radius:${el.borderRadius}px;`;
     if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
