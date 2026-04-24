@@ -3102,33 +3102,32 @@ function previewAnim(){
       else if(a==='wipe'){div.style.opacity=el.opacity;div.style.clipPath=_grpWipeInClip(ga.wipeDir||'→',0,gb,el);}
       else if(a==='wipe-step'){div.style.opacity=el.opacity;div.style.clipPath=_grpWipeInClip(ga.wipeDir||'→',0,gb,el);}
       else if(a==='reveal'){div.style.opacity=el.opacity;div.style.clipPath=_grpRevealInClip(0,gb,el);}
-      if(el.animation&&el.animation!=='none'){const grpUsesClip=(a==='reveal'||a==='wipe'||a==='wipe-step');const savedClip=grpUsesClip?div.style.clipPath:'';setAnimOut(div,el);if(grpUsesClip&&el.animation!=='wipe'&&el.animation!=='wipe-step'&&el.animation!=='reveal'){div.style.clipPath=savedClip;}}
+      if(el.animation&&el.animation!=='none'){setAnimOut(div,el);}
     }else{
       setAnimOut(div,el);
     }
   });
   // Schedule individual element IN/OUT animations
   sorted.forEach(el=>{if(_grpAnimEls.has(el.id)&&(!el.animation||el.animation==='none'))return;
-    const _inClipGrp=_grpAnimEls.has(el.id)&&(()=>{const ga=groupAnimations[el.groupId];return ga&&(ga.animation==='reveal'||ga.animation==='wipe'||ga.animation==='wipe-step');})();
     const div=canvas.querySelector(`[data-id="${el.id}"]`);if(!div)return;
     const _aOrig=ANCHOR_ORIGIN[el.anchor||'tl'];
     if(el.animation==='wipe-step'){
-      if(!_inClipGrp){const dir=el.wipeDir||'→';
-      _WS_PTS.forEach(pt=>{setTimeout(()=>{const d=canvas.querySelector(`[data-id="${el.id}"]`);if(!d)return;d.style.transition='none';d.style.clipPath=_wipeInClip(dir,pt[1]);d.style.opacity=el.opacity;},el.animDelay*1000+pt[0]*el.animDuration*1000+80);});}
+      const dir=el.wipeDir||'→';
+      _WS_PTS.forEach(pt=>{setTimeout(()=>{const d=canvas.querySelector(`[data-id="${el.id}"]`);if(!d)return;d.style.transition='none';d.style.clipPath=_wipeInClip(dir,pt[1]);d.style.opacity=el.opacity;},el.animDelay*1000+pt[0]*el.animDuration*1000+80);});
     }else if(el.animation==='char-step'){
       const n=[...(el.text||'')].length;
       const d0=canvas.querySelector(`[data-id="${el.id}"]`);if(d0)d0.innerHTML=_csHtml(el.text||'',0,el.opacity);
       _csSteps(n,el.charStepMode,el.charStepCount).forEach(s=>{setTimeout(()=>{const d=canvas.querySelector(`[data-id="${el.id}"]`);if(!d)return;d.innerHTML=_csHtml(el.text||'',s.show,el.opacity);},el.animDelay*1000+s.t*el.animDuration*1000+80);});
     }else{
-      setTimeout(()=>{div.style.transition=`opacity ${el.animDuration}s ease,transform ${el.animDuration}s cubic-bezier(0.22,1,0.36,1),clip-path ${el.animDuration}s cubic-bezier(0.42,0,0.58,1)`;div.style.transformOrigin=_aOrig;void div.offsetHeight;div.style.opacity=el.opacity;div.style.transform='none';if(!_inClipGrp){div.style.clipPath='';}if(el.animation==='wipe'&&!_inClipGrp){div.style.clipPath='inset(0 0 0 0)';}if(el.animation==='reveal'&&!_inClipGrp){div.style.clipPath='inset(0% 0)';}if(el.animation==='scale'){div.style.transform='scale(1)';}},el.animDelay*1000+80);
+      setTimeout(()=>{div.style.transition=`opacity ${el.animDuration}s ease,transform ${el.animDuration}s cubic-bezier(0.22,1,0.36,1),clip-path ${el.animDuration}s cubic-bezier(0.42,0,0.58,1)`;div.style.transformOrigin=_aOrig;void div.offsetHeight;div.style.opacity=el.opacity;div.style.transform='none';div.style.clipPath='';if(el.animation==='wipe'){div.style.clipPath='inset(0 0 0 0)';}if(el.animation==='reveal'){div.style.clipPath='inset(0% 0)';}if(el.animation==='scale'){div.style.transform='scale(1)';}},el.animDelay*1000+80);
     }
     const ao=resolveAnimOut(el);
     if(ao!=='none'){
       const outDelay=el.animOutDelay??0;const outDur=el.animOutDuration??0.3;
       const outStart=(el.animDelay+el.animDuration+outDelay)*1000+80;
       if(ao==='wipe-step'){
-        if(!_inClipGrp){const dirOut=el.wipeDirOut||el.wipeDir||'→';
-        _WS_PTS.forEach(pt=>{setTimeout(()=>{const d=canvas.querySelector(`[data-id="${el.id}"]`);if(!d)return;d.style.transition='none';d.style.clipPath=_wipeOutClip(dirOut,pt[1]);},outStart+pt[0]*outDur*1000);});}
+        const dirOut=el.wipeDirOut||el.wipeDir||'→';
+        _WS_PTS.forEach(pt=>{setTimeout(()=>{const d=canvas.querySelector(`[data-id="${el.id}"]`);if(!d)return;d.style.transition='none';d.style.clipPath=_wipeOutClip(dirOut,pt[1]);},outStart+pt[0]*outDur*1000);});
       }else if(ao==='char-step'){
         const n=[...(el.text||'')].length;
         _csSteps(n,el.charStepMode,el.charStepCount).forEach(s=>{setTimeout(()=>{const d=canvas.querySelector(`[data-id="${el.id}"]`);if(!d)return;d.innerHTML=_csHtml(el.text||'',Math.max(0,n-s.show),el.opacity);},outStart+s.t*outDur*1000);});
@@ -3142,8 +3141,8 @@ function previewAnim(){
         else if(ao==='slide-right'){d.style.opacity='0';d.style.transform='translateX(40px)';}
         else if(ao==='slide-up'){d.style.opacity='0';d.style.transform='translateY(-30px)';}
         else if(ao==='slide-down'){d.style.opacity='0';d.style.transform='translateY(30px)';}
-        else if(ao==='wipe'&&!_inClipGrp){d.style.clipPath=_wipeHiddenOut(el.wipeDirOut||el.wipeDir||'→');}
-        else if(ao==='reveal'&&!_inClipGrp){d.style.clipPath='inset(50% 0)';}
+        else if(ao==='wipe'){d.style.clipPath=_wipeHiddenOut(el.wipeDirOut||el.wipeDir||'→');}
+        else if(ao==='reveal'){d.style.clipPath='inset(50% 0)';}
         else if(ao==='scale'){d.style.opacity='0';d.style.transform='scale(0.85)';}
       },outStart);
       }
@@ -3162,6 +3161,7 @@ function previewAnim(){
     const gm=elements.filter(e=>e.groupId===el.groupId);
     // IN
     gm.forEach(m=>{
+      if((a==='reveal'||a==='wipe'||a==='wipe-step')&&m.animation&&m.animation!=='none')return;
       const div=canvas.querySelector(`[data-id="${m.id}"]`);if(!div)return;
       if(a==='wipe-step'){
         _WS_PTS.forEach(pt=>{setTimeout(()=>{const d=canvas.querySelector(`[data-id="${m.id}"]`);if(!d)return;d.style.transition='none';d.style.clipPath=_grpWipeInClip(ga.wipeDir||'→',pt[1],gb,m);d.style.opacity=m.opacity;},inDl*1000+pt[0]*inDur*1000+80);});
@@ -3179,6 +3179,7 @@ function previewAnim(){
     // OUT
     if(ao2!=='none'){
       gm.forEach(m=>{
+        if((ao2==='reveal'||ao2==='wipe'||ao2==='wipe-step')&&m.animation&&m.animation!=='none')return;
         const div=canvas.querySelector(`[data-id="${m.id}"]`);if(!div)return;
         if(ao2==='wipe-step'){
           const dirOut=ga.wipeDirOut||ga.wipeDir||'→';
