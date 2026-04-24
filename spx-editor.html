@@ -3167,6 +3167,7 @@ function previewAnim(){
       }
       setTimeout(()=>{
         div.style.transition=`opacity ${inDur}s ease,transform ${inDur}s cubic-bezier(0.22,1,0.36,1),clip-path ${inDur}s cubic-bezier(0.42,0,0.58,1)`;
+        void div.offsetHeight;
         if(a==='fade'){div.style.opacity=m.opacity;}
         else if(a.startsWith('slide')||a==='scale'){div.style.opacity=m.opacity;div.style.transform='none';}
         else if(a==='wipe'){div.style.clipPath=_grpWipeInClip(ga.wipeDir||'→',1,gb,m);}
@@ -3184,6 +3185,7 @@ function previewAnim(){
         }
         setTimeout(()=>{
           div.style.transition=`opacity ${outDur}s ease-in,transform ${outDur}s ease-in,clip-path ${outDur}s ease-in`;
+          void div.offsetHeight;
           if(ao2==='fade'){div.style.opacity='0';}
           else if(ao2==='slide-left'){div.style.opacity='0';div.style.transform='translateX(-30px)';}
           else if(ao2==='slide-right'){div.style.opacity='0';div.style.transform='translateX(30px)';}
