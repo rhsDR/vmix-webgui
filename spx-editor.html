@@ -3161,7 +3161,7 @@ function previewAnim(){
     const gm=elements.filter(e=>e.groupId===el.groupId);
     // IN
     gm.forEach(m=>{
-      if((a==='reveal'||a==='wipe'||a==='wipe-step')&&m.animation&&m.animation!=='none')return;
+      if(m.animation&&m.animation!=='none')return;
       const div=canvas.querySelector(`[data-id="${m.id}"]`);if(!div)return;
       if(a==='wipe-step'){
         _WS_PTS.forEach(pt=>{setTimeout(()=>{const d=canvas.querySelector(`[data-id="${m.id}"]`);if(!d)return;d.style.transition='none';d.style.clipPath=_grpWipeInClip(ga.wipeDir||'→',pt[1],gb,m);d.style.opacity=m.opacity;},inDl*1000+pt[0]*inDur*1000+80);});
@@ -3179,7 +3179,7 @@ function previewAnim(){
     // OUT
     if(ao2!=='none'){
       gm.forEach(m=>{
-        if((ao2==='reveal'||ao2==='wipe'||ao2==='wipe-step')&&m.animation&&m.animation!=='none')return;
+        if(m.animation&&m.animation!=='none')return;
         const div=canvas.querySelector(`[data-id="${m.id}"]`);if(!div)return;
         if(ao2==='wipe-step'){
           const dirOut=ga.wipeDirOut||ga.wipeDir||'→';
