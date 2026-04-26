@@ -3099,8 +3099,8 @@ function previewAnim(){
       else if(a==='slide-up'){div.style.opacity='0';div.style.transform=`translateY(${Math.round(50*scale)}px)`;div.style.clipPath='';}
       else if(a==='slide-down'){div.style.opacity='0';div.style.transform=`translateY(${Math.round(-50*scale)}px)`;div.style.clipPath='';}
       else if(a==='scale'){div.style.opacity='0';div.style.transform='scale(0.8)';div.style.clipPath='';}
-      else if(a==='wipe'||a==='wipe-step'){const _c0=_grpWipeInClip(ga.wipeDir||'→',0,gb,el);if(el.animation&&el.animation!=='none'){setAnimOut(div,el);}else{div.style.opacity=el.opacity;}div.style.clipPath=_c0;}
-      else if(a==='reveal'){const _c0=_grpRevealInClip(0,gb,el);if(el.animation&&el.animation!=='none'){setAnimOut(div,el);}else{div.style.opacity=el.opacity;}div.style.clipPath=_c0;}
+      else if(a==='wipe'||a==='wipe-step'){if(el.animation&&el.animation!=='none'){setAnimOut(div,el);}else{const _c0=_grpWipeInClip(ga.wipeDir||'→',0,gb,el);div.style.opacity=el.opacity;div.style.clipPath=_c0;}}
+      else if(a==='reveal'){if(el.animation&&el.animation!=='none'){setAnimOut(div,el);}else{const _c0=_grpRevealInClip(0,gb,el);div.style.opacity=el.opacity;div.style.clipPath=_c0;}}
       if(el.animation&&el.animation!=='none'&&a!=='wipe'&&a!=='wipe-step'&&a!=='reveal'){setAnimOut(div,el);}
     }else{
       setAnimOut(div,el);
@@ -3110,7 +3110,7 @@ function previewAnim(){
   sorted.forEach(el=>{if(_grpAnimEls.has(el.id)&&(!el.animation||el.animation==='none'))return;
     const div=canvas.querySelector(`[data-id="${el.id}"]`);if(!div)return;
     const _aOrig=ANCHOR_ORIGIN[el.anchor||'tl'];
-    const _inRWGrp=_grpAnimEls.has(el.id)&&(groupAnimations[el.groupId]?.animation==='reveal'||groupAnimations[el.groupId]?.animation==='wipe'||groupAnimations[el.groupId]?.animation==='wipe-step');
+    const _inRWGrp=_grpAnimEls.has(el.id)&&(!el.animation||el.animation==='none')&&(groupAnimations[el.groupId]?.animation==='reveal'||groupAnimations[el.groupId]?.animation==='wipe'||groupAnimations[el.groupId]?.animation==='wipe-step');
     if(el.animation==='wipe-step'){
       const dir=el.wipeDir||'→';
       _WS_PTS.forEach(pt=>{setTimeout(()=>{const d=canvas.querySelector(`[data-id="${el.id}"]`);if(!d)return;d.style.transition='none';d.style.clipPath=_wipeInClip(dir,pt[1]);d.style.opacity=el.opacity;},el.animDelay*1000+pt[0]*el.animDuration*1000+80);});
@@ -3164,10 +3164,12 @@ function previewAnim(){
       const div=canvas.querySelector(`[data-id="${m.id}"]`);if(!div)return;
       const mHasAnim=m.animation&&m.animation!=='none';
       if(a==='wipe-step'){
-        _WS_PTS.forEach(pt=>{setTimeout(()=>{const d=canvas.querySelector(`[data-id="${m.id}"]`);if(!d)return;d.style.transition='none';d.style.clipPath=_grpWipeInClip(ga.wipeDir||'→',pt[1],gb,m);if(!mHasAnim){d.style.opacity=m.opacity;}},inDl*1000+pt[0]*inDur*1000+80);});
+        if(mHasAnim)return;
+        _WS_PTS.forEach(pt=>{setTimeout(()=>{const d=canvas.querySelector(`[data-id="${m.id}"]`);if(!d)return;d.style.transition='none';d.style.clipPath=_grpWipeInClip(ga.wipeDir||'→',pt[1],gb,m);d.style.opacity=m.opacity;},inDl*1000+pt[0]*inDur*1000+80);});
         return;
       }
       if(a==='wipe'||a==='reveal'){
+        if(mHasAnim)return;
         const _mid=m.id,_mel=m,_dir=ga.wipeDir||'→';
         const _eIO=t=>t<0.5?4*t*t*t:(1-Math.pow(-2*t+2,3)/2);
         setTimeout(()=>{const t0=performance.now();(function frame(now){const p=Math.min(1,(now-t0)/(inDur*1000));const d=canvas.querySelector(`[data-id="${_mid}"]`);if(!d)return;d.style.clipPath=a==='wipe'?_grpWipeInClip(_dir,_eIO(p),gb,_mel):_grpRevealInClip(_eIO(p),gb,_mel);if(p<1)requestAnimationFrame(frame);else d.style.clipPath='';})(performance.now());},inDl*1000);
@@ -3186,11 +3188,13 @@ function previewAnim(){
         const div=canvas.querySelector(`[data-id="${m.id}"]`);if(!div)return;
         const mHasAnim=m.animation&&m.animation!=='none';
         if(ao2==='wipe-step'){
+          if(mHasAnim)return;
           const dirOut=ga.wipeDirOut||ga.wipeDir||'→';
           _WS_PTS.forEach(pt=>{setTimeout(()=>{const d=canvas.querySelector(`[data-id="${m.id}"]`);if(!d)return;d.style.transition='none';d.style.clipPath=_grpWipeOutClip(dirOut,pt[1],gb,m);},outStart*1000+pt[0]*outDur*1000+80);});
           return;
         }
         if(ao2==='wipe'||ao2==='reveal'){
+          if(mHasAnim)return;
           const _mid=m.id,_mel=m,_dout=ga.wipeDirOut||ga.wipeDir||'→';
           const _eIn=t=>t*t*t;
           setTimeout(()=>{const t0=performance.now();(function frame(now){const p=Math.min(1,(now-t0)/(outDur*1000));const d=canvas.querySelector(`[data-id="${_mid}"]`);if(!d)return;d.style.clipPath=ao2==='wipe'?_grpWipeOutClip(_dout,_eIn(p),gb,_mel):_grpRevealOutClip(_eIn(p),gb,_mel);if(p<1)requestAnimationFrame(frame);})(performance.now());},outStart*1000);
