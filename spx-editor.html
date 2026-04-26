@@ -1694,7 +1694,7 @@ function applyScrubState(){
       return;
     }
 
-    const a=el.animation;if(a==='none'){div.style.opacity=el.opacity;div.style.transform='';div.style.clipPath='';return;}
+    const a=el.animation;if(a==='none'){const ao=resolveAnimOut(el),inDelay=el.animDelay||0,inDur=Math.max(el.animDuration||0.5,0.001),outDur=Math.max(el.animOutDuration??0.3,0.001),outDelay=el.animOutDelay??0,outStart=outDelay>0?outDelay:(inDelay+inDur);div.style.transform='';div.style.clipPath='';div.style.mask=div.style.webkitMask='';if(t<inDelay){div.style.opacity=0;}else if(ao==='none'||t<=outStart){div.style.opacity=el.opacity;}else if(t<=outStart+outDur){_applyOutState(div,ao,(t-outStart)/outDur*(t-outStart)/outDur,el);}else{_applyOutState(div,ao,1,el);}return;}
     const ao=resolveAnimOut(el);
     const inDelay=el.animDelay||0,inDur=Math.max(el.animDuration||0.5,0.001);
     const outDur=Math.max(el.animOutDuration??0.3,0.001);
@@ -1753,7 +1753,7 @@ function applyScrubState(){
     const div=canvas.querySelector(`[data-id="${el.id}"]`);if(!div)return;
     const{a,ao,phase,p,ga:gga}=_grpOff[el.groupId];
     // 'none' elements have no first-pass reset — seed from base to avoid stale state
-    if(el.animation==='none'){div.style.opacity=el.opacity;div.style.transform='';div.style.clipPath='';div.style.mask=div.style.webkitMask='';}
+    if(el.animation==='none'){div.style.opacity=t>=(el.animDelay||0)?el.opacity:0;div.style.transform='';div.style.clipPath='';div.style.mask=div.style.webkitMask='';}
     const existOp=parseFloat(div.style.opacity)??el.opacity;
     const existTr=div.style.transform&&div.style.transform!=='none'?div.style.transform:'';
     if(phase==='pre'||phase==='in'){
@@ -3137,7 +3137,7 @@ function previewAnim(){
       else if(a==='reveal'){const _c0=_grpRevealInClip(0,gb,el);if(el.animation==='wipe'||el.animation==='wipe-step'){div.style.opacity=el.opacity;div.style.mask=div.style.webkitMask=_wipeMaskIn(el.wipeDir||'→',0);div.style.clipPath=_c0;}else if(el.animation&&el.animation!=='none'){setAnimOut(div,el);div.style.clipPath=_c0;}else{div.style.opacity=el.opacity;div.style.clipPath=_c0;}}
       if(el.animation&&el.animation!=='none'&&a!=='wipe'&&a!=='wipe-step'&&a!=='reveal'){setAnimOut(div,el);}
     }else{
-      setAnimOut(div,el);
+      setAnimOut(div,el);if((!el.animation||el.animation==='none')&&(el.animDelay||0)>0)div.style.opacity='0';
     }
   });
   // Schedule individual element IN/OUT animations
