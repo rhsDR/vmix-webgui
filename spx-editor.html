@@ -3159,7 +3159,7 @@ function previewAnim(){
     const ao=resolveAnimOut(el);
     if(ao!=='none'){
       const outDelay=el.animOutDelay??0;const outDur=el.animOutDuration??0.3;
-      const outStart=(el.animDelay+el.animDuration+outDelay)*1000+80;
+      const outStart=(outDelay>0?outDelay:(el.animDelay+el.animDuration))*1000+80;
       if(ao==='wipe-step'){
         const dirOut=el.wipeDirOut||el.wipeDir||'→';
         _WS_PTS.forEach(pt=>{setTimeout(()=>{const d=canvas.querySelector(`[data-id="${el.id}"]`);if(!d)return;d.style.transition='none';d.style.clipPath=_wipeOutClip(dirOut,pt[1]);},outStart+pt[0]*outDur*1000);});
