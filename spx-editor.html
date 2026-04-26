@@ -3391,7 +3391,7 @@ function toggleBreakingPreview(){
 function setExportMode(m){exportMode=m;document.getElementById('mode-css').classList.toggle('active',m==='css');document.getElementById('mode-gsap').classList.toggle('active',m==='gsap');toast(m==='gsap'?'GSAP eksport':'CSS eksport');}
 let _spxFieldCallback=null;
 function _showExportFieldDialog(cb){
-  const candidates=elements.filter(e=>e.type==='text'||e.type==='ticker');
+  const candidates=elements.filter(e=>(e.type==='ticker')||(e.type==='text'&&e.animation!=='char-step'));
   if(!candidates.length){cb();return;}
   _spxFieldCallback=cb;
   const scroll=document.getElementById('spx-field-scroll');
@@ -3400,7 +3400,7 @@ function _showExportFieldDialog(cb){
     const row=document.createElement('div');row.className='sfd-row';
     const icon=el.type==='ticker'?'⇌':'T';
     const preview=(el.text||'').slice(0,40)+(el.text&&el.text.length>40?'…':'');
-    const on=el.spxField!==false;
+    const on=el.spxField===true;
     row.innerHTML=`<button class="sfd-toggle ${on?'on':'off'}" data-id="${el.id}" onclick="_toggleSfdRow(this)"></button><span class="sfd-type">${icon}</span><span class="sfd-preview" title="${(el.text||'').replace(/"/g,'&quot;')}">${preview||'<em style="opacity:.4">tom</em>'}</span><input class="sfd-label" data-id="${el.id}" value="${(el.fieldLabel||'').replace(/"/g,'&quot;')}" placeholder="Felt-label">`;
     scroll.appendChild(row);
   });
