@@ -1730,9 +1730,9 @@ function applyScrubState(){
       else if(a==='slide-up'){div.style.opacity=Math.min(existOp,pg);div.style.transform=`translateY(${Math.round((1-pg)*50*scale)}px) `+existTr;}
       else if(a==='slide-down'){div.style.opacity=Math.min(existOp,pg);div.style.transform=`translateY(${Math.round(-(1-pg)*50*scale)}px) `+existTr;}
       else if(a==='scale'){div.style.opacity=Math.min(existOp,pg);div.style.transform=`scale(${(0.8+0.2*pg).toFixed(3)}) `+existTr;}
-      else if(a==='wipe'){div.style.clipPath=_grpWipeInClip(gga.wipeDir||'→',pg,_grpBounds[el.groupId],el);}
-      else if(a==='wipe-step'){div.style.clipPath=_grpWipeInClip(gga.wipeDir||'→',_wsQ(pg),_grpBounds[el.groupId],el);}
-      else if(a==='reveal'){div.style.clipPath=_grpRevealInClip(pg,_grpBounds[el.groupId],el);}
+      else if(a==='wipe'){if(!el.animation||el.animation==='none')div.style.clipPath=_grpWipeInClip(gga.wipeDir||'→',pg,_grpBounds[el.groupId],el);}
+      else if(a==='wipe-step'){if(!el.animation||el.animation==='none')div.style.clipPath=_grpWipeInClip(gga.wipeDir||'→',_wsQ(pg),_grpBounds[el.groupId],el);}
+      else if(a==='reveal'){if(!el.animation||el.animation==='none')div.style.clipPath=_grpRevealInClip(pg,_grpBounds[el.groupId],el);}
     }else if(phase==='out'||phase==='post'){
       if(ao==='fade'){div.style.opacity=Math.min(existOp,1-p);}
       else if(ao==='slide-right'){div.style.opacity=Math.min(existOp,1-p);div.style.transform=`translateX(${Math.round(p*30*scale)}px) `+existTr;}
@@ -1740,12 +1740,13 @@ function applyScrubState(){
       else if(ao==='slide-up'){div.style.opacity=Math.min(existOp,1-p);div.style.transform=`translateY(${Math.round(-p*30*scale)}px) `+existTr;}
       else if(ao==='slide-down'){div.style.opacity=Math.min(existOp,1-p);div.style.transform=`translateY(${Math.round(p*30*scale)}px) `+existTr;}
       else if(ao==='scale'){div.style.opacity=Math.min(existOp,1-p);div.style.transform=`scale(${(0.85+0.15*(1-p)).toFixed(3)}) `+existTr;}
-      else if(ao==='wipe'){div.style.clipPath=_grpWipeOutClip(gga.wipeDirOut||gga.wipeDir||'→',p,_grpBounds[el.groupId],el);}
-      else if(ao==='wipe-step'){div.style.clipPath=_grpWipeOutClip(gga.wipeDirOut||gga.wipeDir||'→',_wsQ(p),_grpBounds[el.groupId],el);}
-      else if(ao==='reveal'){div.style.clipPath=_grpRevealOutClip(p,_grpBounds[el.groupId],el);}
+      else if(ao==='wipe'){if(!el.animation||el.animation==='none')div.style.clipPath=_grpWipeOutClip(gga.wipeDirOut||gga.wipeDir||'→',p,_grpBounds[el.groupId],el);}
+      else if(ao==='wipe-step'){if(!el.animation||el.animation==='none')div.style.clipPath=_grpWipeOutClip(gga.wipeDirOut||gga.wipeDir||'→',_wsQ(p),_grpBounds[el.groupId],el);}
+      else if(ao==='reveal'){if(!el.animation||el.animation==='none')div.style.clipPath=_grpRevealOutClip(p,_grpBounds[el.groupId],el);}
     }else{
-      // show phase: clear group clip/mask
-      div.style.clipPath='';div.style.mask=div.style.webkitMask='';
+      // show phase: clear group clip/mask; elements with own animation keep their clip from first pass
+      if(!el.animation||el.animation==='none')div.style.clipPath='';
+      div.style.mask=div.style.webkitMask='';
     }
   });
 }
