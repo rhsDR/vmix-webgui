@@ -238,7 +238,7 @@ function renderStamdataSection(type, listId, mapper) {
 function makeStamdataRow(item) {
   const hasKort    = item.kort !== null;
   const hasApiNavn = item.apiNavn !== null;
-  const hasTitel   = item.titel !== null;
+  const hasTitel   = item.titel != null;
   const row = document.createElement('div');
   row.className = 'stamdata-item';
   row.dataset.id = item.id;
