@@ -135,7 +135,7 @@ async function fetchAll() {
 
   return {
     dropdowns: {
-      kommentatorer: dropdownsRaw.filter(r => r.type === 'kommentator').map(r => r.lang).sort((a, b) => a.localeCompare(b, 'da')),
+      kommentatorer: dropdownsRaw.filter(r => r.type === 'kommentator').map(r => ({ lang: r.lang, titel: r.titel || '' })).sort((a, b) => a.lang.localeCompare(b.lang, 'da')),
       lokationer:    dropdownsRaw.filter(r => r.type === 'lokation').map(r => r.lang).sort((a, b) => a.localeCompare(b, 'da')),
       holds:         dropdownsRaw.filter(r => r.type === 'hold').map(r => ({ lang: r.lang, kort: r.kort })).sort((a, b) => a.lang.localeCompare(b.lang, 'da'))
     },
@@ -238,6 +238,7 @@ function renderStamdataSection(type, listId, mapper) {
 function makeStamdataRow(item) {
   const hasKort    = item.kort !== null;
   const hasApiNavn = item.apiNavn !== null;
+  const hasTitel   = item.titel !== null;
   const row = document.createElement('div');
   row.className = 'stamdata-item';
   row.dataset.id = item.id;
@@ -246,6 +247,7 @@ function makeStamdataRow(item) {
     row.innerHTML = `
       <span class="stamdata-item-name">${esc(item.label)}</span>
       ${hasKort ? `<span class="stamdata-item-kort">${esc(item.kort)}</span>` : ''}
+      ${hasTitel ? `<span class="stamdata-item-alias">${item.titel ? esc(item.titel) : '<span style="color:#333">ingen titel</span>'}</span>` : ''}
       ${hasApiNavn ? `<span class="stamdata-item-alias" title="API-Football navn">${item.apiNavn ? esc(item.apiNavn) : '<span style="color:#333">ingen alias</span>'}</span>` : ''}
       <button class="stamdata-edit" title="Redigér">✎</button>
       <button class="stamdata-del"  title="Fjern">✕</button>
@@ -258,27 +260,32 @@ function makeStamdataRow(item) {
     row.innerHTML = `
       <input class="stamdata-input sd-edit-lang" value="${esc(item.label)}" placeholder="Dansk navn" style="flex:2;">
       ${hasKort ? `<input class="stamdata-input sd-edit-kort" value="${esc(item.kort)}" placeholder="Kort" style="flex:1;max-width:80px;">` : ''}
+      ${hasTitel ? `<input class="stamdata-input sd-edit-titel" value="${esc(item.titel)}" placeholder="Titel" style="flex:2;">` : ''}
       ${hasApiNavn ? `<input class="stamdata-input sd-edit-api" value="${esc(item.apiNavn)}" placeholder="API-Football navn" style="flex:2;">` : ''}
       <button class="stamdata-btn sd-save">Gem</button>
       <button class="stamdata-del sd-cancel" title="Annuller">✕</button>
     `;
-    const langInput = row.querySelector('.sd-edit-lang');
-    const kortInput = row.querySelector('.sd-edit-kort');
-    const apiInput  = row.querySelector('.sd-edit-api');
+    const langInput  = row.querySelector('.sd-edit-lang');
+    const kortInput  = row.querySelector('.sd-edit-kort');
+    const titelInput = row.querySelector('.sd-edit-titel');
+    const apiInput   = row.querySelector('.sd-edit-api');
     langInput.focus();
 
     row.querySelector('.sd-save').addEventListener('click', async () => {
       const newLang    = langInput.value.trim();
-      const newKort    = kortInput ? kortInput.value.trim() : null;
-      const newApiNavn = apiInput  ? apiInput.value.trim()  : null;
+      const newKort    = kortInput  ? kortInput.value.trim()  : null;
+      const newTitel   = titelInput ? titelInput.value.trim() : null;
+      const newApiNavn = apiInput   ? apiInput.value.trim()   : null;
       if (!newLang) return;
       row.querySelector('.sd-save').disabled = true;
       const body = { lang: newLang };
       if (newKort    !== null) body.kort     = newKort;
+      if (newTitel   !== null) body.titel    = newTitel;
       if (newApiNavn !== null) body.api_navn = newApiNavn || null;
       await sbPatch('dropdowns?id=eq.' + item.id, body);
       item.label   = newLang;
       if (newKort    !== null) item.kort    = newKort;
+      if (newTitel   !== null) item.titel   = newTitel;
       if (newApiNavn !== null) item.apiNavn = newApiNavn;
       await refreshDropdowns();
     });
@@ -288,6 +295,7 @@ function makeStamdataRow(item) {
     langInput.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         if (kortInput) kortInput.focus();
+        else if (titelInput) titelInput.focus();
         else if (apiInput) apiInput.focus();
         else row.querySelector('.sd-save').click();
       }
@@ -295,6 +303,12 @@ function makeStamdataRow(item) {
     });
     if (kortInput) {
       kortInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') titelInput ? titelInput.focus() : apiInput ? apiInput.focus() : row.querySelector('.sd-save').click();
+        if (e.key === 'Escape') showView();
+      });
+    }
+    if (titelInput) {
+      titelInput.addEventListener('keydown', e => {
         if (e.key === 'Enter') apiInput ? apiInput.focus() : row.querySelector('.sd-save').click();
         if (e.key === 'Escape') showView();
       });
@@ -316,12 +330,13 @@ async function deleteStamdataItem(id) {
   await refreshDropdowns();
 }
 
-async function addStamdataItem(type, lang, kort, apiNavn = null) {
+async function addStamdataItem(type, lang, kort, apiNavn = null, titel = null) {
   if (!lang.trim()) return;
   const orden = stamdataRaw.filter(r => r.type === type).length + 1;
   const body = { type, lang: lang.trim(), orden };
   if (kort !== null) body.kort = kort.trim();
   if (apiNavn) body.api_navn = apiNavn;
+  if (titel !== null) body.titel = titel.trim();
   await sbPost('dropdowns', body);
   await refreshDropdowns();
 }
@@ -330,11 +345,11 @@ async function refreshDropdowns() {
   const rows = await sbGet('dropdowns?select=*&order=orden.asc');
   stamdataRaw = rows;
   dropdowns = {
-    kommentatorer: rows.filter(r => r.type === 'kommentator').map(r => r.lang).sort((a, b) => a.localeCompare(b, 'da')),
+    kommentatorer: rows.filter(r => r.type === 'kommentator').map(r => ({ lang: r.lang, titel: r.titel || '' })).sort((a, b) => a.lang.localeCompare(b.lang, 'da')),
     lokationer:    rows.filter(r => r.type === 'lokation').map(r => r.lang).sort((a, b) => a.localeCompare(b, 'da')),
     holds:         rows.filter(r => r.type === 'hold').map(r => ({ lang: r.lang, kort: r.kort })).sort((a, b) => a.lang.localeCompare(b.lang, 'da'))
   };
-  renderStamdataSection('kommentator', 'sdKommList', r => ({ label: r.lang, kort: null, apiNavn: null, id: r.id }));
+  renderStamdataSection('kommentator', 'sdKommList', r => ({ label: r.lang, kort: null, titel: r.titel ?? '', apiNavn: null, id: r.id }));
   renderStamdataSection('hold',        'sdHoldList', r => ({ label: r.lang, kort: r.kort, apiNavn: r.api_navn || '', id: r.id }));
   renderStamdataSection('lokation',    'sdLokList',  r => ({ label: r.lang, kort: null, apiNavn: null, id: r.id }));
 }
@@ -345,14 +360,18 @@ function initStamdata() {
   const sdLokBtn   = document.getElementById('sdLokBtn');
 
   sdKommBtn.addEventListener('click', async () => {
-    const input = document.getElementById('sdKommInput');
+    const input      = document.getElementById('sdKommInput');
+    const titelInput = document.getElementById('sdKommTitelInput');
     sdKommBtn.disabled = true;
-    await addStamdataItem('kommentator', input.value, null);
-    input.value = '';
+    await addStamdataItem('kommentator', input.value, null, null, titelInput.value.trim() || null);
+    input.value = ''; titelInput.value = '';
     sdKommBtn.disabled = false;
     input.focus();
   });
   document.getElementById('sdKommInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('sdKommTitelInput').focus();
+  });
+  document.getElementById('sdKommTitelInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') sdKommBtn.click();
   });
 
@@ -534,7 +553,7 @@ function buildEditView(i) {
   ).join('');
 
   const kommOpts = dropdowns.kommentatorer.map(v =>
-    `<option value="${esc(v)}" ${buf.kommentator === v ? 'selected' : ''}>${esc(v)}</option>`
+    `<option value="${esc(v.lang)}" ${buf.kommentator === v.lang ? 'selected' : ''}>${esc(v.lang)}</option>`
   ).join('');
 
   const lokOpts = dropdowns.lokationer.map(v =>
@@ -787,11 +806,18 @@ async function saveKamp(i, div) {
       vmixcall:     k.vmixcall
     });
     toast('Gemt ✓', 'ok');
-    // Synk link til vmix_calls slot
+    // Synk link + kommentator navn/titel til vmix_calls slot
     if (i < 6 && vmixCalls[i]) {
-      vmixCalls[i].link     = k.vmixcall;
-      vmixCalls[i].buf.link = k.vmixcall;
-      await sbPatch('vmix_calls?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { link: k.vmixcall });
+      const kommEntry = dropdowns.kommentatorer.find(d => d.lang === k.kommentator);
+      const kommNavn  = k.kommentator;
+      const kommTitel = kommEntry ? kommEntry.titel : '';
+      vmixCalls[i].link      = k.vmixcall;
+      vmixCalls[i].buf.link  = k.vmixcall;
+      vmixCalls[i].navn      = kommNavn;
+      vmixCalls[i].buf.navn  = kommNavn;
+      vmixCalls[i].titel     = kommTitel;
+      vmixCalls[i].buf.titel = kommTitel;
+      await sbPatch('vmix_calls?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { link: k.vmixcall, navn: kommNavn, titel: kommTitel });
       rerenderVmixCall(i);
     }
   } catch {
