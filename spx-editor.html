@@ -1214,18 +1214,18 @@ function _renderRibbonAnim(){
       <span class="cb-sep"></span>
       <span class="cb-lbl" style="font-weight:600;color:var(--text2)">IND</span>
       <select class="cb-sel" id="rb-gain" style="width:100px">${ainSel}</select>
-      <span class="cb-lbl scrub-lbl" data-for="rb-gadl" data-step="0.05" data-min="0">Delay</span><input class="cb-inp sm" id="rb-gadl" type="number" value="${ga.animDelay}" step="0.05" data-step="0.05" data-min="0">
-      <span class="cb-lbl scrub-lbl" data-for="rb-gadur" data-step="0.05" data-min="0.05">Dur</span><input class="cb-inp sm" id="rb-gadur" type="number" value="${ga.animDuration}" step="0.05" data-step="0.05" data-min="0.05">
+      <span class="cb-lbl scrub-lbl" data-for="rb-gadl" data-step="1" data-min="0">Delay</span><input class="cb-inp sm" id="rb-gadl" type="number" value="${Math.round(ga.animDelay*tlFps)}" step="1" data-step="1" data-min="0">
+      <span class="cb-lbl scrub-lbl" data-for="rb-gadur" data-step="1" data-min="1">Dur</span><input class="cb-inp sm" id="rb-gadur" type="number" value="${Math.round(ga.animDuration*tlFps)}" step="1" data-step="1" data-min="1">
       <span class="cb-sep"></span>
       <span class="cb-lbl" style="font-weight:600;color:var(--text2)">UD</span>
       <select class="cb-sel" id="rb-gaout" style="width:100px">${aoutSel}</select>
-      <span class="cb-lbl scrub-lbl" data-for="rb-gaodl" data-step="0.05" data-min="0">Delay</span><input class="cb-inp sm" id="rb-gaodl" type="number" value="${ga.animOutDelay??0}" step="0.05" data-step="0.05" data-min="0">
-      <span class="cb-lbl scrub-lbl" data-for="rb-gaodur" data-step="0.05" data-min="0.05">Dur</span><input class="cb-inp sm" id="rb-gaodur" type="number" value="${ga.animOutDuration??0.3}" step="0.05" data-step="0.05" data-min="0.05">`;
+      <span class="cb-lbl scrub-lbl" data-for="rb-gaodl" data-step="1" data-min="0">Delay</span><input class="cb-inp sm" id="rb-gaodl" type="number" value="${Math.round((ga.animOutDelay??0)*tlFps)}" step="1" data-step="1" data-min="0">
+      <span class="cb-lbl scrub-lbl" data-for="rb-gaodur" data-step="1" data-min="1">Dur</span><input class="cb-inp sm" id="rb-gaodur" type="number" value="${Math.round((ga.animOutDuration??0.3)*tlFps)}" step="1" data-step="1" data-min="1">`;
     const cbn=(id,fn)=>{const inp=document.getElementById(id);if(inp){inp.addEventListener('input',e=>{fn(parseFloat(e.target.value)||0);});inp.addEventListener('change',()=>{saveState();renderTimeline();});}};
     const cbs=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('change',e=>{saveState();fn(e.target.value);renderTimeline();});};
     cbs('rb-gain',v=>{ga.animation=v;});cbs('rb-gaout',v=>{ga.animOut=v;});
-    cbn('rb-gadl',v=>{ga.animDelay=v;});cbn('rb-gadur',v=>{ga.animDuration=v;});
-    cbn('rb-gaodl',v=>{ga.animOutDelay=v;});cbn('rb-gaodur',v=>{ga.animOutDuration=v;});
+    cbn('rb-gadl',v=>{ga.animDelay=v/tlFps;});cbn('rb-gadur',v=>{ga.animDuration=Math.max(1/tlFps,v/tlFps);});
+    cbn('rb-gaodl',v=>{ga.animOutDelay=v/tlFps;});cbn('rb-gaodur',v=>{ga.animOutDuration=Math.max(1/tlFps,v/tlFps);});
     return;
   }
   const el=_elForRibbon();
@@ -1235,13 +1235,13 @@ function _renderRibbonAnim(){
   pane.innerHTML=`
     <span class="cb-lbl" style="font-weight:600;color:var(--text2)">IND</span>
     <select class="cb-sel" id="rb-ain" style="width:100px">${ainSel}</select>
-    <span class="cb-lbl scrub-lbl" data-for="rb-adl" data-step="0.05" data-min="0">Delay</span><input class="cb-inp sm" id="rb-adl" type="number" value="${el.animDelay}" step="0.05" data-step="0.05" data-min="0">
-    <span class="cb-lbl scrub-lbl" data-for="rb-adur" data-step="0.05" data-min="0.05">Dur</span><input class="cb-inp sm" id="rb-adur" type="number" value="${el.animDuration}" step="0.05" data-step="0.05" data-min="0.05">
+    <span class="cb-lbl scrub-lbl" data-for="rb-adl" data-step="1" data-min="0">Delay</span><input class="cb-inp sm" id="rb-adl" type="number" value="${Math.round(el.animDelay*tlFps)}" step="1" data-step="1" data-min="0">
+    <span class="cb-lbl scrub-lbl" data-for="rb-adur" data-step="1" data-min="1">Dur</span><input class="cb-inp sm" id="rb-adur" type="number" value="${Math.round(el.animDuration*tlFps)}" step="1" data-step="1" data-min="1">
     <span class="cb-sep"></span>
     <span class="cb-lbl" style="font-weight:600;color:var(--text2)">UD</span>
     <select class="cb-sel" id="rb-aout" style="width:100px">${aoutSel}</select>
-    <span class="cb-lbl scrub-lbl" data-for="rb-aodl" data-step="0.05" data-min="0">Delay</span><input class="cb-inp sm" id="rb-aodl" type="number" value="${el.animOutDelay??0}" step="0.05" data-step="0.05" data-min="0">
-    <span class="cb-lbl scrub-lbl" data-for="rb-aodur" data-step="0.05" data-min="0.05">Dur</span><input class="cb-inp sm" id="rb-aodur" type="number" value="${el.animOutDuration??0.3}" step="0.05" data-step="0.05" data-min="0.05">
+    <span class="cb-lbl scrub-lbl" data-for="rb-aodl" data-step="1" data-min="0">Delay</span><input class="cb-inp sm" id="rb-aodl" type="number" value="${Math.round((el.animOutDelay??0)*tlFps)}" step="1" data-step="1" data-min="0">
+    <span class="cb-lbl scrub-lbl" data-for="rb-aodur" data-step="1" data-min="1">Dur</span><input class="cb-inp sm" id="rb-aodur" type="number" value="${Math.round((el.animOutDuration??0.3)*tlFps)}" step="1" data-step="1" data-min="1">
     <span class="cb-sep"></span>
     ${_wipeRibbonGrps(el)}
     ${el.animation==='char-step'?`<span class="cb-sep"></span><span class="cb-lbl">Trin</span>${[['irregular','Vilkårlig'],['one','1 ad gangen'],['multi','Antal']].map(([v,l])=>`<button class="tb-btn${(el.charStepMode||'irregular')===v?' active':''}" id="rb-csm-${v}" onclick="setCharStepMode('${v}')">${l}</button>`).join('')}${(el.charStepMode||'irregular')==='multi'?`<input class="cb-inp sm" id="rb-csc" type="number" value="${el.charStepCount||3}" min="1" max="20" style="width:44px">`:''}`:''}
@@ -1249,8 +1249,8 @@ function _renderRibbonAnim(){
   const cbn=(id,fn)=>{const inp=document.getElementById(id);if(inp){inp.addEventListener('input',e=>{fn(parseFloat(e.target.value)||0);render();});inp.addEventListener('change',()=>saveState());}};
   const cbs=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('change',e=>{saveState();fn(e.target.value);renderTimeline();renderRibbonBar();});};
   cbs('rb-ain',v=>{el.animation=v;render();applyScrubState();});cbs('rb-aout',v=>{el.animOut=v;render();applyScrubState();});
-  cbn('rb-adl',v=>{el.animDelay=v;});cbn('rb-adur',v=>{el.animDuration=v;});
-  cbn('rb-aodl',v=>{el.animOutDelay=v;});cbn('rb-aodur',v=>{el.animOutDuration=v;});
+  cbn('rb-adl',v=>{el.animDelay=v/tlFps;});cbn('rb-adur',v=>{el.animDuration=Math.max(1/tlFps,v/tlFps);});
+  cbn('rb-aodl',v=>{el.animOutDelay=v/tlFps;});cbn('rb-aodur',v=>{el.animOutDuration=Math.max(1/tlFps,v/tlFps);});
   {const rbc=document.getElementById('rb-csc');if(rbc){rbc.addEventListener('input',e=>{el.charStepCount=Math.max(1,parseInt(e.target.value)||3);});rbc.addEventListener('change',()=>saveState());}}
 }
 function _renderRibbonData(){
@@ -2832,14 +2832,14 @@ function _grpAnimHTML(gid){
     <div class="prow"><span class="plbl">IND</span><select class="pi" id="pg-ain" style="flex:1">${ainSel}</select></div>
     ${wipeInBtns}
     <div class="pg2">
-      <div><label>Forsinkelse (s)</label><input class="pi" type="number" id="pg-adl" value="${ga.animDelay}" step="0.05" min="0"></div>
-      <div><label>Varighed (s)</label><input class="pi" type="number" id="pg-adur" value="${ga.animDuration}" step="0.05" min="0.05"></div>
+      <div><label>Forsinkelse (f)</label><input class="pi" type="number" id="pg-adl" value="${Math.round(ga.animDelay*tlFps)}" step="1" min="0"></div>
+      <div><label>Varighed (f)</label><input class="pi" type="number" id="pg-adur" value="${Math.round(ga.animDuration*tlFps)}" step="1" min="1"></div>
     </div>
     <div class="prow"><span class="plbl">UD</span><select class="pi" id="pg-aout" style="flex:1">${aoutSel}</select></div>
     ${wipeOutBtns}
     <div class="pg2">
-      <div><label>Forsinkelse (s)</label><input class="pi" type="number" id="pg-aodl" value="${ga.animOutDelay??0}" step="0.05" min="0"></div>
-      <div><label>Varighed (s)</label><input class="pi" type="number" id="pg-aodur" value="${ga.animOutDuration??0.3}" step="0.05" min="0.05"></div>
+      <div><label>Forsinkelse (f)</label><input class="pi" type="number" id="pg-aodl" value="${Math.round((ga.animOutDelay??0)*tlFps)}" step="1" min="0"></div>
+      <div><label>Varighed (f)</label><input class="pi" type="number" id="pg-aodur" value="${Math.round((ga.animOutDuration??0.3)*tlFps)}" step="1" min="1"></div>
     </div>
   </div>`;
 }
@@ -2850,8 +2850,8 @@ function _bindGrpAnimPanel(gid){
   const cbt=(id,fn)=>{const el=document.getElementById(id);if(el){el.addEventListener('input',e=>{fn(e.target.value);renderTimeline();});el.addEventListener('change',()=>{saveState();});}};
   cbt('pg-name',v=>{ga.name=v;});
   cbs('pg-ain',v=>{ga.animation=v;});cbs('pg-aout',v=>{ga.animOut=v;});
-  cbn('pg-adl',v=>{ga.animDelay=v;});cbn('pg-adur',v=>{ga.animDuration=v;});
-  cbn('pg-aodl',v=>{ga.animOutDelay=v;});cbn('pg-aodur',v=>{ga.animOutDuration=v;});
+  cbn('pg-adl',v=>{ga.animDelay=v/tlFps;});cbn('pg-adur',v=>{ga.animDuration=Math.max(1/tlFps,v/tlFps);});
+  cbn('pg-aodl',v=>{ga.animOutDelay=v/tlFps;});cbn('pg-aodur',v=>{ga.animOutDuration=Math.max(1/tlFps,v/tlFps);});
 }
 function renderPropsTab(){
   const body=document.getElementById('pbody');
@@ -3013,16 +3013,16 @@ function renderPropsTab(){
       ${(el.animation==='wipe'||el.animation==='wipe-step')?`<div class="prow"><span class="plbl">Retning</span><div style="display:flex;gap:4px">${['←','→','↑','↓'].map(d=>`<button class="achip${(el.wipeDir||'→')===d?' active':''}" onclick="setWipeDir('${d}')">${d}</button>`).join('')}</div></div><div class="prow"><span class="plbl">Feather</span><input class="pi sm" type="number" id="p-wipe-feather" value="${el.wipeFeather||0}" min="0" max="300" step="1" style="width:52px"><span style="font-size:10px;color:var(--text3);margin-left:4px">px</span></div>`:''}
       ${el.animation==='char-step'?`<div class="prow" style="gap:6px"><span class="plbl">Trin</span><div style="display:flex;gap:4px;flex-wrap:wrap">${[['irregular','Vilkårlig'],['one','1 ad gangen'],['multi','Antal']].map(([v,l])=>`<button class="achip${(el.charStepMode||'irregular')===v?' active':''}" onclick="setCharStepMode('${v}')">${l}</button>`).join('')}${(el.charStepMode||'irregular')==='multi'?`<input class="pi sm" type="number" id="p-csc" value="${el.charStepCount||3}" min="1" max="20" style="width:44px">`:''}</div></div>`:''}
       <div class="pg2">
-        <div><label>Forsinkelse (s)</label><input class="pi" type="number" id="p-delay" value="${el.animDelay}" step="0.05" min="0"></div>
-        <div><label>Varighed (s)</label><input class="pi" type="number" id="p-dur" value="${el.animDuration}" step="0.05" min="0.1"></div>
+        <div><label>Forsinkelse (f)</label><input class="pi" type="number" id="p-delay" value="${Math.round(el.animDelay*tlFps)}" step="1" min="0"></div>
+        <div><label>Varighed (f)</label><input class="pi" type="number" id="p-dur" value="${Math.round(el.animDuration*tlFps)}" step="1" min="1"></div>
       </div>
     </div>
     <div class="psec"><div class="psec-title">Animation ud</div>
       <div class="achip-grid">${ANIMS_OUT.map(a=>`<button class="achip${(el.animOut||'auto')===a?' active':''}" onclick="setAnim('out','${a}')">${ANIM_OUT_LBL[a]}</button>`).join('')}</div>
       ${(()=>{const ro=resolveAnimOut(el);return(ro==='wipe'||ro==='wipe-step')?`<div class="prow"><span class="plbl">Retning</span><div style="display:flex;gap:4px"><button class="achip${!el.wipeDirOut?' active':''}" onclick="setWipeDirOut(null)">↔ Auto</button>${['←','→','↑','↓'].map(d=>`<button class="achip${el.wipeDirOut===d?' active':''}" onclick="setWipeDirOut('${d}')">${d}</button>`).join('')}</div></div><div class="prow"><span class="plbl">Feather</span><input class="pi sm" type="number" id="p-wipe-feather-out" value="${el.wipeFeather||0}" min="0" max="300" step="1" style="width:52px"><span style="font-size:10px;color:var(--text3);margin-left:4px">px</span></div>`:''})()}
       <div class="pg2">
-        <div><label>Forsinkelse (s)</label><input class="pi" type="number" id="p-out-delay" value="${el.animOutDelay??0}" step="0.05" min="0"></div>
-        <div><label>Varighed (s)</label><input class="pi" type="number" id="p-out-dur" value="${el.animOutDuration??0.3}" step="0.05" min="0.05"></div>
+        <div><label>Forsinkelse (f)</label><input class="pi" type="number" id="p-out-delay" value="${Math.round((el.animOutDelay??0)*tlFps)}" step="1" min="0"></div>
+        <div><label>Varighed (f)</label><input class="pi" type="number" id="p-out-dur" value="${Math.round((el.animOutDuration??0.3)*tlFps)}" step="1" min="1"></div>
       </div>
     </div>
     ${el.groupId?_grpAnimHTML(el.groupId):''}
@@ -3041,8 +3041,8 @@ function renderPropsTab(){
   {const fw=document.getElementById('p-fw');if(fw)fw.addEventListener('input',e=>{const[w,s]=e.target.value.split('-');el.fontWeight=w;el.fontStyle=s;render();});}
   b('p-x','x',parseFloat);b('p-y','y',parseFloat);b('p-w','w',parseFloat);b('p-h','h',parseFloat);
   b('p-op','opacity',v=>parseFloat(v)/100);b('p-br','borderRadius',parseFloat);
-  b('p-delay','animDelay',parseFloat);b('p-dur','animDuration',parseFloat);
-  b('p-out-delay','animOutDelay',parseFloat);b('p-out-dur','animOutDuration',parseFloat);
+  b('p-delay','animDelay',v=>Math.max(0,parseFloat(v)||0)/tlFps);b('p-dur','animDuration',v=>Math.max(1,parseFloat(v)||1)/tlFps);
+  b('p-out-delay','animOutDelay',v=>Math.max(0,parseFloat(v)||0)/tlFps);b('p-out-dur','animOutDuration',v=>Math.max(1,parseFloat(v)||1)/tlFps);
   {const wf=document.getElementById('p-wipe-feather');if(wf){wf.addEventListener('input',e=>{el.wipeFeather=Math.max(0,parseInt(e.target.value)||0);render();});wf.addEventListener('change',()=>saveState());}}
   {const wfo=document.getElementById('p-wipe-feather-out');if(wfo){wfo.addEventListener('input',e=>{el.wipeFeather=Math.max(0,parseInt(e.target.value)||0);render();});wfo.addEventListener('change',()=>saveState());}}
   {const csc=document.getElementById('p-csc');if(csc)csc.addEventListener('input',e=>{el.charStepCount=Math.max(1,parseInt(e.target.value)||3);});csc&&csc.addEventListener('change',()=>saveState());}
