@@ -1805,7 +1805,8 @@ function _snapZero(v){return v<(1/tlFps)*0.75?0:v;}
 function scrubTo(t){
   const track=document.getElementById('tl-track');if(!track)return;
   const totalS=TL_MAX_S/tlZoom;
-  scrubTime=Math.max(0,Math.min(t,totalS));
+  const ft=1/tlFps;
+  scrubTime=Math.max(0,Math.min(Math.round(t/ft)*ft,totalS));
   const ph=document.getElementById('tl-playhead');
   const pxPerS=track.offsetWidth/totalS;
   ph.style.display='block';
