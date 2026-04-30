@@ -761,6 +761,8 @@ let _dirty=false;
 let selPropKf=null; // {elId, prop, kfIdx} — selected property keyframe
 let expandedLayers=new Set(); // element IDs with expanded property tracks in timeline
 let _kfClipboard=null; // {prop, v} — copied KF value for paste
+let _shouldFocusKfEdit=false; // set true to focus KF input after next renderTimeline
+let _inRenderTimeline=false; // re-entrancy guard — prevents blur→commit during DOM rebuild
 let _selGradStop=0; // selected gradient stop index
 let tlZoom=3;
 let tlFps=25;
@@ -1199,7 +1201,7 @@ function addPropKf(prop){
   else{track.push({t,v});track.sort((a,b)=>a.t-b.t);}
   selPropKf={elId:el.id,prop,kfIdx:track.findIndex(k=>Math.abs(k.t-t)<0.002)};
   if(!expandedLayers.has(el.id))expandedLayers.add(el.id);
-  renderTimeline();renderPanel();
+  _shouldFocusKfEdit=true;renderTimeline();renderPanel();
   toast(`KF ${prop.toUpperCase()} @ ${t.toFixed(2)}s`,'ok');
 }
 function addAllPropKf(){
@@ -4451,6 +4453,7 @@ function _downloadHTML(html,filename){
 
 const TL_ROW_H=28,TL_MAX_S=5;
 function renderTimeline(){
+  _inRenderTimeline=true;
   const labels=document.getElementById('tl-labels-inner');const bars=document.getElementById('tl-bars');const ruler=document.getElementById('tl-ruler-canvas');const track=document.getElementById('tl-track');
   if(!labels||!bars||!ruler||!track)return;
   const trackW=Math.max(200,track.offsetWidth);const totalS=TL_MAX_S/tlZoom;const pxPerS=trackW/totalS;
@@ -4716,11 +4719,11 @@ function renderTimeline(){
             }
           };
           inp.addEventListener('keydown',e=>{
-            if(e.key==='Enter'){commit();e.preventDefault();}
-            if(e.key==='Escape'){_committed=true;renderTimeline();}
-            e.stopPropagation();
+            if(e.key==='Enter'){commit();e.preventDefault();e.stopPropagation();return;}
+            if(e.key==='Escape'){_committed=true;renderTimeline();e.stopPropagation();return;}
+            // Other keys (Ctrl+C, Ctrl+V, Delete, arrows…) bubble up to document handler
           });
-          inp.addEventListener('blur',commit);
+          inp.addEventListener('blur',()=>{if(!_inRenderTimeline)commit();});
           inp.addEventListener('click',e=>e.stopPropagation());
           inp.addEventListener('mousedown',e=>e.stopPropagation());
           pLbl.appendChild(nameEl);pLbl.appendChild(inp);
@@ -4745,10 +4748,13 @@ function renderTimeline(){
           d.addEventListener('mousedown',e=>{
             e.stopPropagation();
             selPropKf={elId:el.id,prop:pd.key,kfIdx};
-            selIds=[el.id];render();renderPanel();renderTimeline();
+            selIds=[el.id];render();renderPanel();
+            _shouldFocusKfEdit=true;renderTimeline();
             scrubTo(kf.t);
+            let _kfDragMoved=false;
             const sx=e.clientX,t0=kf.t;
             const mv=ev=>{
+              _kfDragMoved=true;
               kf.t=Math.max(0,parseFloat((t0+(ev.clientX-sx)/pxPerS).toFixed(3)));
               track.sort((a,b)=>a.t-b.t);
               selPropKf={elId:el.id,prop:pd.key,kfIdx:track.indexOf(kf)};
@@ -4787,8 +4793,11 @@ function renderTimeline(){
       });
     }
   });
-  // Focus the KF value input after render so user can type immediately
-  requestAnimationFrame(()=>{const ie=document.getElementById('tl-kf-edit');if(ie){ie.focus();ie.select();}});
+  _inRenderTimeline=false;
+  if(_shouldFocusKfEdit){
+    _shouldFocusKfEdit=false;
+    requestAnimationFrame(()=>{const ie=document.getElementById('tl-kf-edit');if(ie){ie.focus();ie.select();}});
+  }
 }
 
 function animatePlayhead(totalDur){
