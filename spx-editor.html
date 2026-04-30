@@ -661,10 +661,11 @@ html.theme-kold{
   <div class="sb">H: <span id="sb-h">—</span></div>
   <div class="sb" style="margin-left:auto">Elementer: <span id="sb-n">0</span></div>
   <div class="sb" style="display:flex;align-items:center;gap:4px">
-    <button onclick="setCanvasZoom(canvasZoom/1.25)" style="background:none;border:1px solid var(--border2);color:var(--text2);width:18px;height:18px;border-radius:3px;cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center" title="Zoom ud (Ctrl+−)">−</button>
-    <span style="font-size:11px;color:var(--text3)">Zoom:</span><span id="sb-zoom" style="font-family:var(--mono);font-size:11px;color:var(--text2);min-width:38px;text-align:center">100%</span>
+    <span id="sb-zoom" style="font-family:var(--mono);font-size:11px;color:var(--text2);min-width:38px;text-align:center">100%</span>
+    <button onclick="setCanvasZoom(1)" style="background:none;border:1px solid var(--border2);color:var(--text3);height:18px;padding:0 5px;border-radius:3px;cursor:pointer;font-size:10px" title="Tilpas til vindue (Ctrl+0)">Fit Canvas</button>
+    <button onclick="zoomToActual()" style="background:none;border:1px solid var(--border2);color:var(--text3);height:18px;padding:0 5px;border-radius:3px;cursor:pointer;font-size:10px" title="Faktisk størrelse (1:1 pixels)">100%</button>
     <button onclick="setCanvasZoom(canvasZoom*1.25)" style="background:none;border:1px solid var(--border2);color:var(--text2);width:18px;height:18px;border-radius:3px;cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center" title="Zoom ind (Ctrl+=)">+</button>
-    <button onclick="setCanvasZoom(1)" style="background:none;border:1px solid var(--border2);color:var(--text3);height:18px;padding:0 5px;border-radius:3px;cursor:pointer;font-size:10px" title="Tilpas til vindue (Ctrl+0)">Fit</button>
+    <button onclick="setCanvasZoom(canvasZoom/1.25)" style="background:none;border:1px solid var(--border2);color:var(--text2);width:18px;height:18px;border-radius:3px;cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center" title="Zoom ud (Ctrl+−)">−</button>
   </div>
 </div>
 
@@ -766,7 +767,7 @@ let _inRenderTimeline=false; // re-entrancy guard — prevents blur→commit dur
 let _selGradStop=0; // selected gradient stop index
 let tlZoom=3;
 let tlFps=25;
-let scrubTime=null,isScrubbing=false,_arrowMoving=false;
+let scrubTime=null,isScrubbing=false,_arrowMoving=false,_arrowStart={};
 let transitionOnUpdate=true;
 let previewBreaking=false;
 let smartTickerSettings={
@@ -809,7 +810,7 @@ function calcScale(){
   canvas.style.width=cw+'px';canvas.style.height=ch+'px';
   const ci=document.getElementById('canvas-inner');
   if(ci){ci.style.width=cw+'px';ci.style.height=ch+'px';}
-  const sz=document.getElementById('sb-zoom');if(sz)sz.textContent=Math.round(canvasZoom*100)+'%';
+  const sz=document.getElementById('sb-zoom');if(sz)sz.textContent=Math.round(scale*100)+'%';
   drawGrid();drawRulers();render();renderGuides();
 }
 function setCanvasZoom(z,pivotX,pivotY){
@@ -822,6 +823,13 @@ function setCanvasZoom(z,pivotX,pivotY){
     vport.scrollTop=(vport.scrollTop+pivotY)*ratio-pivotY;
   }
   calcScale();
+}
+function zoomToActual(){
+  const prevOv=vport.style.overflow;vport.style.overflow='hidden';
+  const aw=area.offsetWidth-80,ah=area.offsetHeight-80;
+  vport.style.overflow=prevOv||'';
+  const base=Math.min(aw/CW,ah/CH);
+  if(base>0)setCanvasZoom(1/base);
 }
 function drawRulers(){
   const rh=document.getElementById('ruler-h'),rv=document.getElementById('ruler-v');
@@ -1013,7 +1021,7 @@ function mkEl(type,p={}){
     apiUrl:p.apiUrl??'',
     apiInterval:p.apiInterval??30,
     apiTemplate:p.apiTemplate??'',
-    animation:p.animation??'fade',
+    animation:p.animation??'none',
     animDelay:p.animDelay??0,
     animDuration:p.animDuration??0.45,
     animOut:p.animOut??'auto',
@@ -2157,7 +2165,7 @@ document.addEventListener('mousemove',e=>{
 document.addEventListener('mouseup',()=>{
   const wasDragging=dragging;
   dragging=false;resizing=false;resEl=null;
-  if(wasDragging){dragOff.forEach(o=>{if(o.div)o.div.style.transform='';});render();renderPanel();}
+  if(wasDragging){dragOff.forEach(o=>{if(o.div)o.div.style.transform='';const dx=o.el.x-o.sx,dy=o.el.y-o.sy;if(dx&&o.el.propTracks?.x?.length)o.el.propTracks.x.forEach(k=>k.v+=dx);if(dy&&o.el.propTracks?.y?.length)o.el.propTracks.y.forEach(k=>k.v+=dy);});render();renderPanel();}
   if(boxSel){boxSel=false;document.getElementById('sel-box').style.display='none';render();renderPanel();}
 });
 canvas.addEventListener('mousedown',e=>{
@@ -2261,7 +2269,7 @@ document.addEventListener('keydown',e=>{
   }
   if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)&&selIds.length){
     e.preventDefault();const step=e.shiftKey?10:1;
-    if(!_arrowMoving){saveState();_arrowMoving=true;}
+    if(!_arrowMoving){saveState();_arrowMoving=true;_arrowStart={};selIds.forEach(id=>{const _ae=elements.find(x=>x.id===id);if(_ae)_arrowStart[id]={x:_ae.x,y:_ae.y};});}
     selIds.forEach(id=>{const el=elements.find(x=>x.id===id);if(!el||el.locked)return;
       if(e.key==='ArrowLeft')el.x-=step;if(e.key==='ArrowRight')el.x+=step;
       if(e.key==='ArrowUp')el.y-=step;if(e.key==='ArrowDown')el.y+=step;
@@ -2269,7 +2277,7 @@ document.addEventListener('keydown',e=>{
   }
   if(e.key==='Escape'){selIds=[];selPropKf=null;render();renderPanel();}
 });
-document.addEventListener('keyup',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))_arrowMoving=false;});
+document.addEventListener('keyup',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){if(_arrowMoving){selIds.forEach(id=>{const _ae=elements.find(x=>x.id===id);const _s=_arrowStart[id];if(!_ae||!_s)return;const dx=_ae.x-_s.x,dy=_ae.y-_s.y;if(dx&&_ae.propTracks?.x?.length)_ae.propTracks.x.forEach(k=>k.v+=dx);if(dy&&_ae.propTracks?.y?.length)_ae.propTracks.y.forEach(k=>k.v+=dy);});_arrowStart={};}  _arrowMoving=false;}});
 
 function setTool(t){
   tool=t;
@@ -4612,7 +4620,7 @@ function renderTimeline(){
       const bx=Math.max(0,(el.animDelay||0)*pxPerS);
       const bw=Math.max(4,(el.animDuration||0.45)*pxPerS);
       const bar=document.createElement('div');bar.className='tl-bar'+(selIds.includes(el.id)?' sel':'');
-      bar.style.cssText=`left:${bx}px;width:${bw}px;background:${aIn==='none'?animColor.none:_elColor(el)};opacity:${aIn==='none'?0.35:0.8};`;
+      bar.style.cssText=`left:${bx}px;width:${bw}px;background:${_elColor(el)};opacity:${aIn==='none'?0.55:0.8};`;
       const _inLbl=aIn==='wipe'?`wipe ${el.wipeDir||'→'}`:aIn==='wipe-step'?`wipe-step ${el.wipeDir||'→'}`:aIn==='char-step'?'bogstav-trin':aIn==='reveal'?'↕ reveal':aIn==='reveal-h'?'↔ reveal':aIn;
       bar.textContent=bw>50?_inLbl:'';bar.title=`IN: ${_inLbl} · +${el.animDelay||0}s · ${el.animDuration||0.45}s`;
       let dx0=null;
@@ -4643,7 +4651,7 @@ function renderTimeline(){
       const obw=Math.max(4,outDur*pxPerS);
       const obar=document.createElement('div');
       obar.className='tl-bar out'+(selIds.includes(el.id)?' sel':'');
-      obar.style.cssText=`left:${obx}px;width:${obw}px;background:${ao==='none'?animColor.none:_elColor(el)};opacity:${ao==='none'?0.35:0.55};`;
+      obar.style.cssText=`left:${obx}px;width:${obw}px;background:${_elColor(el)};opacity:${ao==='none'?0.35:0.55};`;
       const _outLbl=ao==='wipe'?`wipe ${el.wipeDirOut||el.wipeDir||'→'}`:ao==='wipe-step'?`wipe-step ${el.wipeDirOut||el.wipeDir||'→'}`:ao==='char-step'?'bogstav-trin':ao;
       obar.textContent=obw>50?_outLbl:'';obar.title=`OUT: ${_outLbl} · delay:${outDelay}s · ${outDur}s`;
       obar.addEventListener('mousedown',e=>{
