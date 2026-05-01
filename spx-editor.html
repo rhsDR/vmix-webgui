@@ -4629,8 +4629,8 @@ function renderTimeline(){
         if(e.ctrlKey||e.metaKey){if(selIds.includes(el.id))selIds=selIds.filter(i=>i!==el.id);else selIds=[...selIds,el.id];}
         else if(!selIds.includes(el.id)){selIds=[el.id];}
         render();renderPanel();renderTimeline();
-        const targets=elements.filter(x=>selIds.includes(x.id)).map(x=>({el:x,d0:x.animDelay||0}));
-        const mv=ev=>{moved=true;const dt=(ev.clientX-dx0)/pxPerS;targets.forEach(({el:e2,d0})=>{e2.animDelay=_snapZero(Math.max(0,parseFloat((d0+dt).toFixed(3))));});renderTimeline();renderPanel();};
+        const targets=elements.filter(x=>selIds.includes(x.id)).map(x=>({el:x,d0:x.animDelay||0,kfT0:Object.fromEntries(Object.entries(x.propTracks||{}).map(([p,tr])=>[p,tr.map(k=>k.t)]))}));
+        const mv=ev=>{moved=true;const dt=(ev.clientX-dx0)/pxPerS;targets.forEach(({el:e2,d0,kfT0})=>{const nd=_snapZero(Math.max(0,parseFloat((d0+dt).toFixed(3))));const adt=nd-d0;e2.animDelay=nd;if(kfT0)Object.entries(kfT0).forEach(([p,times])=>{(e2.propTracks?.[p]||[]).forEach((k,i)=>{if(times[i]!=null)k.t=Math.max(0,parseFloat((times[i]+adt).toFixed(3)));});});});renderTimeline();renderPanel();};
         const up=()=>{if(moved)saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
         document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
       });
