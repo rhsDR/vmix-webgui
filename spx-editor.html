@@ -1991,9 +1991,12 @@ function applyScrubState(){
     if(_hasPropKfs(el)){
       const pt=el.propTracks;
       const isDragged=dragging&&dragOff.some(o=>o.id===el.id);
-      const vx=isDragged?el.x:_interpTrack(pt.x,t);
-      const vy=isDragged?el.y:_interpTrack(pt.y,t);
-      const vw=_interpTrack(pt.w,t),vh=_interpTrack(pt.h,t);
+      const isResized=resizing&&resEl&&resEl.id===el.id;
+      const useEl=isDragged||isResized;
+      const vx=useEl?el.x:_interpTrack(pt.x,t);
+      const vy=useEl?el.y:_interpTrack(pt.y,t);
+      const vw=useEl?el.w:_interpTrack(pt.w,t);
+      const vh=useEl?el.h:_interpTrack(pt.h,t);
       const vop=_interpTrack(pt.opacity,t);
       if(vx!=null)div.style.left=Math.round(vx*scale)+'px';
       if(vy!=null)div.style.top=Math.round(vy*scale)+'px';
@@ -2175,8 +2178,10 @@ document.addEventListener('mousemove',e=>{
 });
 document.addEventListener('mouseup',()=>{
   const wasDragging=dragging;
+  const wasResizing=resizing;const wasResEl=resEl;
   dragging=false;resizing=false;resEl=null;
   if(wasDragging){dragOff.forEach(o=>{const dx=o.el.x-o.sx,dy=o.el.y-o.sy;if(scrubTime!==null&&_hasPropKfs(o.el)){_upsertKf(o.el,'x',scrubTime,o.el.x);_upsertKf(o.el,'y',scrubTime,o.el.y);}else{if(o.kfX?.length&&o.el.propTracks?.x?.length)o.el.propTracks.x.forEach((k,i)=>{if(o.kfX[i]!=null)k.v=o.kfX[i]+dx;});if(o.kfY?.length&&o.el.propTracks?.y?.length)o.el.propTracks.y.forEach((k,i)=>{if(o.kfY[i]!=null)k.v=o.kfY[i]+dy;});}});render();renderPanel();}
+  if(wasResizing&&wasResEl&&scrubTime!==null&&_hasPropKfs(wasResEl)){_upsertKf(wasResEl,'x',scrubTime,wasResEl.x);_upsertKf(wasResEl,'y',scrubTime,wasResEl.y);_upsertKf(wasResEl,'w',scrubTime,wasResEl.w);_upsertKf(wasResEl,'h',scrubTime,wasResEl.h);render();renderPanel();}
   if(boxSel){boxSel=false;document.getElementById('sel-box').style.display='none';render();renderPanel();}
 });
 canvas.addEventListener('mousedown',e=>{
