@@ -1990,7 +1990,9 @@ function applyScrubState(){
     // Per-property keyframe interpolation
     if(_hasPropKfs(el)){
       const pt=el.propTracks;
-      const vx=_interpTrack(pt.x,t),vy=_interpTrack(pt.y,t);
+      const isDragged=dragging&&dragOff.some(o=>o.id===el.id);
+      const vx=isDragged?el.x:_interpTrack(pt.x,t);
+      const vy=isDragged?el.y:_interpTrack(pt.y,t);
       const vw=_interpTrack(pt.w,t),vh=_interpTrack(pt.h,t);
       const vop=_interpTrack(pt.opacity,t);
       if(vx!=null)div.style.left=Math.round(vx*scale)+'px';
@@ -2129,11 +2131,13 @@ function scrubTo(t){
 document.addEventListener('mousemove',e=>{
   if(dragging){
     dragOff.forEach(o=>{
-      if(!o.el||!o.div)return;
+      if(!o.el)return;
       o.el.x=snapEdges(e.clientX/scale-o.ox,o.el.w,[0,960,1920],'v');
       o.el.y=snapEdges(e.clientY/scale-o.oy,o.el.h,[0,540,1080],'h');
-      o.div.style.left=Math.round(o.el.x*scale)+'px';
-      o.div.style.top=Math.round(o.el.y*scale)+'px';
+      const dv=canvas.querySelector(`.el[data-id="${o.id}"]`);
+      if(!dv)return;
+      dv.style.left=Math.round(o.el.x*scale)+'px';
+      dv.style.top=Math.round(o.el.y*scale)+'px';
     });
     return;
   }
