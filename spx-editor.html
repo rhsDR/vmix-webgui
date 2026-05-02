@@ -762,7 +762,8 @@ let exportMode='css';
 let ribbonTab='format';
 const THEMES=['default','dark','graa','kold'];
 let _dirty=false;
-let selPropKf=null; // {elId, prop, kfIdx} — selected property keyframe
+let selPropKf=null; // {elId, prop, kfIdx} — primary selected property keyframe
+let selPropKfs=[]; // all selected property keyframes (multi-select)
 let expandedLayers=new Set(); // element IDs with expanded property tracks in timeline
 let _kfClipboard=null; // {prop, v} — copied KF value for paste
 let _shouldFocusKfEdit=false; // set true to focus KF input after next renderTimeline
@@ -977,7 +978,7 @@ function undo(){
   if(s.scoreCycleSettings)Object.assign(scoreCycleSettings,s.scoreCycleSettings);
   groupAnimations=s.groupAnimations||{};
   guides=s.guides||[];
-  canvas.style.background=bgColor;selIds=[];selPropKf=null;
+  canvas.style.background=bgColor;selIds=[];selPropKf=null;selPropKfs=[];
   elements.forEach(_migratePropTracks);
   render();renderPanel();renderGuides();updUndoBtns();
 }
@@ -990,7 +991,7 @@ function redo(){
   if(s.scoreCycleSettings)Object.assign(scoreCycleSettings,s.scoreCycleSettings);
   groupAnimations=s.groupAnimations||{};
   guides=s.guides||[];
-  canvas.style.background=bgColor;selIds=[];selPropKf=null;
+  canvas.style.background=bgColor;selIds=[];selPropKf=null;selPropKfs=[];
   elements.forEach(_migratePropTracks);
   render();renderPanel();renderGuides();updUndoBtns();
 }
@@ -1143,7 +1144,7 @@ function loadRecentProject(idx){
 }
 function newProject(){
   if(_dirty&&!confirm('Nyt projekt?\n\nDu har ikke-gemte ændringer — de vil gå tabt.'))return;
-  saveState();elements=[];selIds=[];selPropKf=null;bgColor='transparent';elCtr=0;groupAnimations={};expandedGroups=new Set();_dirty=false;projectImages=[];guides=[];
+  saveState();elements=[];selIds=[];selPropKf=null;selPropKfs=[];bgColor='transparent';elCtr=0;groupAnimations={};expandedGroups=new Set();_dirty=false;projectImages=[];guides=[];
   canvas.style.background=bgColor;
   document.getElementById('project-name').value='';
   render();renderPanel();renderTimeline();renderResourceImages();renderGuides();closeFilDropdown();toast('Nyt projekt','ok');
@@ -1233,25 +1234,26 @@ function addAllPropKf(){
 }
 function addKfAtPlayhead(){addAllPropKf();}  // backwards compat
 function deletePropKf(){
-  if(!selPropKf)return;
-  const el=elements.find(x=>x.id===selPropKf.elId);
-  if(!el||!el.propTracks?.[selPropKf.prop])return;
+  if(!selPropKfs.length)return;
   saveState();
-  el.propTracks[selPropKf.prop].splice(selPropKf.kfIdx,1);
-  selPropKf=null;
+  const byTrack=new Map();
+  selPropKfs.forEach(({elId,prop,kfIdx})=>{const key=`${elId}:${prop}`;if(!byTrack.has(key))byTrack.set(key,{elId,prop,idxs:[]});byTrack.get(key).idxs.push(kfIdx);});
+  byTrack.forEach(({elId,prop,idxs})=>{const el=elements.find(x=>x.id===elId);if(!el?.propTracks?.[prop])return;idxs.sort((a,b)=>b-a);idxs.forEach(i=>el.propTracks[prop].splice(i,1));});
+  selPropKf=null;selPropKfs=[];
   renderTimeline();renderPanel();
 }
 function deleteSelKf(){deletePropKf();}  // backwards compat
 function updateSelKf(elId,prop){
   const el=elements.find(x=>x.id===elId);if(!el)return;
-  if(!selPropKf||selPropKf.elId!==elId||selPropKf.prop!==prop)return;
+  const relevant=selPropKfs.filter(k=>k.elId===elId&&k.prop===prop);
+  if(!relevant.length)return;
   const track=el.propTracks?.[prop];if(!track)return;
-  const kf=track[selPropKf.kfIdx];if(!kf)return;
+  const v=prop==='opacity'?(el.opacity??1):el[prop];
   saveState();
-  kf.v=prop==='opacity'?(el.opacity??1):el[prop];
+  relevant.forEach(({kfIdx})=>{const kf=track[kfIdx];if(kf)kf.v=v;});
   if(scrubTime!==null)applyScrubState();else render();
   renderTimeline();renderPanel();
-  toast(`KF ${prop.toUpperCase()} opdateret @ ${kf.t.toFixed(2)}s`,'ok');
+  toast(`KF ${prop.toUpperCase()} opdateret`,'ok');
 }
 function copySelKf(){
   if(!selPropKf)return;
@@ -1272,6 +1274,7 @@ function pastePropKf(){
   if(ei>=0)tr[ei].v=_kfClipboard.v;
   else{tr.push({t,v:_kfClipboard.v});tr.sort((a,b)=>a.t-b.t);}
   selPropKf={elId:el.id,prop:_kfClipboard.prop,kfIdx:tr.findIndex(k=>Math.abs(k.t-t)<0.002)};
+  selPropKfs=[selPropKf];
   if(!expandedLayers.has(el.id))expandedLayers.add(el.id);
   renderTimeline();renderPanel();
   toast('KF '+_kfClipboard.prop.toUpperCase()+' indsat @ '+t.toFixed(2)+'s','ok');
@@ -1295,7 +1298,7 @@ function _showKfCtxMenu(e,onCopy,onDelete){
 function _renderRibbonFormat(){
   const pane=document.getElementById('rb-format');if(!pane)return;
   if(selIds.length>1){
-    selPropKf=null;
+    selPropKf=null;selPropKfs=[];
     const _sels=elements.filter(x=>selIds.includes(x.id));
     const _gids=[...new Set(_sels.filter(x=>x.groupId).map(x=>x.groupId))];
     const _allSameGrp=_sels.every(x=>x.groupId)&&_gids.length===1;
@@ -1312,8 +1315,8 @@ function _renderRibbonFormat(){
     return;
   }
   const el=_elForRibbon();
-  if(!el){selPropKf=null;pane.innerHTML='<span class="cb-hint" style="padding:0 12px">Vælg et element for at redigere</span>';return;}
-  if(selPropKf&&selPropKf.elId!==el.id)selPropKf=null;
+  if(!el){selPropKf=null;selPropKfs=[];pane.innerHTML='<span class="cb-hint" style="padding:0 12px">Vælg et element for at redigere</span>';return;}
+  if(selPropKf&&selPropKf.elId!==el.id){selPropKf=null;selPropKfs=[];}
   const _apk=selPropKf?.elId===el.id?selPropKf:null;
   const _pkv=(prop)=>{if(!_apk||_apk.prop!==prop)return null;const pk=el.propTracks?.[prop]?.[_apk.kfIdx];return pk!=null?pk.v:null;};
   const kfXv=_pkv('x')??Math.round(el.x);
@@ -1818,7 +1821,7 @@ function render(){
     const brd=document.createElement('div');brd.className='el-border';div.appendChild(brd);
     const lk=document.createElement('div');lk.className='el-lock';lk.textContent='🔒';div.appendChild(lk);
     const db=document.createElement('div');db.className='el-del';db.textContent='×';
-    db.addEventListener('mousedown',e=>{e.stopPropagation();saveState();elements=elements.filter(x=>x.id!==el.id);selIds=[];selPropKf=null;render();renderPanel();});
+    db.addEventListener('mousedown',e=>{e.stopPropagation();saveState();elements=elements.filter(x=>x.id!==el.id);selIds=[];selPropKf=null;selPropKfs=[];render();renderPanel();});
     div.appendChild(db);
     if(isSel(el.id)&&!el.locked){
       ['rh-nw','rh-n','rh-ne','rh-w','rh-e','rh-sw','rh-s','rh-se'].forEach(cls=>{
@@ -2215,7 +2218,7 @@ canvas.addEventListener('mousedown',e=>{
   if(e.button===2)return;
   const r=canvas.getBoundingClientRect();
   const x=(e.clientX-r.left)/scale,y=(e.clientY-r.top)/scale;
-  if(tool==='select'){selIds=[];selPropKf=null;render();renderPanel();boxSel=true;boxStart={x,y};return;}
+  if(tool==='select'){selIds=[];selPropKf=null;selPropKfs=[];render();renderPanel();boxSel=true;boxStart={x,y};return;}
   let el;
   if(tool==='text')el=mkEl('text',{x:snap(x),y:snap(y)});
   if(tool==='rect')el=mkEl('rect',{x:snap(x),y:snap(y)});
@@ -2239,7 +2242,7 @@ function showCtx(e,el){
     <div class="ctx-sep"></div>
     ${el.groupId?`<div class="ctx-item" onclick="ungroupSel();hideCtx()">⊟ Opløs gruppe</div>`:(selIds.length>=2?`<div class="ctx-item" onclick="groupSel();hideCtx()">⊞ Gruppér valgte</div>`:`<div class="ctx-item ctx-disabled">⊞ Gruppér (vælg flere)</div>`)}
     <div class="ctx-sep"></div>
-    <div class="ctx-item danger" onclick="saveState();elements=elements.filter(x=>x.id!==${el.id});selIds=[];selPropKf=null;render();renderPanel();hideCtx()">Slet <span class="ctx-kbd">Del</span></div>
+    <div class="ctx-item danger" onclick="saveState();elements=elements.filter(x=>x.id!==${el.id});selIds=[];selPropKf=null;selPropKfs=[];render();renderPanel();hideCtx()">Slet <span class="ctx-kbd">Del</span></div>
   `;
   ctx.style.cssText=`display:block;left:${Math.min(e.clientX,window.innerWidth-170)}px;top:${Math.min(e.clientY,window.innerHeight-180)}px;`;
   selIds=[el.id];render();
@@ -2262,8 +2265,8 @@ document.addEventListener('keydown',e=>{
   }
   if(e.key==='g'||e.key==='G'){toggleGrid();return;}
   if(e.key==='Delete'||e.key==='Backspace'){
-    if(selPropKf){deletePropKf();return;}
-    if(selIds.length){saveState();elements=elements.filter(x=>!selIds.includes(x.id));selIds=[];selPropKf=null;render();renderPanel();return;}
+    if(selPropKfs.length){deletePropKf();return;}
+    if(selIds.length){saveState();elements=elements.filter(x=>!selIds.includes(x.id));selIds=[];selPropKf=null;selPropKfs=[];render();renderPanel();return;}
   }
   if(e.ctrlKey||e.metaKey){
     if(e.key==='z'){e.preventDefault();undo();return;}
@@ -2315,7 +2318,7 @@ document.addEventListener('keydown',e=>{
       _justDraggedSet.add(id);
     });render();renderPanel();
   }
-  if(e.key==='Escape'){selIds=[];selPropKf=null;render();renderPanel();}
+  if(e.key==='Escape'){selIds=[];selPropKf=null;selPropKfs=[];render();renderPanel();}
 });
 document.addEventListener('keyup',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){_arrowMoving=false;}});
 
@@ -2414,7 +2417,7 @@ function exportCanvasPNG(){
   const guides_el=document.getElementById('canvas-inner').querySelectorAll('.guide');
   guides_el.forEach(g=>g.style.display='none');
   const selBorder=document.getElementById('sel-box');if(selBorder)selBorder.style.display='none';
-  const prevSel=[...selIds];selIds=[];selPropKf=null;render();
+  const prevSel=[...selIds];selIds=[];selPropKf=null;selPropKfs=[];render();
   html2canvas(cvs,{
     scale:1920/cvs.offsetWidth,
     backgroundColor:bgColor==='transparent'?null:bgColor,
@@ -3816,7 +3819,7 @@ function loadProject(ev){
     groupAnimations=d.groupAnimations||{};
     if(d.projectName){document.getElementById('project-name').value=d.projectName;_addRecent(d.projectName);}
     if(d.tlFps){tlFps=d.tlFps;const sel=document.getElementById('tl-fps-sel');if(sel)sel.value=tlFps;}
-    canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];_dirty=false;selPropKf=null;
+    canvas.style.background=bgColor;selIds=[];undoStack=[];redoStack=[];_dirty=false;selPropKf=null;selPropKfs=[];
     // Migrate old keyframes → propTracks; ensure gradientStops
     elements.forEach(el=>{_migratePropTracks(el);if(el.gradientDir&&!el.gradientStops)el.gradientStops=_getStops(el);});
     projectImages=[];elements.forEach(el=>{if(el.type==='image'&&el.src&&!projectImages.find(i=>i.src===el.src))projectImages.push({src:el.src,name:el.name||'billede'});});
@@ -4748,7 +4751,7 @@ function renderTimeline(){
         const fmtV=pd.key==='opacity'?Math.round((curV??1)*100)+'%':Math.round(curV??0)+'px';
         const nameEl=document.createElement('span');nameEl.className='tl-prop-name';nameEl.style.color=pd.color;nameEl.textContent=pd.lbl;
         // If this prop's KF is selected → show editable input; otherwise plain text
-        const isSelProp=selPropKf?.elId===el.id&&selPropKf?.prop===pd.key;
+        const isSelProp=selPropKfs.length===1&&selPropKf?.elId===el.id&&selPropKf?.prop===pd.key;
         const selKfObj=isSelProp&&selPropKf.kfIdx>=0&&selPropKf.kfIdx<track.length?track[selPropKf.kfIdx]:null;
         if(selKfObj){
           const rawV=pd.key==='opacity'?Math.round(selKfObj.v*100):Math.round(selKfObj.v);
@@ -4780,7 +4783,7 @@ function renderTimeline(){
           pLbl.appendChild(nameEl);pLbl.appendChild(valEl);
         }
         const updBtn=document.createElement('button');
-        const isUpdActive=selPropKf?.elId===el.id&&selPropKf?.prop===pd.key&&selPropKf?.kfIdx>=0;
+        const isUpdActive=selPropKfs.some(k=>k.elId===el.id&&k.prop===pd.key);
         updBtn.className='tl-prop-upd'+(isUpdActive?' active':'');
         updBtn.title=isUpdActive?`Opdatér KF ${pd.lbl} med nuværende værdi`:`Vælg et KF for at opdatere`;
         updBtn.textContent='↻';
@@ -4795,36 +4798,55 @@ function renderTimeline(){
         // KF diamonds
         track.forEach((kf,kfIdx)=>{
           const kfX=Math.round(kf.t*pxPerS);
-          const isSel=selPropKf?.elId===el.id&&selPropKf?.prop===pd.key&&selPropKf?.kfIdx===kfIdx;
+          const isSel=selPropKfs.some(k=>k.elId===el.id&&k.prop===pd.key&&k.kfIdx===kfIdx);
           const d=document.createElement('div');
           d.className='tl-prop-kf'+(isSel?' sel':'');
           d.style.cssText=`left:${kfX-3.5}px;background:${pd.color};`;
           d.title=`KF ${pd.lbl} t=${kf.t.toFixed(2)}s = ${pd.key==='opacity'?Math.round(kf.v*100)+'%':Math.round(kf.v)+'px'}`;
           d.addEventListener('mousedown',e=>{
             e.stopPropagation();
-            selPropKf={elId:el.id,prop:pd.key,kfIdx};
+            const _entry={elId:el.id,prop:pd.key,kfIdx};
+            if(e.shiftKey){
+              const _ei=selPropKfs.findIndex(k=>k.elId===el.id&&k.prop===pd.key&&k.kfIdx===kfIdx);
+              if(_ei>=0)selPropKfs.splice(_ei,1);else selPropKfs.push(_entry);
+            }else{
+              selPropKfs=[_entry];
+            }
+            selPropKf=selPropKfs[0]||null;
             selIds=[el.id];render();renderPanel();
-            _shouldFocusKfEdit=true;renderTimeline();
-            scrubTo(kf.t);
-            let _kfDragMoved=false;
-            const sx=e.clientX,t0=kf.t;
+            _shouldFocusKfEdit=selPropKfs.length===1;renderTimeline();
+            if(selPropKfs.length===1)scrubTo(kf.t);
+            // Capture initial times for ALL selected KFs (multi-drag)
+            const _dragKfs=selPropKfs.map(sk=>{
+              const _el=elements.find(x=>x.id===sk.elId);
+              const _tr=_el?.propTracks?.[sk.prop];
+              const _obj=_tr?.[sk.kfIdx];
+              return _obj?{ref:sk,obj:_obj,tr:_tr,t0:_obj.t}:null;
+            }).filter(Boolean);
+            const _sx=e.clientX;
             const mv=ev=>{
-              _kfDragMoved=true;
-              kf.t=Math.max(0,parseFloat((t0+(ev.clientX-sx)/pxPerS).toFixed(3)));
-              track.sort((a,b)=>a.t-b.t);
-              selPropKf={elId:el.id,prop:pd.key,kfIdx:track.indexOf(kf)};
-              renderTimeline();scrubTo(kf.t);
+              const dt=(ev.clientX-_sx)/pxPerS;
+              _dragKfs.forEach(dk=>{
+                dk.obj.t=Math.max(0,parseFloat((dk.t0+dt).toFixed(3)));
+                dk.tr.sort((a,b)=>a.t-b.t);
+                dk.ref.kfIdx=dk.tr.indexOf(dk.obj);
+              });
+              selPropKf=selPropKfs[0]||null;
+              renderTimeline();
+              if(_dragKfs.length===1)scrubTo(_dragKfs[0].obj.t);
             };
             const up=()=>{saveState();document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
             document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
           });
           d.addEventListener('contextmenu',e=>{
             e.preventDefault();e.stopPropagation();
-            selPropKf={elId:el.id,prop:pd.key,kfIdx};selIds=[el.id];
+            if(!e.shiftKey){selPropKfs=[{elId:el.id,prop:pd.key,kfIdx}];}
+            else if(!selPropKfs.some(k=>k.elId===el.id&&k.prop===pd.key&&k.kfIdx===kfIdx)){selPropKfs.push({elId:el.id,prop:pd.key,kfIdx});}
+            selPropKf=selPropKfs[0]||null;selIds=[el.id];
             renderTimeline();renderPanel();
             _showKfCtxMenu(e,
               ()=>{_kfClipboard={prop:pd.key,v:kf.v};toast('KF '+pd.lbl+' kopieret','ok');},
-              ()=>{saveState();track.splice(kfIdx,1);if(selPropKf?.elId===el.id&&selPropKf?.prop===pd.key&&selPropKf?.kfIdx===kfIdx)selPropKf=null;renderTimeline();renderPanel();}
+              ()=>{deletePropKf();}
             );
           });
           pRow.appendChild(d);
@@ -4876,7 +4898,7 @@ function loadPreset(){
   else if(t==='smart_ticker'){const s=smartTickerSettings;elements=[mkEl('rect',{x:0,y:1022,w:1920,h:58,bgColor:s.normalBg,animation:'none',name:'Ticker bar',spxField:false}),mkEl('rect',{x:0,y:1022,w:218,h:58,bgColor:s.normalLabelBg,animation:'none',name:'Label baggrund',spxField:false}),mkEl('text',{x:14,y:1030,w:190,h:42,text:s.normalLabelText,fontSize:19,fontWeight:'700',fontFamily:'Oswald',color:s.normalTextColor,animation:'none',spxField:false,name:'Label tekst'}),mkEl('ticker',{x:238,y:1022,w:1660,h:58,text:'Første nyhed  •  Anden nyhed  •  Tredje nyhed',fontSize:23,fontWeight:'400',color:s.normalTextColor,bgColor:'transparent',animation:'none',spxField:false,name:'Ticker tekst',tickerSpeed:120,tickerSep:'  •  '})];}
   else if(t==='credit'){elements=[mkEl('text',{x:760,y:490,w:400,h:36,text:'En produktion af',fontSize:22,fontWeight:'300',color:'rgba(255,255,255,0.5)',animation:'fade',animDelay:0,spxField:false,name:'Undertitel'}),mkEl('rect',{x:760,y:532,w:400,h:3,bgColor:'#e8593c',animation:'wipe',animDelay:0.12,name:'Linje',spxField:false}),mkEl('text',{x:720,y:544,w:480,h:72,text:'Studio Navn',fontSize:54,fontWeight:'700',animation:'slide-up',animDelay:0.22,spxField:true,fieldLabel:'Firma / navn',name:'Hovednavn'})];}
   else{elements=[mkEl('text',{x:120,y:398,w:1680,h:130,text:'STOR OVERSKRIFT',fontSize:100,fontWeight:'700',fontFamily:'Oswald',animation:'slide-up',animDelay:0,spxField:true,fieldLabel:'Overskrift',name:'Overskrift'}),mkEl('rect',{x:120,y:548,w:180,h:6,bgColor:'#e8593c',animation:'wipe',animDelay:0.18,name:'Accent linje',spxField:false}),mkEl('text',{x:120,y:564,w:1300,h:56,text:'Underoverskrift eller ingress',fontSize:36,fontWeight:'300',color:'rgba(255,255,255,0.65)',animation:'fade',animDelay:0.32,spxField:true,fieldLabel:'Undertekst',name:'Undertekst'})];}
-  bgColor='transparent';selIds=[];selPropKf=null;canvas.style.background=bgColor;previewBreaking=false;render();renderPanel();renderTimeline();updSmartTickerUI();toast('Preset indlæst');
+  bgColor='transparent';selIds=[];selPropKf=null;selPropKfs=[];canvas.style.background=bgColor;previewBreaking=false;render();renderPanel();renderTimeline();updSmartTickerUI();toast('Preset indlæst');
 }
 
 function exportSmartTicker(){
@@ -5141,7 +5163,7 @@ function showImportModal(imported,importedBg,filename,warnings,spxCount){
   modal.classList.add('open');
 }
 
-function applyImport(els,bg){saveState();elements=els;bgColor=bg;canvas.style.background=bgColor;selIds=[];selPropKf=null;document.getElementById('import-modal').classList.remove('open');render();renderPanel();renderTimeline();toast(`${els.length} elementer indlæst`,'ok');}
+function applyImport(els,bg){saveState();elements=els;bgColor=bg;canvas.style.background=bgColor;selIds=[];selPropKf=null;selPropKfs=[];document.getElementById('import-modal').classList.remove('open');render();renderPanel();renderTimeline();toast(`${els.length} elementer indlæst`,'ok');}
 document.getElementById('import-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 document.getElementById('help-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 
