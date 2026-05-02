@@ -4805,10 +4805,12 @@ function renderTimeline(){
           d.addEventListener('mousedown',e=>{
             e.stopPropagation();
             const _entry={elId:el.id,prop:pd.key,kfIdx};
+            const _alreadySel=selPropKfs.some(k=>k.elId===el.id&&k.prop===pd.key&&k.kfIdx===kfIdx);
             if(e.shiftKey){
               const _ei=selPropKfs.findIndex(k=>k.elId===el.id&&k.prop===pd.key&&k.kfIdx===kfIdx);
               if(_ei>=0)selPropKfs.splice(_ei,1);else selPropKfs.push(_entry);
-            }else{
+            }else if(!_alreadySel){
+              // Only reset selection if clicking on a KF that isn't already selected
               selPropKfs=[_entry];
             }
             selPropKf=selPropKfs[0]||null;
