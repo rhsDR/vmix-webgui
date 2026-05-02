@@ -1204,7 +1204,7 @@ function _captureKf(el,t){
 }
 function addPropKf(prop){
   const el=elements.find(x=>x.id===selIds[0]);if(!el)return;
-  const t=parseFloat((scrubTime??0).toFixed(3));
+  const t=_snapFrame(scrubTime??0);
   if(!el.propTracks)el.propTracks={x:[],y:[],w:[],h:[],opacity:[]};
   const track=el.propTracks[prop];if(!track)return;
   saveState();
@@ -1218,7 +1218,7 @@ function addPropKf(prop){
 }
 function addAllPropKf(){
   const el=elements.find(x=>x.id===selIds[0]);if(!el)return;
-  const t=parseFloat((scrubTime??0).toFixed(3));
+  const t=_snapFrame(scrubTime??0);
   if(!el.propTracks)el.propTracks={x:[],y:[],w:[],h:[],opacity:[]};
   saveState();
   ['x','y','w','h','opacity'].forEach(prop=>{
@@ -1266,7 +1266,7 @@ function copySelKf(){
 function pastePropKf(){
   if(!_kfClipboard||!selIds.length)return;
   const el=elements.find(x=>x.id===selIds[0]);if(!el)return;
-  const t=parseFloat((scrubTime??0).toFixed(3));
+  const t=_snapFrame(scrubTime??0);
   if(!el.propTracks)el.propTracks={x:[],y:[],w:[],h:[],opacity:[]};
   const tr=el.propTracks[_kfClipboard.prop];if(!tr)return;
   saveState();
@@ -1562,6 +1562,7 @@ function _groupColor(gid){const p=['#3b82f6','#22c55e','#f59e0b','#a855f7','#e85
 const _EL_PALETTE=['#3b82f6','#22c55e','#f59e0b','#a855f7','#06b6d4','#f97316','#ec4899','#84cc16','#14b8a6','#8b5cf6','#6366f1','#64748b'];
 function _elColor(el){return el.groupId?_groupColor(el.groupId):_EL_PALETTE[el.id%_EL_PALETTE.length];}
 // --- Per-property keyframe system ---
+function _snapFrame(t){return Math.round(t*tlFps)/tlFps;}
 function _migratePropTracks(el){
   if(el.propTracks)return;
   el.propTracks={x:[],y:[],w:[],h:[],opacity:[]};
@@ -4652,7 +4653,7 @@ function renderTimeline(){
     row.addEventListener('dblclick',e=>{
       if(e.target.closest('.tl-bar'))return;
       const rx=row.getBoundingClientRect();
-      const kfTime=Math.max(0,parseFloat(((e.clientX-rx.left)/pxPerS).toFixed(3)));
+      const kfTime=Math.max(0,_snapFrame((e.clientX-rx.left)/pxPerS));
       selIds=[el.id];
       scrubTo(kfTime);
       addAllPropKf();
@@ -4828,7 +4829,7 @@ function renderTimeline(){
             const mv=ev=>{
               const dt=(ev.clientX-_sx)/pxPerS;
               _dragKfs.forEach(dk=>{
-                dk.obj.t=Math.max(0,parseFloat((dk.t0+dt).toFixed(3)));
+                dk.obj.t=Math.max(0,_snapFrame(dk.t0+dt));
                 dk.tr.sort((a,b)=>a.t-b.t);
                 dk.ref.kfIdx=dk.tr.indexOf(dk.obj);
               });
