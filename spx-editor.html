@@ -1142,7 +1142,7 @@ function loadRecentProject(idx){
 }
 function newProject(){
   if(_dirty&&!confirm('Nyt projekt?\n\nDu har ikke-gemte ændringer — de vil gå tabt.'))return;
-  saveState();elements=[];selIds=[];bgColor='transparent';elCtr=0;groupAnimations={};expandedGroups=new Set();_dirty=false;projectImages=[];guides=[];
+  saveState();elements=[];selIds=[];selPropKf=null;bgColor='transparent';elCtr=0;groupAnimations={};expandedGroups=new Set();_dirty=false;projectImages=[];guides=[];
   canvas.style.background=bgColor;
   document.getElementById('project-name').value='';
   render();renderPanel();renderTimeline();renderResourceImages();renderGuides();closeFilDropdown();toast('Nyt projekt','ok');
@@ -1817,7 +1817,7 @@ function render(){
     const brd=document.createElement('div');brd.className='el-border';div.appendChild(brd);
     const lk=document.createElement('div');lk.className='el-lock';lk.textContent='🔒';div.appendChild(lk);
     const db=document.createElement('div');db.className='el-del';db.textContent='×';
-    db.addEventListener('mousedown',e=>{e.stopPropagation();saveState();elements=elements.filter(x=>x.id!==el.id);selIds=[];render();renderPanel();});
+    db.addEventListener('mousedown',e=>{e.stopPropagation();saveState();elements=elements.filter(x=>x.id!==el.id);selIds=[];selPropKf=null;render();renderPanel();});
     div.appendChild(db);
     if(isSel(el.id)&&!el.locked){
       ['rh-nw','rh-n','rh-ne','rh-w','rh-e','rh-sw','rh-s','rh-se'].forEach(cls=>{
@@ -2193,8 +2193,8 @@ document.addEventListener('mouseup',()=>{
   const wasDragging=dragging;
   const wasResizing=resizing;const wasResEl=resEl;
   dragging=false;resizing=false;resEl=null;
-  if(wasDragging){dragOff.forEach(o=>{const dx=o.el.x-o.sx,dy=o.el.y-o.sy;if(scrubTime!==null&&_hasPropKfs(o.el)){_upsertKf(o.el,'x',scrubTime,o.el.x);_upsertKf(o.el,'y',scrubTime,o.el.y);}else{if(o.kfX?.length&&o.el.propTracks?.x?.length)o.el.propTracks.x.forEach((k,i)=>{if(o.kfX[i]!=null)k.v=o.kfX[i]+dx;});if(o.kfY?.length&&o.el.propTracks?.y?.length)o.el.propTracks.y.forEach((k,i)=>{if(o.kfY[i]!=null)k.v=o.kfY[i]+dy;});}});render();renderPanel();}
-  if(wasResizing&&wasResEl&&scrubTime!==null&&_hasPropKfs(wasResEl)){_upsertKf(wasResEl,'x',scrubTime,wasResEl.x);_upsertKf(wasResEl,'y',scrubTime,wasResEl.y);_upsertKf(wasResEl,'w',scrubTime,wasResEl.w);_upsertKf(wasResEl,'h',scrubTime,wasResEl.h);render();renderPanel();}
+  if(wasDragging){render();renderPanel();}
+  if(wasResizing&&wasResEl){render();renderPanel();}
   if(boxSel){boxSel=false;document.getElementById('sel-box').style.display='none';render();renderPanel();}
 });
 canvas.addEventListener('mousedown',e=>{
@@ -2205,7 +2205,7 @@ canvas.addEventListener('mousedown',e=>{
   if(e.button===2)return;
   const r=canvas.getBoundingClientRect();
   const x=(e.clientX-r.left)/scale,y=(e.clientY-r.top)/scale;
-  if(tool==='select'){selIds=[];render();renderPanel();boxSel=true;boxStart={x,y};return;}
+  if(tool==='select'){selIds=[];selPropKf=null;render();renderPanel();boxSel=true;boxStart={x,y};return;}
   let el;
   if(tool==='text')el=mkEl('text',{x:snap(x),y:snap(y)});
   if(tool==='rect')el=mkEl('rect',{x:snap(x),y:snap(y)});
@@ -2229,7 +2229,7 @@ function showCtx(e,el){
     <div class="ctx-sep"></div>
     ${el.groupId?`<div class="ctx-item" onclick="ungroupSel();hideCtx()">⊟ Opløs gruppe</div>`:(selIds.length>=2?`<div class="ctx-item" onclick="groupSel();hideCtx()">⊞ Gruppér valgte</div>`:`<div class="ctx-item ctx-disabled">⊞ Gruppér (vælg flere)</div>`)}
     <div class="ctx-sep"></div>
-    <div class="ctx-item danger" onclick="saveState();elements=elements.filter(x=>x.id!==${el.id});selIds=[];render();renderPanel();hideCtx()">Slet <span class="ctx-kbd">Del</span></div>
+    <div class="ctx-item danger" onclick="saveState();elements=elements.filter(x=>x.id!==${el.id});selIds=[];selPropKf=null;render();renderPanel();hideCtx()">Slet <span class="ctx-kbd">Del</span></div>
   `;
   ctx.style.cssText=`display:block;left:${Math.min(e.clientX,window.innerWidth-170)}px;top:${Math.min(e.clientY,window.innerHeight-180)}px;`;
   selIds=[el.id];render();
@@ -2253,7 +2253,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='g'||e.key==='G'){toggleGrid();return;}
   if(e.key==='Delete'||e.key==='Backspace'){
     if(selPropKf){deletePropKf();return;}
-    if(selIds.length){saveState();elements=elements.filter(x=>!selIds.includes(x.id));selIds=[];render();renderPanel();return;}
+    if(selIds.length){saveState();elements=elements.filter(x=>!selIds.includes(x.id));selIds=[];selPropKf=null;render();renderPanel();return;}
   }
   if(e.ctrlKey||e.metaKey){
     if(e.key==='z'){e.preventDefault();undo();return;}
@@ -2298,7 +2298,7 @@ document.addEventListener('keydown',e=>{
   }
   if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)&&selIds.length){
     e.preventDefault();const step=e.shiftKey?10:1;
-    if(!_arrowMoving){saveState();_arrowMoving=true;_arrowStart={};selIds.forEach(id=>{const _ae=elements.find(x=>x.id===id);if(_ae)_arrowStart[id]={x:_ae.x,y:_ae.y,kfX:(_ae.propTracks?.x||[]).map(k=>k.v),kfY:(_ae.propTracks?.y||[]).map(k=>k.v)};});}
+    if(!_arrowMoving){saveState();_arrowMoving=true;}
     selIds.forEach(id=>{const el=elements.find(x=>x.id===id);if(!el||el.locked)return;
       if(e.key==='ArrowLeft')el.x-=step;if(e.key==='ArrowRight')el.x+=step;
       if(e.key==='ArrowUp')el.y-=step;if(e.key==='ArrowDown')el.y+=step;
@@ -2306,7 +2306,7 @@ document.addEventListener('keydown',e=>{
   }
   if(e.key==='Escape'){selIds=[];selPropKf=null;render();renderPanel();}
 });
-document.addEventListener('keyup',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){if(_arrowMoving){selIds.forEach(id=>{const _ae=elements.find(x=>x.id===id);const _s=_arrowStart[id];if(!_ae||!_s)return;const dx=_ae.x-_s.x,dy=_ae.y-_s.y;if(_s.kfX?.length&&_ae.propTracks?.x?.length)_ae.propTracks.x.forEach((k,i)=>{if(_s.kfX[i]!=null)k.v=_s.kfX[i]+dx;});if(_s.kfY?.length&&_ae.propTracks?.y?.length)_ae.propTracks.y.forEach((k,i)=>{if(_s.kfY[i]!=null)k.v=_s.kfY[i]+dy;});});_arrowStart={};}  _arrowMoving=false;}});
+document.addEventListener('keyup',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){_arrowMoving=false;}});
 
 function setTool(t){
   tool=t;
@@ -2403,7 +2403,7 @@ function exportCanvasPNG(){
   const guides_el=document.getElementById('canvas-inner').querySelectorAll('.guide');
   guides_el.forEach(g=>g.style.display='none');
   const selBorder=document.getElementById('sel-box');if(selBorder)selBorder.style.display='none';
-  const prevSel=[...selIds];selIds=[];render();
+  const prevSel=[...selIds];selIds=[];selPropKf=null;render();
   html2canvas(cvs,{
     scale:1920/cvs.offsetWidth,
     backgroundColor:bgColor==='transparent'?null:bgColor,
@@ -4865,7 +4865,7 @@ function loadPreset(){
   else if(t==='smart_ticker'){const s=smartTickerSettings;elements=[mkEl('rect',{x:0,y:1022,w:1920,h:58,bgColor:s.normalBg,animation:'none',name:'Ticker bar',spxField:false}),mkEl('rect',{x:0,y:1022,w:218,h:58,bgColor:s.normalLabelBg,animation:'none',name:'Label baggrund',spxField:false}),mkEl('text',{x:14,y:1030,w:190,h:42,text:s.normalLabelText,fontSize:19,fontWeight:'700',fontFamily:'Oswald',color:s.normalTextColor,animation:'none',spxField:false,name:'Label tekst'}),mkEl('ticker',{x:238,y:1022,w:1660,h:58,text:'Første nyhed  •  Anden nyhed  •  Tredje nyhed',fontSize:23,fontWeight:'400',color:s.normalTextColor,bgColor:'transparent',animation:'none',spxField:false,name:'Ticker tekst',tickerSpeed:120,tickerSep:'  •  '})];}
   else if(t==='credit'){elements=[mkEl('text',{x:760,y:490,w:400,h:36,text:'En produktion af',fontSize:22,fontWeight:'300',color:'rgba(255,255,255,0.5)',animation:'fade',animDelay:0,spxField:false,name:'Undertitel'}),mkEl('rect',{x:760,y:532,w:400,h:3,bgColor:'#e8593c',animation:'wipe',animDelay:0.12,name:'Linje',spxField:false}),mkEl('text',{x:720,y:544,w:480,h:72,text:'Studio Navn',fontSize:54,fontWeight:'700',animation:'slide-up',animDelay:0.22,spxField:true,fieldLabel:'Firma / navn',name:'Hovednavn'})];}
   else{elements=[mkEl('text',{x:120,y:398,w:1680,h:130,text:'STOR OVERSKRIFT',fontSize:100,fontWeight:'700',fontFamily:'Oswald',animation:'slide-up',animDelay:0,spxField:true,fieldLabel:'Overskrift',name:'Overskrift'}),mkEl('rect',{x:120,y:548,w:180,h:6,bgColor:'#e8593c',animation:'wipe',animDelay:0.18,name:'Accent linje',spxField:false}),mkEl('text',{x:120,y:564,w:1300,h:56,text:'Underoverskrift eller ingress',fontSize:36,fontWeight:'300',color:'rgba(255,255,255,0.65)',animation:'fade',animDelay:0.32,spxField:true,fieldLabel:'Undertekst',name:'Undertekst'})];}
-  bgColor='transparent';selIds=[];canvas.style.background=bgColor;previewBreaking=false;render();renderPanel();renderTimeline();updSmartTickerUI();toast('Preset indlæst');
+  bgColor='transparent';selIds=[];selPropKf=null;canvas.style.background=bgColor;previewBreaking=false;render();renderPanel();renderTimeline();updSmartTickerUI();toast('Preset indlæst');
 }
 
 function exportSmartTicker(){
@@ -5130,7 +5130,7 @@ function showImportModal(imported,importedBg,filename,warnings,spxCount){
   modal.classList.add('open');
 }
 
-function applyImport(els,bg){saveState();elements=els;bgColor=bg;canvas.style.background=bgColor;selIds=[];document.getElementById('import-modal').classList.remove('open');render();renderPanel();renderTimeline();toast(`${els.length} elementer indlæst`,'ok');}
+function applyImport(els,bg){saveState();elements=els;bgColor=bg;canvas.style.background=bgColor;selIds=[];selPropKf=null;document.getElementById('import-modal').classList.remove('open');render();renderPanel();renderTimeline();toast(`${els.length} elementer indlæst`,'ok');}
 document.getElementById('import-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 document.getElementById('help-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 
