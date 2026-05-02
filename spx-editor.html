@@ -1829,13 +1829,12 @@ function render(){
         rh.addEventListener('mousedown',e=>{
           e.stopPropagation();resizing=true;resEl=el;
           resHandle=cls.split('-')[1];
-          if(scrubTime!==null&&_hasPropKfs(el)){
+          if(scrubTime!==null&&_hasPropKfs(el)&&!_justDraggedSet.has(el.id)){
             const pt=el.propTracks;const t=scrubTime;
             const _vx=_interpTrack(pt.x,t);const _vy=_interpTrack(pt.y,t);
             const _vw=_interpTrack(pt.w,t);const _vh=_interpTrack(pt.h,t);
             if(_vx!=null)el.x=_vx;if(_vy!=null)el.y=_vy;
             if(_vw!=null)el.w=_vw;if(_vh!=null)el.h=_vh;
-            _justDraggedSet.add(el.id);
           }
           resStart={mx:e.clientX,my:e.clientY,w:el.w,h:el.h,x:el.x,y:el.y,aspect:el.w/el.h};saveState();
         });
@@ -1863,7 +1862,7 @@ function render(){
       render();renderPanel();
       dragging=true;
       saveState();
-      dragOff=selIds.map(id=>{const e2=elements.find(x=>x.id===id);const dv=canvas.querySelector(`.el[data-id="${id}"]`);const vx=(scrubTime!==null&&e2.propTracks?.x?.length)?(_interpTrack(e2.propTracks.x,scrubTime)??e2.x):e2.x;const vy=(scrubTime!==null&&e2.propTracks?.y?.length)?(_interpTrack(e2.propTracks.y,scrubTime)??e2.y):e2.y;e2.x=vx;e2.y=vy;return{id,ox:e.clientX/scale-vx,oy:e.clientY/scale-vy,el:e2,div:dv,sx:vx,sy:vy};});
+      dragOff=selIds.map(id=>{const e2=elements.find(x=>x.id===id);const dv=canvas.querySelector(`.el[data-id="${id}"]`);const _useInterp=scrubTime!==null&&!_justDraggedSet.has(e2.id);const vx=(_useInterp&&e2.propTracks?.x?.length)?(_interpTrack(e2.propTracks.x,scrubTime)??e2.x):e2.x;const vy=(_useInterp&&e2.propTracks?.y?.length)?(_interpTrack(e2.propTracks.y,scrubTime)??e2.y):e2.y;e2.x=vx;e2.y=vy;return{id,ox:e.clientX/scale-vx,oy:e.clientY/scale-vy,el:e2,div:dv,sx:vx,sy:vy};});
     });
     div.addEventListener('contextmenu',e=>{e.preventDefault();showCtx(e,el);});
     canvas.appendChild(div);
