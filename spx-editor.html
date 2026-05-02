@@ -248,6 +248,9 @@ input[type=color].pc{width:28px;height:26px;border:1px solid var(--border2);bord
 .tl-prop-val{color:var(--text2);font-family:var(--mono);font-size:9px;flex:1;min-width:0;overflow:hidden;}
 .tl-prop-add{width:14px;height:14px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:11px;margin-left:auto;border-radius:2px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;line-height:1;}
 .tl-prop-add:hover{color:var(--accent);background:var(--surface3);}
+.tl-prop-upd{width:14px;height:14px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:10px;border-radius:2px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;line-height:1;opacity:.4;}
+.tl-prop-upd.active{opacity:1;color:#f59e0b;}
+.tl-prop-upd:hover{background:var(--surface3);opacity:1;}
 .tl-prop-kf{position:absolute;width:7px;height:7px;top:calc(50% - 3.5px);transform:rotate(45deg);cursor:pointer;z-index:4;border:1.5px solid rgba(0,0,0,.4);border-radius:1px;transition:filter .1s;}
 .tl-prop-kf:hover{filter:brightness(1.5);}
 .tl-prop-kf.sel{border-color:#fff;outline:2px solid var(--accent);outline-offset:2px;}
@@ -1207,9 +1210,8 @@ function addPropKf(prop){
   const ei=track.findIndex(k=>Math.abs(k.t-t)<0.002);
   if(ei>=0)track[ei].v=v;
   else{track.push({t,v});track.sort((a,b)=>a.t-b.t);}
-  selPropKf={elId:el.id,prop,kfIdx:track.findIndex(k=>Math.abs(k.t-t)<0.002)};
   if(!expandedLayers.has(el.id))expandedLayers.add(el.id);
-  _shouldFocusKfEdit=true;renderTimeline();renderPanel();
+  renderTimeline();renderPanel();
   toast(`KF ${prop.toUpperCase()} @ ${t.toFixed(2)}s`,'ok');
 }
 function addAllPropKf(){
@@ -1239,6 +1241,17 @@ function deletePropKf(){
   renderTimeline();renderPanel();
 }
 function deleteSelKf(){deletePropKf();}  // backwards compat
+function updateSelKf(elId,prop){
+  const el=elements.find(x=>x.id===elId);if(!el)return;
+  if(!selPropKf||selPropKf.elId!==elId||selPropKf.prop!==prop)return;
+  const track=el.propTracks?.[prop];if(!track)return;
+  const kf=track[selPropKf.kfIdx];if(!kf)return;
+  saveState();
+  kf.v=prop==='opacity'?(el.opacity??1):el[prop];
+  if(scrubTime!==null)applyScrubState();else render();
+  renderTimeline();renderPanel();
+  toast(`KF ${prop.toUpperCase()} opdateret @ ${kf.t.toFixed(2)}s`,'ok');
+}
 function copySelKf(){
   if(!selPropKf)return;
   const el=elements.find(x=>x.id===selPropKf.elId);
@@ -4755,7 +4768,14 @@ function renderTimeline(){
           const valEl=document.createElement('span');valEl.className='tl-prop-val';valEl.textContent=fmtV;
           pLbl.appendChild(nameEl);pLbl.appendChild(valEl);
         }
-        const addBtn=document.createElement('button');addBtn.className='tl-prop-add';addBtn.title=`KF ${pd.lbl} @ scrub`;addBtn.textContent='+';
+        const updBtn=document.createElement('button');
+        const isUpdActive=selPropKf?.elId===el.id&&selPropKf?.prop===pd.key&&selPropKf?.kfIdx>=0;
+        updBtn.className='tl-prop-upd'+(isUpdActive?' active':'');
+        updBtn.title=isUpdActive?`Opdatér KF ${pd.lbl} med nuværende værdi`:`Vælg et KF for at opdatere`;
+        updBtn.textContent='↻';
+        updBtn.onclick=e=>{e.stopPropagation();updateSelKf(el.id,pd.key);};
+        pLbl.appendChild(updBtn);
+        const addBtn=document.createElement('button');addBtn.className='tl-prop-add';addBtn.title=`Sæt KF ${pd.lbl} @ scrub`;addBtn.textContent='+';
         addBtn.onclick=e=>{e.stopPropagation();selIds=[el.id];addPropKf(pd.key);};
         pLbl.appendChild(addBtn);
         labels.appendChild(pLbl);
