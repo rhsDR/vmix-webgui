@@ -173,7 +173,27 @@ export default async function handler(req, res) {
   const token    = process.env.ENETPULSE_TOKEN;
   if (!username || !token) return res.status(503).json({ error: 'enetpulse credentials ikke konfigureret' });
 
-  const { date, ids } = req.query;
+  const { date, ids, debug } = req.query;
+
+  // ── DEBUG: rå enetpulse JSON for første event ─────────────────
+  if (date && debug === '1') {
+    try {
+      const url = `${EAPI_BASE}/event/daily/?sportFK=1&date=${encodeURIComponent(date)}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
+      const raw = await fetch(url).then(r => r.json());
+      const evList = Object.values(raw?.events || {});
+      const sample = evList[0] || null;
+      return res.status(200).json({
+        total_events: evList.length,
+        sample_event_keys: sample ? Object.keys(sample) : [],
+        sample_participants: sample?.event_participants
+          ? Object.values(sample.event_participants).slice(0, 2)
+          : [],
+        sample_event: sample
+      });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
 
   // ── DAGLIG KAMPLISTE (med Supabase-cache) ─────────────────────
   if (date) {
