@@ -1884,11 +1884,11 @@ function renderLiveCard(m) {
       </div>
       <div class="live-events">${eventsHtml}</div>
       ${renderStats(m.stats)}
-      ${renderLineup(m.lineup)}
+      ${renderLineup(m.lineup, m.home, m.away)}
     </div>`;
 }
 
-function renderLineup(lineup) {
+function renderLineup(lineup, homeName, awayName) {
   if (!lineup) return '';
   const home = lineup.home || [];
   const away = lineup.away || [];
@@ -1906,7 +1906,7 @@ function renderLineup(lineup) {
       </div>`;
   }
 
-  return `<div class="live-lineup">${side(home, 'Hjemme')}${side(away, 'Ude')}</div>`;
+  return `<div class="live-lineup">${side(home, homeName || 'Hjemme')}${side(away, awayName || 'Ude')}</div>`;
 }
 
 // ── REALTIME ──────────────────────────────────────────────────

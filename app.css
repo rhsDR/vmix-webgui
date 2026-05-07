@@ -131,12 +131,12 @@
       gap: 2px;
     }
     .live-team-name {
-      font-size: 16px;
+      font-size: 20px;
       font-weight: 700;
       color: #e5e5e5;
     }
     .live-team-kort {
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 600;
       color: #555;
       letter-spacing: 1px;
@@ -144,7 +144,7 @@
     }
     .live-team.away { text-align: right; align-items: flex-end; }
     .live-score {
-      font-size: 26px;
+      font-size: 36px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       letter-spacing: 4px;
@@ -155,7 +155,7 @@
     .live-status {
       text-align: center;
       margin-top: 6px;
-      font-size: 11px;
+      font-size: 14px;
       font-weight: 700;
       letter-spacing: 1px;
     }
@@ -165,7 +165,7 @@
     .live-status.ns      { color: #555; }
     .live-league {
       text-align: center;
-      font-size: 10px;
+      font-size: 13px;
       color: #444;
       letter-spacing: 1px;
       margin-top: 3px;
@@ -186,7 +186,7 @@
     }
     .live-event:last-child { border-bottom: none; }
     .live-event-min {
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 700;
       color: #555;
       min-width: 32px;
@@ -208,8 +208,8 @@
     .live-event-icon.sub   { background: transparent; border: none; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
     .live-event-icon.sub::before { content: '▲'; font-size: 8px; color: var(--green); line-height: 1; }
     .live-event-icon.sub::after  { content: '▼'; font-size: 8px; color: var(--red);   line-height: 1; }
-    .live-event-name { flex: 1; white-space: normal; word-break: break-word; }
-    .live-event-assist { color: #555; font-size: 13px; }
+    .live-event-name { flex: 1; white-space: normal; word-break: break-word; font-size: 14px; }
+    .live-event-assist { color: #555; font-size: 14px; }
     .live-event.away { flex-direction: row-reverse; }
     .live-event.away .live-event-name { text-align: right; }
     .live-no-fixtures {
@@ -228,7 +228,7 @@
       align-items: center;
       gap: 8px;
       margin-bottom: 8px;
-      font-size: 12px;
+      font-size: 14px;
     }
     .live-stat-row:last-child { margin-bottom: 0; }
     .live-stat-val {
@@ -275,7 +275,7 @@
     }
     .lu-side:first-child { border-right: 1px solid #1e1e1e; }
     .lu-side-title {
-      font-size: 10px;
+      font-size: 13px;
       font-weight: 700;
       letter-spacing: 2px;
       color: var(--orange);
@@ -289,12 +289,12 @@
       align-items: center;
       gap: 8px;
       padding: 3px 0;
-      font-size: 12px;
+      font-size: 14px;
       color: #ccc;
     }
-    .lu-sub { color: #555; font-size: 11px; }
+    .lu-sub { color: #555; font-size: 13px; }
     .lu-shirt {
-      font-size: 11px;
+      font-size: 13px;
       color: #444;
       min-width: 20px;
       text-align: right;
@@ -303,7 +303,7 @@
     }
     .lu-player:not(.lu-sub) .lu-shirt { color: #666; }
     .lu-pos {
-      font-size: 9px;
+      font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.5px;
       color: #444;
@@ -315,7 +315,7 @@
     }
     .lu-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .lu-sub-divider {
-      font-size: 9px;
+      font-size: 11px;
       letter-spacing: 2px;
       color: #333;
       text-transform: uppercase;
