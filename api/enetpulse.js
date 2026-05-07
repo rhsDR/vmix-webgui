@@ -208,18 +208,25 @@ function normalizeEventDetails(raw, id) {
   mappedEvents.sort((a, b) => (parseInt(a.minute) || 0) - (parseInt(b.minute) || 0));
 
   // Startopstillinger
+  // lineup_typeFK: 1=GK 2=DEF 3=MID 4=FWD (startere), 5=bænk, 7/8=ikke disp., 10=træner
   const lineup = { home: [], away: [] };
   for (const part of parts) {
     const side    = String(part.number) === '1' ? 'home' : 'away';
     const entries = part.lineup ? Object.values(part.lineup) : [];
     for (const e of entries) {
+      const typeFK = parseInt(e.lineup_typeFK || 0);
+      if (typeFK === 10 || typeFK === 0) continue; // spring træner og ukendte over
       lineup[side].push({
         name:    e.participant?.name || '',
         shirt:   e.shirt_number || '',
-        starter: String(e.type_typeFK) === '1'
+        enetPos: parseInt(e.enet_pos || 99),
+        starter: typeFK >= 1 && typeFK <= 4
       });
     }
-    lineup[side].sort((a, b) => parseInt(a.shirt || 99) - parseInt(b.shirt || 99));
+    lineup[side].sort((a, b) => {
+      if (a.starter !== b.starter) return a.starter ? -1 : 1;
+      return a.enetPos - b.enetPos;
+    });
   }
 
   return {
