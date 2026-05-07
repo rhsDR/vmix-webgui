@@ -1,6 +1,11 @@
 import { SB_URL, SB_ANON } from './_supabase.js';
 
 const EAPI_BASE = 'http://eapi.enetpulse.com';
+
+// Kendte danske turneringer: { fk: 'Visningsnavn' }
+const DANSKE_LIGAER = {
+  '840491': 'Superligaen',
+};
 const SB_HEADERS = {
   'apikey': SB_ANON,
   'Authorization': 'Bearer ' + SB_ANON,
@@ -23,6 +28,10 @@ async function saveFixturesCache(date, events) {
       body:    JSON.stringify({ date, events, updated_at: new Date().toISOString() })
     });
   } catch { /* ikke kritisk */ }
+}
+
+function participantName(p) {
+  return p.name || p.participant?.name || p.participant_name || p.shortName || '';
 }
 
 function getParticipants(ev) {
@@ -84,22 +93,33 @@ function mapIncident(inc, homeApiName, awayApiName, homePartId) {
 
 function normalizeFixtures(raw) {
   const events = raw?.events || {};
-  return Object.values(events)
-    .filter(ev => ev.id)
+  const evList = Object.values(events).filter(ev => ev.id);
+  // Log participant struktur fra første event (til debugging af navn-felter)
+  if (evList.length > 0) {
+    const parts = evList[0].event_participants ? Object.values(evList[0].event_participants) : [];
+    console.log('[enetpulse] sample participant keys:', parts[0] ? Object.keys(parts[0]) : 'ingen');
+    console.log('[enetpulse] sample participant[0]:', JSON.stringify(parts[0]).substring(0, 300));
+  }
+  const danskeFK = new Set(Object.keys(DANSKE_LIGAER));
+  return evList
     .map(ev => {
+      const fk = String(ev.tournament_stageFK || ev.tournament_templateFK || ev.tournamentFK || '');
       const { home, away } = getParticipants(ev);
       const startdate = ev.startdate || '';
       const timePart  = startdate.includes(' ') ? startdate.split(' ')[1].substring(0, 5) : '';
       return {
-        id:         String(ev.id),
-        starttime:  timePart,
+        id:            String(ev.id),
+        starttime:     timePart,
         startdate,
-        home_enet:  home.name || '',
-        away_enet:  away.name || '',
-        tournament: ev.tournament_stage_name || ev.tournament_name || '',
-        status:     ev.status_type || 'not_started'
+        home_enet:     participantName(home),
+        away_enet:     participantName(away),
+        tournament:    DANSKE_LIGAER[fk] || ev.tournament_stage_name || ev.tournament_name || '',
+        tournament_fk: fk,
+        status:        ev.status_type || 'not_started',
+        dansk:         danskeFK.has(fk)
       };
     })
+    .filter(f => f.dansk)   // kun kendte danske ligaer returneres
     .sort((a, b) => a.startdate.localeCompare(b.startdate));
 }
 

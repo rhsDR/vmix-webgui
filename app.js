@@ -783,16 +783,17 @@ async function searchEnetpulseByDate(i, div, date) {
     const res  = await fetch('/api/enetpulse?date=' + encodeURIComponent(date));
     const data = await res.json();
     if (data.error) { resultsEl.innerHTML = `<span style="color:var(--red);font-size:12px;">${esc(data.error)}</span>`; return; }
-    if (!data.fixtures || !data.fixtures.length) {
+    const fixtures = data.fixtures || [];
+    if (!fixtures.length) {
       resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Ingen kampe den dag</span>';
       return;
     }
     resultsEl.innerHTML = '';
-    data.fixtures.forEach(f => {
+    fixtures.forEach(f => {
       const el = document.createElement('div');
       el.className = 'fixture-result-item';
       el.innerHTML = `
-        <div class="fix-teams">${esc(f.home_enet)} vs ${esc(f.away_enet)}</div>
+        <div class="fix-teams">${esc(f.home_enet || '?')} vs ${esc(f.away_enet || '?')}</div>
         <div class="fix-meta">${esc(f.tournament)} · ${esc(f.starttime)}</div>`;
       el.addEventListener('click', () => selectEnetpulseFixture(i, f));
       resultsEl.appendChild(el);
