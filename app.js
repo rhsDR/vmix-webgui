@@ -239,7 +239,6 @@ function renderStamdataSection(type, listId, mapper) {
 
 function makeStamdataRow(item) {
   const hasKort     = item.kort     !== null;
-  const hasApiNavn  = item.apiNavn  !== null;
   const hasEnetNavn = item.enetNavn !== null;
   const hasTitel    = item.titel    != null;
   const row = document.createElement('div');
@@ -251,7 +250,6 @@ function makeStamdataRow(item) {
       <span class="stamdata-item-name">${esc(item.label)}</span>
       ${hasKort     ? `<span class="stamdata-item-kort">${esc(item.kort)}</span>` : ''}
       ${hasTitel    ? `<span class="stamdata-item-alias">${item.titel ? esc(item.titel) : '<span style="color:#333">ingen titel</span>'}</span>` : ''}
-      ${hasApiNavn  ? `<span class="stamdata-item-alias" title="API-Football navn">${item.apiNavn  ? esc(item.apiNavn)  : '<span style="color:#333">ingen AFL-alias</span>'}</span>` : ''}
       ${hasEnetNavn ? `<span class="stamdata-item-alias" title="Enetpulse navn">${item.enetNavn ? esc(item.enetNavn) : '<span style="color:#333">ingen enet-alias</span>'}</span>` : ''}
       <button class="stamdata-edit" title="Redigér">✎</button>
       <button class="stamdata-del"  title="Fjern">✕</button>
@@ -265,7 +263,6 @@ function makeStamdataRow(item) {
       <input class="stamdata-input sd-edit-lang"  value="${esc(item.label)}"    placeholder="Dansk navn"       style="flex:2;">
       ${hasKort     ? `<input class="stamdata-input sd-edit-kort"  value="${esc(item.kort)}"     placeholder="Kort"             style="flex:1;max-width:80px;">` : ''}
       ${hasTitel    ? `<input class="stamdata-input sd-edit-titel" value="${esc(item.titel)}"    placeholder="Titel"            style="flex:2;">` : ''}
-      ${hasApiNavn  ? `<input class="stamdata-input sd-edit-api"   value="${esc(item.apiNavn)}"  placeholder="API-Football navn" style="flex:2;">` : ''}
       ${hasEnetNavn ? `<input class="stamdata-input sd-edit-enet"  value="${esc(item.enetNavn)}" placeholder="Enetpulse navn"   style="flex:2;">` : ''}
       <button class="stamdata-btn sd-save">Gem</button>
       <button class="stamdata-del sd-cancel" title="Annuller">✕</button>
@@ -273,7 +270,6 @@ function makeStamdataRow(item) {
     const langInput  = row.querySelector('.sd-edit-lang');
     const kortInput  = row.querySelector('.sd-edit-kort');
     const titelInput = row.querySelector('.sd-edit-titel');
-    const apiInput   = row.querySelector('.sd-edit-api');
     const enetInput  = row.querySelector('.sd-edit-enet');
     langInput.focus();
 
@@ -281,27 +277,24 @@ function makeStamdataRow(item) {
       const newLang     = langInput.value.trim();
       const newKort     = kortInput  ? kortInput.value.trim()  : null;
       const newTitel    = titelInput ? titelInput.value.trim() : null;
-      const newApiNavn  = apiInput   ? apiInput.value.trim()   : null;
       const newEnetNavn = enetInput  ? enetInput.value.trim()  : null;
       if (!newLang) return;
       row.querySelector('.sd-save').disabled = true;
       const body = { lang: newLang };
       if (newKort     !== null) body.kort     = newKort;
       if (newTitel    !== null) body.titel    = newTitel;
-      if (newApiNavn  !== null) body.api_navn  = newApiNavn  || null;
       if (newEnetNavn !== null) body.enet_navn = newEnetNavn || null;
       await sbPatch('dropdowns?id=eq.' + item.id, body);
       item.label   = newLang;
       if (newKort     !== null) item.kort     = newKort;
       if (newTitel    !== null) item.titel    = newTitel;
-      if (newApiNavn  !== null) item.apiNavn  = newApiNavn;
       if (newEnetNavn !== null) item.enetNavn = newEnetNavn;
       await refreshDropdowns();
     });
 
     row.querySelector('.sd-cancel').addEventListener('click', showView);
 
-    const inputs = [langInput, kortInput, titelInput, apiInput, enetInput].filter(Boolean);
+    const inputs = [langInput, kortInput, titelInput, enetInput].filter(Boolean);
     inputs.forEach((inp, idx) => {
       inp.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
@@ -323,12 +316,11 @@ async function deleteStamdataItem(id) {
   await refreshDropdowns();
 }
 
-async function addStamdataItem(type, lang, kort, apiNavn = null, titel = null, enetNavn = null) {
+async function addStamdataItem(type, lang, kort, titel = null, enetNavn = null) {
   if (!lang.trim()) return;
   const orden = stamdataRaw.filter(r => r.type === type).length + 1;
   const body = { type, lang: lang.trim(), orden };
   if (kort !== null) body.kort = kort.trim();
-  if (apiNavn)  body.api_navn  = apiNavn;
   if (enetNavn) body.enet_navn = enetNavn;
   if (titel !== null) body.titel = titel.trim();
   await sbPost('dropdowns', body);
@@ -344,7 +336,7 @@ async function refreshDropdowns() {
     holds:         rows.filter(r => r.type === 'hold').map(r => ({ lang: r.lang, kort: r.kort, enetNavn: r.enet_navn || null })).sort((a, b) => a.lang.localeCompare(b.lang, 'da'))
   };
   renderStamdataSection('kommentator', 'sdKommList', r => ({ label: r.lang, kort: null, titel: r.titel ?? '', apiNavn: null, id: r.id }));
-  renderStamdataSection('hold',        'sdHoldList', r => ({ label: r.lang, kort: r.kort, apiNavn: r.api_navn || '', enetNavn: r.enet_navn || '', id: r.id }));
+  renderStamdataSection('hold',        'sdHoldList', r => ({ label: r.lang, kort: r.kort, enetNavn: r.enet_navn || '', id: r.id }));
   renderStamdataSection('lokation',    'sdLokList',  r => ({ label: r.lang, kort: null, apiNavn: null, id: r.id }));
 }
 
@@ -357,7 +349,7 @@ function initStamdata() {
     const input      = document.getElementById('sdKommInput');
     const titelInput = document.getElementById('sdKommTitelInput');
     sdKommBtn.disabled = true;
-    await addStamdataItem('kommentator', input.value, null, null, titelInput.value.trim() || null);
+    await addStamdataItem('kommentator', input.value, null, titelInput.value.trim() || null);
     input.value = ''; titelInput.value = '';
     sdKommBtn.disabled = false;
     input.focus();
@@ -372,12 +364,11 @@ function initStamdata() {
   sdHoldBtn.addEventListener('click', async () => {
     const lang = document.getElementById('sdHoldLangInput');
     const kort = document.getElementById('sdHoldKortInput');
-    const api  = document.getElementById('sdHoldApiInput');
     const enet = document.getElementById('sdHoldEnetInput');
     if (!lang.value.trim()) return;
     sdHoldBtn.disabled = true;
-    await addStamdataItem('hold', lang.value, kort.value, api.value.trim() || null, null, enet.value.trim() || null);
-    lang.value = ''; kort.value = ''; api.value = ''; enet.value = '';
+    await addStamdataItem('hold', lang.value, kort.value, null, enet.value.trim() || null);
+    lang.value = ''; kort.value = ''; enet.value = '';
     sdHoldBtn.disabled = false;
     lang.focus();
   });
@@ -385,9 +376,6 @@ function initStamdata() {
     if (e.key === 'Enter') document.getElementById('sdHoldKortInput').focus();
   });
   document.getElementById('sdHoldKortInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('sdHoldApiInput').focus();
-  });
-  document.getElementById('sdHoldApiInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('sdHoldEnetInput').focus();
   });
   document.getElementById('sdHoldEnetInput').addEventListener('keydown', e => {
