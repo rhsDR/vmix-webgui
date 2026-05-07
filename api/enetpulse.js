@@ -1,6 +1,6 @@
 import { SB_URL, SB_ANON } from './_supabase.js';
 
-const EAPI_BASE = 'http://eapi.enetpulse.com';
+const EAPI_BASE = 'https://eapi.enetpulse.com';
 
 // Kendte danske turneringer: { fk: 'Visningsnavn' }
 const DANSKE_LIGAER = {
