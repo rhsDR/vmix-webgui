@@ -143,6 +143,7 @@
       text-transform: uppercase;
     }
     .live-team.away { text-align: right; align-items: flex-end; }
+    .live-team-logo { width: 36px; height: 36px; object-fit: contain; }
     .live-score {
       font-size: 36px;
       font-weight: 700;

@@ -175,7 +175,7 @@ function normalizeStats(statsRaw, homePartFK, awayPartFK) {
   ];
 }
 
-function normalizeEventDetails(raw, statsRaw, id) {
+function normalizeEventDetails(raw, statsRaw, id, username, token) {
   const evObj = raw?.event || raw?.events || {};
   const ev    = Object.values(evObj)[0];
   if (!ev) return { id, error: 'Ikke fundet' };
@@ -282,6 +282,7 @@ function normalizeEventDetails(raw, statsRaw, id) {
     });
   }
 
+  const logoBase = `${EAPI_BASE}/image/participant/?username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}&id=`;
   return {
     id:        String(ev.id),
     home:      homeApiName,
@@ -290,6 +291,8 @@ function normalizeEventDetails(raw, statsRaw, id) {
     away_kort: '',
     home_api:  homeApiName,
     away_api:  awayApiName,
+    home_logo: homePartFK ? logoBase + homePartFK : null,
+    away_logo: awayPartFK ? logoBase + awayPartFK : null,
     homeGoals,
     awayGoals,
     status:    mapStatus(ev),
@@ -362,7 +365,7 @@ export default async function handler(req, res) {
           fetch(`${EAPI_BASE}/standing/event_stats/?object=event&objectFK=${id}&includeStandingData=yes&includeStandingParticipants=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`).then(r => r.json()).catch(() => null)
         ]);
         if (debug === '1') return { id, raw_keys: Object.keys(detailsRaw || {}), stats_raw: statsRaw };
-        return normalizeEventDetails(detailsRaw, statsRaw, id);
+        return normalizeEventDetails(detailsRaw, statsRaw, id, username, token);
       }));
       return res.status(200).json({ matches: results });
     } catch (err) {

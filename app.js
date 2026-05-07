@@ -1858,11 +1858,13 @@ function renderLiveCard(m) {
       <div class="live-card-header">
         <div class="live-score-row">
           <span class="live-team">
+            ${m.home_logo ? `<img class="live-team-logo" src="${m.home_logo}" alt="" onerror="this.style.display='none'">` : ''}
             <span class="live-team-name">${m.home}</span>
             ${m.home_kort ? `<span class="live-team-kort">${m.home_kort}</span>` : ''}
           </span>
           <span class="live-score">${m.homeGoals} – ${m.awayGoals}</span>
           <span class="live-team away">
+            ${m.away_logo ? `<img class="live-team-logo" src="${m.away_logo}" alt="" onerror="this.style.display='none'">` : ''}
             <span class="live-team-name">${m.away}</span>
             ${m.away_kort ? `<span class="live-team-kort">${m.away_kort}</span>` : ''}
           </span>
