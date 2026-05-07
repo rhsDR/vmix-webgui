@@ -127,38 +127,90 @@ function normalizeFixtures(raw) {
 }
 
 function normalizeEventDetails(raw, id) {
-  const events = raw?.events || {};
-  const ev     = Object.values(events)[0];
+  const evObj = raw?.event || raw?.events || {};
+  const ev    = Object.values(evObj)[0];
   if (!ev) return { id, error: 'Ikke fundet' };
 
   const { home, away } = getParticipants(ev);
   const homeApiName    = participantName(home);
   const awayApiName    = participantName(away);
-  const homePartId     = home.participantFK || home.id || '';
 
   function scoreFromResult(participant) {
     if (!participant.result) return 0;
     const entries = Object.values(participant.result);
     const ot = entries.find(r => r.result_code === 'ordinarytime');
     if (ot) return parseInt(ot.value) || 0;
-    // fallback: første numeriske value
-    const first = entries[0];
-    return parseInt(first?.value) || 0;
+    return parseInt(entries[0]?.value) || 0;
   }
 
   const homeGoals = scoreFromResult(home);
   const awayGoals = scoreFromResult(away);
 
-  const incidents = ev.incident ? Object.values(ev.incident) : [];
-  const mappedEvents = incidents
-    .map(inc => mapIncident(inc, homeApiName, awayApiName, homePartId))
-    .filter(Boolean)
-    .sort((a, b) => (parseInt(a.minute) || 0) - (parseInt(b.minute) || 0));
+  // Saml alle incidents fra begge event_participants med team-tag
+  const parts = ev.event_participants ? Object.values(ev.event_participants) : [];
+  const tagged = [];
+  for (const part of parts) {
+    const isHome = String(part.number) === '1';
+    const team   = isHome ? homeApiName : awayApiName;
+    for (const inc of Object.values(part.incident || {})) {
+      tagged.push({ ...inc, _team: team });
+    }
+  }
+
+  // Grupper på enetID for at parre mål+assist og subst+subst_in
+  const byEnetId = {};
+  for (const inc of tagged) {
+    const k = inc.enetID;
+    if (!byEnetId[k]) byEnetId[k] = [];
+    byEnetId[k].push(inc);
+  }
+
+  const mappedEvents = [];
+  const seen = new Set();
+
+  for (const inc of tagged) {
+    const k    = inc.enetID;
+    if (seen.has(k)) continue;
+    seen.add(k);
+
+    const code    = (inc.incident_code || '').toLowerCase();
+    const typeFK  = String(inc.incident_typeFK || '');
+    const group   = byEnetId[k] || [];
+    const minute  = String(parseInt(inc.elapsed) || '') +
+                    (inc.elapsed_plus && inc.elapsed_plus !== '0' ? '+' + inc.elapsed_plus : '');
+
+    if (code === 'goal') {
+      const assistInc = group.find(i => (i.incident_code || '').toLowerCase() === 'assist');
+      mappedEvents.push({
+        minute,
+        team:   inc._team,
+        player: inc.participant?.name || '',
+        assist: assistInc?.participant?.name || null,
+        type:   'Goal',
+        detail: 'Normal Goal'
+      });
+    } else if (code === 'card') {
+      const detail = typeFK === '15' ? 'Red Card' : typeFK === '17' ? 'Yellow Red Card' : 'Yellow Card';
+      mappedEvents.push({ minute, team: inc._team, player: inc.participant?.name || '', assist: null, type: 'Card', detail });
+    } else if (code === 'subst') {
+      const onInc = group.find(i => (i.incident_code || '').toLowerCase() === 'subst_in');
+      mappedEvents.push({
+        minute,
+        team:   inc._team,
+        player: onInc?.participant?.name || '',
+        assist: inc.participant?.name || null,
+        type:   'subst',
+        detail: 'Substitution'
+      });
+    }
+  }
+
+  mappedEvents.sort((a, b) => (parseInt(a.minute) || 0) - (parseInt(b.minute) || 0));
 
   return {
     id:        String(ev.id),
     home:      homeApiName,
-    home_kort: '',         // udfyldes af frontend via kamp-state
+    home_kort: '',
     away:      awayApiName,
     away_kort: '',
     home_api:  homeApiName,
