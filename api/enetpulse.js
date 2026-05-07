@@ -31,7 +31,7 @@ async function saveFixturesCache(date, events) {
 }
 
 function participantName(p) {
-  return p.name || p.participant?.name || p.participant_name || p.shortName || '';
+  return p.participant?.name || p.name || p.participant_name || p.shortName || '';
 }
 
 function getParticipants(ev) {
@@ -43,12 +43,12 @@ function getParticipants(ev) {
 
 function mapStatus(ev) {
   const st = (ev.status_type || '').toLowerCase();
-  if (st === 'not_started')                              return { short: 'NS',  elapsed: null };
+  if (st === 'not_started' || st === 'notstarted')       return { short: 'NS',  elapsed: null };
   if (st === 'halftime')                                 return { short: 'HT',  elapsed: null };
-  if (st === 'finished' || st === 'finished_aet' || st === 'finished_ap')
+  if (st === 'finished' || st === 'finished_aet' || st === 'finished_ap' || st === 'finalresult')
                                                          return { short: 'FT',  elapsed: null };
   if (st === 'cancelled' || st === 'postponed')          return { short: 'PST', elapsed: null };
-  if (st === 'inprogress') {
+  if (st === 'inprogress' || st === 'started') {
     const period  = (ev.period_type || ev.active_minute_period || '').toLowerCase();
     const elapsed = parseInt(ev.elapsed) || null;
     if (period.includes('2') || period.includes('second')) return { short: '2H', elapsed };
@@ -106,7 +106,8 @@ function normalizeFixtures(raw) {
       const fk = String(ev.tournament_stageFK || ev.tournament_templateFK || ev.tournamentFK || '');
       const { home, away } = getParticipants(ev);
       const startdate = ev.startdate || '';
-      const timePart  = startdate.includes(' ') ? startdate.split(' ')[1].substring(0, 5) : '';
+      const timePart  = startdate.includes('T') ? startdate.split('T')[1].substring(0, 5)
+                      : startdate.includes(' ') ? startdate.split(' ')[1].substring(0, 5) : '';
       return {
         id:            String(ev.id),
         starttime:     timePart,
@@ -129,19 +130,22 @@ function normalizeEventDetails(raw, id) {
   if (!ev) return { id, error: 'Ikke fundet' };
 
   const { home, away } = getParticipants(ev);
-  const homeApiName    = home.name || '';
-  const awayApiName    = away.name || '';
+  const homeApiName    = participantName(home);
+  const awayApiName    = participantName(away);
   const homePartId     = home.participantFK || home.id || '';
 
-  // Score — enetpulse nesting varierer; prøv flere stier
-  let homeGoals = 0, awayGoals = 0;
-  if (home.result) {
-    homeGoals = parseInt(home.result.home  ?? home.result.running_home ?? home.result.value_home ?? 0) || 0;
-    awayGoals = parseInt(home.result.away  ?? home.result.running_away ?? home.result.value_away ?? 0) || 0;
-  } else if (ev.result) {
-    homeGoals = parseInt(ev.result.home ?? 0) || 0;
-    awayGoals = parseInt(ev.result.away ?? 0) || 0;
+  function scoreFromResult(participant) {
+    if (!participant.result) return 0;
+    const entries = Object.values(participant.result);
+    const ot = entries.find(r => r.result_code === 'ordinarytime');
+    if (ot) return parseInt(ot.value) || 0;
+    // fallback: første numeriske value
+    const first = entries[0];
+    return parseInt(first?.value) || 0;
   }
+
+  const homeGoals = scoreFromResult(home);
+  const awayGoals = scoreFromResult(away);
 
   const incidents = ev.incident ? Object.values(ev.incident) : [];
   const mappedEvents = incidents
