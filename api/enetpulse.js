@@ -186,8 +186,15 @@ export default async function handler(req, res) {
       const raw = await fetch(url).then(r => r.json());
       const evList = Object.values(raw?.events || {});
       const sample = evList[0] || null;
+      const tournamentMap = {};
+      evList.forEach(ev => {
+        const fk   = String(ev.tournament_stageFK || ev.tournament_templateFK || ev.tournamentFK || '');
+        const name = ev.tournament_stage_name || ev.tournament_name || '?';
+        if (fk) tournamentMap[fk] = name;
+      });
       return res.status(200).json({
         total_events: evList.length,
+        tournament_fks: tournamentMap,
         sample_event_keys: sample ? Object.keys(sample) : [],
         sample_participants: sample?.event_participants
           ? Object.values(sample.event_participants).slice(0, 2)
