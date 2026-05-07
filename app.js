@@ -1901,7 +1901,7 @@ function renderLineup(lineup) {
     return `
       <div class="lu-side">
         <div class="lu-side-title">${label}</div>
-        ${starters.map(p => `<div class="lu-player"><span class="lu-shirt">${p.shirt}</span><span class="lu-name">${esc(p.name)}</span></div>`).join('')}
+        ${starters.map(p => `<div class="lu-player"><span class="lu-shirt">${p.shirt}</span>${p.pos ? `<span class="lu-pos">${p.pos}</span>` : ''}<span class="lu-name">${esc(p.name)}</span></div>`).join('')}
         ${subs.length ? `<div class="lu-sub-divider">Reserver</div>` + subs.map(p => `<div class="lu-player lu-sub"><span class="lu-shirt">${p.shirt}</span><span class="lu-name">${esc(p.name)}</span></div>`).join('') : ''}
       </div>`;
   }

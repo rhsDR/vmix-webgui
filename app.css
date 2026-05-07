@@ -198,7 +198,8 @@
       border-radius: 3px;
       flex-shrink: 0;
     }
-    .live-event-icon.goal  { background: var(--green); border-radius: 50%; }
+    .live-event-icon.goal  { background: transparent; font-size: 15px; display: flex; align-items: center; justify-content: center; }
+    .live-event-icon.goal::before { content: '⚽'; }
     .live-event-icon.og    { background: var(--red);   border-radius: 50%; }
     .live-event-icon.pen   { background: var(--blue);  border-radius: 50%; }
     .live-event-icon.yc    { background: var(--yellow); }
@@ -301,6 +302,17 @@
       flex-shrink: 0;
     }
     .lu-player:not(.lu-sub) .lu-shirt { color: #666; }
+    .lu-pos {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #444;
+      background: #1a1a1a;
+      border-radius: 2px;
+      padding: 1px 4px;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
     .lu-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .lu-sub-divider {
       font-size: 9px;
