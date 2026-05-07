@@ -1,0 +1,190 @@
+import { SB_URL, SB_ANON } from './_supabase.js';
+
+const EAPI_BASE = 'http://eapi.enetpulse.com';
+const SB_HEADERS = {
+  'apikey': SB_ANON,
+  'Authorization': 'Bearer ' + SB_ANON,
+  'Content-Type': 'application/json'
+};
+
+async function getCachedFixtures(date) {
+  try {
+    const res  = await fetch(`${SB_URL}/rest/v1/enetpulse_cache?date=eq.${date}&select=events`, { headers: SB_HEADERS });
+    const rows = await res.json();
+    return rows?.[0]?.events || null;
+  } catch { return null; }
+}
+
+async function saveFixturesCache(date, events) {
+  try {
+    await fetch(`${SB_URL}/rest/v1/enetpulse_cache`, {
+      method:  'POST',
+      headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+      body:    JSON.stringify({ date, events, updated_at: new Date().toISOString() })
+    });
+  } catch { /* ikke kritisk */ }
+}
+
+function getParticipants(ev) {
+  const parts = ev.event_participants ? Object.values(ev.event_participants) : [];
+  const home  = parts.find(p => String(p.number) === '1') || parts[0] || {};
+  const away  = parts.find(p => String(p.number) === '2') || parts[1] || {};
+  return { home, away };
+}
+
+function mapStatus(ev) {
+  const st = (ev.status_type || '').toLowerCase();
+  if (st === 'not_started')                              return { short: 'NS',  elapsed: null };
+  if (st === 'halftime')                                 return { short: 'HT',  elapsed: null };
+  if (st === 'finished' || st === 'finished_aet' || st === 'finished_ap')
+                                                         return { short: 'FT',  elapsed: null };
+  if (st === 'cancelled' || st === 'postponed')          return { short: 'PST', elapsed: null };
+  if (st === 'inprogress') {
+    const period  = (ev.period_type || ev.active_minute_period || '').toLowerCase();
+    const elapsed = parseInt(ev.elapsed) || null;
+    if (period.includes('2') || period.includes('second')) return { short: '2H', elapsed };
+    if (period.includes('overtime') || period.includes('et')) return { short: 'ET', elapsed };
+    return { short: '1H', elapsed };
+  }
+  return { short: st.toUpperCase().substring(0, 3), elapsed: null };
+}
+
+function mapIncident(inc, homeApiName, awayApiName, homePartId) {
+  const t = (inc.incident_type_fk || '').toLowerCase();
+  let type, detail;
+
+  if (t.includes('goal') || t === 'goal_scored') {
+    type   = 'Goal';
+    detail = t.includes('own') ? 'Own Goal' : t.includes('penalty') ? 'Penalty' : 'Normal Goal';
+  } else if (t.includes('yellow_red') || t.includes('yellowred') || t === 'yellow_red_card') {
+    type = 'Card'; detail = 'Yellow Red Card';
+  } else if (t.includes('red') || t === 'red_card') {
+    type = 'Card'; detail = 'Red Card';
+  } else if (t.includes('yellow') || t === 'yellow_card') {
+    type = 'Card'; detail = 'Yellow Card';
+  } else if (t.includes('subst') || t.includes('substitut')) {
+    type = 'subst'; detail = 'Substitution';
+  } else {
+    return null;
+  }
+
+  const isHome = String(inc.team_participant_id) === String(homePartId)
+               || String(inc.participant_team_id) === String(homePartId);
+  const team   = isHome ? homeApiName : awayApiName;
+
+  return {
+    minute: String(parseInt(inc.elapsed) || inc.elapsed || ''),
+    team,
+    player: inc.participant_name || inc.player_name || '',
+    assist: inc.assist_participant_name || inc.assist_name || null,
+    type,
+    detail
+  };
+}
+
+function normalizeFixtures(raw) {
+  const events = raw?.events || {};
+  return Object.values(events)
+    .filter(ev => ev.id)
+    .map(ev => {
+      const { home, away } = getParticipants(ev);
+      const startdate = ev.startdate || '';
+      const timePart  = startdate.includes(' ') ? startdate.split(' ')[1].substring(0, 5) : '';
+      return {
+        id:         String(ev.id),
+        starttime:  timePart,
+        startdate,
+        home_enet:  home.name || '',
+        away_enet:  away.name || '',
+        tournament: ev.tournament_stage_name || ev.tournament_name || '',
+        status:     ev.status_type || 'not_started'
+      };
+    })
+    .sort((a, b) => a.startdate.localeCompare(b.startdate));
+}
+
+function normalizeEventDetails(raw, id) {
+  const events = raw?.events || {};
+  const ev     = Object.values(events)[0];
+  if (!ev) return { id, error: 'Ikke fundet' };
+
+  const { home, away } = getParticipants(ev);
+  const homeApiName    = home.name || '';
+  const awayApiName    = away.name || '';
+  const homePartId     = home.participantFK || home.id || '';
+
+  // Score — enetpulse nesting varierer; prøv flere stier
+  let homeGoals = 0, awayGoals = 0;
+  if (home.result) {
+    homeGoals = parseInt(home.result.home  ?? home.result.running_home ?? home.result.value_home ?? 0) || 0;
+    awayGoals = parseInt(home.result.away  ?? home.result.running_away ?? home.result.value_away ?? 0) || 0;
+  } else if (ev.result) {
+    homeGoals = parseInt(ev.result.home ?? 0) || 0;
+    awayGoals = parseInt(ev.result.away ?? 0) || 0;
+  }
+
+  const incidents = ev.incident ? Object.values(ev.incident) : [];
+  const mappedEvents = incidents
+    .map(inc => mapIncident(inc, homeApiName, awayApiName, homePartId))
+    .filter(Boolean)
+    .sort((a, b) => (parseInt(a.minute) || 0) - (parseInt(b.minute) || 0));
+
+  return {
+    id:        String(ev.id),
+    home:      homeApiName,
+    home_kort: '',         // udfyldes af frontend via kamp-state
+    away:      awayApiName,
+    away_kort: '',
+    home_api:  homeApiName,
+    away_api:  awayApiName,
+    homeGoals,
+    awayGoals,
+    status:    mapStatus(ev),
+    league:    ev.tournament_stage_name || ev.tournament_name || '',
+    stats:     null,
+    events:    mappedEvents
+  };
+}
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  const username = process.env.ENETPULSE_USERNAME;
+  const token    = process.env.ENETPULSE_TOKEN;
+  if (!username || !token) return res.status(503).json({ error: 'enetpulse credentials ikke konfigureret' });
+
+  const { date, ids } = req.query;
+
+  // ── DAGLIG KAMPLISTE (med Supabase-cache) ─────────────────────
+  if (date) {
+    try {
+      const cached = await getCachedFixtures(date);
+      if (cached) return res.status(200).json({ fixtures: cached, fromCache: true });
+
+      const url = `${EAPI_BASE}/event/daily/?sportFK=1&date=${encodeURIComponent(date)}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
+      const raw  = await fetch(url).then(r => r.json());
+      const fixtures = normalizeFixtures(raw);
+      await saveFixturesCache(date, fixtures);
+      return res.status(200).json({ fixtures, fromCache: false });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // ── LIVE EVENT-DETALJER (ingen cache — bruges til dashboard) ───
+  if (ids) {
+    const idList = String(ids).split(',').filter(Boolean);
+    try {
+      const results = await Promise.all(idList.map(async id => {
+        const url = `${EAPI_BASE}/event/details/?id=${id}&includeIncidents=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
+        const raw = await fetch(url).then(r => r.json());
+        return normalizeEventDetails(raw, id);
+      }));
+      return res.status(200).json({ matches: results });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  return res.status(400).json({ error: 'Mangler date eller ids parameter' });
+}

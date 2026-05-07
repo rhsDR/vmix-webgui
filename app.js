@@ -11,6 +11,7 @@ const makeKamp = () => ({
   hold2Score: 0, hold2Kort: '', hold2Lang: '',
   kommentator: '', lokation: '', vmixcall: '', onAir: false,
   fixtureId: null, autoMode: false,
+  enetpulseId: null,
   // edit buffer
   editMode: false, collapsed: false,
   buf: { hold1Lang: '', hold2Lang: '', kommentator: '', lokation: '', vmixcall: '', lokSomKomm: false }
@@ -137,21 +138,22 @@ async function fetchAll() {
     dropdowns: {
       kommentatorer: dropdownsRaw.filter(r => r.type === 'kommentator').map(r => ({ lang: r.lang, titel: r.titel || '' })).sort((a, b) => a.lang.localeCompare(b.lang, 'da')),
       lokationer:    dropdownsRaw.filter(r => r.type === 'lokation').map(r => r.lang).sort((a, b) => a.localeCompare(b, 'da')),
-      holds:         dropdownsRaw.filter(r => r.type === 'hold').map(r => ({ lang: r.lang, kort: r.kort })).sort((a, b) => a.lang.localeCompare(b.lang, 'da'))
+      holds:         dropdownsRaw.filter(r => r.type === 'hold').map(r => ({ lang: r.lang, kort: r.kort, enetNavn: r.enet_navn || null })).sort((a, b) => a.lang.localeCompare(b.lang, 'da'))
     },
     kampe: kampeRaw.map(r => ({
-      hold1Lang:   r.hold1_lang  || '',
-      hold1Kort:   r.hold1_kort  || '',
-      hold1Score:  r.hold1_score || 0,
-      hold2Score:  r.hold2_score || 0,
-      hold2Kort:   r.hold2_kort  || '',
-      hold2Lang:   r.hold2_lang  || '',
-      kommentator: r.kommentator || '',
-      lokation:    r.lokation    || '',
-      vmixcall:    r.vmixcall    || '',
-      onAir:       r.on_air      || false,
-      fixtureId:   r.fixture_id  || null,
-      autoMode:    r.auto_mode   || false
+      hold1Lang:   r.hold1_lang   || '',
+      hold1Kort:   r.hold1_kort   || '',
+      hold1Score:  r.hold1_score  || 0,
+      hold2Score:  r.hold2_score  || 0,
+      hold2Kort:   r.hold2_kort   || '',
+      hold2Lang:   r.hold2_lang   || '',
+      kommentator: r.kommentator  || '',
+      lokation:    r.lokation     || '',
+      vmixcall:    r.vmixcall     || '',
+      onAir:       r.on_air       || false,
+      fixtureId:   r.fixture_id   || null,
+      autoMode:    r.auto_mode    || false,
+      enetpulseId: r.enetpulse_id || null
     })),
     subs: {
       subs:      subsRaw.map(r => ({ navn: r.navn || '', titel: r.titel || '' })),
@@ -347,7 +349,7 @@ async function refreshDropdowns() {
   dropdowns = {
     kommentatorer: rows.filter(r => r.type === 'kommentator').map(r => ({ lang: r.lang, titel: r.titel || '' })).sort((a, b) => a.lang.localeCompare(b.lang, 'da')),
     lokationer:    rows.filter(r => r.type === 'lokation').map(r => r.lang).sort((a, b) => a.localeCompare(b, 'da')),
-    holds:         rows.filter(r => r.type === 'hold').map(r => ({ lang: r.lang, kort: r.kort })).sort((a, b) => a.lang.localeCompare(b.lang, 'da'))
+    holds:         rows.filter(r => r.type === 'hold').map(r => ({ lang: r.lang, kort: r.kort, enetNavn: r.enet_navn || null })).sort((a, b) => a.lang.localeCompare(b.lang, 'da'))
   };
   renderStamdataSection('kommentator', 'sdKommList', r => ({ label: r.lang, kort: null, titel: r.titel ?? '', apiNavn: null, id: r.id }));
   renderStamdataSection('hold',        'sdHoldList', r => ({ label: r.lang, kort: r.kort, apiNavn: r.api_navn || '', id: r.id }));
@@ -560,11 +562,13 @@ function buildEditView(i) {
     `<option value="${esc(v)}" ${!buf.lokSomKomm && buf.lokation === v ? 'selected' : ''}>${esc(v)}</option>`
   ).join('');
 
+  const today = new Date().toISOString().split('T')[0];
+
   const holdFields = i === 5 && k.autoMode ? `
       <div class="form-group span2">
         <label class="form-label">Vælg kampdag</label>
         <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:8px;">
-          <input class="form-input" type="date" id="efixdate-${i}" style="width:160px;color-scheme:dark;" value="${new Date().toISOString().split('T')[0]}">
+          <input class="form-input" type="date" id="efixdate-${i}" style="width:160px;color-scheme:dark;" value="${today}">
           <button class="btn btn-save" id="efixdatebtn-${i}" style="white-space:nowrap;">VIS KAMPE</button>
         </div>
         <div id="efixresults-${i}"></div>
@@ -583,6 +587,15 @@ function buildEditView(i) {
           <option value="">— Vælg hold —</option>
           ${holdOpts('hold2Lang')}
         </select>
+      </div>
+      <div class="form-group span2">
+        <label class="form-label">Hent fra Enetpulse</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <input class="form-input" type="date" id="enetdate-${i}" value="${today}" style="width:160px;color-scheme:dark;">
+          <button class="btn btn-save" id="enetbtn-${i}" style="white-space:nowrap;">VIS KAMPE</button>
+        </div>
+        <div id="enetresults-${i}"></div>
+        ${k.enetpulseId ? `<div style="margin-top:4px;font-size:11px;color:#555;">Aktiv: <span style="color:var(--orange)">${esc(k.hold1Lang)} vs ${esc(k.hold2Lang)}</span></div>` : ''}
       </div>`;
 
   div.innerHTML = `
@@ -623,6 +636,15 @@ function buildEditView(i) {
   if (!(i === 5 && k.autoMode)) {
     div.querySelector('#eh1-' + i).addEventListener('change', e => { buf.hold1Lang = e.target.value; });
     div.querySelector('#eh2-' + i).addEventListener('change', e => { buf.hold2Lang = e.target.value; });
+
+    const enetBtn = div.querySelector('#enetbtn-' + i);
+    enetBtn.addEventListener('click', () => {
+      const date = div.querySelector('#enetdate-' + i).value;
+      if (date) searchEnetpulseByDate(i, div, date);
+    });
+    div.querySelector('#enetdate-' + i).addEventListener('keydown', e => {
+      if (e.key === 'Enter') enetBtn.click();
+    });
   } else {
     const datebtn = div.querySelector('#efixdatebtn-' + i);
     datebtn.addEventListener('click', () => {
@@ -752,6 +774,61 @@ async function searchFixtureByDate(i, div, date) {
       resultsEl.appendChild(el);
     });
   } catch { resultsEl.innerHTML = '<span style="color:var(--red);font-size:12px;">Hentning fejlede</span>'; }
+}
+
+async function searchEnetpulseByDate(i, div, date) {
+  const resultsEl = div.querySelector('#enetresults-' + i);
+  resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Henter kampe…</span>';
+  try {
+    const res  = await fetch('/api/enetpulse?date=' + encodeURIComponent(date));
+    const data = await res.json();
+    if (data.error) { resultsEl.innerHTML = `<span style="color:var(--red);font-size:12px;">${esc(data.error)}</span>`; return; }
+    if (!data.fixtures || !data.fixtures.length) {
+      resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Ingen kampe den dag</span>';
+      return;
+    }
+    resultsEl.innerHTML = '';
+    data.fixtures.forEach(f => {
+      const el = document.createElement('div');
+      el.className = 'fixture-result-item';
+      el.innerHTML = `
+        <div class="fix-teams">${esc(f.home_enet)} vs ${esc(f.away_enet)}</div>
+        <div class="fix-meta">${esc(f.tournament)} · ${esc(f.starttime)}</div>`;
+      el.addEventListener('click', () => selectEnetpulseFixture(i, f));
+      resultsEl.appendChild(el);
+    });
+  } catch { resultsEl.innerHTML = '<span style="color:var(--red);font-size:12px;">Hentning fejlede</span>'; }
+}
+
+async function selectEnetpulseFixture(i, f) {
+  const h1drop = dropdowns.holds.find(h => h.enetNavn && h.enetNavn === f.home_enet);
+  const h2drop = dropdowns.holds.find(h => h.enetNavn && h.enetNavn === f.away_enet);
+  const h1 = h1drop
+    ? { lang: h1drop.lang, kort: h1drop.kort }
+    : { lang: f.home_enet, kort: f.home_enet.substring(0, 3).toUpperCase() };
+  const h2 = h2drop
+    ? { lang: h2drop.lang, kort: h2drop.kort }
+    : { lang: f.away_enet, kort: f.away_enet.substring(0, 3).toUpperCase() };
+
+  kampe[i].enetpulseId  = f.id;
+  kampe[i].hold1Lang    = h1.lang;
+  kampe[i].hold1Kort    = h1.kort;
+  kampe[i].hold2Lang    = h2.lang;
+  kampe[i].hold2Kort    = h2.kort;
+  kampe[i].buf.hold1Lang = h1.lang;
+  kampe[i].buf.hold2Lang = h2.lang;
+
+  try {
+    await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), {
+      enetpulse_id: f.id,
+      hold1_lang:   h1.lang,
+      hold1_kort:   h1.kort,
+      hold2_lang:   h2.lang,
+      hold2_kort:   h2.kort
+    });
+    toast('Kamp valgt ✓', 'ok');
+    rerender(i);
+  } catch { toast('Fejl ved gem af enetpulse kamp', 'err'); }
 }
 
 function resetEdit(i, div) {
@@ -1612,61 +1689,93 @@ function stopLivePolling() {
 }
 
 async function fetchLiveMatches() {
-  const ids = kampe.filter(k => k.fixtureId).map(k => k.fixtureId);
   const grid = document.getElementById('liveGrid');
   const upd  = document.getElementById('liveUpdated');
   if (!grid) return;
 
-  if (!ids.length) {
+  // Kampe med enetpulse-ID bruger enetpulse; resten bruger API-Football
+  const enetIds = kampe.filter(k => k.enetpulseId).map(k => k.enetpulseId);
+  const aflIds  = kampe.filter(k => k.fixtureId && !k.enetpulseId).map(k => k.fixtureId);
+
+  if (!enetIds.length && !aflIds.length) {
     grid.innerHTML = '<div class="live-no-fixtures">INGEN KAMPE VALGT</div>';
     upd.textContent = '';
     return;
   }
 
   try {
-    const data = await fetch('/api/live-match?ids=' + ids.join(',')).then(r => r.json());
-    if (data.error) { upd.textContent = 'Fejl: ' + data.error; return; }
-    grid.innerHTML = data.matches.map(renderLiveCard).join('');
+    const [enetData, aflData] = await Promise.all([
+      enetIds.length
+        ? fetch('/api/enetpulse?ids=' + enetIds.join(',')).then(r => r.json()).catch(() => ({ matches: [] }))
+        : Promise.resolve({ matches: [] }),
+      aflIds.length
+        ? fetch('/api/live-match?ids=' + aflIds.join(',')).then(r => r.json()).catch(() => ({ matches: [] }))
+        : Promise.resolve({ matches: [] })
+    ]);
+
+    // Byg lookup-maps (ID → match-objekt)
+    const enetMap = {};
+    (enetData.matches || []).forEach(m => { if (m.id) enetMap[String(m.id)] = m; });
+    const aflMap = {};
+    (aflData.matches || []).forEach(m => { if (m.id) aflMap[String(m.id)] = m; });
+
+    // Berig enetpulse-kampe med lokale holdnavne fra kamp-state
+    for (const k of kampe) {
+      if (!k.enetpulseId) continue;
+      const m = enetMap[String(k.enetpulseId)];
+      if (!m || m.error) continue;
+      if (k.hold1Kort) m.home_kort = k.hold1Kort;
+      if (k.hold2Kort) m.away_kort = k.hold2Kort;
+      if (k.hold1Lang) m.home = k.hold1Lang;
+      if (k.hold2Lang) m.away = k.hold2Lang;
+    }
+
+    // Vis kort i slot-rækkefølge
+    const cards = [];
+    for (let i = 0; i < kampe.length; i++) {
+      const k = kampe[i];
+      if (k.enetpulseId && enetMap[String(k.enetpulseId)]) {
+        cards.push(renderLiveCard(enetMap[String(k.enetpulseId)]));
+      } else if (k.fixtureId && !k.enetpulseId && aflMap[String(k.fixtureId)]) {
+        cards.push(renderLiveCard(aflMap[String(k.fixtureId)]));
+      }
+    }
+    grid.innerHTML = cards.length ? cards.join('') : '<div class="live-no-fixtures">INGEN KAMPE VALGT</div>';
     upd.textContent = 'Sidst opdateret ' + new Date().toLocaleTimeString('da-DK');
 
-    // Tjek for nye kort og skriv til Supabase
-    for (const m of data.matches) {
-      if (m.error) continue;
-      const cards = m.events.filter(e => e.type === 'Card');
-      if (!cards.length) continue;
-      const latest = cards[cards.length - 1];
-      const key    = `${latest.type}_${latest.detail}_${latest.minute}_${latest.player}`;
-      if (lastCardSeen[m.id] === key) continue;
-      lastCardSeen[m.id] = key;
-
-      // Find kamp-slot
-      const kampIdx = kampe.findIndex(k => k.fixtureId === m.id);
-      if (kampIdx === -1) continue;
-      const slot = kampIdx + 1;
-
-      const cardType = latest.detail === 'Red Card' ? 'red'
-                     : latest.detail === 'Yellow Red Card' ? 'yr'
-                     : 'yellow';
-
-      // Find holdforkortelse
-      const teamKort = latest.team === m.away_api
-        ? (m.away_kort || m.away)
-        : (m.home_kort || m.home);
-
-      await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + slot, {
-        last_card_type:      cardType,
-        last_card_player:    latest.player,
-        last_card_min:       String(latest.minute),
-        last_card_team_kort: teamKort
+    // Status til Supabase — enetpulse-kampe
+    for (let i = 0; i < kampe.length; i++) {
+      const k = kampe[i];
+      if (!k.enetpulseId) continue;
+      const m = enetMap[String(k.enetpulseId)];
+      if (!m || m.error) continue;
+      await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), {
+        status_short:   m.status.short   || null,
+        status_elapsed: m.status.elapsed ?? null
       }).catch(() => {});
     }
 
-    // Skriv status tilbage til Supabase for hvert fixture
-    for (const m of data.matches) {
+    // Kort-alert + status til Supabase — API-Football kampe
+    for (const m of (aflData.matches || [])) {
       if (m.error) continue;
       const kampIdx = kampe.findIndex(k => k.fixtureId === m.id);
       if (kampIdx === -1) continue;
       const slot = kampIdx + 1;
+
+      const kortEvents = m.events.filter(e => e.type === 'Card');
+      if (kortEvents.length) {
+        const latest  = kortEvents[kortEvents.length - 1];
+        const key     = `${latest.type}_${latest.detail}_${latest.minute}_${latest.player}`;
+        if (lastCardSeen[m.id] !== key) {
+          lastCardSeen[m.id] = key;
+          const cardType  = latest.detail === 'Red Card' ? 'red' : latest.detail === 'Yellow Red Card' ? 'yr' : 'yellow';
+          const teamKort  = latest.team === m.away_api ? (m.away_kort || m.away) : (m.home_kort || m.home);
+          await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + slot, {
+            last_card_type: cardType, last_card_player: latest.player,
+            last_card_min:  String(latest.minute), last_card_team_kort: teamKort
+          }).catch(() => {});
+        }
+      }
       await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + slot, {
         status_short:   m.status.short   || null,
         status_elapsed: m.status.elapsed ?? null
@@ -1791,11 +1900,12 @@ function applyKampRow(row) {
   if (kampe[i].editMode || kampe[i].savePending) return;
   const prev = kampe[i];
   const data = {
-    hold1Lang: row.hold1_lang || '', hold1Kort: row.hold1_kort || '',
-    hold1Score: row.hold1_score || 0, hold2Score: row.hold2_score || 0,
-    hold2Kort: row.hold2_kort || '', hold2Lang: row.hold2_lang || '',
-    kommentator: row.kommentator || '', lokation: row.lokation || '',
-    vmixcall: row.vmixcall || '', onAir: row.on_air === true
+    hold1Lang:   row.hold1_lang   || '', hold1Kort: row.hold1_kort || '',
+    hold1Score:  row.hold1_score  || 0,  hold2Score: row.hold2_score || 0,
+    hold2Kort:   row.hold2_kort   || '', hold2Lang: row.hold2_lang || '',
+    kommentator: row.kommentator  || '', lokation: row.lokation || '',
+    vmixcall:    row.vmixcall     || '', onAir: row.on_air === true,
+    enetpulseId: row.enetpulse_id || null
   };
   const merged = { ...prev, ...data, editMode: false, collapsed: prev.collapsed, buf: prev.buf };
   if (prev.onAirPending) merged.onAir = prev.onAir;
