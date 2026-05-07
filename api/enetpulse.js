@@ -367,15 +367,23 @@ export default async function handler(req, res) {
         if (debug === '1') {
           const normalized = normalizeEventDetails(detailsRaw, statsRaw, id, username, token);
           const homePartFK = normalized.home_logo ? normalized.home_logo.match(/id=([^&]+)/)?.[1] : null;
-          let imageRaw = null;
+          const imageResults = {};
           if (homePartFK) {
-            try {
-              const imgRes = await fetch(`${EAPI_BASE}/image/participant/?id=${homePartFK}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`);
-              const ct = imgRes.headers.get('content-type') || '';
-              imageRaw = ct.includes('json') ? await imgRes.json() : { content_type: ct, status: imgRes.status };
-            } catch (e) { imageRaw = { error: e.message }; }
+            const variants = {
+              'id':             `${EAPI_BASE}/image/participant/?id=${homePartFK}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`,
+              'participantFK':  `${EAPI_BASE}/image/participant/?participantFK=${homePartFK}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`,
+              'object_style':   `${EAPI_BASE}/image/?object=participant&objectFK=${homePartFK}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`,
+              'participant_ep': `${EAPI_BASE}/participant/?id=${homePartFK}&includeImages=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`,
+            };
+            for (const [label, url] of Object.entries(variants)) {
+              try {
+                const r  = await fetch(url);
+                const ct = r.headers.get('content-type') || '';
+                imageResults[label] = ct.includes('json') ? await r.json() : { content_type: ct, status: r.status };
+              } catch (e) { imageResults[label] = { error: e.message }; }
+            }
           }
-          return { id, raw_keys: Object.keys(detailsRaw || {}), home_logo_url: normalized.home_logo, image_api_response: imageRaw };
+          return { id, raw_keys: Object.keys(detailsRaw || {}), homePartFK, image_variants: imageResults };
         }
         return normalizeEventDetails(detailsRaw, statsRaw, id, username, token);
       }));
