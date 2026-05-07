@@ -128,19 +128,19 @@ function normalizeFixtures(raw) {
 
 function normalizeStats(statsRaw, homePartFK, awayPartFK) {
   if (!statsRaw) return null;
-  const standings   = statsRaw.standings || statsRaw.standing || {};
-  const standing    = Object.values(standings)[0];
+  const standings  = statsRaw.standings || statsRaw.standing || {};
+  const standing   = Object.values(standings)[0];
   if (!standing) return null;
   const participants = standing.standing_participants || {};
 
+  // standing_data er et array med { code, value }
   const partMap = {};
   for (const p of Object.values(participants)) {
     const fk   = String(p.participantFK || '');
-    const data = p.standing_data || {};
+    const data = Array.isArray(p.standing_data) ? p.standing_data : Object.values(p.standing_data || {});
     partMap[fk] = {};
-    for (const d of Object.values(data)) {
-      const name = d.name || d.standing_data_type || String(d.standing_data_typeFK || '');
-      partMap[fk][name] = d.value ?? null;
+    for (const d of data) {
+      partMap[fk][d.code] = d.value ?? null;
     }
   }
 
@@ -148,30 +148,31 @@ function normalizeStats(statsRaw, homePartFK, awayPartFK) {
   const a = partMap[String(awayPartFK)] || {};
   if (!Object.keys(h).length && !Object.keys(a).length) return null;
 
-  const MAP = {
-    'Ball Possession': ['Ball Possession', 'Possession', 'ballpossession', 'possession', 'BallPossession'],
-    'Shots on Goal':   ['Shots on Goal', 'ShotsOnTarget', 'shotsontarget', 'Shots On Target', 'Shots on target'],
-    'Total Shots':     ['Total Shots', 'Shots', 'totalshots', 'Total shots'],
-    'Corner Kicks':    ['Corner Kicks', 'Corners', 'corners', 'Corner kicks'],
-    'Fouls':           ['Fouls', 'fouls', 'Foul'],
-    'Passes %':        ['Passes %', 'PassAccuracy', 'pass_accuracy', 'Passes Accuracy', 'Pass accuracy'],
+  // enetpulse code → renderStats-nøglenavn
+  const CODE_MAP = {
+    'Ball Possession': 'possession',
+    'Shots on Goal':   'shoton',
+    'Total Shots':     'goal_attempt',
+    'Corner Kicks':    'corner',
+    'Fouls':           'foulcommit',
+    'Offsides':        'offside',
   };
 
-  function pick(obj, keys) {
-    for (const k of keys) if (obj[k] != null) return String(obj[k]);
-    return null;
-  }
-
   const hStats = {}, aStats = {};
-  for (const [label, aliases] of Object.entries(MAP)) {
-    const hv = pick(h, aliases);
-    const av = pick(a, aliases);
-    if (hv != null) hStats[label] = hv;
-    if (av != null) aStats[label] = av;
+  for (const [label, code] of Object.entries(CODE_MAP)) {
+    const hv = h[code];
+    const av = a[code];
+    // Boldbesiddelse vises med %-tegn
+    const fmt = v => v == null ? null : (label === 'Ball Possession' ? v + '%' : String(v));
+    if (hv != null) hStats[label] = fmt(hv);
+    if (av != null) aStats[label] = fmt(av);
   }
 
   if (!Object.keys(hStats).length) return null;
-  return [{ team: String(homePartFK), stats: hStats }, { team: String(awayPartFK), stats: aStats }];
+  return [
+    { team: String(homePartFK), stats: hStats },
+    { team: String(awayPartFK), stats: aStats }
+  ];
 }
 
 function normalizeEventDetails(raw, statsRaw, id) {

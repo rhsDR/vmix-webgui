@@ -1845,7 +1845,7 @@ function renderLiveCard(m) {
       'Total Shots':      'Skud i alt',
       'Corner Kicks':     'Hjørnespark',
       'Fouls':            'Frispark',
-      'Passes %':         'Afleveringer %'
+      'Offsides':         'Offside'
     };
     return '<div class="live-stats">' + Object.entries(LABELS).map(([key, label]) => {
       const hv = h[key] ?? '—';
