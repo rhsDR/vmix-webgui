@@ -364,7 +364,19 @@ export default async function handler(req, res) {
           fetch(`${EAPI_BASE}/event/details/?id=${id}&includeIncidents=yes&includeLineups=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`).then(r => r.json()),
           fetch(`${EAPI_BASE}/standing/event_stats/?object=event&objectFK=${id}&includeStandingData=yes&includeStandingParticipants=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`).then(r => r.json()).catch(() => null)
         ]);
-        if (debug === '1') return { id, raw_keys: Object.keys(detailsRaw || {}), stats_raw: statsRaw };
+        if (debug === '1') {
+          const normalized = normalizeEventDetails(detailsRaw, statsRaw, id, username, token);
+          const homePartFK = normalized.home_logo ? normalized.home_logo.match(/id=([^&]+)/)?.[1] : null;
+          let imageRaw = null;
+          if (homePartFK) {
+            try {
+              const imgRes = await fetch(`${EAPI_BASE}/image/participant/?id=${homePartFK}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`);
+              const ct = imgRes.headers.get('content-type') || '';
+              imageRaw = ct.includes('json') ? await imgRes.json() : { content_type: ct, status: imgRes.status };
+            } catch (e) { imageRaw = { error: e.message }; }
+          }
+          return { id, raw_keys: Object.keys(detailsRaw || {}), home_logo_url: normalized.home_logo, image_api_response: imageRaw };
+        }
         return normalizeEventDetails(detailsRaw, statsRaw, id, username, token);
       }));
       return res.status(200).json({ matches: results });
