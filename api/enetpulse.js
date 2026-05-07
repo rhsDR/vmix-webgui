@@ -231,6 +231,7 @@ export default async function handler(req, res) {
       const results = await Promise.all(idList.map(async id => {
         const url = `${EAPI_BASE}/event/details/?id=${id}&includeIncidents=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
         const raw = await fetch(url).then(r => r.json());
+        if (debug === '1') return { id, raw_keys: Object.keys(raw || {}), raw_events_count: Object.keys(raw?.events || {}).length, raw };
         return normalizeEventDetails(raw, id);
       }));
       return res.status(200).json({ matches: results });
