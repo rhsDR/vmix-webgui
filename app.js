@@ -566,13 +566,13 @@ function buildEditView(i) {
 
   const holdFields = i === 5 && k.autoMode ? `
       <div class="form-group span2">
-        <label class="form-label">Vælg kampdag</label>
-        <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:8px;">
-          <input class="form-input" type="date" id="efixdate-${i}" style="width:160px;color-scheme:dark;" value="${today}">
-          <button class="btn btn-save" id="efixdatebtn-${i}" style="white-space:nowrap;">VIS KAMPE</button>
+        <label class="form-label">Hent fra Enetpulse</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <input class="form-input" type="date" id="enetdate-${i}" value="${today}" style="width:160px;color-scheme:dark;">
+          <button class="btn btn-save" id="enetbtn-${i}" style="white-space:nowrap;">VIS KAMPE</button>
         </div>
-        <div id="efixresults-${i}"></div>
-        ${k.fixtureId ? `<div style="margin-top:4px;font-size:11px;color:#555;">Aktiv: <span style="color:var(--orange)">${esc(k.hold1Lang)} vs ${esc(k.hold2Lang)}</span></div>` : ''}
+        <div id="enetresults-${i}"></div>
+        ${k.enetpulseId ? `<div style="margin-top:4px;font-size:11px;color:#555;">Aktiv: <span style="color:var(--orange)">${esc(k.hold1Lang)} vs ${esc(k.hold2Lang)}</span></div>` : ''}
       </div>` : `
       <div class="form-group">
         <label class="form-label">Hold 1</label>
@@ -646,13 +646,13 @@ function buildEditView(i) {
       if (e.key === 'Enter') enetBtn.click();
     });
   } else {
-    const datebtn = div.querySelector('#efixdatebtn-' + i);
-    datebtn.addEventListener('click', () => {
-      const date = div.querySelector('#efixdate-' + i).value;
-      if (date) searchFixtureByDate(i, div, date);
+    const enetBtn6 = div.querySelector('#enetbtn-' + i);
+    enetBtn6.addEventListener('click', () => {
+      const date = div.querySelector('#enetdate-' + i).value;
+      if (date) searchEnetpulseByDate(i, div, date);
     });
-    div.querySelector('#efixdate-' + i).addEventListener('keydown', e => {
-      if (e.key === 'Enter') datebtn.click();
+    div.querySelector('#enetdate-' + i).addEventListener('keydown', e => {
+      if (e.key === 'Enter') enetBtn6.click();
     });
   }
   div.querySelector('#ek-'  + i).addEventListener('change', e => { buf.kommentator = e.target.value; });
