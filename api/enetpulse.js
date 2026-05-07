@@ -4,7 +4,9 @@ const EAPI_BASE = 'https://eapi.enetpulse.com';
 
 // Kendte danske turneringer: { fk: 'Visningsnavn' }
 const DANSKE_LIGAER = {
-  '840491': 'Superligaen',
+  '923100': 'Superligaen',   // mesterskabsspillet
+  '923101': 'Superligaen',   // nedrykningsspillet
+  '916899': 'A-Liga',        // kvinder
 };
 const SB_HEADERS = {
   'apikey': SB_ANON,
