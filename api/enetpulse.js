@@ -207,6 +207,21 @@ function normalizeEventDetails(raw, id) {
 
   mappedEvents.sort((a, b) => (parseInt(a.minute) || 0) - (parseInt(b.minute) || 0));
 
+  // Startopstillinger
+  const lineup = { home: [], away: [] };
+  for (const part of parts) {
+    const side    = String(part.number) === '1' ? 'home' : 'away';
+    const entries = part.lineup ? Object.values(part.lineup) : [];
+    for (const e of entries) {
+      lineup[side].push({
+        name:    e.participant?.name || '',
+        shirt:   e.shirt_number || '',
+        starter: String(e.type_typeFK) === '1'
+      });
+    }
+    lineup[side].sort((a, b) => parseInt(a.shirt || 99) - parseInt(b.shirt || 99));
+  }
+
   return {
     id:        String(ev.id),
     home:      homeApiName,
@@ -220,7 +235,8 @@ function normalizeEventDetails(raw, id) {
     status:    mapStatus(ev),
     league:    ev.tournament_stage_name || ev.tournament_name || '',
     stats:     null,
-    events:    mappedEvents
+    events:    mappedEvents,
+    lineup
   };
 }
 
@@ -281,7 +297,7 @@ export default async function handler(req, res) {
     const idList = String(ids).split(',').filter(Boolean);
     try {
       const results = await Promise.all(idList.map(async id => {
-        const url = `${EAPI_BASE}/event/details/?id=${id}&includeIncidents=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
+        const url = `${EAPI_BASE}/event/details/?id=${id}&includeIncidents=yes&includeLineups=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
         const raw = await fetch(url).then(r => r.json());
         if (debug === '1') return { id, raw_keys: Object.keys(raw || {}), raw_events_count: Object.keys(raw?.events || {}).length, raw };
         return normalizeEventDetails(raw, id);

@@ -1884,7 +1884,29 @@ function renderLiveCard(m) {
       </div>
       <div class="live-events">${eventsHtml}</div>
       ${renderStats(m.stats)}
+      ${renderLineup(m.lineup)}
     </div>`;
+}
+
+function renderLineup(lineup) {
+  if (!lineup) return '';
+  const home = lineup.home || [];
+  const away = lineup.away || [];
+  if (!home.length && !away.length) return '';
+
+  function side(players, label) {
+    const starters = players.filter(p => p.starter);
+    const subs     = players.filter(p => !p.starter);
+    if (!starters.length && !subs.length) return '';
+    return `
+      <div class="lu-side">
+        <div class="lu-side-title">${label}</div>
+        ${starters.map(p => `<div class="lu-player"><span class="lu-shirt">${p.shirt}</span><span class="lu-name">${esc(p.name)}</span></div>`).join('')}
+        ${subs.length ? `<div class="lu-sub-divider">Reserver</div>` + subs.map(p => `<div class="lu-player lu-sub"><span class="lu-shirt">${p.shirt}</span><span class="lu-name">${esc(p.name)}</span></div>`).join('') : ''}
+      </div>`;
+  }
+
+  return `<div class="live-lineup">${side(home, 'Hjemme')}${side(away, 'Ude')}</div>`;
 }
 
 // ── REALTIME ──────────────────────────────────────────────────

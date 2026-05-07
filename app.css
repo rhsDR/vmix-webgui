@@ -264,6 +264,48 @@
       background: #3b82f6;
     }
 
+    .live-lineup {
+      display: flex;
+      gap: 1px;
+      border-top: 1px solid #1e1e1e;
+    }
+    .lu-side {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 11px;
+    }
+    .lu-side:first-child { border-right: 1px solid #1a1a1a; }
+    .lu-side-title {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: #444;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .lu-player {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 2px 0;
+      color: #aaa;
+    }
+    .lu-sub { color: #555; }
+    .lu-shirt {
+      font-size: 10px;
+      color: #555;
+      min-width: 18px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .lu-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lu-sub-divider {
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: #333;
+      text-transform: uppercase;
+      margin: 8px 0 4px;
+    }
+
     .live-updated {
       font-size: 10px;
       color: #333;
