@@ -229,7 +229,7 @@ export default async function handler(req, res) {
     const idList = String(ids).split(',').filter(Boolean);
     try {
       const results = await Promise.all(idList.map(async id => {
-        const url = `${EAPI_BASE}/event/daily/?id=${id}&includeIncidents=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
+        const url = `${EAPI_BASE}/event/details/?id=${id}&includeIncidents=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
         const raw = await fetch(url).then(r => r.json());
         if (debug === '1') return { id, raw_keys: Object.keys(raw || {}), raw_events_count: Object.keys(raw?.events || {}).length, raw };
         return normalizeEventDetails(raw, id);
