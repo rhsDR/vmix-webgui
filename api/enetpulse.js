@@ -367,23 +367,19 @@ export default async function handler(req, res) {
         if (debug === '1') {
           const normalized = normalizeEventDetails(detailsRaw, statsRaw, id, username, token);
           const homePartFK = normalized.home_logo ? normalized.home_logo.match(/id=([^&]+)/)?.[1] : null;
-          const imageResults = {};
-          if (homePartFK) {
-            const variants = {
-              'id':             `${EAPI_BASE}/image/participant/?id=${homePartFK}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`,
-              'participantFK':  `${EAPI_BASE}/image/participant/?participantFK=${homePartFK}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`,
-              'object_style':   `${EAPI_BASE}/image/?object=participant&objectFK=${homePartFK}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`,
-              'participant_ep': `${EAPI_BASE}/participant/?id=${homePartFK}&includeImages=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`,
-            };
-            for (const [label, url] of Object.entries(variants)) {
-              try {
-                const r  = await fetch(url);
-                const ct = r.headers.get('content-type') || '';
-                imageResults[label] = ct.includes('json') ? await r.json() : { content_type: ct, status: r.status };
-              } catch (e) { imageResults[label] = { error: e.message }; }
-            }
-          }
-          return { id, raw_keys: Object.keys(detailsRaw || {}), homePartFK, image_variants: imageResults };
+          const evObj = detailsRaw?.event || detailsRaw?.events || {};
+          const ev    = Object.values(evObj)[0] || {};
+          const parts = ev.event_participants ? Object.values(ev.event_participants) : [];
+          const homePart = parts.find(p => String(p.number) === '1') || parts[0] || {};
+          const awayPart = parts.find(p => String(p.number) === '2') || parts[1] || {};
+          return {
+            id,
+            homePartFK,
+            home_event_participant_keys: Object.keys(homePart),
+            home_participant_sub: homePart.participant || null,
+            home_full: homePart,
+            away_full: awayPart,
+          };
         }
         return normalizeEventDetails(detailsRaw, statsRaw, id, username, token);
       }));
