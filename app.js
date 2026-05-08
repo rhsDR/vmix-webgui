@@ -826,6 +826,7 @@ async function resetEdit(i) {
   k.hold1Score = 0; k.hold2Score = 0;
   k.kommentator = ''; k.lokation = '';
   k.enetpulseId = null; k.fixtureId = null;
+  k.onAir = false;
 
   k.buf.hold1Lang = ''; k.buf.hold2Lang = '';
   k.buf.kommentator = ''; k.buf.lokation = '';
@@ -836,7 +837,8 @@ async function resetEdit(i) {
       hold1_lang: '', hold1_kort: '', hold1_score: 0,
       hold2_lang: '', hold2_kort: '', hold2_score: 0,
       kommentator: '', lokation: '',
-      enetpulse_id: null, fixture_id: null
+      enetpulse_id: null, fixture_id: null,
+      on_air: false
     });
   } catch { toast('Fejl ved nulstilling', 'err'); }
 
