@@ -826,6 +826,7 @@ async function resetEdit(i) {
   k.hold1Score = 0; k.hold2Score = 0;
   k.kommentator = ''; k.lokation = '';
   k.enetpulseId = null; k.fixtureId = null;
+  k.hold1PartFk = null; k.hold2PartFk = null;
   k.onAir = false;
 
   k.buf.hold1Lang = ''; k.buf.hold2Lang = '';
