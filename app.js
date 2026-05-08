@@ -2131,11 +2131,10 @@ function renderLeagueTable(data, home, away) {
   if (!rows.length) return '<div class="pm-empty">Ingen deltagere</div>';
 
   // Udtræk standing_data til flat objekt pr. deltager (array format)
-  const parsed = rows.map((p, i) => {
+  const parsed = rows.map(p => {
     const sd = {};
     const arr = Array.isArray(p.standing_data) ? p.standing_data : Object.values(p.standing_data || {});
     arr.forEach(d => { if (d.code) sd[d.code] = d.value; });
-    if (i === 0) console.log('[standing_data codes]', Object.keys(sd));
     const name = p.participant?.name || p.name || p.participant_name || '';
     return { name, rank: parseInt(p.rank || '999'), ...sd };
   });
@@ -2158,12 +2157,12 @@ function renderLeagueTable(data, home, away) {
     const isHome = homeLow && nameLow.includes(homeLow.substring(0, 4));
     const isAway = awayLow && nameLow.includes(awayLow.substring(0, 4));
     const cls    = isHome ? ' class="lt-home"' : isAway ? ' class="lt-away"' : '';
-    const played = p.matches_played || p.played || p.total_matches || '—';
+    const played = p.played || p.matches_played || p.total_matches || '—';
     const wins   = p.wins || p.won || '—';
     const draws  = p.draws || p.draw || '—';
-    const losses = p.losses || p.lost || '—';
-    const gf     = p.goals_for || p.scored || p.goals_scored || '—';
-    const ga     = p.goals_against || p.conceded || p.goals_conceded || '—';
+    const losses = p.defeits || p.losses || p.lost || '—';
+    const gf     = p.goalsfor || p.goals_for || p.scored || '—';
+    const ga     = p.goalsagainst || p.goals_against || p.conceded || '—';
     const pts    = p.points || p.pts || '—';
     return `<tr${cls}><td>${rank}</td><td class="lt-name">${name}</td><td>${played}</td><td>${wins}</td><td>${draws}</td><td>${losses}</td><td>${gf}</td><td>${ga}</td><td>${pts}</td></tr>`;
   }).join('');
@@ -2183,10 +2182,11 @@ function renderTopScorers(data, homeName, awayName) {
   const participants = entry.standing_participants || {};
   if (!Object.keys(participants).length) return '<div class="pm-empty">Ingen spillere</div>';
 
-  const parsed = Object.values(participants).map(p => {
+  const parsed = Object.values(participants).map((p, i) => {
     const sd  = {};
     const arr = Array.isArray(p.standing_data) ? p.standing_data : Object.values(p.standing_data || {});
     arr.forEach(d => { if (d.code) sd[d.code] = d.value; });
+    if (i === 0) console.log('[topscorer codes]', Object.keys(sd));
     const name     = p.participant?.name || p.name || '';
     const teamName = p.team?.name || p.team_name || p.participant?.team_name || '';
     return { name, teamName, goals: parseInt(sd.goals || 0), assists: parseInt(sd.assists || 0), played: sd.played || sd.total_matches || '—' };
