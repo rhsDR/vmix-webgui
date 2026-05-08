@@ -1859,6 +1859,7 @@ function renderLiveCard(m) {
   const mid = String(m.id);
   const statsOpen = liveExpandedStats.has(mid);
   const tableOpen = liveExpandedTable.has(mid);
+  console.log('[logo]', mid, 'home_part_fk:', m.home_part_fk, 'away_part_fk:', m.away_part_fk);
 
   return `
     <div class="live-card" data-tfk="${m.tournament_fk || ''}" data-mid="${mid}">
