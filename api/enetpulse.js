@@ -62,7 +62,6 @@ function mapStatus(ev) {
   const st      = (ev.status_type || '').toLowerCase();
   const period  = (ev.period_type || ev.active_minute_period || '').toLowerCase();
   const elapsed = getElapsedMinute(ev);
-  console.log(`[mapStatus] id=${ev.id} st="${st}" descFK=${ev.status_descFK} elapsed=${elapsed}`);
   if (st === 'not_started' || st === 'notstarted')       return { short: 'NS',  elapsed: null };
   if (st === 'halftime' || st === 'half_time' || period.includes('halftime') || period.includes('half_time') || period === 'ht')
                                                          return { short: 'HT',  elapsed: null };
