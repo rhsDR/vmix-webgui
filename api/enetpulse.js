@@ -139,8 +139,13 @@ function normalizeFixtures(raw) {
         try {
           const iso = startdate.includes('T') ? startdate : startdate.replace(' ', 'T');
           const d = new Date(/[Z+]/.test(iso) ? iso : iso + 'Z');
-          timePart = d.toLocaleTimeString('da-DK', { timeZone: 'Europe/Copenhagen', hour: '2-digit', minute: '2-digit', hour12: false });
-          console.log('[startdate]', startdate, '→', timePart);
+          // Beregn Copenhagen-offset manuelt (toLocaleTimeString med IANA virker ikke på Vercel)
+          const year = d.getUTCFullYear();
+          const dstStart = new Date(Date.UTC(year, 2, 31)); dstStart.setUTCDate(31 - dstStart.getUTCDay()); dstStart.setUTCHours(1);
+          const dstEnd   = new Date(Date.UTC(year, 9, 31)); dstEnd.setUTCDate(31 - dstEnd.getUTCDay());   dstEnd.setUTCHours(1);
+          const offsetMin = (d >= dstStart && d < dstEnd) ? 120 : 60;
+          const local = new Date(d.getTime() + offsetMin * 60000);
+          timePart = `${String(local.getUTCHours()).padStart(2,'0')}:${String(local.getUTCMinutes()).padStart(2,'0')}`;
         } catch { timePart = ''; }
       }
       return {
