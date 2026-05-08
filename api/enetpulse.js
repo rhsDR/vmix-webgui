@@ -209,9 +209,16 @@ function normalizeEventDetails(raw, statsRaw, id) {
   for (const part of parts) {
     const isHome = String(part.number) === '1';
     const team   = isHome ? homeApiName : awayApiName;
-    for (const inc of Object.values(part.incident || {})) {
+    const incSrc = part.incident || part.incidents || {};
+    for (const inc of Object.values(incSrc)) {
       tagged.push({ ...inc, _team: team });
     }
+  }
+  if (tagged.length > 0) {
+    const codes = [...new Set(tagged.map(i => i.incident_code))];
+    console.log(`[incidents] event=${ev.id} total=${tagged.length} codes=${JSON.stringify(codes)}`);
+  } else {
+    console.log(`[incidents] event=${ev.id} ingen incidents fundet`);
   }
 
   // Grupper på enetID for at parre mål+assist og subst+subst_in
