@@ -1918,10 +1918,12 @@ function renderPitch(lineup, homeName, awayName) {
       const y = ZONE_Y[pos]?.[side] ?? 50;
       return group.map((p, i) => {
         const x = ((i + 1) / (group.length + 1) * 100).toFixed(1);
-        const lastName = esc(p.name.split(' ').pop());
+        const parts    = p.name.trim().split(' ');
+        const firstName = esc(parts[0] || '');
+        const lastName  = esc(parts.slice(1).join(' ') || parts[0] || '');
         return `<div class="pitch-player ${side}${p.id ? ' lu-clickable' : ''}" style="left:${x}%;top:${y}%;" data-pid="${p.id || ''}" data-pname="${esc(p.name)}">
           <div class="pitch-player-circle">${p.shirt}</div>
-          <div class="pitch-player-name">${lastName}</div>
+          <div class="pitch-player-name"><span class="pp-first">${firstName}</span><span class="pp-last">${lastName}</span></div>
         </div>`;
       }).join('');
     }).join('');

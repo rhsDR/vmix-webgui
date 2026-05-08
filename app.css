@@ -272,25 +272,26 @@
       background: #161616;
       border: none;
       border-top: 1px solid #1e1e1e;
-      color: #444;
+      color: #888;
       font-size: 10px;
-      letter-spacing: 2px;
-      padding: 6px;
+      letter-spacing: 3px;
+      padding: 8px;
       cursor: pointer;
       text-align: center;
+      font-family: inherit;
     }
-    .live-lineup-toggle:hover { color: #666; }
+    .live-lineup-toggle:hover { color: #aaa; }
 
     /* Lineup tabs */
     .lineup-tabs { display: flex; border-top: 1px solid #1e1e1e; }
     .lu-tab {
-      flex: 1; background: #161616; border: none;
-      color: #333; font-size: 10px; letter-spacing: 2px;
-      padding: 5px; cursor: pointer; font-family: inherit;
+      flex: 1; background: #111; border: none;
+      color: #555; font-size: 10px; letter-spacing: 3px;
+      padding: 7px; cursor: pointer; font-family: inherit;
     }
     .lu-tab:first-child { border-right: 1px solid #1e1e1e; }
-    .lu-tab.active { color: #777; }
-    .lu-tab:hover { color: #666; }
+    .lu-tab.active { color: #ccc; background: #161616; }
+    .lu-tab:hover { color: #999; }
 
     /* Pitch */
     .pitch-wrap {
@@ -332,10 +333,18 @@
     .pitch-player.lu-clickable:hover .pitch-player-circle { filter: brightness(1.2); }
     .pitch-player-name {
       font-size: 8px; color: #fff;
-      text-align: center; max-width: 52px;
+      text-align: center; max-width: 56px;
       text-shadow: 0 1px 3px rgba(0,0,0,0.9);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      line-height: 1.2;
+      line-height: 1.3;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .pp-first {
+      font-size: 7px; color: rgba(255,255,255,0.7);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 56px;
+    }
+    .pp-last {
+      font-size: 8px; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 56px;
     }
     .pitch-formation {
       position: absolute;
