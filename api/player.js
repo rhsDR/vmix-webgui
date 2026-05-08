@@ -1,5 +1,20 @@
 const EAPI_BASE = 'https://eapi.enetpulse.com';
 
+async function tryFetch(url) {
+  try {
+    const r    = await fetch(url);
+    const text = await r.text();
+    try {
+      const json = JSON.parse(text);
+      return { ok: !json.error_message && Object.keys(json).length > 0, json };
+    } catch {
+      return { ok: false, json: null, error: 'Ikke JSON: ' + text.substring(0, 80) };
+    }
+  } catch (err) {
+    return { ok: false, json: null, error: err.message };
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
@@ -12,37 +27,43 @@ export default async function handler(req, res) {
 
   const auth = `username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
 
-  // participantFK er blacklistet — prøv id-i-sti og ?id= varianter
-  const urls = [
-    `${EAPI_BASE}/participant/${id}/?${auth}`,
-    `${EAPI_BASE}/participant/details/${id}/?${auth}`,
-    `${EAPI_BASE}/participant/details/?id=${id}&${auth}`,
-    `${EAPI_BASE}/participant/?id=${id}&${auth}`,
-  ];
-
-  const attempts = [];
-  for (const url of urls) {
-    try {
-      const r    = await fetch(url);
-      const text = await r.text();
-      let json;
-      try { json = JSON.parse(text); } catch { attempts.push({ url: url.split('?')[0].replace(EAPI_BASE, ''), error: 'Ikke JSON: ' + text.substring(0, 80) }); continue; }
-
-      const urlShort = url.split('?')[0].replace(EAPI_BASE, '');
-      attempts.push({ url: urlShort, response: json });
-
-      if (json && !json.error_message && Object.keys(json).length > 0) {
-        const part = json.participant
-          ? Object.values(json.participant)[0]
-          : json.participants
-            ? Object.values(json.participants)[0]
-            : Object.values(json)[0];
-        return res.status(200).json({ raw: part || json });
-      }
-    } catch (err) {
-      attempts.push({ url: url.split('?')[0].replace(EAPI_BASE, ''), error: err.message });
-    }
+  // Hent spillerprofil (sti-baseret ID virker)
+  const profileResult = await tryFetch(`${EAPI_BASE}/participant/${id}/?${auth}`);
+  if (!profileResult.ok) {
+    return res.status(404).json({ error: 'Spillerdata ikke tilgængeligt', debug: profileResult });
   }
 
-  return res.status(404).json({ error: 'Spillerdata ikke tilgængeligt', debug: attempts });
+  const raw = profileResult.json;
+  const part = raw.participant
+    ? Object.values(raw.participant)[0]
+    : raw.participants
+      ? Object.values(raw.participants)[0]
+      : Object.values(raw)[0];
+
+  // Prøv statistik-endpoints parallelt
+  const statsEndpoints = [
+    `/participant/${id}/statistics/?${auth}`,
+    `/participant/${id}/stats/?${auth}`,
+    `/participant/${id}/career/?${auth}`,
+    `/participant/${id}/seasons/?${auth}`,
+    `/participant/${id}/tournaments/?${auth}`,
+    `/participant/statistics/?id=${id}&${auth}`,
+    `/participant/career/?id=${id}&${auth}`,
+  ];
+
+  const statsResults = await Promise.all(
+    statsEndpoints.map(async ep => {
+      const r = await tryFetch(`${EAPI_BASE}${ep}`);
+      return { ep: ep.split('?')[0], ok: r.ok, keys: r.json ? Object.keys(r.json).join(',') : null, error: r.error, sample: r.ok ? JSON.stringify(r.json).substring(0, 200) : null };
+    })
+  );
+
+  const statsDebug = statsResults.filter(r => r.ok);
+  const successfulStats = statsResults.find(r => r.ok);
+
+  return res.status(200).json({
+    raw:        part || raw,
+    statsDebug: statsResults,   // vis alle forsøg
+    stats:      successfulStats ? successfulStats.sample : null
+  });
 }
