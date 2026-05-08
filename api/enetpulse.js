@@ -284,13 +284,16 @@ function normalizeEventDetails(raw, statsRaw, id) {
   }
 
   return {
-    id:        String(ev.id),
-    home:      homeApiName,
-    home_kort: '',
-    away:      awayApiName,
-    away_kort: '',
-    home_api:  homeApiName,
-    away_api:  awayApiName,
+    id:            String(ev.id),
+    home:          homeApiName,
+    home_kort:     '',
+    away:          awayApiName,
+    away_kort:     '',
+    home_api:      homeApiName,
+    away_api:      awayApiName,
+    home_part_fk:  String(homePartFK),
+    away_part_fk:  String(awayPartFK),
+    tournament_fk: String(ev.tournament_stageFK || ev.tournament_templateFK || ev.tournamentFK || ''),
     homeGoals,
     awayGoals,
     status:    mapStatus(ev),
