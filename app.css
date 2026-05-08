@@ -1302,6 +1302,18 @@
       color: var(--muted);
       text-transform: uppercase;
       margin: 14px 0 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pm-rating-badge {
+      background: var(--orange);
+      color: #000;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0;
+      padding: 2px 7px;
+      border-radius: 3px;
     }
     .pm-row {
       display: flex;
@@ -1337,9 +1349,10 @@
     .pm-stat-label { font-size: 11px; color: var(--muted); }
     .pm-stat-value { font-size: 11px; color: var(--text); font-weight: 600; }
 
-    /* ── Kampstatistik & Ligatable toggles ───────────────── */
+    /* ── Kampstatistik & Ligatable & H2H toggles ────────── */
     .live-stats-toggle,
-    .live-table-toggle {
+    .live-table-toggle,
+    .live-h2h-toggle {
       display: block;
       width: 100%;
       background: #111;
@@ -1353,7 +1366,53 @@
       border-top: 1px solid #1a1a1a;
       font-family: inherit;
     }
-    .live-stats-toggle:hover, .live-table-toggle:hover { color: #888; }
+    .live-stats-toggle:hover, .live-table-toggle:hover, .live-h2h-toggle:hover { color: #888; }
+
+    /* ── TABEL sub-tabs ───────────────────────────────────── */
+    .table-subtabs { display: flex; border-bottom: 1px solid #1a1a1a; }
+    .table-subtab {
+      flex: 1;
+      background: #0d0d0d;
+      border: none;
+      color: #444;
+      font-size: 9px;
+      letter-spacing: 2px;
+      padding: 6px 4px;
+      cursor: pointer;
+      text-align: center;
+      font-family: inherit;
+      border-right: 1px solid #1a1a1a;
+    }
+    .table-subtab:last-child { border-right: none; }
+    .table-subtab.active { color: #888; background: #111; }
+    .table-subtab:hover { color: #777; }
+    .ts-team { color: #333 !important; font-size: 9px; }
+
+    /* ── H2H tabel ────────────────────────────────────────── */
+    .h2h-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+      margin: 4px 0 2px;
+    }
+    .h2h-table td { padding: 3px 6px; }
+    .h2h-date { color: #444; white-space: nowrap; font-size: 9px; }
+    .h2h-team { color: #555; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .h2h-right { text-align: right; }
+    .h2h-score { text-align: center; color: #777; font-weight: 600; white-space: nowrap; padding: 3px 8px; }
+    .h2h-home { color: var(--orange) !important; }
+    .h2h-away { color: #3b82f6 !important; }
+    .h2h-summary {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      letter-spacing: 1px;
+      padding: 6px 8px 8px;
+      border-top: 1px solid #1a1a1a;
+    }
+    .h2h-sum-home { color: var(--orange); }
+    .h2h-sum-draw { color: #444; }
+    .h2h-sum-away { color: #3b82f6; }
 
     /* ── Event stats tabel ────────────────────────────────── */
     .event-stats-table {

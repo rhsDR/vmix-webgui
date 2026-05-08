@@ -1666,8 +1666,12 @@ const liveExpandedLineup = new Set(); // matchId → opstilling synlig
 const livePitchMode      = new Map(); // matchId → 'liste' | 'bane'
 const liveExpandedStats  = new Set(); // matchId → statistik synlig
 const liveExpandedTable  = new Set(); // matchId → ligatable synlig
+const liveExpandedH2H    = new Set(); // matchId → H2H synlig
 const liveStatsCache     = new Map(); // matchId → renderet statistik HTML
 const liveTableCache     = new Map(); // matchId → renderet ligatable HTML
+const liveTopScorerCache = new Map(); // matchId → renderet topscorer HTML
+const liveH2HCache       = new Map(); // matchId → renderet H2H HTML
+const liveTableTab       = new Map(); // matchId → 'table' | 'topscorer'
 
 function startLivePolling() {
   fetchLiveMatches();
@@ -1771,16 +1775,90 @@ async function fetchLiveMatches() {
         btn.textContent = 'TABEL ' + (open ? '▾' : '▴');
         wrap.style.display = open ? 'none' : 'block';
         if (!open) {
-          inner.innerHTML = '<div class="pm-loading">Henter…</div>';
+          const tab  = liveTableTab.get(id) || 'table';
           const tfk  = btn.dataset.tfk;
           const home = btn.dataset.home;
           const away = btn.dataset.away;
           if (!tfk) { inner.innerHTML = '<div class="pm-empty">Ingen turnering-FK</div>'; return; }
+          if (tab === 'topscorer') {
+            if (liveTopScorerCache.has(id)) { inner.innerHTML = liveTopScorerCache.get(id); return; }
+            inner.innerHTML = '<div class="pm-loading">Henter…</div>';
+            const r = await fetch(`/api/standings?type=topscorer&object=tournament_stage&objectFK=${encodeURIComponent(tfk)}`);
+            const j = await r.json();
+            const html = j.ok ? renderTopScorers(j.data, home, away) : '<div class="pm-empty">Topscorer ikke tilgængelig</div>';
+            liveTopScorerCache.set(id, html);
+            inner.innerHTML = html;
+          } else {
+            if (liveTableCache.has(id)) { inner.innerHTML = liveTableCache.get(id); return; }
+            inner.innerHTML = '<div class="pm-loading">Henter…</div>';
+            const r = await fetch(`/api/standings?type=leaguetable&object=tournament_stage&objectFK=${encodeURIComponent(tfk)}`);
+            const j = await r.json();
+            const html = j.ok ? renderLeagueTable(j.data, home, away) : '<div class="pm-empty">Ligatable ikke tilgængelig</div>';
+            liveTableCache.set(id, html);
+            inner.innerHTML = html;
+          }
+        }
+      });
+    });
+
+    // TABEL sub-tabs (TABEL | TOPSCORER)
+    grid.querySelectorAll('.table-subtab').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id  = String(btn.dataset.id);
+        const tab = btn.dataset.tab;
+        liveTableTab.set(id, tab);
+        const wrap = btn.closest('.live-table-wrap');
+        wrap.querySelectorAll('.table-subtab').forEach(b => b.classList.toggle('active', b === btn));
+        const inner = wrap.querySelector('.live-table-inner');
+        const card  = btn.closest('.live-card');
+        const tfk   = card?.dataset.tfk || '';
+        const home  = card?.querySelector('.live-team-name')?.textContent || '';
+        const away  = card?.querySelectorAll('.live-team-name')[1]?.textContent || '';
+        if (tab === 'topscorer') {
+          if (liveTopScorerCache.has(id)) { inner.innerHTML = liveTopScorerCache.get(id); return; }
+          inner.innerHTML = '<div class="pm-loading">Henter…</div>';
+          if (!tfk) { inner.innerHTML = '<div class="pm-empty">Ingen turnering-FK</div>'; return; }
+          const r = await fetch(`/api/standings?type=topscorer&object=tournament_stage&objectFK=${encodeURIComponent(tfk)}`);
+          const j = await r.json();
+          const html = j.ok ? renderTopScorers(j.data, home, away) : '<div class="pm-empty">Topscorer ikke tilgængelig</div>';
+          liveTopScorerCache.set(id, html);
+          inner.innerHTML = html;
+        } else {
+          if (liveTableCache.has(id)) { inner.innerHTML = liveTableCache.get(id); return; }
+          inner.innerHTML = '<div class="pm-loading">Henter…</div>';
+          if (!tfk) { inner.innerHTML = '<div class="pm-empty">Ingen turnering-FK</div>'; return; }
           const r = await fetch(`/api/standings?type=leaguetable&object=tournament_stage&objectFK=${encodeURIComponent(tfk)}`);
           const j = await r.json();
-          const tableHtml = j.ok ? renderLeagueTable(j.data, home, away) : '<div class="pm-empty">Ligatable ikke tilgængelig</div>';
-          liveTableCache.set(id, tableHtml);
-          inner.innerHTML = tableHtml;
+          const html = j.ok ? renderLeagueTable(j.data, home, away) : '<div class="pm-empty">Ligatable ikke tilgængelig</div>';
+          liveTableCache.set(id, html);
+          inner.innerHTML = html;
+        }
+      });
+    });
+
+    // H2H toggle
+    grid.querySelectorAll('.live-h2h-toggle').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id   = String(btn.dataset.id);
+        const open = liveExpandedH2H.has(id);
+        if (open) { liveExpandedH2H.delete(id); } else { liveExpandedH2H.add(id); }
+        const wrap  = btn.nextElementSibling;
+        const inner = wrap.querySelector('.live-h2h-inner');
+        btn.textContent = 'H2H ' + (open ? '▾' : '▴');
+        wrap.style.display = open ? 'none' : 'block';
+        if (!open) {
+          if (liveH2HCache.has(id)) { inner.innerHTML = liveH2HCache.get(id); return; }
+          inner.innerHTML = '<div class="pm-loading">Henter…</div>';
+          const p1   = btn.dataset.hpfk;
+          const p2   = btn.dataset.apfk;
+          const home = btn.dataset.home;
+          const away = btn.dataset.away;
+          if (!p1 || !p2) { inner.innerHTML = '<div class="pm-empty">Mangler hold-FK</div>'; return; }
+          const r = await fetch(`/api/h2h?p1=${encodeURIComponent(p1)}&p2=${encodeURIComponent(p2)}`);
+          const j = await r.json();
+          const html = j.ok ? renderH2H(j.data, home, away) : '<div class="pm-empty">H2H ikke tilgængelig</div>';
+          liveH2HCache.set(id, html);
+          inner.innerHTML = html;
         }
       });
     });
@@ -1891,8 +1969,10 @@ function renderLiveCard(m) {
   const mid = String(m.id);
   const statsOpen = liveExpandedStats.has(mid);
   const tableOpen = liveExpandedTable.has(mid);
+  const h2hOpen   = liveExpandedH2H.has(mid);
+  const tableTab  = liveTableTab.get(mid) || 'table';
   return `
-    <div class="live-card" data-tfk="${m.tournament_fk || ''}" data-mid="${mid}">
+    <div class="live-card" data-tfk="${m.tournament_fk || ''}" data-mid="${mid}" data-hpfk="${m.home_part_fk || ''}" data-apfk="${m.away_part_fk || ''}">
       <div class="live-card-header">
         <div class="live-score-row">
           <span class="live-team">
@@ -1917,7 +1997,15 @@ function renderLiveCard(m) {
       </div>
       <button class="live-table-toggle" data-id="${mid}" data-tfk="${m.tournament_fk || ''}" data-home="${m.home}" data-away="${m.away}">TABEL ${tableOpen ? '▴' : '▾'}</button>
       <div class="live-table-wrap" style="display:${tableOpen ? 'block' : 'none'}">
-        <div class="live-table-inner" data-id="${mid}">${liveTableCache.get(mid) || '<div class="pm-loading">Henter…</div>'}</div>
+        <div class="table-subtabs">
+          <button class="table-subtab${tableTab === 'table' ? ' active' : ''}" data-id="${mid}" data-tab="table">TABEL</button>
+          <button class="table-subtab${tableTab === 'topscorer' ? ' active' : ''}" data-id="${mid}" data-tab="topscorer">TOPSCORER</button>
+        </div>
+        <div class="live-table-inner" data-id="${mid}">${tableTab === 'table' ? (liveTableCache.get(mid) || '<div class="pm-loading">Henter…</div>') : (liveTopScorerCache.get(mid) || '<div class="pm-loading">Henter…</div>')}</div>
+      </div>
+      <button class="live-h2h-toggle" data-id="${mid}" data-hpfk="${m.home_part_fk || ''}" data-apfk="${m.away_part_fk || ''}" data-home="${m.home}" data-away="${m.away}">H2H ${h2hOpen ? '▴' : '▾'}</button>
+      <div class="live-h2h-wrap" style="display:${h2hOpen ? 'block' : 'none'}">
+        <div class="live-h2h-inner" data-id="${mid}">${liveH2HCache.get(mid) || '<div class="pm-loading">Henter…</div>'}</div>
       </div>
       ${renderLineup(m.lineup, m.home, m.away, m.id)}
     </div>`;
@@ -2085,6 +2173,111 @@ function renderLeagueTable(data, home, away) {
   </table>`;
 }
 
+function renderTopScorers(data, homeName, awayName) {
+  const standings = data?.standings || data?.standing;
+  if (!standings) return '<div class="pm-empty">Ingen data</div>';
+  const entry = Object.values(standings)[0];
+  if (!entry) return '<div class="pm-empty">Ingen data</div>';
+
+  const participants = entry.standing_participants || {};
+  if (!Object.keys(participants).length) return '<div class="pm-empty">Ingen spillere</div>';
+
+  const parsed = Object.values(participants).map(p => {
+    const sd  = {};
+    const arr = Array.isArray(p.standing_data) ? p.standing_data : Object.values(p.standing_data || {});
+    arr.forEach(d => { if (d.code) sd[d.code] = d.value; });
+    const name     = p.participant?.name || p.name || '';
+    const teamName = p.team?.name || p.team_name || p.participant?.team_name || '';
+    return { name, teamName, goals: parseInt(sd.goals || 0), assists: parseInt(sd.assists || 0), played: sd.played || sd.total_matches || '—' };
+  });
+
+  parsed.sort((a, b) => b.goals - a.goals || b.assists - a.assists);
+
+  const homeLow = (homeName || '').toLowerCase();
+  const awayLow = (awayName || '').toLowerCase();
+
+  const rows = parsed.slice(0, 15).map((p, i) => {
+    const teamLow = p.teamName.toLowerCase();
+    const isHome  = homeLow && teamLow.includes(homeLow.substring(0, 4));
+    const isAway  = awayLow && teamLow.includes(awayLow.substring(0, 4));
+    const cls     = isHome ? ' class="lt-home"' : isAway ? ' class="lt-away"' : '';
+    return `<tr${cls}><td>${i + 1}</td><td class="lt-name">${p.name}</td><td class="lt-name ts-team">${p.teamName}</td><td>${p.goals}</td><td>${p.assists}</td><td>${p.played}</td></tr>`;
+  }).join('');
+
+  return `<table class="league-table">
+    <thead><tr><th>#</th><th class="lt-name">Spiller</th><th class="lt-name ts-team">Hold</th><th>M</th><th>A</th><th>K</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderH2H(data, homeName, awayName) {
+  const events = data?.events || {};
+  const evList = Object.values(events).filter(ev => ev.id);
+  if (!evList.length) return '<div class="pm-empty">Ingen H2H-kampe fundet</div>';
+
+  const homeLow = (homeName || '').toLowerCase().substring(0, 5);
+  const awayLow = (awayName || '').toLowerCase().substring(0, 5);
+  let homeWins = 0, awayWins = 0, draws = 0;
+
+  function scoreFromPart(part) {
+    if (!part?.result) return null;
+    const entries = Object.values(part.result);
+    const ot = entries.find(r => r.result_code === 'ordinarytime');
+    const val = parseInt(ot?.value ?? entries[0]?.value ?? '');
+    return isNaN(val) ? null : val;
+  }
+
+  const rows = evList.slice(0, 5).map(ev => {
+    const parts    = ev.event_participants ? Object.values(ev.event_participants) : [];
+    const homePart = parts.find(p => String(p.number) === '1') || parts[0] || {};
+    const awayPart = parts.find(p => String(p.number) === '2') || parts[1] || {};
+    const hName    = homePart.participant?.name || homePart.name || '?';
+    const aName    = awayPart.participant?.name || awayPart.name || '?';
+    const hGoals   = scoreFromPart(homePart);
+    const aGoals   = scoreFromPart(awayPart);
+
+    // Date
+    const startdate = ev.startdate || '';
+    let dateStr = '';
+    if (startdate) {
+      try {
+        const iso = startdate.includes('T') ? startdate : startdate.replace(' ', 'T');
+        const d   = new Date(/[Z+]/.test(iso) ? iso : iso + 'Z');
+        dateStr   = d.toLocaleDateString('da-DK', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Copenhagen' });
+      } catch { dateStr = startdate.substring(0, 10); }
+    }
+
+    // Win tracking — figure out which side is "our" home team
+    const hNameLow = hName.toLowerCase();
+    const hIsCurrentHome = homeLow && hNameLow.includes(homeLow);
+    if (hGoals !== null && aGoals !== null) {
+      if (hGoals > aGoals)      { hIsCurrentHome ? homeWins++ : awayWins++; }
+      else if (aGoals > hGoals) { hIsCurrentHome ? awayWins++ : homeWins++; }
+      else                      { draws++; }
+    }
+
+    const hCls = homeLow && hNameLow.includes(homeLow) ? 'h2h-home' : (awayLow && hNameLow.includes(awayLow) ? 'h2h-away' : '');
+    const aNameLow = aName.toLowerCase();
+    const aCls = awayLow && aNameLow.includes(awayLow) ? 'h2h-away' : (homeLow && aNameLow.includes(homeLow) ? 'h2h-home' : '');
+    const scoreStr = hGoals !== null && aGoals !== null ? `${hGoals} – ${aGoals}` : '— – —';
+
+    return `<tr>
+      <td class="h2h-date">${dateStr}</td>
+      <td class="h2h-team h2h-right ${hCls}">${hName}</td>
+      <td class="h2h-score">${scoreStr}</td>
+      <td class="h2h-team ${aCls}">${aName}</td>
+    </tr>`;
+  }).join('');
+
+  const summary = `<div class="h2h-summary">
+    <span class="h2h-sum-home">${homeName || 'Hjemme'}: ${homeWins}</span>
+    <span class="h2h-sum-draw">Uafgjort: ${draws}</span>
+    <span class="h2h-sum-away">${awayName || 'Ude'}: ${awayWins}</span>
+  </div>`;
+
+  return `<table class="h2h-table"><tbody>${rows}</tbody></table>${summary}`;
+}
+
 function renderLineup(lineup, homeName, awayName, matchId) {
   if (!lineup) return '';
   const home = lineup.home || [];
@@ -2130,8 +2323,10 @@ playerModal?.addEventListener('click', e => { if (e.target === playerModal) play
 document.getElementById('liveGrid')?.addEventListener('click', ev => {
   const el = ev.target.closest('.lu-clickable');
   if (el && el.dataset.pid) {
-    const tfk = el.closest('.live-card')?.dataset.tfk || '';
-    openPlayerModal(el.dataset.pid, el.dataset.pname, tfk);
+    const card = el.closest('.live-card');
+    const tfk  = card?.dataset.tfk || '';
+    const mid  = card?.dataset.mid || '';
+    openPlayerModal(el.dataset.pid, el.dataset.pname, tfk, mid);
   }
 });
 
@@ -2148,7 +2343,25 @@ function calcAge(dob) {
   return `${d.toLocaleDateString('da-DK')} (${age} år)`;
 }
 
-function renderPlayerData(p, statsJson, playerId) {
+function extractMatchRating(ratingJson, playerId) {
+  if (!ratingJson?.ok) return null;
+  const data  = ratingJson.data;
+  const stats = data?.statistics || data?.statistic || {};
+  for (const stat of Object.values(stats)) {
+    const parts = stat.statistic_participants || {};
+    for (const part of Object.values(parts)) {
+      if (String(part.participantFK) === String(playerId)) {
+        const sd  = {};
+        const arr = Array.isArray(part.statistic_data) ? part.statistic_data : Object.values(part.statistic_data || {});
+        arr.forEach(d => { if (d.code) sd[d.code] = d.value; });
+        return sd;
+      }
+    }
+  }
+  return null;
+}
+
+function renderPlayerData(p, statsJson, playerId, ratingJson) {
   if (!p || typeof p !== 'object') return '<div class="pm-empty">Ingen data</div>';
 
   // Parse enetpulse property-array: [{name, value}, ...] → flat map
@@ -2180,6 +2393,39 @@ function renderPlayerData(p, statsJson, playerId) {
     'type','n','ut','property','id','participantFK','gender','active','retirement_date',
     'birthdate','date_of_birth','position','height','weight','foot']);
   const extraTop = Object.entries(p).filter(([k, v]) => !knownTop.has(k) && v !== null && v !== '' && typeof v !== 'object');
+
+  // Kampvurdering (live rating for denne kamp)
+  let matchRatingHtml = '';
+  const rd = extractMatchRating(ratingJson, playerId);
+  if (rd && Object.keys(rd).length) {
+    const rating = rd.rating || rd.Rating || rd.player_rating;
+    const RATING_LABELS = {
+      rating:               null, // vises som badge
+      Rating:               null,
+      player_rating:        null,
+      shots_on_goal:        'Skud på mål',
+      shots_off_goal:       'Skud udenfor',
+      passes:               'Afleveringer',
+      pass_accuracy:        'Aflevering %',
+      tackles:              'Tacklinger',
+      duel_won:             'Dueller vundet',
+      duel_lost:            'Dueller tabt',
+      aerial_won:           'Luftdueller vundet',
+      aerial_lost:          'Luftdueller tabt',
+      fouls:                'Frispark begået',
+      saves:                'Redninger',
+    };
+    const ratingBadge = rating != null
+      ? `<div class="pm-rating-badge">${parseFloat(rating).toFixed(1)}</div>`
+      : '';
+    const ratingRows = Object.entries(RATING_LABELS)
+      .filter(([k, label]) => label && rd[k] != null)
+      .map(([k, label]) => `<div class="pm-stat-row"><span class="pm-stat-label">${label}</span><span class="pm-stat-value">${rd[k]}</span></div>`)
+      .join('');
+    if (ratingBadge || ratingRows) {
+      matchRatingHtml = `<div class="pm-section-title">Kampvurdering${ratingBadge}</div><div class="pm-section">${ratingRows}</div>`;
+    }
+  }
 
   // Sæsonstatistik fra participant_stats
   let seasonStatsHtml = '';
@@ -2232,25 +2478,29 @@ function renderPlayerData(p, statsJson, playerId) {
       ${extraProps.map(([k, v]) => playerField(k, v)).join('')}
       ${extraTop.map(([k, v]) => playerField(k, v)).join('')}
     </div>` : ''}
+    ${matchRatingHtml}
     ${seasonStatsHtml}`;
 }
 
-async function openPlayerModal(id, name, tournamentFk) {
+async function openPlayerModal(id, name, tournamentFk, matchId) {
   playerModalContent.innerHTML = `<div class="pm-name">${name || '…'}</div><div class="pm-loading">Henter data…</div>`;
   playerModal.style.display = 'flex';
 
   try {
     const fetches = [fetch(`/api/player?id=${encodeURIComponent(id)}`)];
     if (tournamentFk) fetches.push(fetch(`/api/standings?type=participant_stats&object=tournament_stage&objectFK=${encodeURIComponent(tournamentFk)}`));
+    if (matchId)      fetches.push(fetch(`/api/standings?type=player_ratings&object=event&objectFK=${encodeURIComponent(matchId)}`));
     const results = await Promise.all(fetches);
     const profileJson = await results[0].json();
-    let statsJson = null;
-    if (results[1]) { try { statsJson = await results[1].json(); } catch {} }
+    let statsJson  = null;
+    let ratingJson = null;
+    if (results[1]) { try { statsJson  = await results[1].json(); } catch {} }
+    if (results[2]) { try { ratingJson = await results[2].json(); } catch {} }
 
     if (profileJson.error) {
       playerModalContent.innerHTML = `<div class="pm-name">${name}</div><div class="pm-empty">${profileJson.error}</div>`;
     } else {
-      playerModalContent.innerHTML = renderPlayerData(profileJson.raw, statsJson, id);
+      playerModalContent.innerHTML = renderPlayerData(profileJson.raw, statsJson, id, ratingJson);
     }
   } catch (err) {
     playerModalContent.innerHTML = `<div class="pm-name">${name}</div><div class="pm-empty">Netværksfejl</div>`;

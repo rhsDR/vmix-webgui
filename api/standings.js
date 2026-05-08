@@ -11,6 +11,23 @@ export default async function handler(req, res) {
   if (!type || !objectFK) return res.status(400).json({ error: 'Mangler type eller objectFK parameter' });
 
   const auth = `username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
+
+  // Statistik-service — anderledes URL-prefix end standing-service
+  if (type === 'player_ratings') {
+    const url2 = `${EAPI_BASE}/statistics/player_stats_ratings/?object=${encodeURIComponent(object || 'event')}&objectFK=${encodeURIComponent(objectFK)}&includeStatisticParticipants=yes&includeStatisticData=yes&${auth}`;
+    try {
+      const r    = await fetch(url2);
+      const text = await r.text();
+      let json;
+      try { json = JSON.parse(text); } catch { return res.status(500).json({ error: 'Ugyldig JSON fra enetpulse' }); }
+      if (json.error_message || Object.keys(json).length === 0)
+        return res.status(404).json({ error: json.error_message || 'Ingen data' });
+      return res.status(200).json({ ok: true, data: json });
+    } catch {
+      return res.status(500).json({ error: 'Fetch fejlede' });
+    }
+  }
+
   const obj  = object ? `object=${encodeURIComponent(object)}&` : '';
   const url  = `${EAPI_BASE}/standing/${encodeURIComponent(type)}/?${obj}objectFK=${encodeURIComponent(objectFK)}&includeStandingParticipants=yes&includeStandingData=yes&${auth}`;
 
