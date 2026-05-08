@@ -134,6 +134,13 @@
       font-weight: 700;
       color: #e5e5e5;
     }
+    .live-team-logo {
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
+      flex-shrink: 0;
+      opacity: 0.9;
+    }
     .live-team-kort {
       font-size: 13px;
       font-weight: 600;
