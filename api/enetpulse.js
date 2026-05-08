@@ -374,6 +374,7 @@ export default async function handler(req, res) {
         if (debug === '1') return { id, raw_keys: Object.keys(detailsRaw || {}), stats_raw: statsRaw };
         return normalizeEventDetails(detailsRaw, statsRaw, id);
       }));
+      res.setHeader('Cache-Control', 'no-store');
       return res.status(200).json({ matches: results });
     } catch (err) {
       return res.status(500).json({ error: err.message });
