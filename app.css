@@ -738,7 +738,18 @@
       justify-content: center;
       gap: 12px;
     }
-    .team-block { text-align: center; }
+    .team-block {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .team-logo {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+    }
     .team-name {
       font-size: 28px;
       font-weight: 800;
