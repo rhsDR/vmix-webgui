@@ -433,7 +433,7 @@ function buildBlock(i) {
         <span class="kamp-label">KAMP ${i + 1}</span>
       </div>
       <div class="kamp-header-right">
-        ${i === 5 ? `<button class="auto-mode-btn ${k.autoMode ? 'active' : ''}" id="autobtn-${i}">${k.autoMode ? '⚡ AUTO' : 'MANUEL'}</button>` : ''}
+        <button class="auto-mode-btn ${k.autoMode ? 'active' : ''}" id="autobtn-${i}">${k.autoMode ? '⚡ AUTO' : 'MANUEL'}</button>
         ${!k.editMode
           ? `<button class="icon-btn" id="editbtn-${i}" title="Rediger">✏️</button>`
           : ''}
@@ -548,7 +548,7 @@ function buildEditView(i) {
 
   const today = new Date().toISOString().split('T')[0];
 
-  const holdFields = i === 5 && k.autoMode ? `
+  const holdFields = k.autoMode ? `
       <div class="form-group span2">
         <label class="form-label">Hent fra Enetpulse</label>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
