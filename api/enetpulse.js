@@ -43,11 +43,26 @@ function getParticipants(ev) {
   return { home, away };
 }
 
+function getElapsedMinute(ev) {
+  const e = ev.elapsed;
+  if (!e) return null;
+  if (typeof e === 'number') return String(e);
+  if (typeof e === 'string') return e;
+  if (typeof e === 'object') {
+    const entry = Object.values(e)[0];
+    if (!entry) return null;
+    const min   = entry.elapsed || '';
+    const extra = parseInt(entry.injury_time_elapsed) || 0;
+    return min + (extra > 0 ? '+' + extra : '');
+  }
+  return null;
+}
+
 function mapStatus(ev) {
-  const st     = (ev.status_type || '').toLowerCase();
-  const period = (ev.period_type || ev.active_minute_period || '').toLowerCase();
-  const elapsed = parseInt(ev.elapsed) || null;
-  console.log(`[mapStatus] id=${ev.id} st="${st}" period="${period}" elapsed=${JSON.stringify(ev.elapsed)} keys=${Object.keys(ev).filter(k=>['status','period','elapsed','minute','time','active','current'].some(x=>k.toLowerCase().includes(x))).join(',')}`);
+  const st      = (ev.status_type || '').toLowerCase();
+  const period  = (ev.period_type || ev.active_minute_period || '').toLowerCase();
+  const elapsed = getElapsedMinute(ev);
+  console.log(`[mapStatus] id=${ev.id} st="${st}" descFK=${ev.status_descFK} elapsed=${elapsed}`);
   if (st === 'not_started' || st === 'notstarted')       return { short: 'NS',  elapsed: null };
   if (st === 'halftime' || st === 'half_time' || period.includes('halftime') || period.includes('half_time') || period === 'ht')
                                                          return { short: 'HT',  elapsed: null };
@@ -55,8 +70,9 @@ function mapStatus(ev) {
                                                          return { short: 'FT',  elapsed: null };
   if (st === 'cancelled' || st === 'postponed')          return { short: 'PST', elapsed: null };
   if (st === 'inprogress' || st === 'started') {
-    if (period.includes('2') || period.includes('second')) return { short: '2H', elapsed };
-    if (period.includes('overtime') || period.includes('et')) return { short: 'ET', elapsed };
+    const min = parseInt(elapsed) || 0;
+    if (period.includes('2') || period.includes('second') || min >= 46) return { short: '2H', elapsed };
+    if (period.includes('overtime') || period.includes('et') || min > 90) return { short: 'ET', elapsed };
     return { short: '1H', elapsed };
   }
   return { short: st.toUpperCase().substring(0, 3), elapsed: null };
