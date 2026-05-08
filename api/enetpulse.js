@@ -268,7 +268,6 @@ function normalizeEventDetails(raw, statsRaw, id) {
       const typeFK = parseInt(e.lineup_typeFK || 0);
       if (typeFK === 10 || typeFK === 0) continue; // spring træner og ukendte over
       const posMap = { 1: 'MV', 2: 'FB', 3: 'MF', 4: 'A' };
-      if (lineup[side].length === 0) console.log('[lineup-entry]', JSON.stringify(e).substring(0, 600));
       lineup[side].push({
         name:    e.participant?.name || '',
         shirt:   e.shirt_number || '',

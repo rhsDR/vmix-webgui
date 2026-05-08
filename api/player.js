@@ -10,18 +10,14 @@ async function tryFetch(url) {
     } catch {
       return { ok: false, json: null };
     }
-  } catch (err) {
+  } catch {
     return { ok: false, json: null };
   }
 }
 
 function extractParticipant(json) {
   if (!json) return null;
-  const obj = json.participant
-    ? json.participant
-    : json.participants
-      ? json.participants
-      : json;
+  const obj = json.participant || json.participants || json;
   const values = Object.values(obj);
   return (values[0] && typeof values[0] === 'object') ? values[0] : null;
 }
@@ -38,7 +34,6 @@ export default async function handler(req, res) {
 
   const auth = `username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
 
-  // Prøv alle kendte profil-URL-mønstre — ét af dem virker afhængig af spillerens ID
   const profileUrls = [
     `${EAPI_BASE}/participant/${id}/?${auth}`,
     `${EAPI_BASE}/participant/details/${id}/?${auth}`,
@@ -46,39 +41,13 @@ export default async function handler(req, res) {
     `${EAPI_BASE}/participant/?id=${id}&${auth}`,
   ];
 
-  let part = null;
   for (const url of profileUrls) {
     const r = await tryFetch(url);
     if (r.ok) {
-      part = extractParticipant(r.json);
-      if (part) break;
+      const part = extractParticipant(r.json);
+      if (part) return res.status(200).json({ raw: part });
     }
   }
 
-  if (!part) return res.status(404).json({ error: 'Spillerdata ikke tilgængeligt' });
-
-  // Prøv statistik-endpoints parallelt
-  const statsUrls = [
-    `${EAPI_BASE}/participant/${id}/statistics/?${auth}`,
-    `${EAPI_BASE}/participant/${id}/stats/?${auth}`,
-    `${EAPI_BASE}/participant/${id}/career/?${auth}`,
-    `${EAPI_BASE}/participant/${id}/seasons/?${auth}`,
-    `${EAPI_BASE}/participant/${id}/tournaments/?${auth}`,
-    `${EAPI_BASE}/participant/statistics/?id=${id}&${auth}`,
-  ];
-
-  const statsResults = await Promise.all(statsUrls.map(async url => {
-    const r = await tryFetch(url);
-    return {
-      ep:     url.split('?')[0].replace(EAPI_BASE, ''),
-      ok:     r.ok,
-      keys:   r.ok && r.json ? Object.keys(r.json).join(',') : null,
-      sample: r.ok && r.json ? JSON.stringify(r.json).substring(0, 300) : null
-    };
-  }));
-
-  return res.status(200).json({
-    raw:        part,
-    statsDebug: statsResults
-  });
+  return res.status(404).json({ error: 'Spillerdata ikke tilgængeligt' });
 }
