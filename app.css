@@ -432,6 +432,50 @@
       border-top: 1px solid #1a1a1a;
     }
 
+    .lineup-onair-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px 12px;
+      border-top: 1px solid #1a1a1a;
+    }
+    .lu-onair-btn {
+      font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      color: #fff; background: #1a3d1a; border: 1px solid #2d6b2d;
+      border-radius: 4px; padding: 5px 12px; cursor: pointer;
+      text-transform: uppercase;
+    }
+    .lu-onair-btn:hover { background: #235c23; }
+    .lu-offair-btn {
+      font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      color: #fff; background: #3d1a1a; border: 1px solid #8b2020;
+      border-radius: 4px; padding: 5px 12px; cursor: pointer;
+      text-transform: uppercase;
+    }
+    .lu-offair-btn:hover { background: #5c1f1f; }
+    .lu-preview-btn {
+      font-size: 11px; font-weight: 600; letter-spacing: 1px;
+      color: #888; background: transparent; border: 1px solid #2e2e2e;
+      border-radius: 4px; padding: 5px 10px; cursor: pointer;
+      text-transform: uppercase;
+    }
+    .lu-preview-btn:hover { color: #ccc; border-color: #444; }
+    .lu-onair-badge {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+      color: #ff4444; text-transform: uppercase;
+      margin-left: 4px;
+    }
+    .lu-onair-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #ff4444;
+      animation: lu-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes lu-pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
     .live-updated {
       font-size: 10px;
       color: #333;

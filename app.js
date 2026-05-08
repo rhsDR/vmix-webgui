@@ -1671,6 +1671,7 @@ init();
 // ── LIVE DASHBOARD ────────────────────────────────────────────
 let liveTimer    = null;
 let lastCardSeen       = {}; // fixtureId → sidste sete korttype+minut+spiller
+let lineupOnAirMatchId = null; // matchId der aktuelt er on air, eller null
 const liveExpandedLineup = new Set(); // matchId → opstilling synlig
 const livePitchMode      = new Map(); // matchId → 'liste' | 'bane'
 const liveExpandedStats  = new Set(); // matchId → statistik synlig
@@ -1681,6 +1682,7 @@ const liveTableCache     = new Map(); // matchId → renderet ligatable HTML
 const liveTopScorerCache = new Map(); // matchId → renderet topscorer HTML
 const liveH2HCache       = new Map(); // matchId → renderet H2H HTML
 const liveTableTab       = new Map(); // matchId → 'table' | 'topscorer'
+const liveMatchData      = new Map(); // matchId → fuldt match-objekt fra enetpulse
 
 function startLivePolling() {
   fetchLiveMatches();
@@ -1739,6 +1741,9 @@ async function fetchLiveMatches() {
       }
     }
 
+    // Gem match-objekter til brug i sendLineupOnAir
+    Object.entries(enetMap).forEach(([id, m]) => liveMatchData.set(id, m));
+
     // Vis kort i slot-rækkefølge
     const cards = [];
     for (let i = 0; i < kampe.length; i++) {
@@ -1766,6 +1771,22 @@ async function fetchLiveMatches() {
         wrap.querySelectorAll('.lu-tab').forEach(b => b.classList.toggle('active', b === btn));
         wrap.querySelector('.live-lineup').style.display = mode === 'liste' ? 'flex' : 'none';
         wrap.querySelector('.pitch-wrap').style.display  = mode === 'bane'  ? 'block' : 'none';
+      });
+    });
+
+    // OPSTILLING ON AIR knapper
+    grid.querySelectorAll('.lu-onair-btn').forEach(btn => {
+      btn.addEventListener('click', () => sendLineupOnAir(btn.dataset.id));
+    });
+    grid.querySelectorAll('.lu-offair-btn').forEach(btn => {
+      btn.addEventListener('click', () => sendLineupOff());
+    });
+    grid.querySelectorAll('.lu-preview-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const modal = document.getElementById('previewModal');
+        const frame = document.getElementById('previewFrame');
+        frame.src = 'opstilling.html?preview=1&p=' + aktivProjektId + '&t=' + Date.now();
+        modal.style.display = 'flex';
       });
     });
 
@@ -2326,8 +2347,9 @@ function renderLineup(lineup, homeName, awayName, matchId, homeFK, awayFK) {
       </div>`;
   }
 
-  const open = liveExpandedLineup.has(String(matchId));
-  const mode = livePitchMode.get(String(matchId)) || 'liste';
+  const open    = liveExpandedLineup.has(String(matchId));
+  const mode    = livePitchMode.get(String(matchId)) || 'liste';
+  const isOnAir = String(lineupOnAirMatchId) === String(matchId);
   return `
     <button class="live-lineup-toggle" data-id="${matchId}">OPSTILLING ${open ? '▴' : '▾'}</button>
     <div class="live-lineup-wrap" style="display:${open ? 'block' : 'none'}">
@@ -2339,7 +2361,80 @@ function renderLineup(lineup, homeName, awayName, matchId, homeFK, awayFK) {
       <div class="pitch-wrap" style="display:${mode === 'bane' ? 'block' : 'none'}">
         <div class="pitch-inner">${renderPitch(lineup, homeName, awayName, homeFK, awayFK)}</div>
       </div>
+      <div class="lineup-onair-bar" data-id="${matchId}">
+        <button class="lu-onair-btn" data-id="${matchId}" style="${isOnAir ? 'display:none' : ''}">▶ SEND ON AIR</button>
+        <button class="lu-offair-btn" data-id="${matchId}" style="${!isOnAir ? 'display:none' : ''}">■ TAG AF</button>
+        <span class="lu-onair-badge" style="${!isOnAir ? 'display:none' : ''}"><span class="lu-onair-dot"></span>LIVE</span>
+        <button class="lu-preview-btn" data-id="${matchId}" style="margin-left:auto">▶ PREVIEW</button>
+      </div>
     </div>`;
+}
+
+// ── OPSTILLING ON AIR ─────────────────────────────────────────
+
+function buildLineupPayload(m) {
+  if (!m?.lineup) return null;
+  function formation(players) {
+    const st = players.filter(p => p.starter);
+    const d  = st.filter(p => p.pos === 'FB').length;
+    const mf = st.filter(p => p.pos === 'MF').length;
+    const f  = st.filter(p => p.pos === 'A').length;
+    return (d || mf || f) ? `${d}-${mf}-${f}` : '';
+  }
+  function mapPlayers(players) {
+    return (players || []).map(p => ({
+      shirt:   p.shirt,
+      name:    p.name,
+      pos:     p.pos || '',
+      starter: !!p.starter
+    }));
+  }
+  return {
+    home: {
+      name:      m.home  || '',
+      partFK:    m.home_part_fk || '',
+      formation: formation(m.lineup.home || []),
+      players:   mapPlayers(m.lineup.home)
+    },
+    away: {
+      name:      m.away  || '',
+      partFK:    m.away_part_fk || '',
+      formation: formation(m.lineup.away || []),
+      players:   mapPlayers(m.lineup.away)
+    }
+  };
+}
+
+async function sendLineupOnAir(matchId) {
+  const m = liveMatchData.get(String(matchId));
+  if (!m) return;
+  const payload = buildLineupPayload(m);
+  if (!payload) return;
+  try {
+    await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.lineup_data',    { value: JSON.stringify(payload) });
+    await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.lineup_trigger', { value: 'in' });
+    lineupOnAirMatchId = String(matchId);
+    updateLineupOnAirBars();
+    toast('Opstilling sendt on air ✓', 'ok');
+  } catch { toast('Fejl ved send on air', 'err'); }
+}
+
+async function sendLineupOff() {
+  try {
+    await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.lineup_trigger', { value: 'out' });
+    lineupOnAirMatchId = null;
+    updateLineupOnAirBars();
+    toast('Opstilling taget af ✓', 'ok');
+  } catch { toast('Fejl ved tag af', 'err'); }
+}
+
+function updateLineupOnAirBars() {
+  document.querySelectorAll('.lineup-onair-bar').forEach(bar => {
+    const isOnAir = String(lineupOnAirMatchId) === String(bar.dataset.id);
+    bar.querySelector('.lu-onair-btn').style.display  = isOnAir ? 'none' : '';
+    bar.querySelector('.lu-offair-btn').style.display = isOnAir ? '' : 'none';
+    bar.querySelector('.lu-onair-badge').style.display = isOnAir ? '' : 'none';
+  });
 }
 
 // ── SPILLER-MODAL ─────────────────────────────────────────────
@@ -2608,6 +2703,8 @@ sbClient.channel('db-changes')
         if (p.new.key === 'credits_trigger') {
           creditsTriggerActive = p.new.value === 'in';
           updateCreditsSendBtn();
+        } else if (p.new.key === 'lineup_trigger') {
+          if (p.new.value === 'out') { lineupOnAirMatchId = null; updateLineupOnAirBars(); }
         } else if (p.new.key === 'active_sub') {
           activeSubSlot = parseInt(p.new.value) || 0;
           subs.forEach((_, i) => rerenderSub(i));

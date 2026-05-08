@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <title>Opstilling</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: transparent;
+      overflow: hidden;
+    }
+
+    #clip {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      background: rgb(0, 0, 44);
+      border-top: 3px solid rgba(255, 210, 0, 0.7);
+      transform: translateY(100%);
+    }
+
+    /* svage banelinjer som baggrundsdekor */
+    #clip::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 60'%3E%3Crect x='1' y='1' width='98' height='58' fill='none' stroke='white' stroke-width='0.4'/%3E%3Cline x1='50' y1='1' x2='50' y2='59' stroke='white' stroke-width='0.4'/%3E%3Ccircle cx='50' cy='30' r='8' fill='none' stroke='white' stroke-width='0.4'/%3E%3Crect x='1' y='18' width='14' height='24' fill='none' stroke='white' stroke-width='0.3'/%3E%3Crect x='85' y='18' width='14' height='24' fill='none' stroke='white' stroke-width='0.3'/%3E%3C/svg%3E");
+      background-size: cover;
+      opacity: 0.04;
+      pointer-events: none;
+    }
+
+    /* ── HEADER ────────────────────────────────────────────────── */
+    #header {
+      display: flex;
+      align-items: center;
+      padding: 16px 80px;
+      gap: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    #header.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .team-hdr {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .team-hdr.away { flex-direction: row-reverse; }
+
+    .team-logo {
+      width: 48px; height: 48px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .team-hdr-name {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .team-hdr-formation {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: rgb(255, 210, 0);
+      letter-spacing: 3px;
+      margin-left: auto;
+    }
+    .team-hdr.away .team-hdr-formation {
+      margin-left: 0;
+      margin-right: auto;
+    }
+
+    .hdr-sep {
+      width: 1px;
+      height: 44px;
+      background: rgba(255, 255, 255, 0.18);
+      flex-shrink: 0;
+      margin: 0 48px;
+    }
+
+    /* ── CONTENT (spillerkolonner) ──────────────────────────────── */
+    #content {
+      display: flex;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0;
+    }
+
+    .players-col {
+      flex: 1;
+      padding: 10px 80px 24px;
+    }
+    .col-sep {
+      width: 1px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 10px 0 24px;
+      flex-shrink: 0;
+    }
+
+    .player-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0;
+      opacity: 0;
+      transform: translateX(-6px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    .players-col.away .player-row {
+      transform: translateX(6px);
+    }
+    .player-row.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .player-row.sub { opacity: 0; }
+    .player-row.sub.visible { opacity: 0.55; }
+
+    .p-shirt {
+      width: 20px; height: 24px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .p-num {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.45);
+      width: 20px;
+      text-align: right;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .p-pos {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      color: rgb(255, 210, 0);
+      width: 26px;
+      text-align: left;
+      flex-shrink: 0;
+      letter-spacing: 0.5px;
+    }
+    .p-name {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sub-divider {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 9px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.25);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 8px 0 2px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="clip">
+
+    <div id="header">
+      <div class="team-hdr home">
+        <img class="team-logo" id="homeLogo" src="" alt="" onerror="this.style.display='none'">
+        <span class="team-hdr-name" id="homeName"></span>
+        <span class="team-hdr-formation" id="homeFormation"></span>
+      </div>
+      <div class="hdr-sep"></div>
+      <div class="team-hdr away">
+        <span class="team-hdr-formation" id="awayFormation"></span>
+        <span class="team-hdr-name" id="awayName"></span>
+        <img class="team-logo" id="awayLogo" src="" alt="" onerror="this.style.display='none'">
+      </div>
+    </div>
+
+    <div id="content">
+      <div id="colHome" class="players-col home"></div>
+      <div class="col-sep"></div>
+      <div id="colAway" class="players-col away"></div>
+    </div>
+
+  </div>
+
+  <script>
+    const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
+    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
+    const SB_HDR  = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Content-Type': 'application/json' };
+
+    const projektId = new URLSearchParams(window.location.search).get('p') || '';
+    const pidFilter = projektId ? '&projekt_id=eq.' + encodeURIComponent(projektId) : '';
+
+    let animating = false;
+    let isVisible = false;
+    let currentData = null;
+
+    // ── HJÆLPERE ──────────────────────────────────────────────────
+    function esc(s) {
+      return String(s || '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function calcFormation(players) {
+      const st = (players || []).filter(p => p.starter);
+      const d  = st.filter(p => p.pos === 'FB').length;
+      const m  = st.filter(p => p.pos === 'MF').length;
+      const f  = st.filter(p => p.pos === 'A').length;
+      return (d || m || f) ? `${d}-${m}-${f}` : '';
+    }
+
+    function buildCol(players, partFK) {
+      const starters = (players || []).filter(p => p.starter);
+      const subs     = (players || []).filter(p => !p.starter);
+      const shirtSrc = partFK
+        ? `/api/team-image?teamFK=${encodeURIComponent(partFK)}&type=shirt`
+        : '';
+
+      function makeRow(p, isSub) {
+        return `
+          <div class="player-row${isSub ? ' sub' : ''}">
+            ${shirtSrc ? `<img class="p-shirt" src="${shirtSrc}" alt="" onerror="this.style.display='none'">` : ''}
+            <span class="p-num">${esc(p.shirt)}</span>
+            <span class="p-pos">${esc(p.pos || '')}</span>
+            <span class="p-name">${esc(p.name)}</span>
+          </div>`;
+      }
+
+      return starters.map(p => makeRow(p, false)).join('') +
+        (subs.length
+          ? `<div class="sub-divider">Reserver</div>` + subs.map(p => makeRow(p, true)).join('')
+          : '');
+    }
+
+    function populateUI(data) {
+      const home = data.home || {};
+      const away = data.away || {};
+
+      document.getElementById('homeName').textContent = (home.name || '').toUpperCase();
+      document.getElementById('awayName').textContent = (away.name || '').toUpperCase();
+      document.getElementById('homeFormation').textContent = home.formation || calcFormation(home.players);
+      document.getElementById('awayFormation').textContent = away.formation || calcFormation(away.players);
+
+      if (home.partFK) {
+        document.getElementById('homeLogo').src = `/api/team-image?teamFK=${encodeURIComponent(home.partFK)}`;
+      }
+      if (away.partFK) {
+        document.getElementById('awayLogo').src = `/api/team-image?teamFK=${encodeURIComponent(away.partFK)}`;
+      }
+
+      document.getElementById('colHome').innerHTML = buildCol(home.players, home.partFK);
+      document.getElementById('colAway').innerHTML = buildCol(away.players, away.partFK);
+    }
+
+    // ── ANIMATION IN ──────────────────────────────────────────────
+    function animateIn() {
+      if (animating || isVisible) return;
+      animating = true;
+
+      populateUI(currentData || {});
+
+      const clip = document.getElementById('clip');
+      clip.style.transition = 'none';
+      clip.style.transform  = 'translateY(100%)';
+      clip.offsetHeight; // tving reflow
+
+      clip.style.transition = 'transform 800ms cubic-bezier(0.16, 1, 0.3, 1)';
+      clip.style.transform  = 'translateY(0)';
+
+      // Header fade-in efter panel er dukket op
+      setTimeout(() => {
+        document.getElementById('header').classList.add('visible');
+      }, 350);
+
+      // Spillere stagger ind
+      const rows = clip.querySelectorAll('.player-row');
+      rows.forEach((row, i) => {
+        setTimeout(() => row.classList.add('visible'), 550 + i * 30);
+      });
+
+      const done = 550 + rows.length * 30 + 150;
+      setTimeout(() => {
+        animating = false;
+        isVisible = true;
+        setTimeout(pollTrigger, 2000);
+      }, Math.max(done, 900));
+    }
+
+    // ── ANIMATION OUT ─────────────────────────────────────────────
+    function animateOut() {
+      if (animating || !isVisible) return;
+      animating = true;
+
+      const clip = document.getElementById('clip');
+      const rows = clip.querySelectorAll('.player-row');
+
+      rows.forEach(row => row.classList.remove('visible'));
+      document.getElementById('header').classList.remove('visible');
+
+      setTimeout(() => {
+        clip.style.transition = 'transform 650ms cubic-bezier(0.7, 0, 1, 1)';
+        clip.style.transform  = 'translateY(100%)';
+
+        setTimeout(async () => {
+          await resetTrigger();
+          isVisible = false;
+          animating = false;
+          setTimeout(pollTrigger, 2000);
+        }, 700);
+      }, 200);
+    }
+
+    async function resetTrigger() {
+      try {
+        await fetch(
+          `${SB_URL}/rest/v1/settings?key=eq.lineup_trigger${pidFilter}`,
+          { method: 'PATCH', headers: SB_HDR, body: JSON.stringify({ value: 'out' }) }
+        );
+      } catch {}
+    }
+
+    // ── POLLING ───────────────────────────────────────────────────
+    async function pollTrigger() {
+      if (animating) return;
+      try {
+        const rows = await fetch(
+          `${SB_URL}/rest/v1/settings?select=key,value&key=in.(lineup_trigger,lineup_data)${pidFilter}`,
+          { headers: SB_HDR }
+        ).then(r => r.json());
+
+        const trigger = rows.find(r => r.key === 'lineup_trigger')?.value;
+        const dataStr = rows.find(r => r.key === 'lineup_data')?.value;
+
+        if (trigger === 'in' && !isVisible) {
+          try { currentData = JSON.parse(dataStr || '{}'); } catch { currentData = {}; }
+          animateIn();
+          return;
+        }
+        if (trigger === 'out' && isVisible) {
+          animateOut();
+          return;
+        }
+      } catch {}
+      setTimeout(pollTrigger, 2000);
+    }
+
+    // ── INIT ──────────────────────────────────────────────────────
+    function getDemoData() {
+      return {
+        home: {
+          name: 'FC København', partFK: '', formation: '4-3-3',
+          players: [
+            { shirt: 1,  name: 'Kamil Grabara',      pos: 'MV', starter: true  },
+            { shirt: 5,  name: 'Kevin Diks',          pos: 'FB', starter: true  },
+            { shirt: 3,  name: 'Davit Khocholava',    pos: 'FB', starter: true  },
+            { shirt: 4,  name: 'Diogo Gonçalves',     pos: 'FB', starter: true  },
+            { shirt: 22, name: 'Elias Jelert',         pos: 'FB', starter: true  },
+            { shirt: 6,  name: 'Lukas Lerager',        pos: 'MF', starter: true  },
+            { shirt: 8,  name: 'Viktor Claesson',      pos: 'MF', starter: true  },
+            { shirt: 10, name: 'Roony Bardghji',       pos: 'MF', starter: true  },
+            { shirt: 11, name: 'Mohamed Daramy',       pos: 'A',  starter: true  },
+            { shirt: 9,  name: 'Hákon Haraldsson',     pos: 'A',  starter: true  },
+            { shirt: 7,  name: 'Andreas Cornelius',    pos: 'A',  starter: true  },
+            { shirt: 13, name: 'Mathias Kvistgaarden', pos: 'MF', starter: false },
+            { shirt: 17, name: 'Elias Achouri',        pos: 'MF', starter: false },
+            { shirt: 20, name: 'Adam Gnezda Čerin',    pos: 'MF', starter: false },
+          ]
+        },
+        away: {
+          name: 'Brøndby IF', partFK: '', formation: '4-4-2',
+          players: [
+            { shirt: 1,  name: 'Mads Hermansen',       pos: 'MV', starter: true  },
+            { shirt: 4,  name: 'Kevin Mensah',          pos: 'FB', starter: true  },
+            { shirt: 5,  name: 'Anthony Jung',          pos: 'FB', starter: true  },
+            { shirt: 3,  name: 'Josip Radošević',       pos: 'FB', starter: true  },
+            { shirt: 2,  name: 'Tobias Børkeeiet',      pos: 'FB', starter: true  },
+            { shirt: 6,  name: 'Yuito Suzuki',          pos: 'MF', starter: true  },
+            { shirt: 8,  name: 'Mathias Greve',         pos: 'MF', starter: true  },
+            { shirt: 10, name: 'Jesper Lindstrøm',      pos: 'MF', starter: true  },
+            { shirt: 11, name: 'Blas Riveros',          pos: 'MF', starter: true  },
+            { shirt: 9,  name: 'Mikael Uhre',           pos: 'A',  starter: true  },
+            { shirt: 7,  name: 'Simon Hedlund',         pos: 'A',  starter: true  },
+            { shirt: 16, name: 'Oliver Provstgaard',    pos: 'MV', starter: false },
+            { shirt: 19, name: 'Lasse Berg Johansen',   pos: 'MF', starter: false },
+            { shirt: 23, name: 'Josip Drmič',           pos: 'A',  starter: false },
+          ]
+        }
+      };
+    }
+
+    if (new URLSearchParams(window.location.search).get('preview') === '1') {
+      currentData = getDemoData();
+      animateIn();
+    } else {
+      pollTrigger();
+    }
+  </script>
+
+</body>
+</html>
