@@ -2131,10 +2131,11 @@ function renderLeagueTable(data, home, away) {
   if (!rows.length) return '<div class="pm-empty">Ingen deltagere</div>';
 
   // Udtræk standing_data til flat objekt pr. deltager (array format)
-  const parsed = rows.map(p => {
+  const parsed = rows.map((p, i) => {
     const sd = {};
     const arr = Array.isArray(p.standing_data) ? p.standing_data : Object.values(p.standing_data || {});
     arr.forEach(d => { if (d.code) sd[d.code] = d.value; });
+    if (i === 0) console.log('[standing_data codes]', Object.keys(sd));
     const name = p.participant?.name || p.name || p.participant_name || '';
     return { name, rank: parseInt(p.rank || '999'), ...sd };
   });
