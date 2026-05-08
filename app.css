@@ -1386,7 +1386,7 @@
     .table-subtab:last-child { border-right: none; }
     .table-subtab.active { color: #ccc; background: #161616; }
     .table-subtab:hover { color: #aaa; }
-    .ts-team { color: #333 !important; font-size: 9px; }
+    .ts-team { color: #555 !important; font-size: 11px; }
 
     /* ── H2H tabel ────────────────────────────────────────── */
     .h2h-table {
@@ -1430,23 +1430,23 @@
     .league-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 10px;
+      font-size: 12px;
       margin: 4px 0 8px;
     }
     .league-table th {
-      color: #444;
-      padding: 3px 4px;
+      color: #666;
+      padding: 5px 6px;
       text-align: center;
       font-weight: 400;
       letter-spacing: 1px;
       border-bottom: 1px solid #1a1a1a;
     }
     .league-table th.lt-name { text-align: left; }
-    .league-table td { padding: 3px 4px; text-align: center; color: #555; }
+    .league-table td { padding: 5px 6px; text-align: center; color: #888; }
     .league-table .lt-name {
       text-align: left;
-      color: #777;
-      max-width: 90px;
+      color: #bbb;
+      max-width: 110px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
