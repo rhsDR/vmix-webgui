@@ -2197,10 +2197,14 @@ function renderPlayerData(p, statsJson, playerId) {
       const arr = Array.isArray(partEntry.standing_data) ? partEntry.standing_data : Object.values(partEntry.standing_data);
       arr.forEach(d => { if (d.code) sd[d.code] = d.value; });
       const LABELS = {
-        goals: 'Mål', goal: 'Mål', assists: 'Assists',
-        yellow_cards: 'Gule kort', red_cards: 'Røde kort',
-        matches_played: 'Kampe', minutes_played: 'Minutter',
-        shoton: 'Skud på mål', goal_attempt: 'Skudforsøg i alt'
+        played:      'Kampe',
+        min:         'Minutter',
+        goals:       'Mål',
+        assists:     'Assists',
+        ycards:      'Gule kort',
+        rcards:      'Røde kort',
+        cleansheets: 'Clean sheets',
+        conceded:    'Indkasserede mål',
       };
       const rows = Object.entries(LABELS)
         .filter(([k]) => sd[k] != null)
