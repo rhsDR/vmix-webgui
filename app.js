@@ -1895,7 +1895,7 @@ function renderLiveCard(m) {
   const tableOpen = liveExpandedTable.has(mid);
 
   return `
-    <div class="live-card">
+    <div class="live-card" data-tfk="${m.tournament_fk || ''}" data-mid="${mid}">
       <div class="live-card-header">
         <div class="live-score-row">
           <span class="live-team">
@@ -2130,8 +2130,11 @@ playerModalClose?.addEventListener('click', () => { playerModal.style.display = 
 playerModal?.addEventListener('click', e => { if (e.target === playerModal) playerModal.style.display = 'none'; });
 document.getElementById('liveGrid')?.addEventListener('click', ev => {
   const el = ev.target.closest('.lu-clickable');
-  if (el && el.dataset.pid) openPlayerModal(el.dataset.pid, el.dataset.pname);
-});;
+  if (el && el.dataset.pid) {
+    const tfk = el.closest('.live-card')?.dataset.tfk || '';
+    openPlayerModal(el.dataset.pid, el.dataset.pname, tfk);
+  }
+});
 
 function playerField(label, value) {
   if (!value && value !== 0) return '';
@@ -2146,7 +2149,7 @@ function calcAge(dob) {
   return `${d.toLocaleDateString('da-DK')} (${age} år)`;
 }
 
-function renderPlayerData(p, statsJson) {
+function renderPlayerData(p, statsJson, playerId) {
   if (!p || typeof p !== 'object') return '<div class="pm-empty">Ingen data</div>';
 
   // Parse enetpulse property-array: [{name, value}, ...] → flat map
@@ -2185,14 +2188,19 @@ function renderPlayerData(p, statsJson) {
   if (statsStandings) {
     const standingEntry = Object.values(statsStandings)[0];
     const participants  = standingEntry?.standing_participants || {};
-    const partEntry     = Object.values(participants)[0];
+    const allParts = Object.values(participants);
+    const partEntry = playerId
+      ? allParts.find(p => String(p.participantFK) === String(playerId)) || allParts[0]
+      : allParts[0];
     if (partEntry?.standing_data) {
       const sd = {};
       const arr = Array.isArray(partEntry.standing_data) ? partEntry.standing_data : Object.values(partEntry.standing_data);
       arr.forEach(d => { if (d.code) sd[d.code] = d.value; });
       const LABELS = {
-        goals: 'Mål', assists: 'Assists', yellow_cards: 'Gule kort',
-        red_cards: 'Røde kort', matches_played: 'Kampe', minutes_played: 'Minutter'
+        goals: 'Mål', goal: 'Mål', assists: 'Assists',
+        yellow_cards: 'Gule kort', red_cards: 'Røde kort',
+        matches_played: 'Kampe', minutes_played: 'Minutter',
+        shoton: 'Skud på mål', goal_attempt: 'Skudforsøg i alt'
       };
       const rows = Object.entries(LABELS)
         .filter(([k]) => sd[k] != null)
@@ -2224,23 +2232,22 @@ function renderPlayerData(p, statsJson) {
     ${seasonStatsHtml}`;
 }
 
-async function openPlayerModal(id, name) {
+async function openPlayerModal(id, name, tournamentFk) {
   playerModalContent.innerHTML = `<div class="pm-name">${name || '…'}</div><div class="pm-loading">Henter data…</div>`;
   playerModal.style.display = 'flex';
 
   try {
-    const [profileRes, statsRes] = await Promise.all([
-      fetch(`/api/player?id=${encodeURIComponent(id)}`),
-      fetch(`/api/standings?type=participant_stats&object=participant&objectFK=${encodeURIComponent(id)}`)
-    ]);
-    const profileJson = await profileRes.json();
+    const fetches = [fetch(`/api/player?id=${encodeURIComponent(id)}`)];
+    if (tournamentFk) fetches.push(fetch(`/api/standings?type=participant_stats&object=tournament_stage&objectFK=${encodeURIComponent(tournamentFk)}`));
+    const results = await Promise.all(fetches);
+    const profileJson = await results[0].json();
     let statsJson = null;
-    try { statsJson = await statsRes.json(); } catch {}
+    if (results[1]) { try { statsJson = await results[1].json(); } catch {} }
 
     if (profileJson.error) {
       playerModalContent.innerHTML = `<div class="pm-name">${name}</div><div class="pm-empty">${profileJson.error}</div>`;
     } else {
-      playerModalContent.innerHTML = renderPlayerData(profileJson.raw, statsJson);
+      playerModalContent.innerHTML = renderPlayerData(profileJson.raw, statsJson, id);
     }
   } catch (err) {
     playerModalContent.innerHTML = `<div class="pm-name">${name}</div><div class="pm-empty">Netværksfejl</div>`;
