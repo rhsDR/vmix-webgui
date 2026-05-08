@@ -1985,52 +1985,71 @@ function renderPitch(lineup, homeName, awayName) {
 }
 
 function renderEventStats(data, cardEl) {
-  const standing = data?.standing;
-  if (!standing) return '<div class="pm-empty">Ingen data</div>';
-  const entry = Object.values(standing)[0];
+  const standings = data?.standings || data?.standing;
+  if (!standings) return '<div class="pm-empty">Ingen data</div>';
+  const entry = Object.values(standings)[0];
   if (!entry) return '<div class="pm-empty">Ingen data</div>';
 
   const participants = entry.standing_participants || {};
   const parts = Object.values(participants);
   if (parts.length < 2) return '<div class="pm-empty">Utilstrækkelige data</div>';
 
-  // Forsøg at identificere hjemme/ude — enetpulse bruger typisk 'home'/'away' som navne
-  let home = parts.find(p => (p.name || '').toLowerCase() === 'home') || parts[0];
-  let away = parts.find(p => (p.name || '').toLowerCase() === 'away') || parts[1];
+  const getData = (part) => {
+    const sd = {};
+    const arr = Array.isArray(part.standing_data) ? part.standing_data : Object.values(part.standing_data || {});
+    arr.forEach(d => { if (d.code) sd[d.code] = d.value; });
+    return { name: part.participant?.name || part.name || '', sd };
+  };
 
-  const homeData = {};
-  Object.values(home.standing_data || {}).forEach(d => { homeData[d.type || d.name] = d.value; });
-  const awayData = {};
-  Object.values(away.standing_data || {}).forEach(d => { awayData[d.type || d.name] = d.value; });
+  const p1 = getData(parts[0]);
+  const p2 = getData(parts[1]);
 
-  const allKeys = [...new Set([...Object.keys(homeData), ...Object.keys(awayData)])];
-  if (!allKeys.length) return '<div class="pm-empty">Ingen statistik-data</div>';
+  const LABELS = {
+    possession:    'Boldbesiddelse %',
+    shoton:        'Skud på mål',
+    shotoff:       'Skud forbi',
+    goal_attempt:  'Skudforsøg i alt',
+    corner:        'Hjørnespark',
+    offside:       'Offside',
+    yellow_cards:  'Gule kort',
+    red_cards:     'Røde kort',
+    foulcommit:    'Frispark',
+    saves:         'Redninger',
+    dangerous_attacks: 'Farlige angreb',
+    attacks:       'Angreb',
+  };
 
-  const rows = allKeys.map(k => {
-    const hv = homeData[k] ?? '—';
-    const av = awayData[k] ?? '—';
-    const label = k.replace(/_/g, ' ');
+  const rows = Object.entries(LABELS).map(([k, label]) => {
+    const hv = p1.sd[k] ?? '—';
+    const av = p2.sd[k] ?? '—';
     return `<tr><td class="es-home">${hv}</td><td class="es-label">${label}</td><td class="es-away">${av}</td></tr>`;
   }).join('');
 
-  return `<table class="event-stats-table"><tbody>${rows}</tbody></table>`;
+  return `
+    <div style="display:flex;justify-content:space-between;padding:6px 8px 2px;font-size:10px;">
+      <span style="color:var(--orange);font-weight:600">${p1.name}</span>
+      <span style="color:#3b82f6;font-weight:600">${p2.name}</span>
+    </div>
+    <table class="event-stats-table"><tbody>${rows}</tbody></table>`;
 }
 
 function renderLeagueTable(data, home, away) {
-  const standing = data?.standing;
-  if (!standing) return '<div class="pm-empty">Ingen data</div>';
-  const entry = Object.values(standing)[0];
+  const standings = data?.standings || data?.standing;
+  if (!standings) return '<div class="pm-empty">Ingen data</div>';
+  const entry = Object.values(standings)[0];
   if (!entry) return '<div class="pm-empty">Ingen data</div>';
 
   const participants = entry.standing_participants || {};
   const rows = Object.values(participants);
   if (!rows.length) return '<div class="pm-empty">Ingen deltagere</div>';
 
-  // Udtræk standing_data til flat objekt pr. deltager
+  // Udtræk standing_data til flat objekt pr. deltager (array format)
   const parsed = rows.map(p => {
     const sd = {};
-    Object.values(p.standing_data || {}).forEach(d => { sd[d.type || d.name] = d.value; });
-    return { name: p.name || p.participant_name || '', ...sd };
+    const arr = Array.isArray(p.standing_data) ? p.standing_data : Object.values(p.standing_data || {});
+    arr.forEach(d => { if (d.code) sd[d.code] = d.value; });
+    const name = p.participant?.name || p.name || p.participant_name || '';
+    return { name, rank: parseInt(p.rank || '999'), ...sd };
   });
 
   // Sorter efter rank, derefter points
@@ -2162,13 +2181,15 @@ function renderPlayerData(p, statsJson) {
 
   // Sæsonstatistik fra participant_stats
   let seasonStatsHtml = '';
-  if (statsJson?.ok && statsJson.data?.standing) {
-    const standingEntry = Object.values(statsJson.data.standing)[0];
+  const statsStandings = statsJson?.ok && (statsJson.data?.standings || statsJson.data?.standing);
+  if (statsStandings) {
+    const standingEntry = Object.values(statsStandings)[0];
     const participants  = standingEntry?.standing_participants || {};
     const partEntry     = Object.values(participants)[0];
     if (partEntry?.standing_data) {
       const sd = {};
-      Object.values(partEntry.standing_data).forEach(d => { sd[d.type || d.name] = d.value; });
+      const arr = Array.isArray(partEntry.standing_data) ? partEntry.standing_data : Object.values(partEntry.standing_data);
+      arr.forEach(d => { if (d.code) sd[d.code] = d.value; });
       const LABELS = {
         goals: 'Mål', assists: 'Assists', yellow_cards: 'Gule kort',
         red_cards: 'Røde kort', matches_played: 'Kampe', minutes_played: 'Minutter'
