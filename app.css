@@ -288,7 +288,9 @@
       flex: 1;
       padding: 12px 14px 14px;
     }
-    .lu-side:first-child { border-right: 1px solid #1e1e1e; }
+    .lu-side:first-child { border-right: 1px solid #1e1e1e; align-items: flex-start; }
+    .lu-side:last-child  { align-items: flex-end; text-align: right; }
+    .lu-side:last-child .lu-player { flex-direction: row-reverse; }
     .lu-side-title {
       font-size: 13px;
       font-weight: 700;
