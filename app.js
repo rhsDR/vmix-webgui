@@ -1666,6 +1666,8 @@ const liveExpandedLineup = new Set(); // matchId → opstilling synlig
 const livePitchMode      = new Map(); // matchId → 'liste' | 'bane'
 const liveExpandedStats  = new Set(); // matchId → statistik synlig
 const liveExpandedTable  = new Set(); // matchId → ligatable synlig
+const liveStatsCache     = new Map(); // matchId → renderet statistik HTML
+const liveTableCache     = new Map(); // matchId → renderet ligatable HTML
 
 function startLivePolling() {
   fetchLiveMatches();
@@ -1765,7 +1767,9 @@ async function fetchLiveMatches() {
           inner.innerHTML = '<div class="pm-loading">Henter…</div>';
           const r = await fetch(`/api/standings?type=event_stats&object=event&objectFK=${encodeURIComponent(id)}`);
           const j = await r.json();
-          inner.innerHTML = j.ok ? renderEventStats(j.data, btn.closest('.live-card')) : '<div class="pm-empty">Kampstatistik ikke tilgængelig</div>';
+          const statsHtml = j.ok ? renderEventStats(j.data, btn.closest('.live-card')) : '<div class="pm-empty">Kampstatistik ikke tilgængelig</div>';
+          liveStatsCache.set(id, statsHtml);
+          inner.innerHTML = statsHtml;
         }
       });
     });
@@ -1788,7 +1792,9 @@ async function fetchLiveMatches() {
           if (!tfk) { inner.innerHTML = '<div class="pm-empty">Ingen turnering-FK</div>'; return; }
           const r = await fetch(`/api/standings?type=leaguetable&object=tournament_stage&objectFK=${encodeURIComponent(tfk)}`);
           const j = await r.json();
-          inner.innerHTML = j.ok ? renderLeagueTable(j.data, home, away) : '<div class="pm-empty">Ligatable ikke tilgængelig</div>';
+          const tableHtml = j.ok ? renderLeagueTable(j.data, home, away) : '<div class="pm-empty">Ligatable ikke tilgængelig</div>';
+          liveTableCache.set(id, tableHtml);
+          inner.innerHTML = tableHtml;
         }
       });
     });
@@ -1914,11 +1920,11 @@ function renderLiveCard(m) {
       <div class="live-events">${eventsHtml}</div>
       <button class="live-stats-toggle" data-id="${mid}">STATISTIK ${statsOpen ? '▴' : '▾'}</button>
       <div class="live-stats-wrap" style="display:${statsOpen ? 'block' : 'none'}">
-        <div class="live-stats-inner" data-id="${mid}"><div class="pm-loading">Henter…</div></div>
+        <div class="live-stats-inner" data-id="${mid}">${liveStatsCache.get(mid) || '<div class="pm-loading">Henter…</div>'}</div>
       </div>
       <button class="live-table-toggle" data-id="${mid}" data-tfk="${m.tournament_fk || ''}" data-home="${m.home}" data-away="${m.away}">TABEL ${tableOpen ? '▴' : '▾'}</button>
       <div class="live-table-wrap" style="display:${tableOpen ? 'block' : 'none'}">
-        <div class="live-table-inner" data-id="${mid}"><div class="pm-loading">Henter…</div></div>
+        <div class="live-table-inner" data-id="${mid}">${liveTableCache.get(mid) || '<div class="pm-loading">Henter…</div>'}</div>
       </div>
       ${renderLineup(m.lineup, m.home, m.away, m.id)}
     </div>`;
