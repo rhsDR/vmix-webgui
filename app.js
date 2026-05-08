@@ -1659,6 +1659,7 @@ async function init() {
     renderTickers();
     renderCredits();
     await refreshDropdowns();
+    fetchLiveMatches();
     initStamdata();
     const loader = document.getElementById('pageLoader');
     loader.style.opacity = '0';
