@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     const pid = encodeURIComponent(id);
 
     const [projektRaw, kampeRaw, subsRaw, vmixCallsRaw, tickersRaw, settingsRaw] = await Promise.all([
-      sbGet('projekter?id=eq.' + pid + '&select=navn,type,undertitel&limit=1'),
+      sbGet('projekter?id=eq.' + pid + '&select=navn,type,undertitel,aktiv&limit=1'),
       sbGet('kampe?projekt_id=eq.' + pid + '&select=slot,hold1_lang,hold1_kort,hold1_score,hold2_score,hold2_kort,hold2_lang,kommentator,lokation,vmixcall,on_air,last_card_type,last_card_player,last_card_min,last_card_team_kort,status_short,status_elapsed&order=slot.asc'),
       sbGet('subs?projekt_id=eq.' + pid + '&select=slot,navn,titel&order=slot.asc'),
       sbGet('vmix_calls?projekt_id=eq.' + pid + '&select=slot,navn,titel,link&order=slot.asc'),
@@ -29,6 +29,13 @@ export default async function handler(req, res) {
 
     if (!projektRaw[0]) return res.status(404).json({ error: 'Projekt ikke fundet' });
     const projekt = projektRaw[0];
+
+    if (projekt.aktiv === false) {
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Content-Type', 'application/json; charset=iso-8859-1');
+      return res.status(200).end(Buffer.from(JSON.stringify([{ aktiv: false }]), 'latin1'));
+    }
 
     // Byg ticker-strenge — kun ON AIR
     const tickerSep  = ' &nbsp; &bull; &nbsp; ';

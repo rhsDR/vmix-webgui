@@ -159,6 +159,33 @@
 
     .project-card:hover .project-arrow { color: #f97316; }
 
+    .project-card.inaktiv {
+      opacity: 0.4;
+      cursor: default;
+      border-color: #1e1e1e;
+    }
+    .project-card.inaktiv:hover {
+      border-color: #1e1e1e;
+      background: #1c1c1c;
+    }
+    .project-card.inaktiv .project-arrow { display: none; }
+
+    .toggle-btn {
+      position: absolute;
+      bottom: 14px;
+      right: 16px;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      border: 1px solid #444;
+      background: none;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .toggle-btn.on  { color: #4ade80; border-color: #4ade80; }
+    .toggle-btn.off { color: #555;    border-color: #444;    }
+    .toggle-btn:hover { border-color: #888; color: #ccc; }
+
     #loader {
       position: fixed;
       inset: 0;
@@ -244,9 +271,17 @@
       const grid = document.getElementById('projectGrid');
       grid.innerHTML = '';
 
-      projekter.forEach(p => {
+      const visible = userIsAdmin
+        ? projekter
+        : projekter.filter(p => p.aktiv !== false || p.type === 'kampdag');
+
+      visible.forEach(p => {
+        const erAktiv = p.aktiv !== false || p.type === 'kampdag';
         const card = document.createElement('div');
-        card.className = 'project-card' + (p.type === 'kampdag' ? ' kampdag' : '');
+        let cls = 'project-card';
+        if (p.type === 'kampdag') cls += ' kampdag';
+        if (!erAktiv) cls += ' inaktiv';
+        card.className = cls;
         card.innerHTML = `
           <div class="project-arrow">›</div>
           <div class="project-type">${p.type === 'kampdag' ? 'Kampdag' : 'TV Produktion'}</div>
@@ -254,18 +289,38 @@
           <div class="project-undertitel" id="ut-${p.id}" data-id="${p.id}">${esc(p.undertitel || '')}</div>
         `;
 
-        // Klik på kort → åbn projekt
+        // Toggle-knap — kun admins, kun ikke-kampdag
+        if (userIsAdmin && p.type !== 'kampdag') {
+          const btn = document.createElement('button');
+          btn.className = 'toggle-btn ' + (erAktiv ? 'on' : 'off');
+          btn.textContent = erAktiv ? '● Aktiv' : '○ Inaktiv';
+          btn.addEventListener('click', async e => {
+            e.stopPropagation();
+            await fetch(SB_URL + '/rest/v1/projekter?id=eq.' + p.id, {
+              method: 'PATCH',
+              headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+              body: JSON.stringify({ aktiv: !erAktiv })
+            });
+            await loadProjects();
+          });
+          card.appendChild(btn);
+        }
+
+        // Klik på kort → åbn projekt (blokér hvis inaktivt)
         card.addEventListener('click', e => {
-          if (e.target.classList.contains('project-undertitel') || e.target.classList.contains('project-undertitel-input')) return;
+          if (!erAktiv) return;
+          if (e.target.classList.contains('project-undertitel') || e.target.classList.contains('project-undertitel-input') || e.target.classList.contains('toggle-btn')) return;
           window.location.href = 'app.html?p=' + p.id;
         });
 
-        // Klik på undertitel → rediger
-        const ut = card.querySelector('.project-undertitel');
-        ut.addEventListener('click', e => {
-          e.stopPropagation();
-          startEditUndertitel(p.id, p.undertitel || '');
-        });
+        // Klik på undertitel → rediger (kun aktive projekter)
+        if (erAktiv) {
+          const ut = card.querySelector('.project-undertitel');
+          ut.addEventListener('click', e => {
+            e.stopPropagation();
+            startEditUndertitel(p.id, p.undertitel || '');
+          });
+        }
 
         grid.appendChild(card);
       });
