@@ -2036,11 +2036,11 @@ function renderLiveCard(m) {
       <div class="live-h2h-wrap" style="display:${h2hOpen ? 'block' : 'none'}">
         <div class="live-h2h-inner" data-id="${mid}">${liveH2HCache.get(mid) || '<div class="pm-loading">Henter…</div>'}</div>
       </div>
-      ${renderLineup(m.lineup, m.home, m.away, m.id)}
+      ${renderLineup(m.lineup, m.home, m.away, m.id, m.home_part_fk, m.away_part_fk)}
     </div>`;
 }
 
-function renderPitch(lineup, homeName, awayName) {
+function renderPitch(lineup, homeName, awayName, homeFK, awayFK) {
   if (!lineup) return '';
   const homePlayers = (lineup.home || []).filter(p => p.starter);
   const awayPlayers = (lineup.away || []).filter(p => p.starter);
@@ -2049,7 +2049,7 @@ function renderPitch(lineup, homeName, awayName) {
   // y-procent pr. zone pr. hold (hjemme=nederst, ude=øverst)
   const ZONE_Y = { MV: { home: 84, away: 16 }, FB: { home: 65, away: 35 }, MF: { home: 46, away: 54 }, A: { home: 27, away: 73 } };
 
-  function pitchPlayers(players, side) {
+  function pitchPlayers(players, side, partFK) {
     const zones = { MV: [], FB: [], MF: [], A: [] };
     for (const p of players) {
       (zones[p.pos] || zones.MF).push(p);
@@ -2063,8 +2063,11 @@ function renderPitch(lineup, homeName, awayName) {
         const parts    = p.name.trim().split(' ');
         const firstName = esc(parts[0] || '');
         const lastName  = esc(parts.slice(1).join(' ') || parts[0] || '');
+        const circleContent = partFK
+          ? `<img class="pitch-shirt-img" src="/api/team-image?teamFK=${partFK}&type=shirt" alt="" onload="this.parentElement.style.background='transparent';this.parentElement.style.border='none'" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="pitch-shirt-num" style="display:none">${p.shirt}</span>`
+          : p.shirt;
         return `<div class="pitch-player ${side}${p.id ? ' lu-clickable' : ''}" style="left:${x}%;top:${y}%;" data-pid="${p.id || ''}" data-pname="${esc(p.name)}">
-          <div class="pitch-player-circle">${p.shirt}</div>
+          <div class="pitch-player-circle">${circleContent}</div>
           <div class="pitch-player-name"><span class="pp-first">${firstName}</span><span class="pp-last">${lastName}</span></div>
         </div>`;
       }).join('');
@@ -2096,8 +2099,8 @@ function renderPitch(lineup, homeName, awayName) {
     </svg>
     ${awayFmn ? `<div class="pitch-formation" style="top:5px;left:50%;transform:translateX(-50%)">${awayFmn}</div>` : ''}
     ${homeFmn ? `<div class="pitch-formation" style="bottom:5px;left:50%;transform:translateX(-50%)">${homeFmn}</div>` : ''}
-    ${pitchPlayers(homePlayers, 'home')}
-    ${pitchPlayers(awayPlayers, 'away')}`;
+    ${pitchPlayers(homePlayers, 'home', homeFK)}
+    ${pitchPlayers(awayPlayers, 'away', awayFK)}`;
 }
 
 function renderEventStats(data, cardEl) {
@@ -2308,7 +2311,7 @@ function renderH2H(data, homeName, awayName) {
   return `<table class="h2h-table"><tbody>${rows}</tbody></table>${summary}`;
 }
 
-function renderLineup(lineup, homeName, awayName, matchId) {
+function renderLineup(lineup, homeName, awayName, matchId, homeFK, awayFK) {
   if (!lineup) return '';
   const home = lineup.home || [];
   const away = lineup.away || [];
@@ -2337,7 +2340,7 @@ function renderLineup(lineup, homeName, awayName, matchId) {
       </div>
       <div class="live-lineup" style="display:${mode === 'liste' ? 'flex' : 'none'}">${side(home, homeName || 'Hjemme')}${side(away, awayName || 'Ude')}</div>
       <div class="pitch-wrap" style="display:${mode === 'bane' ? 'block' : 'none'}">
-        <div class="pitch-inner">${renderPitch(lineup, homeName, awayName)}</div>
+        <div class="pitch-inner">${renderPitch(lineup, homeName, awayName, homeFK, awayFK)}</div>
       </div>
     </div>`;
 }

@@ -334,10 +334,21 @@
       display: flex; align-items: center; justify-content: center;
       font-size: 10px; font-weight: 700; line-height: 1;
       border: 2px solid rgba(0,0,0,0.3);
+      overflow: hidden;
     }
     .pitch-player.home .pitch-player-circle { background: var(--orange); color: #111; }
     .pitch-player.away .pitch-player-circle { background: #3b82f6; color: #fff; }
     .pitch-player.lu-clickable:hover .pitch-player-circle { filter: brightness(1.2); }
+    .pitch-shirt-img {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .pitch-shirt-num {
+      width: 100%; height: 100%;
+      align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700;
+    }
     .pitch-player-name {
       font-size: 8px; color: #fff;
       text-align: center; max-width: 56px;
