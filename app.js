@@ -499,8 +499,7 @@ function buildNormalView(i) {
     </div>
     <div class="score-area">
       <div class="team-block">
-        <img class="team-logo" id="logo1-${i}" src="" alt=""
-             onerror="this.style.display='none'" style="display:none">
+        ${k.hold1PartFk ? `<img class="team-logo" src="/api/team-image?teamFK=${esc(k.hold1PartFk)}&v=3" onerror="this.style.display='none'" alt="">` : ''}
         <div class="team-name">${esc(k.hold1Kort) || '—'}</div>
         <div class="score-row">
           <button class="score-btn" id="s1m-${i}">−</button>
@@ -510,8 +509,7 @@ function buildNormalView(i) {
       </div>
       <div class="vs-sep">VS</div>
       <div class="team-block">
-        <img class="team-logo" id="logo2-${i}" src="" alt=""
-             onerror="this.style.display='none'" style="display:none">
+        ${k.hold2PartFk ? `<img class="team-logo" src="/api/team-image?teamFK=${esc(k.hold2PartFk)}&v=3" onerror="this.style.display='none'" alt="">` : ''}
         <div class="team-name">${esc(k.hold2Kort) || '—'}</div>
         <div class="score-row">
           <button class="score-btn" id="s2m-${i}">−</button>
@@ -1727,16 +1725,19 @@ async function fetchLiveMatches() {
       if (k.hold2Lang) m.away = k.hold2Lang;
     }
 
-    // Opdater logoer i kampblokkene
+    // Gem part_fk på kampe-state og rerender blokke hvor det ændrer sig
     for (let i = 0; i < kampe.length; i++) {
       const k = kampe[i];
       if (!k.enetpulseId) continue;
       const m = enetMap[String(k.enetpulseId)];
       if (!m || m.error) continue;
-      const img1 = document.getElementById(`logo1-${i}`);
-      const img2 = document.getElementById(`logo2-${i}`);
-      if (img1 && m.home_part_fk) { img1.src = `/api/team-image?teamFK=${m.home_part_fk}&v=3`; img1.style.display = ''; }
-      if (img2 && m.away_part_fk) { img2.src = `/api/team-image?teamFK=${m.away_part_fk}&v=3`; img2.style.display = ''; }
+      const fk1 = m.home_part_fk || null;
+      const fk2 = m.away_part_fk || null;
+      if (fk1 !== kampe[i].hold1PartFk || fk2 !== kampe[i].hold2PartFk) {
+        kampe[i].hold1PartFk = fk1;
+        kampe[i].hold2PartFk = fk2;
+        rerender(i);
+      }
     }
 
     // Vis kort i slot-rækkefølge
