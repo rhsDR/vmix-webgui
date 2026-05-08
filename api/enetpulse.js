@@ -140,6 +140,7 @@ function normalizeFixtures(raw) {
           const iso = startdate.includes('T') ? startdate : startdate.replace(' ', 'T');
           const d = new Date(/[Z+]/.test(iso) ? iso : iso + 'Z');
           timePart = d.toLocaleTimeString('da-DK', { timeZone: 'Europe/Copenhagen', hour: '2-digit', minute: '2-digit', hour12: false });
+          console.log('[startdate]', startdate, '→', timePart);
         } catch { timePart = ''; }
       }
       return {
