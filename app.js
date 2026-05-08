@@ -617,7 +617,7 @@ function buildEditView(i) {
   `;
 
   // Live-update buffer on change
-  if (!(i === 5 && k.autoMode)) {
+  if (!k.autoMode) {
     div.querySelector('#eh1-' + i).addEventListener('change', e => { buf.hold1Lang = e.target.value; });
     div.querySelector('#eh2-' + i).addEventListener('change', e => { buf.hold2Lang = e.target.value; });
 
