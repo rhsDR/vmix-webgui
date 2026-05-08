@@ -1664,6 +1664,8 @@ let liveTimer    = null;
 let lastCardSeen       = {}; // fixtureId → sidste sete korttype+minut+spiller
 const liveExpandedLineup = new Set(); // matchId → opstilling synlig
 const livePitchMode      = new Map(); // matchId → 'liste' | 'bane'
+const liveExpandedStats  = new Set(); // matchId → statistik synlig
+const liveExpandedTable  = new Set(); // matchId → ligatable synlig
 
 function startLivePolling() {
   fetchLiveMatches();
@@ -1748,6 +1750,49 @@ async function fetchLiveMatches() {
         wrap.querySelector('.pitch-wrap').style.display  = mode === 'bane'  ? 'block' : 'none';
       });
     });
+
+    // STATISTIK toggle
+    grid.querySelectorAll('.live-stats-toggle').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id   = String(btn.dataset.id);
+        const open = liveExpandedStats.has(id);
+        if (open) { liveExpandedStats.delete(id); } else { liveExpandedStats.add(id); }
+        const wrap  = btn.nextElementSibling;
+        const inner = wrap.querySelector('.live-stats-inner');
+        btn.textContent = 'STATISTIK ' + (open ? '▾' : '▴');
+        wrap.style.display = open ? 'none' : 'block';
+        if (!open) {
+          inner.innerHTML = '<div class="pm-loading">Henter…</div>';
+          const r = await fetch(`/api/standings?type=event_stats&object=event&objectFK=${encodeURIComponent(id)}`);
+          const j = await r.json();
+          inner.innerHTML = j.ok ? renderEventStats(j.data, btn.closest('.live-card')) : '<div class="pm-empty">Kampstatistik ikke tilgængelig</div>';
+        }
+      });
+    });
+
+    // TABEL toggle
+    grid.querySelectorAll('.live-table-toggle').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id   = String(btn.dataset.id);
+        const open = liveExpandedTable.has(id);
+        if (open) { liveExpandedTable.delete(id); } else { liveExpandedTable.add(id); }
+        const wrap  = btn.nextElementSibling;
+        const inner = wrap.querySelector('.live-table-inner');
+        btn.textContent = 'TABEL ' + (open ? '▾' : '▴');
+        wrap.style.display = open ? 'none' : 'block';
+        if (!open) {
+          inner.innerHTML = '<div class="pm-loading">Henter…</div>';
+          const tfk  = btn.dataset.tfk;
+          const home = btn.dataset.home;
+          const away = btn.dataset.away;
+          if (!tfk) { inner.innerHTML = '<div class="pm-empty">Ingen turnering-FK</div>'; return; }
+          const r = await fetch(`/api/standings?type=leaguetable&object=tournament_stage&objectFK=${encodeURIComponent(tfk)}`);
+          const j = await r.json();
+          inner.innerHTML = j.ok ? renderLeagueTable(j.data, home, away) : '<div class="pm-empty">Ligatable ikke tilgængelig</div>';
+        }
+      });
+    });
+
     upd.textContent = 'Sidst opdateret ' + new Date().toLocaleTimeString('da-DK');
 
     // Status til Supabase — enetpulse-kampe
@@ -1845,35 +1890,9 @@ function renderLiveCard(m) {
       }).join('')
     : '<div class="live-event" style="color:#333;justify-content:center">ingen hændelser endnu</div>';
 
-  function renderStats(stats) {
-    if (!stats || stats.length < 2) return '';
-    const h = stats[0].stats;
-    const a = stats[1].stats;
-    const LABELS = {
-      'Ball Possession':  'Boldbesiddelse',
-      'Shots on Goal':    'Skud på mål',
-      'Total Shots':      'Skud i alt',
-      'Corner Kicks':     'Hjørnespark',
-      'Fouls':            'Frispark',
-      'Offsides':         'Offside'
-    };
-    return '<div class="live-stats">' + Object.entries(LABELS).map(([key, label]) => {
-      const hv = h[key] ?? '—';
-      const av = a[key] ?? '—';
-      const hNum = parseFloat(String(hv)) || 0;
-      const aNum = parseFloat(String(av)) || 0;
-      const total = hNum + aNum;
-      const hPct  = total > 0 ? (hNum / total * 100) : 50;
-      const aPct  = total > 0 ? (aNum / total * 100) : 50;
-      return `<div class="live-stat-row">
-        <span class="live-stat-val">${hv}</span>
-        <div class="live-stat-bar"><div class="live-stat-bar-fill" style="width:${hPct}%"></div></div>
-        <span class="live-stat-label">${label}</span>
-        <div class="live-stat-bar away"><div class="live-stat-bar-fill" style="width:${aPct}%"></div></div>
-        <span class="live-stat-val away">${av}</span>
-      </div>`;
-    }).join('') + '</div>';
-  }
+  const mid = String(m.id);
+  const statsOpen = liveExpandedStats.has(mid);
+  const tableOpen = liveExpandedTable.has(mid);
 
   return `
     <div class="live-card">
@@ -1893,7 +1912,14 @@ function renderLiveCard(m) {
         <div class="live-league">${m.league}</div>
       </div>
       <div class="live-events">${eventsHtml}</div>
-      ${renderStats(m.stats)}
+      <button class="live-stats-toggle" data-id="${mid}">STATISTIK ${statsOpen ? '▴' : '▾'}</button>
+      <div class="live-stats-wrap" style="display:${statsOpen ? 'block' : 'none'}">
+        <div class="live-stats-inner" data-id="${mid}"><div class="pm-loading">Henter…</div></div>
+      </div>
+      <button class="live-table-toggle" data-id="${mid}" data-tfk="${m.tournament_fk || ''}" data-home="${m.home}" data-away="${m.away}">TABEL ${tableOpen ? '▴' : '▾'}</button>
+      <div class="live-table-wrap" style="display:${tableOpen ? 'block' : 'none'}">
+        <div class="live-table-inner" data-id="${mid}"><div class="pm-loading">Henter…</div></div>
+      </div>
       ${renderLineup(m.lineup, m.home, m.away, m.id)}
     </div>`;
 }
@@ -1958,6 +1984,89 @@ function renderPitch(lineup, homeName, awayName) {
     ${pitchPlayers(awayPlayers, 'away')}`;
 }
 
+function renderEventStats(data, cardEl) {
+  const standing = data?.standing;
+  if (!standing) return '<div class="pm-empty">Ingen data</div>';
+  const entry = Object.values(standing)[0];
+  if (!entry) return '<div class="pm-empty">Ingen data</div>';
+
+  const participants = entry.standing_participants || {};
+  const parts = Object.values(participants);
+  if (parts.length < 2) return '<div class="pm-empty">Utilstrækkelige data</div>';
+
+  // Forsøg at identificere hjemme/ude — enetpulse bruger typisk 'home'/'away' som navne
+  let home = parts.find(p => (p.name || '').toLowerCase() === 'home') || parts[0];
+  let away = parts.find(p => (p.name || '').toLowerCase() === 'away') || parts[1];
+
+  const homeData = {};
+  Object.values(home.standing_data || {}).forEach(d => { homeData[d.type || d.name] = d.value; });
+  const awayData = {};
+  Object.values(away.standing_data || {}).forEach(d => { awayData[d.type || d.name] = d.value; });
+
+  const allKeys = [...new Set([...Object.keys(homeData), ...Object.keys(awayData)])];
+  if (!allKeys.length) return '<div class="pm-empty">Ingen statistik-data</div>';
+
+  const rows = allKeys.map(k => {
+    const hv = homeData[k] ?? '—';
+    const av = awayData[k] ?? '—';
+    const label = k.replace(/_/g, ' ');
+    return `<tr><td class="es-home">${hv}</td><td class="es-label">${label}</td><td class="es-away">${av}</td></tr>`;
+  }).join('');
+
+  return `<table class="event-stats-table"><tbody>${rows}</tbody></table>`;
+}
+
+function renderLeagueTable(data, home, away) {
+  const standing = data?.standing;
+  if (!standing) return '<div class="pm-empty">Ingen data</div>';
+  const entry = Object.values(standing)[0];
+  if (!entry) return '<div class="pm-empty">Ingen data</div>';
+
+  const participants = entry.standing_participants || {};
+  const rows = Object.values(participants);
+  if (!rows.length) return '<div class="pm-empty">Ingen deltagere</div>';
+
+  // Udtræk standing_data til flat objekt pr. deltager
+  const parsed = rows.map(p => {
+    const sd = {};
+    Object.values(p.standing_data || {}).forEach(d => { sd[d.type || d.name] = d.value; });
+    return { name: p.name || p.participant_name || '', ...sd };
+  });
+
+  // Sorter efter rank, derefter points
+  parsed.sort((a, b) => {
+    const ra = parseInt(a.rank || a.position || '999');
+    const rb = parseInt(b.rank || b.position || '999');
+    if (ra !== rb) return ra - rb;
+    return parseInt(b.points || b.pts || '0') - parseInt(a.points || a.pts || '0');
+  });
+
+  const homeLow = (home || '').toLowerCase();
+  const awayLow = (away || '').toLowerCase();
+
+  const tableRows = parsed.map((p, i) => {
+    const rank = p.rank || p.position || (i + 1);
+    const name = p.name;
+    const nameLow = name.toLowerCase();
+    const isHome = homeLow && nameLow.includes(homeLow.substring(0, 4));
+    const isAway = awayLow && nameLow.includes(awayLow.substring(0, 4));
+    const cls    = isHome ? ' class="lt-home"' : isAway ? ' class="lt-away"' : '';
+    const played = p.matches_played || p.played || p.total_matches || '—';
+    const wins   = p.wins || p.won || '—';
+    const draws  = p.draws || p.draw || '—';
+    const losses = p.losses || p.lost || '—';
+    const gf     = p.goals_for || p.scored || p.goals_scored || '—';
+    const ga     = p.goals_against || p.conceded || p.goals_conceded || '—';
+    const pts    = p.points || p.pts || '—';
+    return `<tr${cls}><td>${rank}</td><td class="lt-name">${name}</td><td>${played}</td><td>${wins}</td><td>${draws}</td><td>${losses}</td><td>${gf}</td><td>${ga}</td><td>${pts}</td></tr>`;
+  }).join('');
+
+  return `<table class="league-table">
+    <thead><tr><th>#</th><th class="lt-name">Hold</th><th>K</th><th>V</th><th>U</th><th>T</th><th>MF</th><th>MA</th><th>P</th></tr></thead>
+    <tbody>${tableRows}</tbody>
+  </table>`;
+}
+
 function renderLineup(lineup, homeName, awayName, matchId) {
   if (!lineup) return '';
   const home = lineup.home || [];
@@ -2018,7 +2127,7 @@ function calcAge(dob) {
   return `${d.toLocaleDateString('da-DK')} (${age} år)`;
 }
 
-function renderPlayerData(p) {
+function renderPlayerData(p, statsJson) {
   if (!p || typeof p !== 'object') return '<div class="pm-empty">Ingen data</div>';
 
   // Parse enetpulse property-array: [{name, value}, ...] → flat map
@@ -2051,6 +2160,27 @@ function renderPlayerData(p) {
     'birthdate','date_of_birth','position','height','weight','foot']);
   const extraTop = Object.entries(p).filter(([k, v]) => !knownTop.has(k) && v !== null && v !== '' && typeof v !== 'object');
 
+  // Sæsonstatistik fra participant_stats
+  let seasonStatsHtml = '';
+  if (statsJson?.ok && statsJson.data?.standing) {
+    const standingEntry = Object.values(statsJson.data.standing)[0];
+    const participants  = standingEntry?.standing_participants || {};
+    const partEntry     = Object.values(participants)[0];
+    if (partEntry?.standing_data) {
+      const sd = {};
+      Object.values(partEntry.standing_data).forEach(d => { sd[d.type || d.name] = d.value; });
+      const LABELS = {
+        goals: 'Mål', assists: 'Assists', yellow_cards: 'Gule kort',
+        red_cards: 'Røde kort', matches_played: 'Kampe', minutes_played: 'Minutter'
+      };
+      const rows = Object.entries(LABELS)
+        .filter(([k]) => sd[k] != null)
+        .map(([k, label]) => `<div class="pm-stat-row"><span class="pm-stat-label">${label}</span><span class="pm-stat-value">${sd[k]}</span></div>`)
+        .join('');
+      if (rows) seasonStatsHtml = `<div class="pm-section-title">Sæsonstatistik</div><div class="pm-section">${rows}</div>`;
+    }
+  }
+
   return `
     <div class="pm-name">${name || '—'}</div>
     <div class="pm-section">
@@ -2069,7 +2199,8 @@ function renderPlayerData(p) {
     <div class="pm-section">
       ${extraProps.map(([k, v]) => playerField(k, v)).join('')}
       ${extraTop.map(([k, v]) => playerField(k, v)).join('')}
-    </div>` : ''}`;
+    </div>` : ''}
+    ${seasonStatsHtml}`;
 }
 
 async function openPlayerModal(id, name) {
@@ -2077,12 +2208,18 @@ async function openPlayerModal(id, name) {
   playerModal.style.display = 'flex';
 
   try {
-    const res  = await fetch(`/api/player?id=${encodeURIComponent(id)}`);
-    const json = await res.json();
-    if (json.error) {
-      playerModalContent.innerHTML = `<div class="pm-name">${name}</div><div class="pm-empty">${json.error}</div>`;
+    const [profileRes, statsRes] = await Promise.all([
+      fetch(`/api/player?id=${encodeURIComponent(id)}`),
+      fetch(`/api/standings?type=participant_stats&object=participant&objectFK=${encodeURIComponent(id)}`)
+    ]);
+    const profileJson = await profileRes.json();
+    let statsJson = null;
+    try { statsJson = await statsRes.json(); } catch {}
+
+    if (profileJson.error) {
+      playerModalContent.innerHTML = `<div class="pm-name">${name}</div><div class="pm-empty">${profileJson.error}</div>`;
     } else {
-      playerModalContent.innerHTML = renderPlayerData(json.raw);
+      playerModalContent.innerHTML = renderPlayerData(profileJson.raw, statsJson);
     }
   } catch (err) {
     playerModalContent.innerHTML = `<div class="pm-name">${name}</div><div class="pm-empty">Netværksfejl</div>`;

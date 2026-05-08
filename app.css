@@ -1321,6 +1321,74 @@
       padding: 20px 0;
       text-align: center;
     }
+    .pm-stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .pm-stat-label { font-size: 11px; color: var(--muted); }
+    .pm-stat-value { font-size: 11px; color: var(--text); font-weight: 600; }
+
+    /* ── Kampstatistik & Ligatable toggles ───────────────── */
+    .live-stats-toggle,
+    .live-table-toggle {
+      display: block;
+      width: 100%;
+      background: #111;
+      border: none;
+      color: #555;
+      font-size: 10px;
+      letter-spacing: 3px;
+      padding: 8px;
+      cursor: pointer;
+      text-align: center;
+      border-top: 1px solid #1a1a1a;
+      font-family: inherit;
+    }
+    .live-stats-toggle:hover, .live-table-toggle:hover { color: #888; }
+
+    /* ── Event stats tabel ────────────────────────────────── */
+    .event-stats-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin: 4px 0 8px;
+    }
+    .event-stats-table td { padding: 4px 8px; }
+    .event-stats-table .es-home { text-align: right; color: var(--orange); font-weight: 600; }
+    .event-stats-table .es-label { text-align: center; color: #555; font-size: 10px; letter-spacing: 1px; }
+    .event-stats-table .es-away { text-align: left; color: #3b82f6; font-weight: 600; }
+
+    /* ── Ligatable ────────────────────────────────────────── */
+    .league-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+      margin: 4px 0 8px;
+    }
+    .league-table th {
+      color: #444;
+      padding: 3px 4px;
+      text-align: center;
+      font-weight: 400;
+      letter-spacing: 1px;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .league-table th.lt-name { text-align: left; }
+    .league-table td { padding: 3px 4px; text-align: center; color: #555; }
+    .league-table .lt-name {
+      text-align: left;
+      color: #777;
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .league-table .lt-home td { color: var(--orange); }
+    .league-table .lt-home .lt-name { color: var(--orange); }
+    .league-table .lt-away td { color: #3b82f6; }
+    .league-table .lt-away .lt-name { color: #3b82f6; }
 
     /* ── Mobil ────────────────────────────────────────────── */
     @media (max-width: 640px) {
