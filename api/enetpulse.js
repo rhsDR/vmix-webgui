@@ -332,6 +332,7 @@ function normalizeEventDetails(raw, statsRaw, id) {
     tournament_fk: String(ev.tournament_stageFK || ev.tournament_templateFK || ev.tournamentFK || ''),
     homeGoals,
     awayGoals,
+    starttime: copenhagenTime(ev.startdate || ''),
     status:    mapStatus(ev),
     league:    ev.tournament_stage_name || ev.tournament_name || '',
     stats:     normalizeStats(statsRaw, homePartFK, awayPartFK),

@@ -720,6 +720,7 @@
       color: #bbb;
     }
     .info-icon { color: #555; font-size: 13px; min-width: 16px; text-align: center; }
+    .kampstart-tid { font-size: 12px; color: #777; }
     .info-link-text {
       font-size: 12px;
       color: #777;
@@ -768,6 +769,13 @@
       color: #fff;
       min-height: 38px;
       line-height: 1;
+    }
+    .team-name-full {
+      font-size: 10px;
+      color: #666;
+      margin-top: 3px;
+      letter-spacing: 0;
+      font-weight: 400;
     }
     .score-row {
       display: flex;

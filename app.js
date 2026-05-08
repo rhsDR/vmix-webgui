@@ -11,7 +11,7 @@ const makeKamp = () => ({
   hold2Score: 0, hold2Kort: '', hold2Lang: '',
   kommentator: '', lokation: '', vmixcall: '', onAir: false,
   fixtureId: null, autoMode: false,
-  enetpulseId: null,
+  enetpulseId: null, starttime: '',
   // edit buffer
   editMode: false, collapsed: false,
   buf: { hold1Lang: '', hold2Lang: '', kommentator: '', lokation: '', vmixcall: '', lokSomKomm: false }
@@ -496,11 +496,13 @@ function buildNormalView(i) {
         <span class="info-link-text" title="${esc(k.vmixcall)}">${esc(k.vmixcall) || '<span style="color:#444">—</span>'}</span>
         <button class="copy-btn" id="cpnorm-${i}" title="Kopiér link">⎘</button>
       </div>
+      ${k.starttime ? `<div class="info-row"><span class="info-icon">🕐</span><span class="kampstart-tid">Kampstart ${esc(k.starttime)}</span></div>` : ''}
     </div>
     <div class="score-area">
       <div class="team-block">
         ${k.hold1PartFk ? `<img class="team-logo" src="/api/team-image?teamFK=${esc(k.hold1PartFk)}&v=3" onerror="this.style.display='none'" alt="">` : ''}
         <div class="team-name">${esc(k.hold1Kort) || '—'}</div>
+        ${k.hold1Lang && k.hold1Lang !== k.hold1Kort ? `<div class="team-name-full">${esc(k.hold1Lang)}</div>` : ''}
         <div class="score-row">
           <button class="score-btn" id="s1m-${i}">−</button>
           <div class="score-val" id="sv1-${i}">${k.hold1Score}</div>
@@ -511,6 +513,7 @@ function buildNormalView(i) {
       <div class="team-block">
         ${k.hold2PartFk ? `<img class="team-logo" src="/api/team-image?teamFK=${esc(k.hold2PartFk)}&v=3" onerror="this.style.display='none'" alt="">` : ''}
         <div class="team-name">${esc(k.hold2Kort) || '—'}</div>
+        ${k.hold2Lang && k.hold2Lang !== k.hold2Kort ? `<div class="team-name-full">${esc(k.hold2Lang)}</div>` : ''}
         <div class="score-row">
           <button class="score-btn" id="s2m-${i}">−</button>
           <div class="score-val" id="sv2-${i}">${k.hold2Score}</div>
@@ -827,6 +830,7 @@ async function resetEdit(i) {
   k.kommentator = ''; k.lokation = '';
   k.enetpulseId = null; k.fixtureId = null;
   k.hold1PartFk = null; k.hold2PartFk = null;
+  k.starttime = '';
   k.onAir = false;
 
   k.buf.hold1Lang = ''; k.buf.hold2Lang = '';
@@ -1736,9 +1740,11 @@ async function fetchLiveMatches() {
       if (!m || m.error) continue;
       const fk1 = m.home_part_fk || null;
       const fk2 = m.away_part_fk || null;
-      if (fk1 !== kampe[i].hold1PartFk || fk2 !== kampe[i].hold2PartFk) {
+      const st  = m.starttime || '';
+      if (fk1 !== kampe[i].hold1PartFk || fk2 !== kampe[i].hold2PartFk || st !== kampe[i].starttime) {
         kampe[i].hold1PartFk = fk1;
         kampe[i].hold2PartFk = fk2;
+        kampe[i].starttime   = st;
         rerender(i);
       }
     }
