@@ -1785,6 +1785,33 @@ async function fetchLiveMatches() {
       });
     });
 
+    // Auto-åbn og opdater STATISTIK for kampe i gang
+    for (const k of kampe) {
+      if (!k.enetpulseId) continue;
+      const m = enetMap[String(k.enetpulseId)];
+      if (!m || m.error) continue;
+      if (!['1H','2H','HT','ET','P','LIVE'].includes(m.status?.short)) continue;
+      const mid = String(m.id);
+      liveExpandedStats.add(mid);
+      const card  = grid.querySelector(`.live-card[data-mid="${mid}"]`);
+      if (!card) continue;
+      const wrap  = card.querySelector('.live-stats-wrap');
+      const inner = card.querySelector('.live-stats-inner');
+      const btn   = card.querySelector('.live-stats-toggle');
+      if (!wrap || !inner || !btn) continue;
+      wrap.style.display = 'block';
+      btn.textContent = 'STATISTIK ▴';
+      if (!liveStatsCache.has(mid)) inner.innerHTML = '<div class="pm-loading">Henter…</div>';
+      fetch(`/api/standings?type=event_stats&object=event&objectFK=${encodeURIComponent(mid)}`)
+        .then(r => r.json())
+        .then(j => {
+          const html = j.ok ? renderEventStats(j.data, card) : '<div class="pm-empty">Kampstatistik ikke tilgængelig</div>';
+          liveStatsCache.set(mid, html);
+          inner.innerHTML = html;
+        })
+        .catch(() => {});
+    }
+
     upd.textContent = 'Sidst opdateret ' + new Date().toLocaleTimeString('da-DK');
 
     // Status til Supabase — enetpulse-kampe
@@ -1810,11 +1837,16 @@ function liveStatusClass(short) {
 }
 
 function liveStatusLabel(status) {
+  const min = status.elapsed != null ? ' · ' + status.elapsed + "'" : '';
   if (status.short === 'NS')  return 'IKKE STARTET';
   if (status.short === 'HT')  return 'PAUSE';
   if (status.short === 'FT')  return 'SLUTFLØJT';
   if (status.short === 'AET') return 'EFTER FORLÆNGING';
   if (status.short === 'PEN') return 'EFTER STRAFFE';
+  if (status.short === '1H')  return '1. HALVLEG' + min;
+  if (status.short === '2H')  return '2. HALVLEG' + min;
+  if (status.short === 'ET')  return 'FORLÆNGING' + min;
+  if (status.short === 'P')   return 'STRAFFESPARK';
   if (status.elapsed != null) return status.elapsed + "'";
   return status.short;
 }

@@ -214,12 +214,6 @@ function normalizeEventDetails(raw, statsRaw, id) {
       tagged.push({ ...inc, _team: team });
     }
   }
-  if (tagged.length > 0) {
-    const codes = [...new Set(tagged.map(i => i.incident_code))];
-    console.log(`[incidents] event=${ev.id} total=${tagged.length} codes=${JSON.stringify(codes)}`);
-  } else {
-    console.log(`[incidents] event=${ev.id} ingen incidents fundet`);
-  }
 
   // Grupper på enetID for at parre mål+assist og subst+subst_in
   const byEnetId = {};
