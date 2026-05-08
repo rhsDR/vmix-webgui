@@ -101,15 +101,12 @@
 
     /* ── Live Dashboard ───────────────────────────────────── */
     .live-grid {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
       gap: 16px;
-      align-items: flex-start;
-      overflow-x: auto;
-      padding-bottom: 8px;
+      align-items: start;
     }
     .live-card {
-      flex: none;
-      width: 380px;
       background: var(--card);
       border: 1px solid var(--card-border);
       border-radius: 12px;
@@ -183,6 +180,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      border-left: 3px solid rgba(255,140,0,0.5);
       padding: 7px 16px;
       font-size: 14px;
       color: #bbb;
@@ -214,7 +212,7 @@
     .live-event-icon.sub::after  { content: '▼'; font-size: 8px; color: var(--red);   line-height: 1; }
     .live-event-name { flex: 1; white-space: normal; word-break: break-word; font-size: 14px; }
     .live-event-assist { color: #555; font-size: 14px; }
-    .live-event.away { flex-direction: row-reverse; }
+    .live-event.away { flex-direction: row-reverse; border-left: none; border-right: 3px solid rgba(59,130,246,0.5); }
     .live-event.away .live-event-name { text-align: right; }
     .live-no-fixtures {
       padding: 60px;
