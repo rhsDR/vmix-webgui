@@ -293,12 +293,12 @@
     .lineup-tabs { display: flex; border-top: 1px solid #1e1e1e; }
     .lu-tab {
       flex: 1; background: #111; border: none;
-      color: #555; font-size: 10px; letter-spacing: 3px;
-      padding: 7px; cursor: pointer; font-family: inherit;
+      color: #666; font-size: 11px; letter-spacing: 3px;
+      padding: 8px; cursor: pointer; font-family: inherit;
     }
     .lu-tab:first-child { border-right: 1px solid #1e1e1e; }
     .lu-tab.active { color: #ccc; background: #161616; }
-    .lu-tab:hover { color: #999; }
+    .lu-tab:hover { color: #aaa; }
 
     /* Pitch */
     .pitch-wrap {
@@ -1374,18 +1374,18 @@
       flex: 1;
       background: #0d0d0d;
       border: none;
-      color: #444;
-      font-size: 9px;
+      color: #666;
+      font-size: 11px;
       letter-spacing: 2px;
-      padding: 6px 4px;
+      padding: 8px 4px;
       cursor: pointer;
       text-align: center;
       font-family: inherit;
       border-right: 1px solid #1a1a1a;
     }
     .table-subtab:last-child { border-right: none; }
-    .table-subtab.active { color: #888; background: #111; }
-    .table-subtab:hover { color: #777; }
+    .table-subtab.active { color: #ccc; background: #161616; }
+    .table-subtab:hover { color: #aaa; }
     .ts-team { color: #333 !important; font-size: 9px; }
 
     /* ── H2H tabel ────────────────────────────────────────── */
