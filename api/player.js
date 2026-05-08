@@ -12,37 +12,32 @@ export default async function handler(req, res) {
 
   const auth = `username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
 
-  // Prøv participant/details endpoint
   const urls = [
     `${EAPI_BASE}/participant/details/?participantFK=${id}&${auth}`,
     `${EAPI_BASE}/participant/?participantFK=${id}&${auth}`,
+    `${EAPI_BASE}/participants/?participantFK=${id}&${auth}`,
   ];
 
-  let raw = null;
+  const attempts = [];
   for (const url of urls) {
     try {
       const r    = await fetch(url);
       const json = await r.json();
-      console.log('[player] url:', url, '→ keys:', Object.keys(json || {}).join(','));
+      const urlShort = url.split('?')[0].replace(EAPI_BASE, '');
+      attempts.push({ url: urlShort, response: json });
       if (json && !json.error_message && Object.keys(json).length > 0) {
-        raw = json;
-        break;
+        const part = json.participant
+          ? Object.values(json.participant)[0]
+          : json.participants
+            ? Object.values(json.participants)[0]
+            : Object.values(json)[0];
+        return res.status(200).json({ raw: part || json });
       }
     } catch (err) {
-      console.warn('[player] fetch fejl:', err.message);
+      attempts.push({ url: url.split('?')[0].replace(EAPI_BASE, ''), error: err.message });
     }
   }
 
-  if (!raw) return res.status(404).json({ error: 'Spillerdata ikke tilgængeligt' });
-
-  // Udtræk participant-objekt uanset nesting
-  const part = raw.participant
-    ? Object.values(raw.participant)[0]
-    : raw.participants
-      ? Object.values(raw.participants)[0]
-      : Object.values(raw)[0];
-
-  console.log('[player] participant keys:', part ? Object.keys(part).join(',') : 'ingen');
-
-  return res.status(200).json({ raw: part || raw });
+  // Returner debug-info så vi kan se hvad enetpulse svarede
+  return res.status(404).json({ error: 'Spillerdata ikke tilgængeligt', debug: attempts });
 }
