@@ -13,14 +13,12 @@ export default async function handler(req, res) {
   const url  = `${EAPI_BASE}/image/${endpoint}/?teamFK=${encodeURIComponent(teamFK)}&${auth}`;
 
   try {
-    const r   = await fetch(url);
-    const ct  = r.headers.get('content-type') || '';
-    const buf = await r.arrayBuffer();
-    const hex = Buffer.from(buf.slice(0, 8)).toString('hex');
-    console.log(`[team-image] teamFK=${teamFK} status=${r.status} ct="${ct}" size=${buf.byteLength} hex=${hex}`);
-
-    if (!r.ok) return res.status(404).end();
-    res.status(200).json({ status: r.status, ct, size: buf.byteLength, hex });
+    const r    = await fetch(url);
+    const text = await r.text();
+    let json;
+    try { json = JSON.parse(text); } catch { json = null; }
+    console.log(`[team-image] teamFK=${teamFK} status=${r.status} size=${text.length} keys=${json ? JSON.stringify(Object.keys(json)) : 'not-json'} sample=${text.slice(0, 120)}`);
+    res.status(200).json({ keys: json ? Object.keys(json) : null, sample: text.slice(0, 200) });
   } catch (err) {
     console.error('[team-image] error:', err.message);
     res.status(500).end();
