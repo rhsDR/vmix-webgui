@@ -47,7 +47,7 @@ function mapStatus(ev) {
   const st     = (ev.status_type || '').toLowerCase();
   const period = (ev.period_type || ev.active_minute_period || '').toLowerCase();
   const elapsed = parseInt(ev.elapsed) || null;
-  console.log(`[mapStatus] id=${ev.id} st="${st}" period="${period}" elapsed=${ev.elapsed}`);
+  console.log(`[mapStatus] id=${ev.id} st="${st}" period="${period}" elapsed=${JSON.stringify(ev.elapsed)} keys=${Object.keys(ev).filter(k=>['status','period','elapsed','minute','time','active','current'].some(x=>k.toLowerCase().includes(x))).join(',')}`);
   if (st === 'not_started' || st === 'notstarted')       return { short: 'NS',  elapsed: null };
   if (st === 'halftime' || st === 'half_time' || period.includes('halftime') || period.includes('half_time') || period === 'ht')
                                                          return { short: 'HT',  elapsed: null };
