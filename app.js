@@ -502,7 +502,7 @@ function buildNormalView(i) {
       <div class="team-block">
         ${k.hold1PartFk ? `<img class="team-logo" src="/api/team-image?teamFK=${esc(k.hold1PartFk)}&v=3" onerror="this.style.display='none'" alt="">` : ''}
         <div class="team-name">${esc(k.hold1Kort) || '—'}</div>
-        ${k.hold1Lang && k.hold1Lang !== k.hold1Kort ? `<div class="team-name-full">${esc(k.hold1Lang)}</div>` : ''}
+        ${k.hold1Lang ? `<div class="team-name-full">${esc(k.hold1Lang)}</div>` : ''}
         <div class="score-row">
           <button class="score-btn" id="s1m-${i}">−</button>
           <div class="score-val" id="sv1-${i}">${k.hold1Score}</div>
@@ -513,7 +513,7 @@ function buildNormalView(i) {
       <div class="team-block">
         ${k.hold2PartFk ? `<img class="team-logo" src="/api/team-image?teamFK=${esc(k.hold2PartFk)}&v=3" onerror="this.style.display='none'" alt="">` : ''}
         <div class="team-name">${esc(k.hold2Kort) || '—'}</div>
-        ${k.hold2Lang && k.hold2Lang !== k.hold2Kort ? `<div class="team-name-full">${esc(k.hold2Lang)}</div>` : ''}
+        ${k.hold2Lang ? `<div class="team-name-full">${esc(k.hold2Lang)}</div>` : ''}
         <div class="score-row">
           <button class="score-btn" id="s2m-${i}">−</button>
           <div class="score-val" id="sv2-${i}">${k.hold2Score}</div>
@@ -700,7 +700,8 @@ function enterEdit(i) {
     kommentator: k.kommentator,
     lokation:    k.lokation,
     vmixcall:    k.vmixcall,
-    lokSomKomm:  false
+    lokSomKomm:  false,
+    enetpulseId: k.enetpulseId
   };
   k.editMode = true;
   rerender(i);
@@ -800,25 +801,12 @@ async function selectEnetpulseFixture(i, f) {
     ? { lang: h2drop.lang, kort: h2drop.kort }
     : { lang: f.away_enet, kort: f.away_enet.substring(0, 3).toUpperCase() };
 
-  kampe[i].enetpulseId  = f.id;
-  kampe[i].hold1Lang    = h1.lang;
-  kampe[i].hold1Kort    = h1.kort;
-  kampe[i].hold2Lang    = h2.lang;
-  kampe[i].hold2Kort    = h2.kort;
-  kampe[i].buf.hold1Lang = h1.lang;
-  kampe[i].buf.hold2Lang = h2.lang;
+  kampe[i].buf.enetpulseId = f.id;
+  kampe[i].buf.hold1Lang   = h1.lang;
+  kampe[i].buf.hold2Lang   = h2.lang;
 
-  try {
-    await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), {
-      enetpulse_id: f.id,
-      hold1_lang:   h1.lang,
-      hold1_kort:   h1.kort,
-      hold2_lang:   h2.lang,
-      hold2_kort:   h2.kort
-    });
-    toast('Kamp valgt ✓', 'ok');
-    rerender(i);
-  } catch { toast('Fejl ved gem af enetpulse kamp', 'err'); }
+  toast('Kamp valgt — tryk Gem for at gemme', 'ok');
+  rerender(i);
 }
 
 async function resetEdit(i) {
@@ -864,10 +852,11 @@ async function saveKamp(i, div) {
     k.hold2Lang = buf.hold2Lang;
     k.hold2Kort = h2 ? h2.kort : buf.hold2Lang;
   }
-  k.kommentator = buf.kommentator;
-  k.lokation    = buf.lokSomKomm ? buf.kommentator : buf.lokation;
-  k.vmixcall    = buf.vmixcall;
-  k.editMode    = false;
+  k.kommentator  = buf.kommentator;
+  k.lokation     = buf.lokSomKomm ? buf.kommentator : buf.lokation;
+  k.vmixcall     = buf.vmixcall;
+  k.enetpulseId  = buf.enetpulseId !== undefined ? buf.enetpulseId : k.enetpulseId;
+  k.editMode     = false;
 
   rerender(i);
   if (i < 6) rerenderVmixCall(i); // Lås/frigiv sub slot øjeblikkeligt
@@ -883,7 +872,8 @@ async function saveKamp(i, div) {
       hold2_lang:   k.hold2Lang,
       kommentator:  k.kommentator,
       lokation:     k.lokation,
-      vmixcall:     k.vmixcall
+      vmixcall:     k.vmixcall,
+      enetpulse_id: k.enetpulseId
     });
     toast('Gemt ✓', 'ok');
     // Synk link + kommentator navn/titel til vmix_calls slot
