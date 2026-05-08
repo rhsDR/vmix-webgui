@@ -655,7 +655,7 @@ function buildEditView(i) {
 
   div.querySelector('#gem-' + i).addEventListener('click', () => saveKamp(i, div));
   div.querySelector('#ann-' + i).addEventListener('click', () => cancelEdit(i));
-  div.querySelector('#nul-' + i).addEventListener('click', () => resetEdit(i, div));
+  div.querySelector('#nul-' + i).addEventListener('click', () => resetEdit(i));
 
   return div;
 }
@@ -816,21 +816,30 @@ async function selectEnetpulseFixture(i, f) {
   } catch { toast('Fejl ved gem af enetpulse kamp', 'err'); }
 }
 
-function resetEdit(i, div) {
-  // Clear dropdowns and score — keep vmixcall
+async function resetEdit(i) {
   const k = kampe[i];
-  k.buf.hold1Lang   = '';
-  k.buf.hold2Lang   = '';
-  k.buf.kommentator = '';
-  k.buf.lokation    = '';
-  k.buf.lokSomKomm  = false;
-  k.hold1Score      = 0;
-  k.hold2Score      = 0;
 
-  div.querySelector('#eh1-' + i).value = '';
-  div.querySelector('#eh2-' + i).value = '';
-  div.querySelector('#ek-'  + i).value = '';
-  div.querySelector('#el-'  + i).value = '';
+  k.hold1Lang = ''; k.hold1Kort = '';
+  k.hold2Lang = ''; k.hold2Kort = '';
+  k.hold1Score = 0; k.hold2Score = 0;
+  k.kommentator = ''; k.lokation = '';
+  k.enetpulseId = null; k.fixtureId = null;
+
+  k.buf.hold1Lang = ''; k.buf.hold2Lang = '';
+  k.buf.kommentator = ''; k.buf.lokation = '';
+  k.buf.lokSomKomm = false;
+
+  try {
+    await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), {
+      hold1_lang: '', hold1_kort: '', hold1_score: 0,
+      hold2_lang: '', hold2_kort: '', hold2_score: 0,
+      kommentator: '', lokation: '',
+      enetpulse_id: null, fixture_id: null
+    });
+  } catch { toast('Fejl ved nulstilling', 'err'); }
+
+  rerender(i);
+  fetchLiveMatches();
 }
 
 async function saveKamp(i, div) {
