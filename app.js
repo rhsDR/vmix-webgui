@@ -1663,6 +1663,7 @@ init();
 let liveTimer    = null;
 let lastCardSeen       = {}; // fixtureId → sidste sete korttype+minut+spiller
 const liveExpandedLineup = new Set(); // matchId → opstilling synlig
+const livePitchMode      = new Map(); // matchId → 'liste' | 'bane'
 
 function startLivePolling() {
   fetchLiveMatches();
@@ -1733,7 +1734,18 @@ async function fetchLiveMatches() {
         const open = liveExpandedLineup.has(id);
         if (open) liveExpandedLineup.delete(id); else liveExpandedLineup.add(id);
         btn.textContent = 'OPSTILLING ' + (open ? '▾' : '▴');
-        btn.nextElementSibling.style.display = open ? 'none' : 'flex';
+        btn.nextElementSibling.style.display = open ? 'none' : 'block';
+      });
+    });
+    grid.querySelectorAll('.lu-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id   = String(btn.dataset.id);
+        const mode = btn.dataset.mode;
+        livePitchMode.set(id, mode);
+        const wrap = btn.closest('.live-lineup-wrap');
+        wrap.querySelectorAll('.lu-tab').forEach(b => b.classList.toggle('active', b === btn));
+        wrap.querySelector('.live-lineup').style.display = mode === 'liste' ? 'flex' : 'none';
+        wrap.querySelector('.pitch-wrap').style.display  = mode === 'bane'  ? 'block' : 'none';
       });
     });
     upd.textContent = 'Sidst opdateret ' + new Date().toLocaleTimeString('da-DK');
@@ -1886,6 +1898,64 @@ function renderLiveCard(m) {
     </div>`;
 }
 
+function renderPitch(lineup, homeName, awayName) {
+  if (!lineup) return '';
+  const homePlayers = (lineup.home || []).filter(p => p.starter);
+  const awayPlayers = (lineup.away || []).filter(p => p.starter);
+  if (!homePlayers.length && !awayPlayers.length) return '';
+
+  // y-procent pr. zone pr. hold (hjemme=nederst, ude=øverst)
+  const ZONE_Y = { MV: { home: 84, away: 16 }, FB: { home: 65, away: 35 }, MF: { home: 46, away: 54 }, A: { home: 27, away: 73 } };
+
+  function pitchPlayers(players, side) {
+    const zones = { MV: [], FB: [], MF: [], A: [] };
+    for (const p of players) {
+      (zones[p.pos] || zones.MF).push(p);
+    }
+    return Object.entries(zones).map(([pos, group]) => {
+      if (!group.length) return '';
+      group.sort((a, b) => a.enetPos - b.enetPos);
+      const y = ZONE_Y[pos]?.[side] ?? 50;
+      return group.map((p, i) => {
+        const x = ((i + 1) / (group.length + 1) * 100).toFixed(1);
+        const lastName = esc(p.name.split(' ').pop());
+        return `<div class="pitch-player ${side}${p.id ? ' lu-clickable' : ''}" style="left:${x}%;top:${y}%;" data-pid="${p.id || ''}" data-pname="${esc(p.name)}">
+          <div class="pitch-player-circle">${p.shirt}</div>
+          <div class="pitch-player-name">${lastName}</div>
+        </div>`;
+      }).join('');
+    }).join('');
+  }
+
+  function formation(players) {
+    const d = players.filter(p => p.pos === 'FB').length;
+    const m = players.filter(p => p.pos === 'MF').length;
+    const f = players.filter(p => p.pos === 'A').length;
+    return (d || m || f) ? `${d}-${m}-${f}` : '';
+  }
+
+  const homeFmn = formation(homePlayers);
+  const awayFmn = formation(awayPlayers);
+
+  return `
+    <svg class="pitch-lines" viewBox="0 0 100 140" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="98" height="138" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.8"/>
+      <line x1="1" y1="70" x2="99" y2="70" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+      <circle cx="50" cy="70" r="9.15" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+      <rect x="22" y="109" width="56" height="30" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+      <rect x="36" y="127" width="28" height="12" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+      <rect x="22" y="1" width="56" height="30" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+      <rect x="36" y="1" width="28" height="12" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+      <circle cx="50" cy="70" r="0.8" fill="rgba(255,255,255,0.2)"/>
+      <circle cx="50" cy="122" r="0.8" fill="rgba(255,255,255,0.2)"/>
+      <circle cx="50" cy="18" r="0.8" fill="rgba(255,255,255,0.2)"/>
+    </svg>
+    ${awayFmn ? `<div class="pitch-formation" style="top:5px;left:50%;transform:translateX(-50%)">${awayFmn}</div>` : ''}
+    ${homeFmn ? `<div class="pitch-formation" style="bottom:5px;left:50%;transform:translateX(-50%)">${homeFmn}</div>` : ''}
+    ${pitchPlayers(homePlayers, 'home')}
+    ${pitchPlayers(awayPlayers, 'away')}`;
+}
+
 function renderLineup(lineup, homeName, awayName, matchId) {
   if (!lineup) return '';
   const home = lineup.home || [];
@@ -1905,9 +1975,19 @@ function renderLineup(lineup, homeName, awayName, matchId) {
   }
 
   const open = liveExpandedLineup.has(String(matchId));
+  const mode = livePitchMode.get(String(matchId)) || 'liste';
   return `
     <button class="live-lineup-toggle" data-id="${matchId}">OPSTILLING ${open ? '▴' : '▾'}</button>
-    <div class="live-lineup" style="display:${open ? 'flex' : 'none'}">${side(home, homeName || 'Hjemme')}${side(away, awayName || 'Ude')}</div>`;
+    <div class="live-lineup-wrap" style="display:${open ? 'block' : 'none'}">
+      <div class="lineup-tabs">
+        <button class="lu-tab${mode === 'liste' ? ' active' : ''}" data-mode="liste" data-id="${matchId}">LISTE</button>
+        <button class="lu-tab${mode === 'bane' ? ' active' : ''}" data-mode="bane" data-id="${matchId}">BANE</button>
+      </div>
+      <div class="live-lineup" style="display:${mode === 'liste' ? 'flex' : 'none'}">${side(home, homeName || 'Hjemme')}${side(away, awayName || 'Ude')}</div>
+      <div class="pitch-wrap" style="display:${mode === 'bane' ? 'block' : 'none'}">
+        <div class="pitch-inner">${renderPitch(lineup, homeName, awayName)}</div>
+      </div>
+    </div>`;
 }
 
 // ── SPILLER-MODAL ─────────────────────────────────────────────

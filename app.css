@@ -280,6 +280,70 @@
       text-align: center;
     }
     .live-lineup-toggle:hover { color: #666; }
+
+    /* Lineup tabs */
+    .lineup-tabs { display: flex; border-top: 1px solid #1e1e1e; }
+    .lu-tab {
+      flex: 1; background: #161616; border: none;
+      color: #333; font-size: 10px; letter-spacing: 2px;
+      padding: 5px; cursor: pointer; font-family: inherit;
+    }
+    .lu-tab:first-child { border-right: 1px solid #1e1e1e; }
+    .lu-tab.active { color: #777; }
+    .lu-tab:hover { color: #666; }
+
+    /* Pitch */
+    .pitch-wrap {
+      position: relative;
+      width: 100%;
+      padding-bottom: 148%;
+      background: #1a3d1a;
+      overflow: hidden;
+    }
+    .pitch-inner {
+      position: absolute;
+      inset: 0;
+    }
+    .pitch-lines {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .pitch-player {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      cursor: default;
+    }
+    .pitch-player.lu-clickable { cursor: pointer; }
+    .pitch-player-circle {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; line-height: 1;
+      border: 2px solid rgba(0,0,0,0.3);
+    }
+    .pitch-player.home .pitch-player-circle { background: var(--orange); color: #111; }
+    .pitch-player.away .pitch-player-circle { background: #3b82f6; color: #fff; }
+    .pitch-player.lu-clickable:hover .pitch-player-circle { filter: brightness(1.2); }
+    .pitch-player-name {
+      font-size: 8px; color: #fff;
+      text-align: center; max-width: 52px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      line-height: 1.2;
+    }
+    .pitch-formation {
+      position: absolute;
+      font-size: 9px; letter-spacing: 2px;
+      color: rgba(255,255,255,0.35);
+      pointer-events: none;
+    }
+
     .live-lineup {
       display: flex;
       border-top: 1px solid #1e1e1e;
