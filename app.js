@@ -1939,60 +1939,54 @@ function calcAge(dob) {
 function renderPlayerData(p) {
   if (!p || typeof p !== 'object') return '<div class="pm-empty">Ingen data</div>';
 
-  // Prøv kendte felter — vis alt der er tilgængeligt
+  // Parse enetpulse property-array: [{name, value}, ...] → flat map
+  const props = {};
+  if (p.property) {
+    const items = Array.isArray(p.property) ? p.property : Object.values(p.property);
+    for (const item of items) {
+      if (item.name && item.value != null) props[item.name] = item.value;
+    }
+  }
+
   const name        = p.name || p.fullname || '';
-  const shortName   = p.short_name || p.shortName || '';
-  const dob         = p.birthdate || p.date_of_birth || p.birth_date || '';
-  const nationality = p.country_name || p.nationality || p.nationalityFK || '';
-  const height      = p.height ? p.height + ' cm' : '';
-  const weight      = p.weight ? p.weight + ' kg' : '';
-  const position    = p.position || p.position_name || p.primary_position || '';
-  const foot        = p.foot || p.strong_foot || '';
-  const marketVal   = p.market_value || '';
+  const nationality = p.country_name || p.nationality || '';
+  const dob         = props.date_of_birth || p.birthdate || p.date_of_birth || '';
+  const position    = props.position || p.position || '';
+  const specPos     = props.specific_position || '';
+  const secPos      = props.secondary_position_1 || '';
+  const status      = props.status || '';
+  const heightVal   = props.height || p.height || '';
+  const weightVal   = props.weight || p.weight || '';
+  const foot        = props.foot || p.foot || '';
 
-  // Sæsonstatistik (hvis tilgængeligt)
-  const goals    = p.goals ?? p.goal ?? '';
-  const assists  = p.assists ?? p.assist ?? '';
-  const cards_y  = p.yellowcards ?? p.yellow_cards ?? p.yellowcard ?? '';
-  const cards_r  = p.redcards ?? p.red_cards ?? p.redcard ?? '';
-  const minutes  = p.minutesplayed ?? p.minutes_played ?? '';
-  const matches  = p.matches ?? p.appearances ?? '';
-  const rating   = p.rating ?? '';
+  // Resterende property-felter der ikke er vist ovenfor
+  const knownProps = new Set(['date_of_birth','position','specific_position','secondary_position_1','status','height','weight','foot']);
+  const extraProps = Object.entries(props).filter(([k]) => !knownProps.has(k));
 
-  // Vis alle ukendte felter råt (til debugging)
-  const known = new Set(['name','fullname','short_name','shortName','birthdate','date_of_birth','birth_date',
-    'country_name','nationality','nationalityFK','height','weight','position','position_name','primary_position',
-    'foot','strong_foot','market_value','goals','goal','assists','assist','yellowcards','yellow_cards',
-    'yellowcard','redcards','red_cards','redcard','minutesplayed','minutes_played','matches','appearances',
-    'rating','id','participantFK','gender','active','retirement_date']);
-  const extras = Object.entries(p).filter(([k]) => !known.has(k) && p[k] !== null && p[k] !== '');
+  // Resterende top-level felter (skjul interne / allerede viste)
+  const knownTop = new Set(['name','fullname','short_name','country_name','nationality','countryFK',
+    'type','n','ut','property','id','participantFK','gender','active','retirement_date',
+    'birthdate','date_of_birth','position','height','weight','foot']);
+  const extraTop = Object.entries(p).filter(([k, v]) => !knownTop.has(k) && v !== null && v !== '' && typeof v !== 'object');
 
   return `
-    <div class="pm-name">${name || shortName || '—'}</div>
+    <div class="pm-name">${name || '—'}</div>
     <div class="pm-section">
-      ${playerField('Fødselsdato', calcAge(dob))}
       ${playerField('Nationalitet', nationality)}
+      ${playerField('Fødselsdato', calcAge(dob))}
       ${playerField('Position', position)}
-      ${playerField('Fod', foot)}
-      ${playerField('Højde', height)}
-      ${playerField('Vægt', weight)}
-      ${playerField('Markedsværdi', marketVal)}
+      ${specPos ? playerField('Specifik position', specPos) : ''}
+      ${secPos && secPos !== specPos ? playerField('Alternativ position', secPos) : ''}
+      ${foot ? playerField('Fod', foot) : ''}
+      ${heightVal ? playerField('Højde', heightVal + ' cm') : ''}
+      ${weightVal ? playerField('Vægt', weightVal + ' kg') : ''}
+      ${status ? playerField('Status', status) : ''}
     </div>
-    ${(goals !== '' || assists !== '' || cards_y !== '' || minutes !== '') ? `
-    <div class="pm-section-title">Sæsonstatistik</div>
-    <div class="pm-section">
-      ${playerField('Kampe', matches)}
-      ${playerField('Mål', goals)}
-      ${playerField('Assists', assists)}
-      ${playerField('Gule kort', cards_y)}
-      ${playerField('Røde kort', cards_r)}
-      ${playerField('Minutter', minutes)}
-      ${playerField('Rating', rating)}
-    </div>` : ''}
-    ${extras.length ? `
+    ${extraProps.length || extraTop.length ? `
     <div class="pm-section-title">Øvrige data</div>
     <div class="pm-section">
-      ${extras.map(([k, v]) => playerField(k, typeof v === 'object' ? JSON.stringify(v) : v)).join('')}
+      ${extraProps.map(([k, v]) => playerField(k, v)).join('')}
+      ${extraTop.map(([k, v]) => playerField(k, v)).join('')}
     </div>` : ''}`;
 }
 
