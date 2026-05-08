@@ -1684,31 +1684,19 @@ async function fetchLiveMatches() {
   const upd  = document.getElementById('liveUpdated');
   if (!grid) return;
 
-  // Kampe med enetpulse-ID bruger enetpulse; resten bruger API-Football
   const enetIds = kampe.filter(k => k.enetpulseId).map(k => k.enetpulseId);
-  const aflIds  = kampe.filter(k => k.fixtureId && !k.enetpulseId).map(k => k.fixtureId);
 
-  if (!enetIds.length && !aflIds.length) {
+  if (!enetIds.length) {
     grid.innerHTML = '<div class="live-no-fixtures">INGEN KAMPE VALGT</div>';
     upd.textContent = '';
     return;
   }
 
   try {
-    const [enetData, aflData] = await Promise.all([
-      enetIds.length
-        ? fetch('/api/enetpulse?ids=' + enetIds.join(',')).then(r => r.json()).catch(() => ({ matches: [] }))
-        : Promise.resolve({ matches: [] }),
-      aflIds.length
-        ? fetch('/api/live-match?ids=' + aflIds.join(',')).then(r => r.json()).catch(() => ({ matches: [] }))
-        : Promise.resolve({ matches: [] })
-    ]);
+    const enetData = await fetch('/api/enetpulse?ids=' + enetIds.join(',')).then(r => r.json()).catch(() => ({ matches: [] }));
 
-    // Byg lookup-maps (ID → match-objekt)
     const enetMap = {};
     (enetData.matches || []).forEach(m => { if (m.id) enetMap[String(m.id)] = m; });
-    const aflMap = {};
-    (aflData.matches || []).forEach(m => { if (m.id) aflMap[String(m.id)] = m; });
 
     // Berig enetpulse-kampe med lokale holdnavne fra kamp-state
     for (const k of kampe) {
@@ -1727,8 +1715,6 @@ async function fetchLiveMatches() {
       const k = kampe[i];
       if (k.enetpulseId && enetMap[String(k.enetpulseId)]) {
         cards.push(renderLiveCard(enetMap[String(k.enetpulseId)]));
-      } else if (k.fixtureId && !k.enetpulseId && aflMap[String(k.fixtureId)]) {
-        cards.push(renderLiveCard(aflMap[String(k.fixtureId)]));
       }
     }
     grid.innerHTML = cards.length ? cards.join('') : '<div class="live-no-fixtures">INGEN KAMPE VALGT</div>';
@@ -1813,32 +1799,6 @@ async function fetchLiveMatches() {
       }).catch(() => {});
     }
 
-    // Kort-alert + status til Supabase — API-Football kampe
-    for (const m of (aflData.matches || [])) {
-      if (m.error) continue;
-      const kampIdx = kampe.findIndex(k => k.fixtureId === m.id);
-      if (kampIdx === -1) continue;
-      const slot = kampIdx + 1;
-
-      const kortEvents = m.events.filter(e => e.type === 'Card');
-      if (kortEvents.length) {
-        const latest  = kortEvents[kortEvents.length - 1];
-        const key     = `${latest.type}_${latest.detail}_${latest.minute}_${latest.player}`;
-        if (lastCardSeen[m.id] !== key) {
-          lastCardSeen[m.id] = key;
-          const cardType  = latest.detail === 'Red Card' ? 'red' : latest.detail === 'Yellow Red Card' ? 'yr' : 'yellow';
-          const teamKort  = latest.team === m.away_api ? (m.away_kort || m.away) : (m.home_kort || m.home);
-          await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + slot, {
-            last_card_type: cardType, last_card_player: latest.player,
-            last_card_min:  String(latest.minute), last_card_team_kort: teamKort
-          }).catch(() => {});
-        }
-      }
-      await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + slot, {
-        status_short:   m.status.short   || null,
-        status_elapsed: m.status.elapsed ?? null
-      }).catch(() => {});
-    }
   } catch { upd.textContent = 'Netværksfejl'; }
 }
 
