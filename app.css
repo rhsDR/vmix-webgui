@@ -329,7 +329,7 @@
     }
     .pitch-player.lu-clickable { cursor: pointer; }
     .pitch-player-circle {
-      width: 26px; height: 26px;
+      width: 36px; height: 36px;
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-size: 10px; font-weight: 700; line-height: 1;
@@ -339,6 +339,11 @@
     .pitch-player.home .pitch-player-circle { background: var(--orange); color: #111; }
     .pitch-player.away .pitch-player-circle { background: #3b82f6; color: #fff; }
     .pitch-player.lu-clickable:hover .pitch-player-circle { filter: brightness(1.2); }
+    .pitch-player-photo {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
     .pitch-shirt-img {
       width: 100%; height: 100%;
       object-fit: contain;
@@ -439,13 +444,20 @@
       padding: 8px 14px 12px;
       border-top: 1px solid #1a1a1a;
     }
-    .lu-onair-btn {
+    .lu-home-btn {
       font-size: 11px; font-weight: 700; letter-spacing: 1px;
-      color: #fff; background: #1a3d1a; border: 1px solid #2d6b2d;
+      color: #111; background: var(--orange); border: 1px solid rgba(255,120,0,0.6);
       border-radius: 4px; padding: 5px 12px; cursor: pointer;
       text-transform: uppercase;
     }
-    .lu-onair-btn:hover { background: #235c23; }
+    .lu-home-btn:hover { filter: brightness(1.15); }
+    .lu-away-btn {
+      font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      color: #fff; background: #1a4d8a; border: 1px solid #2d6bb5;
+      border-radius: 4px; padding: 5px 12px; cursor: pointer;
+      text-transform: uppercase;
+    }
+    .lu-away-btn:hover { background: #245fa8; }
     .lu-offair-btn {
       font-size: 11px; font-weight: 700; letter-spacing: 1px;
       color: #fff; background: #3d1a1a; border: 1px solid #8b2020;

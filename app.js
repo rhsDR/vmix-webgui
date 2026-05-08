@@ -5,6 +5,7 @@ let aktivProjektId = new URLSearchParams(window.location.search).get('p') || '';
 let projektType = 'kampdag'; // sættes ved load baseret på URL-parameter
 let activeSubSlot = 0; // slot nummer for aktiv sub (0 = ingen)
 let dropdowns = { holds: [], kommentatorer: [], lokationer: [] };
+let playerPhotoIndex = null;
 
 const makeKamp = () => ({
   hold1Lang: '', hold1Kort: '', hold1Score: 0,
@@ -1707,6 +1708,11 @@ async function fetchLiveMatches() {
     return;
   }
 
+  if (!playerPhotoIndex) {
+    try { playerPhotoIndex = await fetch(`${SB_URL}/storage/v1/object/public/spiller-profiler/index.json`).then(r => r.json()); }
+    catch { playerPhotoIndex = {}; }
+  }
+
   try {
     const enetData = await fetch('/api/enetpulse?ids=' + enetIds.join(',')).then(r => r.json()).catch(() => ({ matches: [] }));
 
@@ -1775,8 +1781,11 @@ async function fetchLiveMatches() {
     });
 
     // OPSTILLING ON AIR knapper
-    grid.querySelectorAll('.lu-onair-btn').forEach(btn => {
-      btn.addEventListener('click', () => sendLineupOnAir(btn.dataset.id));
+    grid.querySelectorAll('.lu-home-btn').forEach(btn => {
+      btn.addEventListener('click', () => sendLineupSide(btn.dataset.id, 'home'));
+    });
+    grid.querySelectorAll('.lu-away-btn').forEach(btn => {
+      btn.addEventListener('click', () => sendLineupSide(btn.dataset.id, 'away'));
     });
     grid.querySelectorAll('.lu-offair-btn').forEach(btn => {
       btn.addEventListener('click', () => sendLineupOff());
@@ -2081,9 +2090,14 @@ function renderPitch(lineup, homeName, awayName, homeFK, awayFK) {
         const parts    = p.name.trim().split(' ');
         const firstName = esc(parts[0] || '');
         const lastName  = esc(parts.slice(1).join(' ') || parts[0] || '');
-        const circleContent = partFK
-          ? `<img class="pitch-shirt-img" src="/api/team-image?teamFK=${partFK}&type=shirt" alt="" onload="this.parentElement.style.background='transparent';this.parentElement.style.border='none'" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="pitch-shirt-num" style="display:none">${p.shirt}</span>`
-          : p.shirt;
+        const photoPath = playerPhotoIndex?.[p.id];
+        const circleContent = photoPath
+          ? `<img class="pitch-player-photo" src="${SB_URL}/storage/v1/object/public/spiller-profiler/${photoPath}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">${partFK
+              ? `<img class="pitch-shirt-img" style="display:none" src="/api/team-image?teamFK=${partFK}&type=shirt" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="pitch-shirt-num" style="display:none">${p.shirt}</span>`
+              : `<span class="pitch-shirt-num" style="display:none">${p.shirt}</span>`}`
+          : partFK
+            ? `<img class="pitch-shirt-img" src="/api/team-image?teamFK=${partFK}&type=shirt" alt="" onload="this.parentElement.style.background='transparent';this.parentElement.style.border='none'" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="pitch-shirt-num" style="display:none">${p.shirt}</span>`
+            : p.shirt;
         return `<div class="pitch-player ${side}${p.id ? ' lu-clickable' : ''}" style="left:${x}%;top:${y}%;" data-pid="${p.id || ''}" data-pname="${esc(p.name)}">
           <div class="pitch-player-circle">${circleContent}</div>
           <div class="pitch-player-name"><span class="pp-first">${firstName}</span><span class="pp-last">${lastName}</span></div>
@@ -2362,7 +2376,8 @@ function renderLineup(lineup, homeName, awayName, matchId, homeFK, awayFK) {
         <div class="pitch-inner">${renderPitch(lineup, homeName, awayName, homeFK, awayFK)}</div>
       </div>
       <div class="lineup-onair-bar" data-id="${matchId}">
-        <button class="lu-onair-btn" data-id="${matchId}" style="${isOnAir ? 'display:none' : ''}">▶ SEND ON AIR</button>
+        <button class="lu-home-btn" data-id="${matchId}">⬤ HJEMMEHOLD</button>
+        <button class="lu-away-btn" data-id="${matchId}">⬤ UDEHOLD</button>
         <button class="lu-offair-btn" data-id="${matchId}" style="${!isOnAir ? 'display:none' : ''}">■ TAG AF</button>
         <span class="lu-onair-badge" style="${!isOnAir ? 'display:none' : ''}"><span class="lu-onair-dot"></span>LIVE</span>
         <button class="lu-preview-btn" data-id="${matchId}" style="margin-left:auto">▶ PREVIEW</button>
@@ -2405,17 +2420,17 @@ function buildLineupPayload(m) {
   };
 }
 
-async function sendLineupOnAir(matchId) {
+async function sendLineupSide(matchId, side) {
   const m = liveMatchData.get(String(matchId));
   if (!m) return;
   const payload = buildLineupPayload(m);
   if (!payload) return;
   try {
     await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.lineup_data',    { value: JSON.stringify(payload) });
-    await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.lineup_trigger', { value: 'in' });
+    await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.lineup_trigger', { value: side });
     lineupOnAirMatchId = String(matchId);
     updateLineupOnAirBars();
-    toast('Opstilling sendt on air ✓', 'ok');
+    toast('Opstilling (' + (side === 'home' ? 'Hjemme' : 'Ude') + ') on air ✓', 'ok');
   } catch { toast('Fejl ved send on air', 'err'); }
 }
 
@@ -2431,8 +2446,7 @@ async function sendLineupOff() {
 function updateLineupOnAirBars() {
   document.querySelectorAll('.lineup-onair-bar').forEach(bar => {
     const isOnAir = String(lineupOnAirMatchId) === String(bar.dataset.id);
-    bar.querySelector('.lu-onair-btn').style.display  = isOnAir ? 'none' : '';
-    bar.querySelector('.lu-offair-btn').style.display = isOnAir ? '' : 'none';
+    bar.querySelector('.lu-offair-btn').style.display  = isOnAir ? '' : 'none';
     bar.querySelector('.lu-onair-badge').style.display = isOnAir ? '' : 'none';
   });
 }
