@@ -44,15 +44,17 @@ function getParticipants(ev) {
 }
 
 function mapStatus(ev) {
-  const st = (ev.status_type || '').toLowerCase();
+  const st     = (ev.status_type || '').toLowerCase();
+  const period = (ev.period_type || ev.active_minute_period || '').toLowerCase();
+  const elapsed = parseInt(ev.elapsed) || null;
+  console.log(`[mapStatus] id=${ev.id} st="${st}" period="${period}" elapsed=${ev.elapsed}`);
   if (st === 'not_started' || st === 'notstarted')       return { short: 'NS',  elapsed: null };
-  if (st === 'halftime')                                 return { short: 'HT',  elapsed: null };
+  if (st === 'halftime' || st === 'half_time' || period.includes('halftime') || period.includes('half_time') || period === 'ht')
+                                                         return { short: 'HT',  elapsed: null };
   if (st === 'finished' || st === 'finished_aet' || st === 'finished_ap' || st === 'finalresult')
                                                          return { short: 'FT',  elapsed: null };
   if (st === 'cancelled' || st === 'postponed')          return { short: 'PST', elapsed: null };
   if (st === 'inprogress' || st === 'started') {
-    const period  = (ev.period_type || ev.active_minute_period || '').toLowerCase();
-    const elapsed = parseInt(ev.elapsed) || null;
     if (period.includes('2') || period.includes('second')) return { short: '2H', elapsed };
     if (period.includes('overtime') || period.includes('et')) return { short: 'ET', elapsed };
     return { short: '1H', elapsed };
