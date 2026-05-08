@@ -108,8 +108,14 @@ function normalizeFixtures(raw) {
       const fk = String(ev.tournament_stageFK || ev.tournament_templateFK || ev.tournamentFK || '');
       const { home, away } = getParticipants(ev);
       const startdate = ev.startdate || '';
-      const timePart  = startdate.includes('T') ? startdate.split('T')[1].substring(0, 5)
-                      : startdate.includes(' ') ? startdate.split(' ')[1].substring(0, 5) : '';
+      let timePart = '';
+      if (startdate) {
+        try {
+          const iso = startdate.includes('T') ? startdate : startdate.replace(' ', 'T');
+          const d = new Date(/[Z+]/.test(iso) ? iso : iso + 'Z');
+          timePart = d.toLocaleTimeString('da-DK', { timeZone: 'Europe/Copenhagen', hour: '2-digit', minute: '2-digit', hour12: false });
+        } catch { timePart = ''; }
+      }
       return {
         id:            String(ev.id),
         starttime:     timePart,

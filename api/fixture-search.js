@@ -36,7 +36,7 @@ function formatFixture(f, holdMap) {
     away:      away.lang,
     away_kort: away.kort,
     league:    f.league.name,
-    date:      d.toLocaleDateString('da-DK', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+    date:      d.toLocaleDateString('da-DK', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Copenhagen' }),
     timestamp: f.fixture.timestamp
   };
 }
