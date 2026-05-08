@@ -8,11 +8,22 @@ async function tryFetch(url) {
       const json = JSON.parse(text);
       return { ok: !json.error_message && Object.keys(json).length > 0, json };
     } catch {
-      return { ok: false, json: null, error: 'Ikke JSON: ' + text.substring(0, 80) };
+      return { ok: false, json: null };
     }
   } catch (err) {
-    return { ok: false, json: null, error: err.message };
+    return { ok: false, json: null };
   }
+}
+
+function extractParticipant(json) {
+  if (!json) return null;
+  const obj = json.participant
+    ? json.participant
+    : json.participants
+      ? json.participants
+      : json;
+  const values = Object.values(obj);
+  return (values[0] && typeof values[0] === 'object') ? values[0] : null;
 }
 
 export default async function handler(req, res) {
@@ -27,43 +38,47 @@ export default async function handler(req, res) {
 
   const auth = `username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
 
-  // Hent spillerprofil (sti-baseret ID virker)
-  const profileResult = await tryFetch(`${EAPI_BASE}/participant/${id}/?${auth}`);
-  if (!profileResult.ok) {
-    return res.status(404).json({ error: 'Spillerdata ikke tilgængeligt', debug: profileResult });
-  }
-
-  const raw = profileResult.json;
-  const part = raw.participant
-    ? Object.values(raw.participant)[0]
-    : raw.participants
-      ? Object.values(raw.participants)[0]
-      : Object.values(raw)[0];
-
-  // Prøv statistik-endpoints parallelt
-  const statsEndpoints = [
-    `/participant/${id}/statistics/?${auth}`,
-    `/participant/${id}/stats/?${auth}`,
-    `/participant/${id}/career/?${auth}`,
-    `/participant/${id}/seasons/?${auth}`,
-    `/participant/${id}/tournaments/?${auth}`,
-    `/participant/statistics/?id=${id}&${auth}`,
-    `/participant/career/?id=${id}&${auth}`,
+  // Prøv alle kendte profil-URL-mønstre — ét af dem virker afhængig af spillerens ID
+  const profileUrls = [
+    `${EAPI_BASE}/participant/${id}/?${auth}`,
+    `${EAPI_BASE}/participant/details/${id}/?${auth}`,
+    `${EAPI_BASE}/participant/details/?id=${id}&${auth}`,
+    `${EAPI_BASE}/participant/?id=${id}&${auth}`,
   ];
 
-  const statsResults = await Promise.all(
-    statsEndpoints.map(async ep => {
-      const r = await tryFetch(`${EAPI_BASE}${ep}`);
-      return { ep: ep.split('?')[0], ok: r.ok, keys: r.json ? Object.keys(r.json).join(',') : null, error: r.error, sample: r.ok ? JSON.stringify(r.json).substring(0, 200) : null };
-    })
-  );
+  let part = null;
+  for (const url of profileUrls) {
+    const r = await tryFetch(url);
+    if (r.ok) {
+      part = extractParticipant(r.json);
+      if (part) break;
+    }
+  }
 
-  const statsDebug = statsResults.filter(r => r.ok);
-  const successfulStats = statsResults.find(r => r.ok);
+  if (!part) return res.status(404).json({ error: 'Spillerdata ikke tilgængeligt' });
+
+  // Prøv statistik-endpoints parallelt
+  const statsUrls = [
+    `${EAPI_BASE}/participant/${id}/statistics/?${auth}`,
+    `${EAPI_BASE}/participant/${id}/stats/?${auth}`,
+    `${EAPI_BASE}/participant/${id}/career/?${auth}`,
+    `${EAPI_BASE}/participant/${id}/seasons/?${auth}`,
+    `${EAPI_BASE}/participant/${id}/tournaments/?${auth}`,
+    `${EAPI_BASE}/participant/statistics/?id=${id}&${auth}`,
+  ];
+
+  const statsResults = await Promise.all(statsUrls.map(async url => {
+    const r = await tryFetch(url);
+    return {
+      ep:     url.split('?')[0].replace(EAPI_BASE, ''),
+      ok:     r.ok,
+      keys:   r.ok && r.json ? Object.keys(r.json).join(',') : null,
+      sample: r.ok && r.json ? JSON.stringify(r.json).substring(0, 300) : null
+    };
+  }));
 
   return res.status(200).json({
-    raw:        part || raw,
-    statsDebug: statsResults,   // vis alle forsøg
-    stats:      successfulStats ? successfulStats.sample : null
+    raw:        part,
+    statsDebug: statsResults
   });
 }
