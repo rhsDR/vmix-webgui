@@ -119,38 +119,32 @@ function mapIncident(inc, homeApiName, awayApiName, homePartId) {
   };
 }
 
+function copenhagenTime(startdate) {
+  if (!startdate) return '';
+  try {
+    const iso = startdate.includes('T') ? startdate : startdate.replace(' ', 'T');
+    const d = new Date(/[Z+]/.test(iso) ? iso : iso + 'Z');
+    const year = d.getUTCFullYear();
+    const dstStart = new Date(Date.UTC(year, 2, 31)); dstStart.setUTCDate(31 - dstStart.getUTCDay()); dstStart.setUTCHours(1);
+    const dstEnd   = new Date(Date.UTC(year, 9, 31)); dstEnd.setUTCDate(31 - dstEnd.getUTCDay());   dstEnd.setUTCHours(1);
+    const offsetMin = (d >= dstStart && d < dstEnd) ? 120 : 60;
+    const local = new Date(d.getTime() + offsetMin * 60000);
+    return `${String(local.getUTCHours()).padStart(2,'0')}:${String(local.getUTCMinutes()).padStart(2,'0')}`;
+  } catch { return ''; }
+}
+
 function normalizeFixtures(raw) {
   const events = raw?.events || {};
   const evList = Object.values(events).filter(ev => ev.id);
-  // Log participant struktur fra første event (til debugging af navn-felter)
-  if (evList.length > 0) {
-    const parts = evList[0].event_participants ? Object.values(evList[0].event_participants) : [];
-    console.log('[enetpulse] sample participant keys:', parts[0] ? Object.keys(parts[0]) : 'ingen');
-    console.log('[enetpulse] sample participant[0]:', JSON.stringify(parts[0]).substring(0, 300));
-  }
   const danskeFK = new Set(Object.keys(DANSKE_LIGAER));
   return evList
     .map(ev => {
       const fk = String(ev.tournament_stageFK || ev.tournament_templateFK || ev.tournamentFK || '');
       const { home, away } = getParticipants(ev);
       const startdate = ev.startdate || '';
-      let timePart = '';
-      if (startdate) {
-        try {
-          const iso = startdate.includes('T') ? startdate : startdate.replace(' ', 'T');
-          const d = new Date(/[Z+]/.test(iso) ? iso : iso + 'Z');
-          // Beregn Copenhagen-offset manuelt (toLocaleTimeString med IANA virker ikke på Vercel)
-          const year = d.getUTCFullYear();
-          const dstStart = new Date(Date.UTC(year, 2, 31)); dstStart.setUTCDate(31 - dstStart.getUTCDay()); dstStart.setUTCHours(1);
-          const dstEnd   = new Date(Date.UTC(year, 9, 31)); dstEnd.setUTCDate(31 - dstEnd.getUTCDay());   dstEnd.setUTCHours(1);
-          const offsetMin = (d >= dstStart && d < dstEnd) ? 120 : 60;
-          const local = new Date(d.getTime() + offsetMin * 60000);
-          timePart = `${String(local.getUTCHours()).padStart(2,'0')}:${String(local.getUTCMinutes()).padStart(2,'0')}`;
-        } catch { timePart = ''; }
-      }
       return {
         id:            String(ev.id),
-        starttime:     timePart,
+        starttime:     copenhagenTime(startdate),
         startdate,
         home_enet:     participantName(home),
         away_enet:     participantName(away),
@@ -405,7 +399,10 @@ export default async function handler(req, res) {
   if (date) {
     try {
       const cached = await getCachedFixtures(date);
-      if (cached) return res.status(200).json({ fixtures: cached, fromCache: true });
+      if (cached) {
+        const fresh = cached.map(f => ({ ...f, starttime: copenhagenTime(f.startdate) }));
+        return res.status(200).json({ fixtures: fresh, fromCache: true });
+      }
 
       const url = `${EAPI_BASE}/event/daily/?sportFK=1&date=${encodeURIComponent(date)}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
       const raw  = await fetch(url).then(r => r.json());
