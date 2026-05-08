@@ -175,7 +175,7 @@ function normalizeStats(statsRaw, homePartFK, awayPartFK) {
   ];
 }
 
-function normalizeEventDetails(raw, statsRaw, id, username, token) {
+function normalizeEventDetails(raw, statsRaw, id) {
   const evObj = raw?.event || raw?.events || {};
   const ev    = Object.values(evObj)[0];
   if (!ev) return { id, error: 'Ikke fundet' };
@@ -282,7 +282,6 @@ function normalizeEventDetails(raw, statsRaw, id, username, token) {
     });
   }
 
-  const logoBase = `${EAPI_BASE}/image/participant/?username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}&id=`;
   return {
     id:        String(ev.id),
     home:      homeApiName,
@@ -291,8 +290,6 @@ function normalizeEventDetails(raw, statsRaw, id, username, token) {
     away_kort: '',
     home_api:  homeApiName,
     away_api:  awayApiName,
-    home_logo: homePartFK ? logoBase + homePartFK : null,
-    away_logo: awayPartFK ? logoBase + awayPartFK : null,
     homeGoals,
     awayGoals,
     status:    mapStatus(ev),
@@ -364,24 +361,8 @@ export default async function handler(req, res) {
           fetch(`${EAPI_BASE}/event/details/?id=${id}&includeIncidents=yes&includeLineups=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`).then(r => r.json()),
           fetch(`${EAPI_BASE}/standing/event_stats/?object=event&objectFK=${id}&includeStandingData=yes&includeStandingParticipants=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`).then(r => r.json()).catch(() => null)
         ]);
-        if (debug === '1') {
-          const normalized = normalizeEventDetails(detailsRaw, statsRaw, id, username, token);
-          const homePartFK = normalized.home_logo ? normalized.home_logo.match(/id=([^&]+)/)?.[1] : null;
-          const evObj = detailsRaw?.event || detailsRaw?.events || {};
-          const ev    = Object.values(evObj)[0] || {};
-          const parts = ev.event_participants ? Object.values(ev.event_participants) : [];
-          const homePart = parts.find(p => String(p.number) === '1') || parts[0] || {};
-          const awayPart = parts.find(p => String(p.number) === '2') || parts[1] || {};
-          return {
-            id,
-            homePartFK,
-            home_event_participant_keys: Object.keys(homePart),
-            home_participant_sub: homePart.participant || null,
-            home_full: homePart,
-            away_full: awayPart,
-          };
-        }
-        return normalizeEventDetails(detailsRaw, statsRaw, id, username, token);
+        if (debug === '1') return { id, raw_keys: Object.keys(detailsRaw || {}), stats_raw: statsRaw };
+        return normalizeEventDetails(detailsRaw, statsRaw, id);
       }));
       return res.status(200).json({ matches: results });
     } catch (err) {
