@@ -1854,7 +1854,7 @@ async function fetchLiveMatches() {
           const home = btn.dataset.home;
           const away = btn.dataset.away;
           if (!p1 || !p2) { inner.innerHTML = '<div class="pm-empty">Mangler hold-FK</div>'; return; }
-          const r = await fetch(`/api/h2h?p1=${encodeURIComponent(p1)}&p2=${encodeURIComponent(p2)}`);
+          const r = await fetch(`/api/enetpulse?h2h=1&p1=${encodeURIComponent(p1)}&p2=${encodeURIComponent(p2)}`);
           const j = await r.json();
           const html = j.ok ? renderH2H(j.data, home, away) : '<div class="pm-empty">H2H ikke tilgængelig</div>';
           liveH2HCache.set(id, html);

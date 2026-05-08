@@ -58,20 +58,29 @@ function getElapsedMinute(ev) {
   return null;
 }
 
+// status_descFK: 1=not started, 2=1H, 3=2H, 4=penalty, 5=postponed, 6=finished, 8=ET-1H, 9=ET-2H
 function mapStatus(ev) {
+  const desc    = parseInt(ev.status_descFK || 0);
   const st      = (ev.status_type || '').toLowerCase();
-  const period  = (ev.period_type || ev.active_minute_period || '').toLowerCase();
   const elapsed = getElapsedMinute(ev);
-  if (st === 'not_started' || st === 'notstarted')       return { short: 'NS',  elapsed: null };
-  if (st === 'halftime' || st === 'half_time' || period.includes('halftime') || period.includes('half_time') || period === 'ht')
-                                                         return { short: 'HT',  elapsed: null };
-  if (st === 'finished' || st === 'finished_aet' || st === 'finished_ap' || st === 'finalresult')
-                                                         return { short: 'FT',  elapsed: null };
-  if (st === 'cancelled' || st === 'postponed')          return { short: 'PST', elapsed: null };
+
+  if (desc === 1 || st === 'not_started' || st === 'notstarted') return { short: 'NS',  elapsed: null };
+  if (desc === 5 || st === 'postponed')                           return { short: 'PST', elapsed: null };
+  if (desc === 6 || st === 'finished' || st === 'finished_aet' || st === 'finished_ap' || st === 'finalresult')
+                                                                  return { short: 'FT',  elapsed: null };
+  if (desc === 2)                                                 return { short: '1H',  elapsed };
+  if (desc === 3)                                                 return { short: '2H',  elapsed };
+  if (desc === 4 || st === 'penalties')                           return { short: 'P',   elapsed };
+  if (desc === 8)                                                 return { short: 'ET',  elapsed };
+  if (desc === 9)                                                 return { short: 'ET',  elapsed };
+
+  // Fallback hvis descFK mangler — brug status_type + minut-heuristik
+  const period = (ev.period_type || ev.active_minute_period || '').toLowerCase();
+  if (st === 'halftime' || st === 'half_time' || period === 'ht') return { short: 'HT',  elapsed: null };
   if (st === 'inprogress' || st === 'started') {
     const min = parseInt(elapsed) || 0;
-    if (period.includes('2') || period.includes('second') || min >= 46) return { short: '2H', elapsed };
-    if (period.includes('overtime') || period.includes('et') || min > 90) return { short: 'ET', elapsed };
+    if (min > 90 || period.includes('overtime') || period.includes('et')) return { short: 'ET', elapsed };
+    if (min >= 46 || period.includes('2') || period.includes('second'))    return { short: '2H', elapsed };
     return { short: '1H', elapsed };
   }
   return { short: st.toUpperCase().substring(0, 3), elapsed: null };
@@ -277,6 +286,9 @@ function normalizeEventDetails(raw, statsRaw, id) {
         type:   'subst',
         detail: 'Substitution'
       });
+    } else if (!['assist','subst_in'].includes(code)) {
+      // Log ukendte incident-typer (hjælper med at finde injury_time-format)
+      console.log(`[incident-ukendt] event=${id} code=${code} typeFK=${typeFK} keys=${Object.keys(inc).join(',')} data=${JSON.stringify(inc).substring(0, 200)}`);
     }
   }
 
@@ -335,7 +347,26 @@ export default async function handler(req, res) {
   const token    = process.env.ENETPULSE_TOKEN;
   if (!username || !token) return res.status(503).json({ error: 'enetpulse credentials ikke konfigureret' });
 
-  const { date, ids, debug } = req.query;
+  const { date, ids, debug, h2h } = req.query;
+  const auth = `username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
+
+  // ── H2H ───────────────────────────────────────────────────────
+  if (h2h) {
+    const { p1, p2 } = req.query;
+    if (!p1 || !p2) return res.status(400).json({ error: 'Mangler p1/p2 parameter' });
+    const url = `${EAPI_BASE}/event/h2h/?participant1FK=${encodeURIComponent(p1)}&participant2FK=${encodeURIComponent(p2)}&limit=5&includeVenue=yes&${auth}`;
+    try {
+      const r    = await fetch(url);
+      const text = await r.text();
+      let json;
+      try { json = JSON.parse(text); } catch { return res.status(500).json({ error: 'Ugyldig JSON fra enetpulse' }); }
+      if (json.error_message || Object.keys(json).length === 0)
+        return res.status(404).json({ error: json.error_message || 'Ingen H2H data' });
+      return res.status(200).json({ ok: true, data: json });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
 
   // ── DEBUG: rå enetpulse JSON for første event ─────────────────
   if (date && debug === '1') {
