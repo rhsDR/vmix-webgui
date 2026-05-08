@@ -1392,26 +1392,26 @@
     .h2h-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 10px;
+      font-size: 12px;
       margin: 4px 0 2px;
     }
-    .h2h-table td { padding: 3px 6px; }
-    .h2h-date { color: #444; white-space: nowrap; font-size: 9px; }
-    .h2h-team { color: #555; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .h2h-table td { padding: 5px 6px; }
+    .h2h-date { color: #666; white-space: nowrap; font-size: 11px; }
+    .h2h-team { color: #bbb; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .h2h-right { text-align: right; }
-    .h2h-score { text-align: center; color: #777; font-weight: 600; white-space: nowrap; padding: 3px 8px; }
+    .h2h-score { text-align: center; color: #888; font-weight: 600; white-space: nowrap; padding: 5px 8px; }
     .h2h-home { color: var(--orange) !important; }
     .h2h-away { color: #3b82f6 !important; }
     .h2h-summary {
       display: flex;
       justify-content: space-between;
-      font-size: 9px;
+      font-size: 11px;
       letter-spacing: 1px;
       padding: 6px 8px 8px;
       border-top: 1px solid #1a1a1a;
     }
     .h2h-sum-home { color: var(--orange); }
-    .h2h-sum-draw { color: #444; }
+    .h2h-sum-draw { color: #666; }
     .h2h-sum-away { color: #3b82f6; }
 
     /* ── Event stats tabel ────────────────────────────────── */
