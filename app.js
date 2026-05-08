@@ -1661,7 +1661,8 @@ init();
 
 // ── LIVE DASHBOARD ────────────────────────────────────────────
 let liveTimer    = null;
-let lastCardSeen = {}; // fixtureId → sidste sete korttype+minut+spiller
+let lastCardSeen       = {}; // fixtureId → sidste sete korttype+minut+spiller
+const liveExpandedLineup = new Set(); // matchId → opstilling synlig
 
 function startLivePolling() {
   fetchLiveMatches();
@@ -1726,6 +1727,15 @@ async function fetchLiveMatches() {
       }
     }
     grid.innerHTML = cards.length ? cards.join('') : '<div class="live-no-fixtures">INGEN KAMPE VALGT</div>';
+    grid.querySelectorAll('.live-lineup-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id   = String(btn.dataset.id);
+        const open = liveExpandedLineup.has(id);
+        if (open) liveExpandedLineup.delete(id); else liveExpandedLineup.add(id);
+        btn.textContent = 'OPSTILLING ' + (open ? '▾' : '▴');
+        btn.nextElementSibling.style.display = open ? 'none' : 'flex';
+      });
+    });
     upd.textContent = 'Sidst opdateret ' + new Date().toLocaleTimeString('da-DK');
 
     // Status til Supabase — enetpulse-kampe
@@ -1872,11 +1882,11 @@ function renderLiveCard(m) {
       </div>
       <div class="live-events">${eventsHtml}</div>
       ${renderStats(m.stats)}
-      ${renderLineup(m.lineup, m.home, m.away)}
+      ${renderLineup(m.lineup, m.home, m.away, m.id)}
     </div>`;
 }
 
-function renderLineup(lineup, homeName, awayName) {
+function renderLineup(lineup, homeName, awayName, matchId) {
   if (!lineup) return '';
   const home = lineup.home || [];
   const away = lineup.away || [];
@@ -1894,7 +1904,10 @@ function renderLineup(lineup, homeName, awayName) {
       </div>`;
   }
 
-  return `<div class="live-lineup">${side(home, homeName || 'Hjemme')}${side(away, awayName || 'Ude')}</div>`;
+  const open = liveExpandedLineup.has(String(matchId));
+  return `
+    <button class="live-lineup-toggle" data-id="${matchId}">OPSTILLING ${open ? '▴' : '▾'}</button>
+    <div class="live-lineup" style="display:${open ? 'flex' : 'none'}">${side(home, homeName || 'Hjemme')}${side(away, awayName || 'Ude')}</div>`;
 }
 
 // ── REALTIME ──────────────────────────────────────────────────
