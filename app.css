@@ -1387,6 +1387,7 @@
     .table-subtab.active { color: #ccc; background: #161616; }
     .table-subtab:hover { color: #aaa; }
     .ts-team { color: #555 !important; font-size: 11px; }
+    .ts-pen { color: #666; font-size: 10px; font-weight: 400; }
 
     /* ── H2H tabel ────────────────────────────────────────── */
     .h2h-table {

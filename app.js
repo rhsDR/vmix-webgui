@@ -2182,31 +2182,31 @@ function renderTopScorers(data, homeName, awayName) {
   const participants = entry.standing_participants || {};
   if (!Object.keys(participants).length) return '<div class="pm-empty">Ingen spillere</div>';
 
-  const parsed = Object.values(participants).map((p, i) => {
+  const parsed = Object.values(participants).map(p => {
     const sd  = {};
     const arr = Array.isArray(p.standing_data) ? p.standing_data : Object.values(p.standing_data || {});
     arr.forEach(d => { if (d.code) sd[d.code] = d.value; });
-    if (i === 0) console.log('[topscorer codes]', Object.keys(sd));
     const name     = p.participant?.name || p.name || '';
     const teamName = p.team?.name || p.team_name || p.participant?.team_name || '';
-    return { name, teamName, goals: parseInt(sd.goals || 0), assists: parseInt(sd.assists || 0), played: sd.played || sd.total_matches || '—' };
+    return { name, teamName, rank: parseInt(p.rank || '999'), goals: parseInt(sd.goals || 0), penalties: parseInt(sd.penalties || 0) };
   });
 
-  parsed.sort((a, b) => b.goals - a.goals || b.assists - a.assists);
+  parsed.sort((a, b) => b.goals - a.goals || a.rank - b.rank);
 
   const homeLow = (homeName || '').toLowerCase();
   const awayLow = (awayName || '').toLowerCase();
 
   const rows = parsed.slice(0, 15).map((p, i) => {
-    const teamLow = p.teamName.toLowerCase();
-    const isHome  = homeLow && teamLow.includes(homeLow.substring(0, 4));
-    const isAway  = awayLow && teamLow.includes(awayLow.substring(0, 4));
-    const cls     = isHome ? ' class="lt-home"' : isAway ? ' class="lt-away"' : '';
-    return `<tr${cls}><td>${i + 1}</td><td class="lt-name">${p.name}</td><td class="lt-name ts-team">${p.teamName}</td><td>${p.goals}</td><td>${p.assists}</td><td>${p.played}</td></tr>`;
+    const teamLow  = p.teamName.toLowerCase();
+    const isHome   = homeLow && teamLow.includes(homeLow.substring(0, 4));
+    const isAway   = awayLow && teamLow.includes(awayLow.substring(0, 4));
+    const cls      = isHome ? ' class="lt-home"' : isAway ? ' class="lt-away"' : '';
+    const penBadge = p.penalties > 0 ? ` <span class="ts-pen">(${p.penalties}S)</span>` : '';
+    return `<tr${cls}><td>${i + 1}</td><td class="lt-name">${p.name}${penBadge}</td><td class="lt-name ts-team">${p.teamName}</td><td>${p.goals}</td></tr>`;
   }).join('');
 
   return `<table class="league-table">
-    <thead><tr><th>#</th><th class="lt-name">Spiller</th><th class="lt-name ts-team">Hold</th><th>M</th><th>A</th><th>K</th></tr></thead>
+    <thead><tr><th>#</th><th class="lt-name">Spiller</th><th class="lt-name ts-team">Hold</th><th>M</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
