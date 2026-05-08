@@ -1162,6 +1162,93 @@
     }
     .preview-close:hover { background: var(--red); border-color: var(--red); }
 
+    /* ── Player modal ─────────────────────────────────────── */
+    .lu-clickable {
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .lu-clickable:hover { color: var(--orange); }
+
+    .player-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .player-modal-inner {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      max-height: 80vh;
+      overflow-y: auto;
+      background: var(--card);
+      border-radius: 6px;
+      border: 1px solid #2a2a2a;
+      box-shadow: 0 0 60px rgba(0,0,0,0.8);
+      padding: 24px 20px 20px;
+    }
+    .player-modal-close {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      background: none;
+      border: none;
+      color: #555;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    .player-modal-close:hover { color: var(--red); }
+    .pm-name {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--text);
+      margin-bottom: 16px;
+      padding-right: 24px;
+    }
+    .pm-section {
+      border-top: 1px solid #1e1e1e;
+      padding-top: 10px;
+      margin-bottom: 12px;
+    }
+    .pm-section-title {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin: 14px 0 4px;
+    }
+    .pm-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 5px 0;
+      border-bottom: 1px solid #1a1a1a;
+      gap: 12px;
+    }
+    .pm-label {
+      font-size: 11px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .pm-value {
+      font-size: 12px;
+      color: var(--text);
+      text-align: right;
+      word-break: break-word;
+    }
+    .pm-loading, .pm-empty {
+      font-size: 12px;
+      color: #444;
+      padding: 20px 0;
+      text-align: center;
+    }
+
     /* ── Mobil ────────────────────────────────────────────── */
     @media (max-width: 640px) {
       .header {

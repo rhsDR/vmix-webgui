@@ -1899,8 +1899,8 @@ function renderLineup(lineup, homeName, awayName, matchId) {
     return `
       <div class="lu-side">
         <div class="lu-side-title">${label}</div>
-        ${starters.map(p => `<div class="lu-player"><span class="lu-shirt">${p.shirt}</span>${p.pos ? `<span class="lu-pos">${p.pos}</span>` : ''}<span class="lu-name">${esc(p.name)}</span></div>`).join('')}
-        ${subs.length ? `<div class="lu-sub-divider">Reserver</div>` + subs.map(p => `<div class="lu-player lu-sub"><span class="lu-shirt">${p.shirt}</span><span class="lu-name">${esc(p.name)}</span></div>`).join('') : ''}
+        ${starters.map(p => `<div class="lu-player"><span class="lu-shirt">${p.shirt}</span>${p.pos ? `<span class="lu-pos">${p.pos}</span>` : ''}<span class="lu-name${p.id ? ' lu-clickable' : ''}" data-pid="${p.id || ''}" data-pname="${esc(p.name)}">${esc(p.name)}</span></div>`).join('')}
+        ${subs.length ? `<div class="lu-sub-divider">Reserver</div>` + subs.map(p => `<div class="lu-player lu-sub"><span class="lu-shirt">${p.shirt}</span><span class="lu-name${p.id ? ' lu-clickable' : ''}" data-pid="${p.id || ''}" data-pname="${esc(p.name)}">${esc(p.name)}</span></div>`).join('') : ''}
       </div>`;
   }
 
@@ -1908,6 +1908,109 @@ function renderLineup(lineup, homeName, awayName, matchId) {
   return `
     <button class="live-lineup-toggle" data-id="${matchId}">OPSTILLING ${open ? '▴' : '▾'}</button>
     <div class="live-lineup" style="display:${open ? 'flex' : 'none'}">${side(home, homeName || 'Hjemme')}${side(away, awayName || 'Ude')}</div>`;
+}
+
+// ── SPILLER-MODAL ─────────────────────────────────────────────
+
+const playerModal    = document.getElementById('playerModal');
+const playerModalClose = document.getElementById('playerModalClose');
+const playerModalContent = document.getElementById('playerModalContent');
+
+playerModalClose?.addEventListener('click', () => { playerModal.style.display = 'none'; });
+playerModal?.addEventListener('click', e => { if (e.target === playerModal) playerModal.style.display = 'none'; });
+document.getElementById('liveGrid')?.addEventListener('click', ev => {
+  const el = ev.target.closest('.lu-clickable');
+  if (el && el.dataset.pid) openPlayerModal(el.dataset.pid, el.dataset.pname);
+});;
+
+function playerField(label, value) {
+  if (!value && value !== 0) return '';
+  return `<div class="pm-row"><span class="pm-label">${label}</span><span class="pm-value">${value}</span></div>`;
+}
+
+function calcAge(dob) {
+  if (!dob) return '';
+  const d = new Date(dob);
+  if (isNaN(d)) return dob;
+  const age = Math.floor((Date.now() - d) / (365.25 * 24 * 3600 * 1000));
+  return `${d.toLocaleDateString('da-DK')} (${age} år)`;
+}
+
+function renderPlayerData(p) {
+  if (!p || typeof p !== 'object') return '<div class="pm-empty">Ingen data</div>';
+
+  // Prøv kendte felter — vis alt der er tilgængeligt
+  const name        = p.name || p.fullname || '';
+  const shortName   = p.short_name || p.shortName || '';
+  const dob         = p.birthdate || p.date_of_birth || p.birth_date || '';
+  const nationality = p.country_name || p.nationality || p.nationalityFK || '';
+  const height      = p.height ? p.height + ' cm' : '';
+  const weight      = p.weight ? p.weight + ' kg' : '';
+  const position    = p.position || p.position_name || p.primary_position || '';
+  const foot        = p.foot || p.strong_foot || '';
+  const marketVal   = p.market_value || '';
+
+  // Sæsonstatistik (hvis tilgængeligt)
+  const goals    = p.goals ?? p.goal ?? '';
+  const assists  = p.assists ?? p.assist ?? '';
+  const cards_y  = p.yellowcards ?? p.yellow_cards ?? p.yellowcard ?? '';
+  const cards_r  = p.redcards ?? p.red_cards ?? p.redcard ?? '';
+  const minutes  = p.minutesplayed ?? p.minutes_played ?? '';
+  const matches  = p.matches ?? p.appearances ?? '';
+  const rating   = p.rating ?? '';
+
+  // Vis alle ukendte felter råt (til debugging)
+  const known = new Set(['name','fullname','short_name','shortName','birthdate','date_of_birth','birth_date',
+    'country_name','nationality','nationalityFK','height','weight','position','position_name','primary_position',
+    'foot','strong_foot','market_value','goals','goal','assists','assist','yellowcards','yellow_cards',
+    'yellowcard','redcards','red_cards','redcard','minutesplayed','minutes_played','matches','appearances',
+    'rating','id','participantFK','gender','active','retirement_date']);
+  const extras = Object.entries(p).filter(([k]) => !known.has(k) && p[k] !== null && p[k] !== '');
+
+  return `
+    <div class="pm-name">${name || shortName || '—'}</div>
+    <div class="pm-section">
+      ${playerField('Fødselsdato', calcAge(dob))}
+      ${playerField('Nationalitet', nationality)}
+      ${playerField('Position', position)}
+      ${playerField('Fod', foot)}
+      ${playerField('Højde', height)}
+      ${playerField('Vægt', weight)}
+      ${playerField('Markedsværdi', marketVal)}
+    </div>
+    ${(goals !== '' || assists !== '' || cards_y !== '' || minutes !== '') ? `
+    <div class="pm-section-title">Sæsonstatistik</div>
+    <div class="pm-section">
+      ${playerField('Kampe', matches)}
+      ${playerField('Mål', goals)}
+      ${playerField('Assists', assists)}
+      ${playerField('Gule kort', cards_y)}
+      ${playerField('Røde kort', cards_r)}
+      ${playerField('Minutter', minutes)}
+      ${playerField('Rating', rating)}
+    </div>` : ''}
+    ${extras.length ? `
+    <div class="pm-section-title">Øvrige data</div>
+    <div class="pm-section">
+      ${extras.map(([k, v]) => playerField(k, typeof v === 'object' ? JSON.stringify(v) : v)).join('')}
+    </div>` : ''}`;
+}
+
+async function openPlayerModal(id, name) {
+  playerModalContent.innerHTML = `<div class="pm-name">${name || '…'}</div><div class="pm-loading">Henter data…</div>`;
+  playerModal.style.display = 'flex';
+
+  try {
+    const res  = await fetch(`/api/player?id=${encodeURIComponent(id)}`);
+    const json = await res.json();
+    if (json.error) {
+      playerModalContent.innerHTML = `<div class="pm-name">${name}</div><div class="pm-empty">${json.error}</div>`;
+    } else {
+      playerModalContent.innerHTML = renderPlayerData(json.raw);
+    }
+  } catch (err) {
+    playerModalContent.innerHTML = `<div class="pm-name">${name}</div><div class="pm-empty">Netværksfejl</div>`;
+  }
 }
 
 // ── REALTIME ──────────────────────────────────────────────────

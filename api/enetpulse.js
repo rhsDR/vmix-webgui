@@ -268,12 +268,14 @@ function normalizeEventDetails(raw, statsRaw, id) {
       const typeFK = parseInt(e.lineup_typeFK || 0);
       if (typeFK === 10 || typeFK === 0) continue; // spring træner og ukendte over
       const posMap = { 1: 'MV', 2: 'FB', 3: 'MF', 4: 'A' };
+      if (lineup[side].length === 0) console.log('[lineup-entry]', JSON.stringify(e).substring(0, 600));
       lineup[side].push({
         name:    e.participant?.name || '',
         shirt:   e.shirt_number || '',
         pos:     posMap[typeFK] || '',
         enetPos: parseInt(e.enet_pos || 99),
-        starter: typeFK >= 1 && typeFK <= 4
+        starter: typeFK >= 1 && typeFK <= 4,
+        id:      e.participantFK || e.participant?.participantFK || e.participant?.id || ''
       });
     }
     lineup[side].sort((a, b) => {
