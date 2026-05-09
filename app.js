@@ -101,6 +101,15 @@ async function sbPatch(path, body) {
   if (!res.ok) throw new Error('HTTP ' + res.status);
 }
 
+async function sbUpsert(table, body) {
+  const res = await fetch(SB_URL + '/rest/v1/' + table, {
+    method: 'POST',
+    headers: { ...SB_HEADERS_MINIMAL, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+}
+
 async function sbDelete(path) {
   const res = await fetch(SB_URL + '/rest/v1/' + path, {
     method: 'DELETE', headers: SB_HEADERS_MINIMAL
@@ -2431,8 +2440,8 @@ async function sendLineupSide(matchId, side) {
   const payload = buildLineupPayload(m);
   if (!payload) return;
   try {
-    await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.lineup_data',    { value: JSON.stringify(payload) });
-    await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.lineup_trigger', { value: side });
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lineup_data',    value: JSON.stringify(payload) });
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lineup_trigger', value: side });
     lineupOnAirMatchId = String(matchId);
     updateLineupOnAirBars();
     toast('Opstilling (' + (side === 'home' ? 'Hjemme' : 'Ude') + ') on air ✓', 'ok');
@@ -2441,7 +2450,7 @@ async function sendLineupSide(matchId, side) {
 
 async function sendLineupOff() {
   try {
-    await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.lineup_trigger', { value: 'out' });
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lineup_trigger', value: 'out' });
     lineupOnAirMatchId = null;
     updateLineupOnAirBars();
     toast('Opstilling taget af ✓', 'ok');
