@@ -2078,9 +2078,11 @@ function renderPitch(lineup, homeName, awayName, homeFK, awayFK) {
     return Object.entries(zones).map(([pos, group]) => {
       if (!group.length) return '';
       group.sort((a, b) => a.enetPos - b.enetPos);
-      const y = ZONE_Y[pos]?.[side] ?? 50;
+      const baseY = ZONE_Y[pos]?.[side] ?? 50;
+      const stagger = group.length >= 5 ? 4 : 0;
       return group.map((p, i) => {
         const x = ((i + 1) / (group.length + 1) * 100).toFixed(1);
+        const y = (baseY + (stagger ? (i % 2 === 0 ? -stagger : stagger) : 0)).toFixed(1);
         const parts    = p.name.trim().split(' ');
         const firstName = esc(parts[0] || '');
         const lastName  = esc(parts.slice(1).join(' ') || parts[0] || '');
