@@ -2088,7 +2088,7 @@ function renderPitch(lineup, homeName, awayName, homeFK, awayFK) {
           ? `<img class="pitch-player-photo" src="https://driu3sl4x7vty.cloudfront.net/spdk/current/524x584/${partFK}/${p.id}.png" alt="">`
           : p.shirt;
         return `<div class="pitch-player ${side}${p.id ? ' lu-clickable' : ''}" style="left:${x}%;top:${y}%;" data-pid="${p.id || ''}" data-pname="${esc(p.name)}">
-          <div class="pitch-player-circle">${circleContent}</div>
+          <div class="pitch-player-circle${partFK ? ' has-photo' : ''}">${circleContent}</div>
           <div class="pitch-player-name"><span class="pp-first">${firstName}</span><span class="pp-last">${lastName}</span></div>
         </div>`;
       }).join('');
