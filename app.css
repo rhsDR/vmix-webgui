@@ -338,6 +338,7 @@
     }
     .pitch-player.home .pitch-player-circle { background: var(--orange); color: #111; }
     .pitch-player.away .pitch-player-circle { background: #3b82f6; color: #fff; }
+    .pitch-player-circle:has(.pitch-player-photo) { background: transparent; border-color: transparent; }
     .pitch-player.lu-clickable:hover .pitch-player-circle { filter: brightness(1.2); }
     .pitch-player-photo {
       width: 100%; height: 100%;
