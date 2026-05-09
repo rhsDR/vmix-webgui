@@ -1,6 +1,6 @@
 // Kør fra projektmappen: node generate-player-index.js
-// Henter filliste fra Supabase Storage og genererer players/index.json lokalt.
-// Upload derefter index.json til roden af players-bucketen via Supabase-dashboardet.
+// Henter filliste fra Supabase Storage (rod-niveau) og genererer index.json lokalt.
+// Upload derefter index.json til roden af spiller-profiler-bucketen via Supabase-dashboardet.
 
 const fs   = require('fs');
 const path = require('path');
@@ -29,41 +29,36 @@ async function listFolder(prefix) {
 async function main() {
   console.log('Henter filliste fra Supabase Storage...');
 
-  // Liste top-niveau (hold-mapper)
-  const topLevel = await listFolder('');
-  const folders  = topLevel.filter(e => e.id === null).map(e => e.name);
-  const index    = {};
-  let   count    = 0;
+  const rootItems = await listFolder('');
+  const index = {};
+  let count = 0;
 
-  for (const folder of folders) {
-    const files = await listFolder(folder + '/');
-    for (const f of files) {
-      if (!f.name) continue;
-      const ext = path.extname(f.name).toLowerCase();
-      if (!['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) continue;
+  for (const f of rootItems) {
+    if (f.id === null) continue; // spring undermapper over
+    if (!f.name) continue;
+    const ext = path.extname(f.name).toLowerCase();
+    if (!['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) continue;
 
-      const match = f.name.match(/-(\d+)\.[^.]+$/);
-      if (!match) {
-        console.warn(`  Spring over (intet ID i filnavn): ${folder}/${f.name}`);
-        continue;
-      }
-
-      const id      = match[1];
-      const relPath = `${folder}/${f.name}`;
-      if (index[id]) {
-        console.warn(`  Duplikat ID ${id}: "${index[id]}" og "${relPath}" — beholder første`);
-        continue;
-      }
-      index[id] = relPath;
-      count++;
+    const match = f.name.match(/-(\d+)\.[^.]+$/);
+    if (!match) {
+      console.warn(`  Spring over (intet ID i filnavn): ${f.name}`);
+      continue;
     }
+
+    const id = match[1];
+    if (index[id]) {
+      console.warn(`  Duplikat ID ${id}: "${index[id]}" og "${f.name}" — beholder første`);
+      continue;
+    }
+    index[id] = f.name;
+    count++;
   }
 
   fs.writeFileSync(OUT, JSON.stringify(index, null, 2), 'utf8');
   console.log(`Fandt ${count} spillere.`);
   console.log(`Gemt lokalt: ${OUT}`);
   console.log('');
-  console.log('Upload nu index.json til roden af players-bucketen i Supabase-dashboardet.');
+  console.log('Upload nu index.json til roden af spiller-profiler-bucketen i Supabase-dashboardet.');
 }
 
 main().catch(err => { console.error(err.message); process.exit(1); });
