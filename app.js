@@ -2089,7 +2089,7 @@ function renderPitch(lineup, homeName, awayName, homeFK, awayFK) {
         const circleContent = partFK
           ? `<img class="pitch-player-photo" src="https://driu3sl4x7vty.cloudfront.net/spdk/current/524x584/${partFK}/${p.id}.png" alt="">`
           : p.shirt;
-        return `<div class="pitch-player ${side}${p.id ? ' lu-clickable' : ''}" style="left:${x}%;top:${y}%;" data-pid="${p.id || ''}" data-pname="${esc(p.name)}">
+        return `<div class="pitch-player ${side}${p.id ? ' lu-clickable' : ''}" style="left:${x}%;top:${y}%;" data-pid="${p.id || ''}" data-pname="${esc(p.name)}" data-tpfk="${partFK || ''}">
           <div class="pitch-player-circle${partFK ? ' has-photo' : ''}">${circleContent}</div>
           <div class="pitch-player-name"><span class="pp-first">${firstName}</span><span class="pp-last">${lastName}</span></div>
         </div>`;
@@ -2340,15 +2340,15 @@ function renderLineup(lineup, homeName, awayName, matchId, homeFK, awayFK) {
   const away = lineup.away || [];
   if (!home.length && !away.length) return '';
 
-  function side(players, label) {
+  function side(players, label, sidePartFK) {
     const starters = players.filter(p => p.starter);
     const subs     = players.filter(p => !p.starter);
     if (!starters.length && !subs.length) return '';
     return `
       <div class="lu-side">
         <div class="lu-side-title">${label}</div>
-        ${starters.map(p => `<div class="lu-player"><span class="lu-shirt">${p.shirt}</span>${p.pos ? `<span class="lu-pos">${p.pos}</span>` : ''}<span class="lu-name${p.id ? ' lu-clickable' : ''}" data-pid="${p.id || ''}" data-pname="${esc(p.name)}">${esc(p.name)}</span></div>`).join('')}
-        ${subs.length ? `<div class="lu-sub-divider">Reserver</div>` + subs.map(p => `<div class="lu-player lu-sub"><span class="lu-shirt">${p.shirt}</span><span class="lu-name${p.id ? ' lu-clickable' : ''}" data-pid="${p.id || ''}" data-pname="${esc(p.name)}">${esc(p.name)}</span></div>`).join('') : ''}
+        ${starters.map(p => `<div class="lu-player"><span class="lu-shirt">${p.shirt}</span>${p.pos ? `<span class="lu-pos">${p.pos}</span>` : ''}<span class="lu-name${p.id ? ' lu-clickable' : ''}" data-pid="${p.id || ''}" data-pname="${esc(p.name)}" data-tpfk="${sidePartFK || ''}">${esc(p.name)}</span></div>`).join('')}
+        ${subs.length ? `<div class="lu-sub-divider">Reserver</div>` + subs.map(p => `<div class="lu-player lu-sub"><span class="lu-shirt">${p.shirt}</span><span class="lu-name${p.id ? ' lu-clickable' : ''}" data-pid="${p.id || ''}" data-pname="${esc(p.name)}" data-tpfk="${sidePartFK || ''}">${esc(p.name)}</span></div>`).join('') : ''}
       </div>`;
   }
 
@@ -2362,7 +2362,7 @@ function renderLineup(lineup, homeName, awayName, matchId, homeFK, awayFK) {
         <button class="lu-tab${mode === 'liste' ? ' active' : ''}" data-mode="liste" data-id="${matchId}">LISTE</button>
         <button class="lu-tab${mode === 'bane' ? ' active' : ''}" data-mode="bane" data-id="${matchId}">BANE</button>
       </div>
-      <div class="live-lineup" style="display:${mode === 'liste' ? 'flex' : 'none'}">${side(home, homeName || 'Hjemme')}${side(away, awayName || 'Ude')}</div>
+      <div class="live-lineup" style="display:${mode === 'liste' ? 'flex' : 'none'}">${side(home, homeName || 'Hjemme', homeFK)}${side(away, awayName || 'Ude', awayFK)}</div>
       <div class="pitch-wrap" style="display:${mode === 'bane' ? 'block' : 'none'}">
         <div class="pitch-inner">${renderPitch(lineup, homeName, awayName, homeFK, awayFK)}</div>
       </div>
@@ -2456,7 +2456,7 @@ document.getElementById('liveGrid')?.addEventListener('click', ev => {
     const card = el.closest('.live-card');
     const tfk  = card?.dataset.tfk || '';
     const mid  = card?.dataset.mid || '';
-    openPlayerModal(el.dataset.pid, el.dataset.pname, tfk, mid);
+    openPlayerModal(el.dataset.pid, el.dataset.pname, tfk, mid, el.dataset.tpfk || '');
   }
 });
 
@@ -2491,7 +2491,7 @@ function extractMatchRating(ratingJson, playerId) {
   return null;
 }
 
-function renderPlayerData(p, statsJson, playerId, ratingJson) {
+function renderPlayerData(p, statsJson, playerId, ratingJson, teamPartFK) {
   if (!p || typeof p !== 'object') return '<div class="pm-empty">Ingen data</div>';
 
   // Parse enetpulse property-array: [{name, value}, ...] → flat map
@@ -2589,7 +2589,12 @@ function renderPlayerData(p, statsJson, playerId, ratingJson) {
     }
   }
 
+  const photoHtml = teamPartFK && playerId
+    ? `<img class="pm-photo" src="https://driu3sl4x7vty.cloudfront.net/spdk/current/524x584/${teamPartFK}/${playerId}.png" alt="">`
+    : '';
+
   return `
+    ${photoHtml}
     <div class="pm-name">${name || '—'}</div>
     <div class="pm-section">
       ${playerField('Nationalitet', nationality)}
@@ -2612,7 +2617,7 @@ function renderPlayerData(p, statsJson, playerId, ratingJson) {
     ${seasonStatsHtml}`;
 }
 
-async function openPlayerModal(id, name, tournamentFk, matchId) {
+async function openPlayerModal(id, name, tournamentFk, matchId, teamPartFK) {
   playerModalContent.innerHTML = `<div class="pm-name">${name || '…'}</div><div class="pm-loading">Henter data…</div>`;
   playerModal.style.display = 'flex';
 
@@ -2630,7 +2635,7 @@ async function openPlayerModal(id, name, tournamentFk, matchId) {
     if (profileJson.error) {
       playerModalContent.innerHTML = `<div class="pm-name">${name}</div><div class="pm-empty">${profileJson.error}</div>`;
     } else {
-      playerModalContent.innerHTML = renderPlayerData(profileJson.raw, statsJson, id, ratingJson);
+      playerModalContent.innerHTML = renderPlayerData(profileJson.raw, statsJson, id, ratingJson, teamPartFK);
     }
   } catch (err) {
     playerModalContent.innerHTML = `<div class="pm-name">${name}</div><div class="pm-empty">Netværksfejl</div>`;
