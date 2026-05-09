@@ -302,15 +302,34 @@
 
     /* Pitch */
     .pitch-wrap {
-      position: relative;
       width: 100%;
-      padding-bottom: 148%;
+      display: flex;
+      gap: 6px;
+    }
+    .pitch-half-wrap {
+      flex: 1;
+      position: relative;
+      padding-bottom: 100%;
       background: #1a3d1a;
       overflow: hidden;
     }
     .pitch-inner {
       position: absolute;
       inset: 0;
+    }
+    .pitch-half-label {
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      white-space: nowrap;
+      z-index: 1;
+      pointer-events: none;
     }
     .pitch-lines {
       position: absolute;
@@ -329,7 +348,7 @@
     }
     .pitch-player.lu-clickable { cursor: pointer; }
     .pitch-player-circle {
-      width: 52px; height: 52px;
+      width: 44px; height: 44px;
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-size: 13px; font-weight: 700; line-height: 1;

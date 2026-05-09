@@ -1770,7 +1770,7 @@ async function fetchLiveMatches() {
         const wrap = btn.closest('.live-lineup-wrap');
         wrap.querySelectorAll('.lu-tab').forEach(b => b.classList.toggle('active', b === btn));
         wrap.querySelector('.live-lineup').style.display = mode === 'liste' ? 'flex' : 'none';
-        wrap.querySelector('.pitch-wrap').style.display  = mode === 'bane'  ? 'block' : 'none';
+        wrap.querySelector('.pitch-wrap').style.display  = mode === 'bane'  ? 'flex' : 'none';
       });
     });
 
@@ -2067,27 +2067,33 @@ function renderPitch(lineup, homeName, awayName, homeFK, awayFK) {
   const awayPlayers = (lineup.away || []).filter(p => p.starter);
   if (!homePlayers.length && !awayPlayers.length) return '';
 
-  // y-procent pr. zone pr. hold (hjemme=nederst, ude=øverst)
-  const ZONE_Y = { MV: { home: 84, away: 16 }, FB: { home: 65, away: 35 }, MF: { home: 46, away: 54 }, A: { home: 27, away: 73 } };
+  // Hvert hold vises på sin egen halvbane — GK i bunden, angribere øverst
+  const ZONE_Y = { MV: 88, FB: 68, MF: 46, A: 22 };
 
-  function pitchPlayers(players, side, partFK) {
+  function formation(players) {
+    const d = players.filter(p => p.pos === 'FB').length;
+    const m = players.filter(p => p.pos === 'MF').length;
+    const f = players.filter(p => p.pos === 'A').length;
+    return (d || m || f) ? `${d}-${m}-${f}` : '';
+  }
+
+  function halfPitch(players, side, partFK, label) {
     const zones = { MV: [], FB: [], MF: [], A: [] };
-    for (const p of players) {
-      (zones[p.pos] || zones.MF).push(p);
-    }
-    return Object.entries(zones).map(([pos, group]) => {
+    for (const p of players) (zones[p.pos] || zones.MF).push(p);
+
+    const playersHtml = Object.entries(zones).map(([pos, group]) => {
       if (!group.length) return '';
       group.sort((a, b) => a.enetPos - b.enetPos);
-      const baseY = ZONE_Y[pos]?.[side] ?? 50;
+      const baseY   = ZONE_Y[pos] ?? 50;
       const twoRows = group.length >= 5;
       const rowSize = twoRows ? Math.ceil(group.length / 2) : group.length;
       return group.map((p, i) => {
-        const row        = twoRows ? Math.floor(i / rowSize) : 0;
-        const idxInRow   = i % rowSize;
-        const rowLen     = (row === 0) ? rowSize : group.length - rowSize;
+        const row      = twoRows ? Math.floor(i / rowSize) : 0;
+        const idxInRow = i % rowSize;
+        const rowLen   = (row === 0) ? rowSize : group.length - rowSize;
         const x = ((idxInRow + 1) / (rowLen + 1) * 100).toFixed(1);
-        const y = (baseY + (twoRows ? (row === 0 ? -6 : 6) : 0)).toFixed(1);
-        const parts    = p.name.trim().split(' ');
+        const y = (baseY + (twoRows ? (row === 0 ? -7 : 7) : 0)).toFixed(1);
+        const parts     = p.name.trim().split(' ');
         const firstName = esc(parts[0] || '');
         const lastName  = esc(parts.slice(1).join(' ') || parts[0] || '');
         const circleContent = partFK
@@ -2099,35 +2105,29 @@ function renderPitch(lineup, homeName, awayName, homeFK, awayFK) {
         </div>`;
       }).join('');
     }).join('');
+
+    const fmn = formation(players);
+    return `<div class="pitch-half-wrap">
+      <div class="pitch-inner">
+        <div class="pitch-half-label">${esc(label)}</div>
+        <svg class="pitch-lines" viewBox="0 0 100 140" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="1" width="98" height="138" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.8"/>
+          <line x1="1" y1="70" x2="99" y2="70" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+          <circle cx="50" cy="70" r="9.15" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+          <rect x="22" y="109" width="56" height="30" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+          <rect x="36" y="127" width="28" height="12" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+          <rect x="22" y="1" width="56" height="30" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+          <rect x="36" y="1" width="28" height="12" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+          <circle cx="50" cy="122" r="0.8" fill="rgba(255,255,255,0.2)"/>
+          <circle cx="50" cy="18" r="0.8" fill="rgba(255,255,255,0.2)"/>
+        </svg>
+        ${fmn ? `<div class="pitch-formation" style="bottom:5px;left:50%;transform:translateX(-50%)">${fmn}</div>` : ''}
+        ${playersHtml}
+      </div>
+    </div>`;
   }
 
-  function formation(players) {
-    const d = players.filter(p => p.pos === 'FB').length;
-    const m = players.filter(p => p.pos === 'MF').length;
-    const f = players.filter(p => p.pos === 'A').length;
-    return (d || m || f) ? `${d}-${m}-${f}` : '';
-  }
-
-  const homeFmn = formation(homePlayers);
-  const awayFmn = formation(awayPlayers);
-
-  return `
-    <svg class="pitch-lines" viewBox="0 0 100 140" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="1" y="1" width="98" height="138" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.8"/>
-      <line x1="1" y1="70" x2="99" y2="70" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
-      <circle cx="50" cy="70" r="9.15" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
-      <rect x="22" y="109" width="56" height="30" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
-      <rect x="36" y="127" width="28" height="12" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
-      <rect x="22" y="1" width="56" height="30" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
-      <rect x="36" y="1" width="28" height="12" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
-      <circle cx="50" cy="70" r="0.8" fill="rgba(255,255,255,0.2)"/>
-      <circle cx="50" cy="122" r="0.8" fill="rgba(255,255,255,0.2)"/>
-      <circle cx="50" cy="18" r="0.8" fill="rgba(255,255,255,0.2)"/>
-    </svg>
-    ${awayFmn ? `<div class="pitch-formation" style="top:5px;left:50%;transform:translateX(-50%)">${awayFmn}</div>` : ''}
-    ${homeFmn ? `<div class="pitch-formation" style="bottom:5px;left:50%;transform:translateX(-50%)">${homeFmn}</div>` : ''}
-    ${pitchPlayers(homePlayers, 'home', homeFK)}
-    ${pitchPlayers(awayPlayers, 'away', awayFK)}`;
+  return `${halfPitch(homePlayers, 'home', homeFK, homeName || 'Hjemme')}${halfPitch(awayPlayers, 'away', awayFK, awayName || 'Ude')}`;
 }
 
 function renderEventStats(data, cardEl) {
@@ -2367,8 +2367,8 @@ function renderLineup(lineup, homeName, awayName, matchId, homeFK, awayFK) {
         <button class="lu-tab${mode === 'bane' ? ' active' : ''}" data-mode="bane" data-id="${matchId}">BANE</button>
       </div>
       <div class="live-lineup" style="display:${mode === 'liste' ? 'flex' : 'none'}">${side(home, homeName || 'Hjemme', homeFK)}${side(away, awayName || 'Ude', awayFK)}</div>
-      <div class="pitch-wrap" style="display:${mode === 'bane' ? 'block' : 'none'}">
-        <div class="pitch-inner">${renderPitch(lineup, homeName, awayName, homeFK, awayFK)}</div>
+      <div class="pitch-wrap" style="display:${mode === 'bane' ? 'flex' : 'none'}">
+        ${renderPitch(lineup, homeName, awayName, homeFK, awayFK)}
       </div>
       <div class="lineup-onair-bar" data-id="${matchId}">
         <button class="lu-home-btn" data-id="${matchId}">⬤ HJEMMEHOLD</button>
