@@ -1792,6 +1792,14 @@ async function fetchLiveMatches() {
         modal.style.display = 'flex';
       });
     });
+    grid.querySelectorAll('.lu-vmix-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const url = `${location.origin}/opstilling?p=${aktivProjektId}`;
+        navigator.clipboard.writeText(url);
+        btn.textContent = '✓ Kopieret!';
+        setTimeout(() => { btn.textContent = '⧉ vMix URL'; }, 2000);
+      });
+    });
 
     // STATISTIK toggle
     grid.querySelectorAll('.live-stats-toggle').forEach(btn => {
@@ -2376,6 +2384,7 @@ function renderLineup(lineup, homeName, awayName, matchId, homeFK, awayFK) {
         <button class="lu-offair-btn" data-id="${matchId}" style="${!isOnAir ? 'display:none' : ''}">■ TAG AF</button>
         <span class="lu-onair-badge" style="${!isOnAir ? 'display:none' : ''}"><span class="lu-onair-dot"></span>LIVE</span>
         <button class="lu-preview-btn" data-id="${matchId}" style="margin-left:auto">▶ PREVIEW</button>
+        <button class="lu-vmix-btn" data-id="${matchId}">⧉ vMix URL</button>
       </div>
     </div>`;
 }
@@ -2393,6 +2402,7 @@ function buildLineupPayload(m) {
   }
   function mapPlayers(players) {
     return (players || []).map(p => ({
+      id:      p.id || '',
       shirt:   p.shirt,
       name:    p.name,
       pos:     p.pos || '',
