@@ -2079,10 +2079,14 @@ function renderPitch(lineup, homeName, awayName, homeFK, awayFK) {
       if (!group.length) return '';
       group.sort((a, b) => a.enetPos - b.enetPos);
       const baseY = ZONE_Y[pos]?.[side] ?? 50;
-      const stagger = group.length >= 5 ? 4 : 0;
+      const twoRows = group.length >= 5;
+      const rowSize = twoRows ? Math.ceil(group.length / 2) : group.length;
       return group.map((p, i) => {
-        const x = ((i + 1) / (group.length + 1) * 100).toFixed(1);
-        const y = (baseY + (stagger ? (i % 2 === 0 ? -stagger : stagger) : 0)).toFixed(1);
+        const row        = twoRows ? Math.floor(i / rowSize) : 0;
+        const idxInRow   = i % rowSize;
+        const rowLen     = (row === 0) ? rowSize : group.length - rowSize;
+        const x = ((idxInRow + 1) / (rowLen + 1) * 100).toFixed(1);
+        const y = (baseY + (twoRows ? (row === 0 ? -6 : 6) : 0)).toFixed(1);
         const parts    = p.name.trim().split(' ');
         const firstName = esc(parts[0] || '');
         const lastName  = esc(parts.slice(1).join(' ') || parts[0] || '');

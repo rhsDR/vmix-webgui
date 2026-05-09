@@ -372,8 +372,8 @@
     }
     .pitch-formation {
       position: absolute;
-      font-size: 9px; letter-spacing: 2px;
-      color: rgba(255,255,255,0.35);
+      font-size: 14px; font-weight: 700; letter-spacing: 3px;
+      color: rgba(255,255,255,0.55);
       pointer-events: none;
     }
 
