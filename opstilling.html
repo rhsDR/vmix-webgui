@@ -447,17 +447,19 @@
     const previewSide = params.get('preview');
     if (previewSide === '1' || previewSide === 'home' || previewSide === 'away') {
       const side = previewSide === 'away' ? 'away' : 'home';
-      try {
-        const rows = await fetch(
-          ${SB_URL}/rest/v1/settings?select=key,value&key=in.(lineup_data) + pidFilter,
-          { headers: SB_HDR }
-        ).then(r => r.json());
-        const dataStr = rows.find(r => r.key === 'lineup_data')?.value;
-        lineupData = dataStr ? JSON.parse(dataStr) : getDemoData();
-      } catch {
-        lineupData = getDemoData();
-      }
-      showSide(side);
+      (async () => {
+        try {
+          const rows = await fetch(
+            SB_URL + '/rest/v1/settings?select=key,value&key=in.(lineup_data)' + pidFilter,
+            { headers: SB_HDR }
+          ).then(r => r.json());
+          const dataStr = rows.find(r => r.key === 'lineup_data')?.value;
+          lineupData = dataStr ? JSON.parse(dataStr) : getDemoData();
+        } catch {
+          lineupData = getDemoData();
+        }
+        showSide(side);
+      })();
     } else {
       pollTrigger();
     }
