@@ -5,7 +5,6 @@ let aktivProjektId = new URLSearchParams(window.location.search).get('p') || '';
 let projektType = 'kampdag'; // sættes ved load baseret på URL-parameter
 let activeSubSlot = 0; // slot nummer for aktiv sub (0 = ingen)
 let dropdowns = { holds: [], kommentatorer: [], lokationer: [] };
-let playerPhotoIndex = null;
 
 const makeKamp = () => ({
   hold1Lang: '', hold1Kort: '', hold1Score: 0,
@@ -1708,11 +1707,6 @@ async function fetchLiveMatches() {
     return;
   }
 
-  if (!playerPhotoIndex) {
-    try { playerPhotoIndex = await fetch(`${SB_URL}/storage/v1/object/public/spiller-profiler/index.json`).then(r => r.json()); }
-    catch { playerPhotoIndex = {}; }
-  }
-
   try {
     const enetData = await fetch('/api/enetpulse?ids=' + enetIds.join(',')).then(r => r.json()).catch(() => ({ matches: [] }));
 
@@ -2090,14 +2084,9 @@ function renderPitch(lineup, homeName, awayName, homeFK, awayFK) {
         const parts    = p.name.trim().split(' ');
         const firstName = esc(parts[0] || '');
         const lastName  = esc(parts.slice(1).join(' ') || parts[0] || '');
-        const photoPath = playerPhotoIndex?.[p.id];
-        const circleContent = photoPath
-          ? `<img class="pitch-player-photo" src="${SB_URL}/storage/v1/object/public/spiller-profiler/${photoPath}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">${partFK
-              ? `<img class="pitch-shirt-img" style="display:none" src="/api/team-image?teamFK=${partFK}&type=shirt" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="pitch-shirt-num" style="display:none">${p.shirt}</span>`
-              : `<span class="pitch-shirt-num" style="display:none">${p.shirt}</span>`}`
-          : partFK
-            ? `<img class="pitch-shirt-img" src="/api/team-image?teamFK=${partFK}&type=shirt" alt="" onload="this.parentElement.style.background='transparent';this.parentElement.style.border='none'" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="pitch-shirt-num" style="display:none">${p.shirt}</span>`
-            : p.shirt;
+        const circleContent = partFK
+          ? `<img class="pitch-player-photo" src="https://driu3sl4x7vty.cloudfront.net/spdk/current/524x584/${partFK}/${p.id}.png" alt="">`
+          : p.shirt;
         return `<div class="pitch-player ${side}${p.id ? ' lu-clickable' : ''}" style="left:${x}%;top:${y}%;" data-pid="${p.id || ''}" data-pname="${esc(p.name)}">
           <div class="pitch-player-circle">${circleContent}</div>
           <div class="pitch-player-name"><span class="pp-first">${firstName}</span><span class="pp-last">${lastName}</span></div>
