@@ -1794,10 +1794,18 @@ async function fetchLiveMatches() {
       btn.addEventListener('click', () => sendLineupOff());
     });
     grid.querySelectorAll('.lu-preview-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const m  = liveMatchData.get(String(id));
+        if (m) {
+          const payload = buildLineupPayload(m);
+          if (payload) {
+            try { await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lineup_data', value: JSON.stringify(payload) }); } catch {}
+          }
+        }
         const modal = document.getElementById('previewModal');
         const frame = document.getElementById('previewFrame');
-        frame.src = 'opstilling.html?preview=1&p=' + aktivProjektId + '&t=' + Date.now();
+        frame.src = 'opstilling?preview=home&p=' + aktivProjektId + '&t=' + Date.now();
         modal.style.display = 'flex';
       });
     });
