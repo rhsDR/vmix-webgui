@@ -2410,6 +2410,14 @@ function renderLineup(lineup, homeName, awayName, matchId, homeFK, awayFK) {
 
 function buildLineupPayload(m) {
   if (!m?.lineup) return null;
+  const cardsByPlayer = {};
+  for (const ev of (m.events || [])) {
+    if (ev.type !== 'Card') continue;
+    const n = ev.player;
+    if (!cardsByPlayer[n]) cardsByPlayer[n] = { yellow: 0, red: false };
+    if (ev.detail === 'Yellow Card') cardsByPlayer[n].yellow++;
+    else cardsByPlayer[n].red = true;
+  }
   function formation(players) {
     const st = players.filter(p => p.starter);
     const d  = st.filter(p => p.pos === 'FB').length;
@@ -2418,13 +2426,18 @@ function buildLineupPayload(m) {
     return (d || mf || f) ? `${d}-${mf}-${f}` : '';
   }
   function mapPlayers(players) {
-    return (players || []).map(p => ({
-      id:      p.id || '',
-      shirt:   p.shirt,
-      name:    p.name,
-      pos:     p.pos || '',
-      starter: !!p.starter
-    }));
+    return (players || []).map(p => {
+      const c = cardsByPlayer[p.name] || {};
+      return {
+        id:          p.id || '',
+        shirt:       p.shirt,
+        name:        p.name,
+        pos:         p.pos || '',
+        starter:     !!p.starter,
+        yellowCards: c.yellow || 0,
+        redCard:     c.red    || false
+      };
+    });
   }
   return {
     home: {

@@ -119,6 +119,20 @@
       line-height: 1;
     }
 
+    .p-cards {
+      position: absolute;
+      top: 4px; left: 4px;
+      display: flex; gap: 2px;
+      z-index: 2;
+    }
+    .p-card {
+      width: 9px; height: 13px;
+      border-radius: 2px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+    .p-card.yellow { background: #F5C400; }
+    .p-card.red    { background: #D0021B; }
+
     .p-name {
       font-size: 16px;
       font-weight: 700;
@@ -281,10 +295,17 @@
             ? `${CDN}/${encodeURIComponent(partFK)}/${encodeURIComponent(p.id)}.png`
             : PHOTO_PLACEHOLDER;
 
+          const yc = p.yellowCards || 0;
+          const rc = p.redCard || false;
+          const cardsHtml = (yc >= 1 || rc)
+            ? '<div class="p-cards">' + (yc >= 1 ? '<span class="p-card yellow"></span>' : '') + (yc >= 2 || rc ? '<span class="p-card red"></span>' : '') + '</div>'
+            : '';
+
           el.innerHTML = `
             <div class="p-photo-wrap">
               <img class="p-photo" src="${photoSrc}" alt=""
                    onerror="this.onerror=null;this.src=PHOTO_PLACEHOLDER">
+              ${cardsHtml}
               <span class="p-num">${esc(p.shirt)}</span>
             </div>
             <div class="p-name">
@@ -410,14 +431,14 @@
         home: {
           name: 'FC København', partFK: '', formation: '4-3-3',
           players: [
-            { id: '', shirt: 1,  name: 'Kamil Grabara',     pos: 'MV', starter: true },
-            { id: '', shirt: 5,  name: 'Kevin Diks',         pos: 'FB', starter: true },
-            { id: '', shirt: 3,  name: 'Davit Khocholava',   pos: 'FB', starter: true },
-            { id: '', shirt: 4,  name: 'Diogo Gonçalves',    pos: 'FB', starter: true },
-            { id: '', shirt: 22, name: 'Elias Jelert',        pos: 'FB', starter: true },
-            { id: '', shirt: 6,  name: 'Lukas Lerager',       pos: 'MF', starter: true },
-            { id: '', shirt: 8,  name: 'Viktor Claesson',     pos: 'MF', starter: true },
-            { id: '', shirt: 10, name: 'Roony Bardghji',      pos: 'MF', starter: true },
+            { id: '', shirt: 1,  name: 'Kamil Grabara',     pos: 'MV', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 5,  name: 'Kevin Diks',         pos: 'FB', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 3,  name: 'Davit Khocholava',   pos: 'FB', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 4,  name: 'Diogo Gonçalves',    pos: 'FB', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 22, name: 'Elias Jelert',        pos: 'FB', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 6,  name: 'Lukas Lerager',       pos: 'MF', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 8,  name: 'Viktor Claesson',     pos: 'MF', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 10, name: 'Roony Bardghji',      pos: 'MF', starter: true, yellowCards: 0, redCard: false },
             { id: '', shirt: 11, name: 'Mohamed Daramy',      pos: 'A',  starter: true },
             { id: '', shirt: 9,  name: 'Hákon Haraldsson',    pos: 'A',  starter: true },
             { id: '', shirt: 7,  name: 'Andreas Cornelius',   pos: 'A',  starter: true },
@@ -426,15 +447,15 @@
         away: {
           name: 'Brøndby IF', partFK: '', formation: '4-4-2',
           players: [
-            { id: '', shirt: 1,  name: 'Mads Hermansen',     pos: 'MV', starter: true },
-            { id: '', shirt: 4,  name: 'Kevin Mensah',        pos: 'FB', starter: true },
-            { id: '', shirt: 5,  name: 'Anthony Jung',        pos: 'FB', starter: true },
-            { id: '', shirt: 3,  name: 'Josip Radošević',     pos: 'FB', starter: true },
-            { id: '', shirt: 2,  name: 'Tobias Børkeeiet',    pos: 'FB', starter: true },
-            { id: '', shirt: 6,  name: 'Yuito Suzuki',        pos: 'MF', starter: true },
-            { id: '', shirt: 8,  name: 'Mathias Greve',       pos: 'MF', starter: true },
-            { id: '', shirt: 10, name: 'Jesper Lindstrøm',    pos: 'MF', starter: true },
-            { id: '', shirt: 11, name: 'Blas Riveros',        pos: 'MF', starter: true },
+            { id: '', shirt: 1,  name: 'Mads Hermansen',     pos: 'MV', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 4,  name: 'Kevin Mensah',        pos: 'FB', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 5,  name: 'Anthony Jung',        pos: 'FB', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 3,  name: 'Josip Radošević',     pos: 'FB', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 2,  name: 'Tobias Børkeeiet',    pos: 'FB', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 6,  name: 'Yuito Suzuki',        pos: 'MF', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 8,  name: 'Mathias Greve',       pos: 'MF', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 10, name: 'Jesper Lindstrøm',    pos: 'MF', starter: true, yellowCards: 0, redCard: false },
+            { id: '', shirt: 11, name: 'Blas Riveros',        pos: 'MF', starter: true, yellowCards: 0, redCard: false },
             { id: '', shirt: 9,  name: 'Mikael Uhre',         pos: 'A',  starter: true },
             { id: '', shirt: 7,  name: 'Simon Hedlund',       pos: 'A',  starter: true },
           ]
