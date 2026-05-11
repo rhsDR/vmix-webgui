@@ -432,13 +432,10 @@ export default async function handler(req, res) {
           const parts = ev.event_participants ? Object.values(ev.event_participants) : [];
           const lineupSample = parts.map(p => {
             const entries = p.lineup ? Object.values(p.lineup) : [];
-            const first = entries[0] || {};
+            const players = entries.filter(e => { const t = parseInt(e.lineup_typeFK || 0); return t >= 1 && t <= 4; });
             return {
               number: p.number,
-              participant_keys: Object.keys(p),
-              formation_id: p.formation_id,
-              lineup_entry_keys: Object.keys(first),
-              lineup_entry_sample: Object.fromEntries(Object.entries(first).filter(([k]) => k !== 'participant')),
+              player_pos_values: players.map(e => ({ shirt: e.shirt_number, typeFK: e.lineup_typeFK, pos: e.pos, enet_pos: e.enet_pos })),
             };
           });
           return { id, raw_keys: Object.keys(detailsRaw || {}), lineupSample };
