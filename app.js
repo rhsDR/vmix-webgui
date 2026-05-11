@@ -1295,7 +1295,7 @@ let creditsData = { items: [], speed: 30 };
 let creditNewCounter = 0;
 let creditsTriggerActive = false;
 const OVERLAY_GRAPHICS = [
-  { id: 'lower-third', label: 'Lower Third',     file: 'lower-third.html',    triggerKey: 'lt_trigger',         type: 'simple'  },
+  { id: 'lower-third', label: 'Lower Third',     file: 'lower-third.html',    triggerKey: 'lt_trigger',         type: 'lt'      },
   { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html',       triggerKey: 'breaking_trigger',   type: 'simple'  },
   { id: 'ticker',      label: 'Ticker',           file: 'ticker-overlay.html', triggerKey: 'ticker_ovl_trigger', type: 'simple'  },
   { id: 'stilling',    label: 'Stilling',         file: 'stilling.html',       triggerKey: 'stilling_trigger',   type: 'simple'  },
@@ -1349,7 +1349,7 @@ async function refreshCredits() {
 }
 
 async function refreshGrafiktState() {
-  const keys = OVERLAY_GRAPHICS.map(g => g.triggerKey).join(',');
+  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey), 'lt_slot'].join(',');
   try {
     const rows = await sbGet('settings?select=key,value&key=in.(' + keys + ')&projekt_id=eq.' + aktivProjektId);
     rows.forEach(r => { grafiktState[r.key] = r.value; });
@@ -1551,9 +1551,8 @@ function renderGrafik() {
     }
 
     let buttons = '';
-    if (g.type === 'simple') {
+    if (g.type === 'simple' || g.type === 'lt') {
       buttons = `
-        <button class="btn btn-save btn-sm"   data-trig="${g.triggerKey}" data-val="in">PÅ</button>
         <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out" ${!isLive ? 'disabled style="opacity:0.35;"' : ''}>AF</button>`;
     } else if (g.type === 'lineup') {
       const isHome = val === 'home';
@@ -1568,7 +1567,25 @@ function renderGrafik() {
         <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out" ${!isLive ? 'disabled style="opacity:0.35;"' : ''}>AF</button>`;
     }
 
-    return `<div class="grafik-row">
+    let subRows = '';
+    if (g.type === 'lt') {
+      const activeLtSlot = grafiktState['lt_slot'] || '';
+      subRows = subs.map((s, i) => {
+        if (!s.navn && !s.titel) return '';
+        const slot      = i + 1;
+        const isActive  = isLive && String(activeLtSlot) === String(slot);
+        return `<div class="grafik-sub-row">
+          <span class="grafik-sub-slot">${slot}</span>
+          <span class="grafik-sub-navn ${!s.navn ? 'muted' : ''}">${s.navn || '—'}</span>
+          <span class="grafik-sub-titel">${s.titel || ''}</span>
+          <button class="btn btn-sm ${isActive ? 'btn-save' : 'btn-cancel'} grafik-lt-paa"
+            data-slot="${slot}" title="${isActive ? 'Aktiv' : 'Sæt på'}">PÅ</button>
+        </div>`;
+      }).filter(Boolean).join('');
+      if (!subRows) subRows = `<div style="font-size:12px;color:#444;padding:6px 0;">Ingen subs indlæst — udfyld i SUBS-fanen</div>`;
+    }
+
+    return `<div class="grafik-row${g.type === 'lt' ? ' grafik-row--lt' : ''}">
       <span class="grafik-label">${g.label}</span>
       <span class="grafik-live">${liveBadge}</span>
       <span class="grafik-btns">${buttons}</span>
@@ -1576,7 +1593,7 @@ function renderGrafik() {
         <span title="${url}">${url}</span>
         <button class="copy-btn icon-btn" data-copy="${url}" title="Kopiér link">⎘</button>
       </div>
-    </div>`;
+    </div>${subRows ? `<div class="grafik-sub-list">${subRows}</div>` : ''}`;
   }).join('');
 
   // Byg drag-and-drop lag-liste
@@ -1617,11 +1634,24 @@ function renderGrafik() {
   container.querySelectorAll('[data-copy]').forEach(btn =>
     btn.addEventListener('click', () => copyText(btn.dataset.copy)));
 
-  // Trigger-knapper
+  // Trigger-knapper (generiske)
   container.querySelectorAll('[data-trig]').forEach(btn =>
     btn.addEventListener('click', () => {
       if (btn.disabled) return;
       setGrafiktTrigger(btn.dataset.trig, btn.dataset.val);
+    }));
+
+  // Lower Third PÅ-knapper (per sub-slot)
+  container.querySelectorAll('.grafik-lt-paa').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      const slot = btn.dataset.slot;
+      grafiktState['lt_slot']    = slot;
+      grafiktState['lt_trigger'] = 'in';
+      renderGrafik();
+      try {
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot',    value: slot });
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: 'in' });
+      } catch { toast('Fejl ved lower third trigger', 'err'); }
     }));
 
   // Drag-and-drop
@@ -2976,8 +3006,8 @@ sbClient.channel('db-changes')
         } else {
           refreshCredits();
         }
-        // Opdater grafik-tab hvis det er åbent og en trigger-key ændrer sig
-        if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key)) {
+        // Opdater grafik-tab hvis det er åbent og en trigger-key eller lt_slot ændrer sig
+        if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot') {
           grafiktState[p.new.key] = p.new.value;
           if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
         }

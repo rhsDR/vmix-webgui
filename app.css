@@ -1349,6 +1349,40 @@
       flex: 1;
     }
 
+    /* Lower Third sub-liste */
+    .grafik-row--lt { border-bottom: none; }
+    .grafik-sub-list {
+      border-bottom: 1px solid #1a1a1a;
+      padding: 2px 0 10px 0;
+    }
+    .grafik-sub-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 0 5px 8px;
+      border-radius: 4px;
+    }
+    .grafik-sub-row:hover { background: #111; }
+    .grafik-sub-slot {
+      font-size: 11px;
+      color: #444;
+      min-width: 18px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .grafik-sub-navn {
+      font-size: 13px;
+      color: #ccc;
+      min-width: 160px;
+      flex-shrink: 0;
+    }
+    .grafik-sub-titel {
+      font-size: 12px;
+      color: #555;
+      flex: 1;
+    }
+    .grafik-lt-paa { flex-shrink: 0; }
+
     /* Drag-and-drop lag-liste */
     .lag-list { display: flex; flex-direction: column; gap: 5px; max-width: 300px; }
     .lag-row {
