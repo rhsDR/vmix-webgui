@@ -2447,6 +2447,8 @@ function buildLineupPayload(m) {
         shirt:       p.shirt,
         name:        p.name,
         pos:         p.pos || '',
+        rawPos:      p.rawPos  || 0,
+        enetPos:     p.enetPos || 99,
         starter:     !!p.starter,
         yellowCards: c.yellow || 0,
         redCard:     c.red    || false

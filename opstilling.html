@@ -213,7 +213,7 @@
     let lineupData  = null; // { home: {...}, away: {...} }
 
     // Y-zoner på halvbanen (% fra top, mål i bunden)
-    const ZONE_Y = { MV: 84, FB: 64, MF: 38, A: 16 };
+    const ZONE_Y = { MV: 84, FB: 64, MF: 52, AMF: 34, A: 16 };
 
     const PLACEHOLDER_LOGO = 'data:image/svg+xml;base64,' + btoa(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 56">' +
@@ -246,12 +246,25 @@
       return String(name || '').trim().split(' ')[0] || '';
     }
 
+    function pitchZone(p) {
+      const rp = p.rawPos || 0;
+      if (!rp) return p.pos || 'MF';
+      if (rp <= 20)  return 'MV';
+      if (rp <= 60)  return 'FB';
+      if (rp <= 82)  return 'MF';
+      if (rp <= 100) return 'AMF';
+      return 'A';
+    }
     function calcFormation(players) {
       const st = (players || []).filter(p => p.starter);
-      const d  = st.filter(p => p.pos === 'FB').length;
-      const m  = st.filter(p => p.pos === 'MF').length;
-      const f  = st.filter(p => p.pos === 'A').length;
-      return (d || m || f) ? `${d}-${m}-${f}` : PLACEHOLDER_LOGO;
+      const lines = {};
+      for (const p of st) {
+        const z = pitchZone(p);
+        if (z === 'MV') continue;
+        lines[z] = (lines[z] || 0) + 1;
+      }
+      const str = ['FB','MF','AMF','A'].map(z => lines[z]).filter(Boolean).join('-');
+      return str || '';
     }
 
     // ── DOM-HELPERS ───────────────────────────────────────────────
@@ -276,8 +289,11 @@
       const pitchArea = document.getElementById('pitch-area');
       pitchArea.querySelectorAll('.pitch-player').forEach(el => el.remove());
 
-      const zones = { MV: [], FB: [], MF: [], A: [] };
-      for (const p of players) (zones[p.pos] || zones.MF).push(p);
+      const zones = { MV: [], FB: [], MF: [], AMF: [], A: [] };
+      for (const p of players) (zones[pitchZone(p)] || zones.MF).push(p);
+      const isHome = side === 'home';
+      for (const g of Object.values(zones))
+        g.sort((a, b) => isHome ? (b.enetPos || 99) - (a.enetPos || 99) : (a.enetPos || 99) - (b.enetPos || 99));
 
       for (const [pos, group] of Object.entries(zones)) {
         if (!group.length) continue;
