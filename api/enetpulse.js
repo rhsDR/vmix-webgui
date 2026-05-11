@@ -424,7 +424,17 @@ export default async function handler(req, res) {
           fetch(`${EAPI_BASE}/event/details/?id=${id}&includeIncidents=yes&includeLineups=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`).then(r => r.json()),
           fetch(`${EAPI_BASE}/standing/event_stats/?object=event&objectFK=${id}&includeStandingData=yes&includeStandingParticipants=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`).then(r => r.json()).catch(() => null)
         ]);
-        if (debug === '1') return { id, raw_keys: Object.keys(detailsRaw || {}), stats_raw: statsRaw };
+        if (debug === '1') {
+          const evObj = detailsRaw?.event || detailsRaw?.events || {};
+          const ev = Object.values(evObj)[0] || {};
+          const parts = ev.event_participants ? Object.values(ev.event_participants) : [];
+          return {
+            id,
+            raw_keys: Object.keys(detailsRaw || {}),
+            participant_keys: parts.map(p => Object.keys(p)),
+            formation_ids: parts.map(p => ({ number: p.number, formation_id: p.formation_id })),
+          };
+        }
         return normalizeEventDetails(detailsRaw, statsRaw, id);
       }));
       res.setHeader('Cache-Control', 'no-store');
