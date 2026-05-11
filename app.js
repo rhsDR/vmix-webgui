@@ -78,8 +78,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-    if (btn.dataset.tab === 'live') startLivePolling();
-    else stopLivePolling();
+    if (btn.dataset.tab === 'live')   startLivePolling();
+    else                              stopLivePolling();
+    if (btn.dataset.tab === 'grafik') renderGrafik();
   });
 });
 
@@ -1294,12 +1295,12 @@ let creditsData = { items: [], speed: 30 };
 let creditNewCounter = 0;
 let creditsTriggerActive = false;
 const OVERLAY_GRAPHICS = [
-  { id: 'lower-third', label: 'Lower Third'     },
-  { id: 'breaking',    label: 'Breaking Ticker'  },
-  { id: 'ticker',      label: 'Ticker'           },
-  { id: 'stilling',    label: 'Stilling'         },
-  { id: 'opstilling',  label: 'Opstilling'       },
-  { id: 'credits',     label: 'Credits'          },
+  { id: 'lower-third', label: 'Lower Third',     file: 'lower-third.html'    },
+  { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html'       },
+  { id: 'ticker',      label: 'Ticker',           file: 'ticker-overlay.html' },
+  { id: 'stilling',    label: 'Stilling',         file: 'stilling.html'       },
+  { id: 'opstilling',  label: 'Opstilling',       file: 'opstilling.html'     },
+  { id: 'credits',     label: 'Credits',          file: 'credits.html'        },
 ];
 const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.map(g => g.id);
 let overlayLagOrder = [...DEFAULT_LAG_ORDER];
@@ -1360,7 +1361,7 @@ function moveOverlayItem(id, dir) {
   const arr = [...overlayLagOrder];
   [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
   overlayLagOrder = arr;
-  renderCredits();
+  renderGrafik();
   saveOverlayLagOrder();
 }
 
@@ -1382,32 +1383,7 @@ function renderCredits() {
     <div style="display:flex;align-items:center;gap:6px;background:#0d0d0d;border:1px solid #2e2e2e;border-radius:6px;padding:5px 10px;max-width:320px;overflow:hidden;">
       <span style="font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">https://vmix-control.vercel.app/credits.html?p=${aktivProjektId}</span>
       <button class="copy-btn icon-btn" id="creditsUrlCopy" title="Kopiér link">⎘</button>
-    </div>
-    ${projektType === 'kampdag' ? `
-    <div style="width:100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:4px;">
-      <span class="credits-speed-label">Kombineret overlay</span>
-      <div style="display:flex;align-items:center;gap:6px;background:#0d0d0d;border:1px solid #2e2e2e;border-radius:6px;padding:5px 10px;flex:1;max-width:320px;overflow:hidden;">
-        <span style="font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">https://vmix-control.vercel.app/overlay.html?p=${aktivProjektId}</span>
-        <button class="copy-btn icon-btn" id="overlayUrlCopy" title="Kopiér link">⎘</button>
-      </div>
-    </div>
-    <div style="width:100%;padding-top:10px;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#555;text-transform:uppercase;margin-bottom:8px;">Lag-rækkefølge <span style="font-weight:400;letter-spacing:0;text-transform:none;color:#444;">(øverst → nederst)</span></div>
-      <div id="overlayLagList" style="display:flex;flex-direction:column;gap:4px;">
-        ${overlayLagOrder.map((id, idx) => {
-          const g = OVERLAY_GRAPHICS.find(x => x.id === id);
-          const label = g ? g.label : id;
-          const isFirst = idx === 0;
-          const isLast  = idx === overlayLagOrder.length - 1;
-          return `<div style="display:flex;align-items:center;gap:6px;">
-            <button class="btn btn-cancel btn-sm" data-lagid="${id}" data-lagdir="-1" ${isFirst ? 'disabled style="opacity:0.3"' : ''} title="Flyt op">▲</button>
-            <button class="btn btn-cancel btn-sm" data-lagid="${id}" data-lagdir="1"  ${isLast  ? 'disabled style="opacity:0.3"' : ''} title="Flyt ned">▼</button>
-            <span style="font-size:13px;color:#ccc;min-width:130px;">${label}</span>
-            <span style="font-size:11px;color:#444;">${idx === 0 ? 'øverst' : idx === overlayLagOrder.length - 1 ? 'nederst' : ''}</span>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>` : ''}`;
+    </div>`;
   container.appendChild(speedBar);
   updateCreditsSendBtn();
   speedBar.querySelector('#speedSlider').addEventListener('input', e => {
@@ -1427,15 +1403,6 @@ function renderCredits() {
     frame.src = 'credits.html?preview=1&p=' + aktivProjektId + '&t=' + Date.now();
     modal.style.display = 'flex';
   });
-  if (projektType === 'kampdag') {
-    speedBar.querySelector('#overlayUrlCopy').addEventListener('click', () => copyText('https://vmix-control.vercel.app/overlay.html?p=' + aktivProjektId));
-    speedBar.querySelectorAll('[data-lagid]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (btn.disabled) return;
-        moveOverlayItem(btn.dataset.lagid, parseInt(btn.dataset.lagdir));
-      });
-    });
-  }
 
   // Two columns
   const cols = document.createElement('div');
@@ -1553,6 +1520,76 @@ function buildCreditCard(item, side) {
   return card;
 }
 
+// ── GRAFIK TAB ────────────────────────────────────────────────
+function renderGrafik() {
+  const container = document.getElementById('grafikList');
+  if (!container) return;
+
+  const base = 'https://vmix-control.vercel.app/';
+
+  function urlRow(url) {
+    return `<div style="display:flex;align-items:center;gap:6px;background:#0d0d0d;border:1px solid #2e2e2e;border-radius:6px;padding:5px 10px;overflow:hidden;flex:1;min-width:0;">
+      <span style="font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;" title="${url}">${url}</span>
+      <button class="copy-btn icon-btn" data-copy="${url}" title="Kopiér link">⎘</button>
+    </div>`;
+  }
+
+  const lagRows = overlayLagOrder.map((id, idx) => {
+    const g       = OVERLAY_GRAPHICS.find(x => x.id === id);
+    const label   = g ? g.label : id;
+    const isFirst = idx === 0;
+    const isLast  = idx === overlayLagOrder.length - 1;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;">
+      <button class="btn btn-cancel btn-sm" data-lagid="${id}" data-lagdir="-1" ${isFirst ? 'disabled' : ''} style="${isFirst ? 'opacity:0.25;' : ''}" title="Flyt op">▲</button>
+      <button class="btn btn-cancel btn-sm" data-lagid="${id}" data-lagdir="1"  ${isLast  ? 'disabled' : ''} style="${isLast  ? 'opacity:0.25;' : ''}" title="Flyt ned">▼</button>
+      <span style="font-size:13px;color:#ccc;min-width:140px;">${label}</span>
+      <span style="font-size:11px;color:#444;">${idx === 0 ? 'øverst' : idx === overlayLagOrder.length - 1 ? 'nederst' : ''}</span>
+    </div>`;
+  }).join('');
+
+  const grafRows = overlayLagOrder.map(id => {
+    const g = OVERLAY_GRAPHICS.find(x => x.id === id);
+    if (!g) return '';
+    const url = base + g.file + '?p=' + aktivProjektId;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:4px 0;">
+      <span style="font-size:12px;color:#888;min-width:140px;">${g.label}</span>
+      ${urlRow(url)}
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="padding:20px 0 40px;">
+
+      <div style="margin-bottom:28px;">
+        <div class="credits-speed-label" style="margin-bottom:10px;">Kombineret overlay (brug dette i vMix)</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          ${urlRow(base + 'overlay.html?p=' + aktivProjektId)}
+        </div>
+      </div>
+
+      <div style="margin-bottom:28px;">
+        <div class="credits-speed-label" style="margin-bottom:10px;">Individuelle grafikker</div>
+        ${grafRows}
+      </div>
+
+      <div>
+        <div class="credits-speed-label" style="margin-bottom:10px;">Lag-rækkefølge (øverst → nederst)</div>
+        <div id="overlayLagList">${lagRows}</div>
+      </div>
+
+    </div>`;
+
+  container.querySelectorAll('[data-copy]').forEach(btn => {
+    btn.addEventListener('click', () => copyText(btn.dataset.copy));
+  });
+  container.querySelectorAll('[data-lagid]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      moveOverlayItem(btn.dataset.lagid, parseInt(btn.dataset.lagdir));
+    });
+  });
+}
+
 async function reorderCredits(srcRow, targetRow, targetSide) {
   const srcItem = creditsData.items.find(i => String(i.row) === String(srcRow));
   if (!srcItem) return;
@@ -1661,14 +1698,16 @@ async function init() {
         }
         projektType = rows[0].type;
         if (rows[0].type === 'tv') {
-          // Skjul KAMPE, STAMDATA og DASHBOARD — aktiver SUBS som standard
+          // Skjul KAMPE, STAMDATA, GRAFIK og DASHBOARD — aktiver SUBS som standard
           const kampeBtn     = document.querySelector('.tab-btn[data-tab="kampe"]');
           const stamdataBtn  = document.querySelector('.tab-btn[data-tab="admin"]');
           const dashboardBtn = document.querySelector('.tab-btn[data-tab="live"]');
+          const grafikBtn    = document.querySelector('.tab-btn[data-tab="grafik"]');
           const subsBtn      = document.querySelector('.tab-btn[data-tab="subs"]');
           if (kampeBtn)     kampeBtn.style.display     = 'none';
           if (stamdataBtn)  stamdataBtn.style.display  = 'none';
           if (dashboardBtn) dashboardBtn.style.display = 'none';
+          if (grafikBtn)    grafikBtn.style.display    = 'none';
           // Skjul også STAMDATA-knappen i headeren
           const headerStamdataBtn = document.querySelector('header .tab-btn[data-tab="admin"]');
           if (headerStamdataBtn) headerStamdataBtn.style.display = 'none';
@@ -2856,7 +2895,7 @@ sbClient.channel('db-changes')
         } else if (p.new.key === 'overlay_lag_order') {
           const raw = p.new.value || '';
           overlayLagOrder = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_LAG_ORDER];
-          renderCredits();
+          renderGrafik();
         } else {
           refreshCredits();
         }
