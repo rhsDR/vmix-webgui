@@ -80,7 +80,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
     if (btn.dataset.tab === 'live')   startLivePolling();
     else                              stopLivePolling();
-    if (btn.dataset.tab === 'grafik') refreshGrafiktState();
+    if (btn.dataset.tab === 'grafik') { refreshGrafiktState(); fetchLineupDataForGrafik(); }
   });
 });
 
@@ -1528,6 +1528,24 @@ function buildCreditCard(item, side) {
 }
 
 // ── GRAFIK TAB ────────────────────────────────────────────────
+async function fetchLineupDataForGrafik() {
+  const enetIds = kampe.filter(k => k.enetpulseId).map(k => k.enetpulseId);
+  if (!enetIds.length) return;
+  try {
+    const data = await fetch('/api/enetpulse?ids=' + enetIds.join(',')).then(r => r.json());
+    (data.matches || []).forEach(m => {
+      if (!m.id || m.error) return;
+      const k = kampe.find(k2 => String(k2.enetpulseId) === String(m.id));
+      if (k) {
+        if (k.hold1Lang) m.home = k.hold1Lang;
+        if (k.hold2Lang) m.away = k.hold2Lang;
+      }
+      liveMatchData.set(String(m.id), m);
+    });
+  } catch {}
+  renderGrafik();
+}
+
 function renderGrafik() {
   const container = document.getElementById('grafikList');
   if (!container) return;
@@ -1544,7 +1562,9 @@ function renderGrafik() {
 
     let liveBadge = '';
     if (isLive) {
-      const liveLabel = (g.type === 'lineup' && val !== 'in') ? val.toUpperCase() : 'LIVE';
+      const liveLabel = g.type === 'lineup'
+        ? (val === 'home' ? 'HJEM' : val === 'away' ? 'UDE' : 'LIVE')
+        : 'LIVE';
       liveBadge = `<span class="credits-live-badge visible" style="font-size:10px;gap:4px;">
         <span class="credits-live-dot"></span>${liveLabel}
       </span>`;
@@ -1555,12 +1575,30 @@ function renderGrafik() {
       buttons = `
         <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out" ${!isLive ? 'disabled style="opacity:0.35;"' : ''}>AF</button>`;
     } else if (g.type === 'lineup') {
-      const isHome = val === 'home';
-      const isAway = val === 'away';
-      buttons = `
-        <button class="btn btn-sm ${isHome ? 'btn-save' : 'btn-cancel'}" data-trig="${g.triggerKey}" data-val="home">HJEM</button>
-        <button class="btn btn-sm ${isAway ? 'btn-save' : 'btn-cancel'}" data-trig="${g.triggerKey}" data-val="away">UDE</button>
-        <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out" ${!isLive ? 'disabled style="opacity:0.35;"' : ''}>AF</button>`;
+      const isOnAir = isLive || lineupOnAirMatchId !== null;
+      buttons = `<button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out" ${!isOnAir ? 'disabled style="opacity:0.35;"' : ''}>AF</button>`;
+      const dashKampe = kampe.filter(k => k.enetpulseId);
+      if (!dashKampe.length) {
+        subRows = `<div style="font-size:12px;color:#444;padding:6px 0 6px 8px;">Ingen kampe i Dashboard — tilføj kampe i KAMPE-fanen</div>`;
+      } else {
+        subRows = dashKampe.map(k => {
+          const matchId    = String(k.enetpulseId);
+          const isActive   = String(lineupOnAirMatchId) === matchId;
+          const homeActive = isActive && val === 'home';
+          const awayActive = isActive && val === 'away';
+          const hjemNavn   = k.hold1Lang || k.hold1Kort || '—';
+          const udeNavn    = k.hold2Lang || k.hold2Kort || '—';
+          const badge      = isActive
+            ? `<span class="credits-live-badge visible" style="font-size:10px;flex-shrink:0;"><span class="credits-live-dot"></span>${homeActive ? 'HJEM' : 'UDE'}</span>`
+            : `<span style="width:60px;flex-shrink:0;"></span>`;
+          return `<div class="grafik-sub-row">
+            ${badge}
+            <span class="grafik-lineup-match">${esc(hjemNavn)} <span class="muted">vs</span> ${esc(udeNavn)}</span>
+            <button class="btn btn-sm ${homeActive ? 'btn-save' : 'btn-cancel'} grafik-lu-btn" data-matchid="${matchId}" data-side="home">HJEM</button>
+            <button class="btn btn-sm ${awayActive ? 'btn-save' : 'btn-cancel'} grafik-lu-btn" data-matchid="${matchId}" data-side="away">UDE</button>
+          </div>`;
+        }).join('');
+      }
     } else if (g.type === 'credits') {
       buttons = `
         <button class="btn btn-save btn-sm"   data-trig="${g.triggerKey}" data-val="in">PÅ</button>
@@ -1640,6 +1678,10 @@ function renderGrafik() {
       if (btn.disabled) return;
       setGrafiktTrigger(btn.dataset.trig, btn.dataset.val);
     }));
+
+  // Opstilling HJEM/UDE per kamp
+  container.querySelectorAll('.grafik-lu-btn').forEach(btn =>
+    btn.addEventListener('click', () => sendLineupSide(btn.dataset.matchid, btn.dataset.side)));
 
   // Lower Third PÅ-knapper (per sub-slot)
   container.querySelectorAll('.grafik-lt-paa').forEach(btn =>

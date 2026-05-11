@@ -1382,6 +1382,7 @@
       flex: 1;
     }
     .grafik-lt-paa { flex-shrink: 0; }
+    .grafik-lineup-match { font-size: 13px; color: #ccc; flex: 1; }
 
     /* Drag-and-drop lag-liste */
     .lag-list { display: flex; flex-direction: column; gap: 5px; max-width: 300px; }
