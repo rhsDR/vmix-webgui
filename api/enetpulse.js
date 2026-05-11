@@ -430,12 +430,18 @@ export default async function handler(req, res) {
           const evObj = detailsRaw?.event || detailsRaw?.events || {};
           const ev = Object.values(evObj)[0] || {};
           const parts = ev.event_participants ? Object.values(ev.event_participants) : [];
-          return {
-            id,
-            raw_keys: Object.keys(detailsRaw || {}),
-            participant_keys: parts.map(p => Object.keys(p)),
-            formation_ids: parts.map(p => ({ number: p.number, formation_id: p.formation_id })),
-          };
+          const lineupSample = parts.map(p => {
+            const entries = p.lineup ? Object.values(p.lineup) : [];
+            const first = entries[0] || {};
+            return {
+              number: p.number,
+              participant_keys: Object.keys(p),
+              formation_id: p.formation_id,
+              lineup_entry_keys: Object.keys(first),
+              lineup_entry_sample: Object.fromEntries(Object.entries(first).filter(([k]) => k !== 'participant')),
+            };
+          });
+          return { id, raw_keys: Object.keys(detailsRaw || {}), lineupSample };
         }
         return normalizeEventDetails(detailsRaw, statsRaw, id);
       }));
