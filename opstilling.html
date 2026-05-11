@@ -120,6 +120,7 @@
       color: #fff;
       text-shadow: 0 1px 3px rgba(0,0,0,0.9);
       line-height: 1;
+      z-index: 1;
     }
 
     .p-cards {
@@ -216,7 +217,7 @@
     let lineupData  = null; // { home: {...}, away: {...} }
 
     // Y-zoner på halvbanen (% fra top, mål i bunden)
-    const ZONE_Y = { MV: 84, FB: 67, MF: 47, AMF: 28, A: 10 };
+    const ZONE_Y = { MV: 88, FB: 67, MF: 47, AMF: 28, A: 10 };
 
     const PLACEHOLDER_LOGO = 'data:image/svg+xml;base64,' + btoa(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 56">' +
