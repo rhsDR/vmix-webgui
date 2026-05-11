@@ -848,6 +848,7 @@ async function saveKamp(i, div) {
   k.lokation     = buf.lokSomKomm ? buf.kommentator : buf.lokation;
   k.vmixcall     = buf.vmixcall;
   k.enetpulseId  = buf.enetpulseId !== undefined ? buf.enetpulseId : k.enetpulseId;
+  if (!k.enetpulseId) { k.hold1PartFk = null; k.hold2PartFk = null; k.starttime = ''; }
   k.editMode     = false;
 
   rerender(i);
@@ -2689,6 +2690,11 @@ function applyKampRow(row) {
   };
   const merged = { ...prev, ...data, editMode: false, collapsed: prev.collapsed, buf: prev.buf };
   if (prev.onAirPending) merged.onAir = prev.onAir;
+  if (!data.enetpulseId && prev.enetpulseId) {
+    merged.hold1PartFk = null;
+    merged.hold2PartFk = null;
+    merged.starttime = '';
+  }
   const enetChanged = prev.enetpulseId !== data.enetpulseId;
   kampe[i] = merged;
   rerender(i);
