@@ -2114,7 +2114,11 @@ function renderPitch(lineup, homeName, awayName, homeFK, awayFK) {
 
     const playersHtml = Object.entries(zones).map(([pos, group]) => {
       if (!group.length) return '';
-      group.sort((a, b) => b.enetPos - a.enetPos);
+      if (side === 'home') {
+        group.sort((a, b) => b.enetPos - a.enetPos);
+      } else {
+        group.sort((a, b) => a.enetPos - b.enetPos);
+      }
       const baseY   = ZONE_Y[pos] ?? 50;
       const twoRows = group.length >= 5;
       const rowSize = twoRows ? Math.ceil(group.length / 2) : group.length;
