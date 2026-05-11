@@ -1571,6 +1571,7 @@ function renderGrafik() {
     }
 
     let buttons = '';
+    let subRows = '';
     if (g.type === 'simple' || g.type === 'lt') {
       buttons = `
         <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out" ${!isLive ? 'disabled style="opacity:0.35;"' : ''}>AF</button>`;
@@ -1605,7 +1606,6 @@ function renderGrafik() {
         <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out" ${!isLive ? 'disabled style="opacity:0.35;"' : ''}>AF</button>`;
     }
 
-    let subRows = '';
     if (g.type === 'lt') {
       const activeLtSlot = grafiktState['lt_slot'] || '';
       subRows = subs.map((s, i) => {
