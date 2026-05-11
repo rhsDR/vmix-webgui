@@ -337,7 +337,9 @@ function normalizeEventDetails(raw, statsRaw, id) {
     league:    ev.tournament_stage_name || ev.tournament_name || '',
     stats:     normalizeStats(statsRaw, homePartFK, awayPartFK),
     events:    mappedEvents,
-    lineup
+    lineup,
+    home_formation_id: home.formation_id || null,
+    away_formation_id: away.formation_id || null,
   };
 }
 

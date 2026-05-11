@@ -2067,11 +2067,19 @@ function renderLiveCard(m) {
       <div class="live-h2h-wrap" style="display:${h2hOpen ? 'block' : 'none'}">
         <div class="live-h2h-inner" data-id="${mid}">${liveH2HCache.get(mid) || '<div class="pm-loading">Henter…</div>'}</div>
       </div>
-      ${renderLineup(m.lineup, m.home, m.away, m.id, m.home_part_fk, m.away_part_fk)}
+      ${renderLineup(m.lineup, m.home, m.away, m.id, m.home_part_fk, m.away_part_fk, m.home_formation_id, m.away_formation_id)}
     </div>`;
 }
 
-function renderPitch(lineup, homeName, awayName, homeFK, awayFK) {
+const FORMATION_MAP = {
+  '1':'4-4-2','2':'4-3-3','3':'3-5-2','4':'5-3-2','5':'4-5-1',
+  '6':'4-2-3-1','7':'3-4-3','8':'5-4-1','9':'3-4-1-2','10':'4-1-4-1',
+  '11':'4-3-1-2','12':'4-4-1-1','13':'3-3-4','14':'4-1-2-1-2','15':'4-3-2-1',
+  '16':'4-1-3-2','17':'3-1-4-2','18':'4-2-4','19':'5-2-3','20':'3-4-2-1',
+  '21':'4-2-2-2','22':'3-5-1-1','23':'4-4-2','24':'4-1-2-3',
+};
+
+function renderPitch(lineup, homeName, awayName, homeFK, awayFK, homeFormationId, awayFormationId) {
   if (!lineup) return '';
   const homePlayers = (lineup.home || []).filter(p => p.starter);
   const awayPlayers = (lineup.away || []).filter(p => p.starter);
@@ -2080,14 +2088,15 @@ function renderPitch(lineup, homeName, awayName, homeFK, awayFK) {
   // Hvert hold vises på sin egen halvbane — GK i bunden, angribere øverst
   const ZONE_Y = { MV: 88, FB: 68, MF: 46, A: 22 };
 
-  function formation(players) {
+  function formation(players, formationId) {
+    if (formationId && FORMATION_MAP[String(formationId)]) return FORMATION_MAP[String(formationId)];
     const d = players.filter(p => p.pos === 'FB').length;
     const m = players.filter(p => p.pos === 'MF').length;
     const f = players.filter(p => p.pos === 'A').length;
     return (d || m || f) ? `${d}-${m}-${f}` : '';
   }
 
-  function halfPitch(players, side, partFK, label) {
+  function halfPitch(players, side, partFK, label, formationId) {
     const zones = { MV: [], FB: [], MF: [], A: [] };
     for (const p of players) (zones[p.pos] || zones.MF).push(p);
 
@@ -2120,7 +2129,7 @@ function renderPitch(lineup, homeName, awayName, homeFK, awayFK) {
       }).join('');
     }).join('');
 
-    const fmn = formation(players);
+    const fmn = formation(players, formationId);
     return `<div class="pitch-half-wrap">
       <div class="pitch-inner">
         <div class="pitch-half-label">${esc(label)}</div>
@@ -2141,7 +2150,7 @@ function renderPitch(lineup, homeName, awayName, homeFK, awayFK) {
     </div>`;
   }
 
-  return `${halfPitch(homePlayers, 'home', homeFK, homeName || 'Hjemme')}${halfPitch(awayPlayers, 'away', awayFK, awayName || 'Ude')}`;
+  return `${halfPitch(homePlayers, 'home', homeFK, homeName || 'Hjemme', homeFormationId)}${halfPitch(awayPlayers, 'away', awayFK, awayName || 'Ude', awayFormationId)}`;
 }
 
 function renderEventStats(data, cardEl) {
@@ -2352,7 +2361,7 @@ function renderH2H(data, homeName, awayName) {
   return `<table class="h2h-table"><tbody>${rows}</tbody></table>${summary}`;
 }
 
-function renderLineup(lineup, homeName, awayName, matchId, homeFK, awayFK) {
+function renderLineup(lineup, homeName, awayName, matchId, homeFK, awayFK, homeFormationId, awayFormationId) {
   if (!lineup) return '';
   const home = lineup.home || [];
   const away = lineup.away || [];
@@ -2382,7 +2391,7 @@ function renderLineup(lineup, homeName, awayName, matchId, homeFK, awayFK) {
       </div>
       <div class="live-lineup" style="display:${mode === 'liste' ? 'flex' : 'none'}">${side(home, homeName || 'Hjemme', homeFK)}${side(away, awayName || 'Ude', awayFK)}</div>
       <div class="pitch-wrap" style="display:${mode === 'bane' ? 'flex' : 'none'}">
-        ${renderPitch(lineup, homeName, awayName, homeFK, awayFK)}
+        ${renderPitch(lineup, homeName, awayName, homeFK, awayFK, homeFormationId, awayFormationId)}
       </div>
       <div class="lineup-onair-bar" data-id="${matchId}">
         <button class="lu-home-btn" data-id="${matchId}">⬤ HJEMMEHOLD</button>
