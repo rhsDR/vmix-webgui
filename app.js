@@ -818,39 +818,22 @@ async function selectEnetpulseFixture(i, f) {
   rerender(i);
 }
 
-async function resetEdit(i) {
-  const k = kampe[i];
-
-  k.hold1Lang = ''; k.hold1Kort = '';
-  k.hold2Lang = ''; k.hold2Kort = '';
-  k.hold1Score = 0; k.hold2Score = 0;
-  k.kommentator = ''; k.lokation = '';
-  k.enetpulseId = null; k.fixtureId = null;
-  k.hold1PartFk = null; k.hold2PartFk = null;
-  k.starttime = '';
-  k.onAir = false;
-
-  k.buf.hold1Lang = ''; k.buf.hold2Lang = '';
-  k.buf.kommentator = ''; k.buf.lokation = '';
-  k.buf.lokSomKomm = false;
-
-  try {
-    await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), {
-      hold1_lang: '', hold1_kort: '', hold1_score: 0,
-      hold2_lang: '', hold2_kort: '', hold2_score: 0,
-      kommentator: '', lokation: '',
-      enetpulse_id: null, fixture_id: null,
-      on_air: false
-    });
-  } catch { toast('Fejl ved nulstilling', 'err'); }
-
+function resetEdit(i) {
+  const buf = kampe[i].buf;
+  buf.hold1Lang = '';
+  buf.hold2Lang = '';
+  buf.kommentator = '';
+  buf.lokation = '';
+  buf.lokSomKomm = false;
+  buf.enetpulseId = null;
+  // buf.vmixcall bevares — linket må ikke ryddes
   rerender(i);
-  fetchLiveMatches();
 }
 
 async function saveKamp(i, div) {
   const k   = kampe[i];
   const buf = k.buf;
+  const prevEnetpulseId = k.enetpulseId;
 
   // Resolve short names — spring over i AUTO mode (holdnavne sættes via fixture-søgning)
   if (!k.autoMode) {
@@ -885,6 +868,7 @@ async function saveKamp(i, div) {
       enetpulse_id: k.enetpulseId
     });
     toast('Gemt ✓', 'ok');
+    if (k.enetpulseId !== prevEnetpulseId) fetchLiveMatches();
     // Synk link + kommentator navn/titel til vmix_calls slot
     if (i < 6 && vmixCalls[i]) {
       const kommEntry = dropdowns.kommentatorer.find(d => d.lang === k.kommentator);
