@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <title>Ticker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <!-- Ticker overlay — IKKE IMPLEMENTERET ENDNU -->
+  <!-- Trigger key: ticker_ovl_trigger (in / out) -->
+  <!-- Reads from existing tickers table: on_air=true, breaking=false -->
+  <!-- Concatenated string available via JSON API: ticker_normal -->
+
+  <script>
+    const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
+    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
+    const SB_HDR  = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Content-Type': 'application/json' };
+
+    const pid = new URLSearchParams(window.location.search).get('p') || '';
+    const pf  = pid ? '&projekt_id=eq.' + encodeURIComponent(pid) : '';
+
+    let visible = false;
+
+    async function pollTrigger() {
+      try {
+        const rows = await fetch(
+          `${SB_URL}/rest/v1/settings?key=eq.ticker_ovl_trigger&select=value${pf}`,
+          { headers: SB_HDR }
+        ).then(r => r.json());
+        const trigger = rows[0]?.value;
+        if (trigger === 'in'  && !visible) { runIN();  return; }
+        if (trigger === 'out' &&  visible) { runOUT(); return; }
+      } catch {}
+      setTimeout(pollTrigger, 2000);
+    }
+
+    function runIN()  { visible = true;  /* TODO */ setTimeout(pollTrigger, 2000); }
+    function runOUT() { visible = false; /* TODO */ setTimeout(pollTrigger, 2000); }
+
+    pollTrigger();
+  </script>
+</body>
+</html>

@@ -1293,6 +1293,16 @@ async function saveVmixCallRow(i) {
 let creditsData = { items: [], speed: 30 };
 let creditNewCounter = 0;
 let creditsTriggerActive = false;
+const OVERLAY_GRAPHICS = [
+  { id: 'lower-third', label: 'Lower Third'     },
+  { id: 'breaking',    label: 'Breaking Ticker'  },
+  { id: 'ticker',      label: 'Ticker'           },
+  { id: 'stilling',    label: 'Stilling'         },
+  { id: 'opstilling',  label: 'Opstilling'       },
+  { id: 'credits',     label: 'Credits'          },
+];
+const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.map(g => g.id);
+let overlayLagOrder = [...DEFAULT_LAG_ORDER];
 
 function updateCreditsSendBtn() {
   const badge = document.getElementById('creditsTriggerBadge');
@@ -1320,7 +1330,13 @@ async function refreshCredits() {
     ]);
     const speedRow   = settingsRaw.find(r => r.key === 'credits_speed');
     const triggerRow = settingsRaw.find(r => r.key === 'credits_trigger');
+    const lagRow     = settingsRaw.find(r => r.key === 'overlay_lag_order');
     creditsTriggerActive = triggerRow ? triggerRow.value === 'in' : false;
+    if (lagRow && lagRow.value) {
+      overlayLagOrder = lagRow.value.split(',').map(s => s.trim()).filter(Boolean);
+    } else {
+      overlayLagOrder = [...DEFAULT_LAG_ORDER];
+    }
     const data = {
       items: creditsRaw.map(r => ({ row: r.id, side: r.side, orden: r.orden, titel: r.titel || '', navne: r.navne || '' })),
       speed: speedRow ? parseFloat(speedRow.value) : 30
@@ -1328,6 +1344,24 @@ async function refreshCredits() {
     initCreditsFromData(data);
   } catch { /* stille */ }
   renderCredits();
+}
+
+async function saveOverlayLagOrder() {
+  try {
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'overlay_lag_order', value: overlayLagOrder.join(',') });
+  } catch { toast('Fejl ved lag-gem', 'err'); }
+}
+
+function moveOverlayItem(id, dir) {
+  const idx = overlayLagOrder.indexOf(id);
+  if (idx < 0) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= overlayLagOrder.length) return;
+  const arr = [...overlayLagOrder];
+  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+  overlayLagOrder = arr;
+  renderCredits();
+  saveOverlayLagOrder();
 }
 
 function renderCredits() {
@@ -1346,9 +1380,34 @@ function renderCredits() {
     <button class="btn btn-cancel" id="previewBtn" style="margin-left:auto;">▶ PREVIEW</button>
     <span class="credits-live-badge" id="creditsTriggerBadge"><span class="credits-live-dot"></span>LIVE</span>
     <div style="display:flex;align-items:center;gap:6px;background:#0d0d0d;border:1px solid #2e2e2e;border-radius:6px;padding:5px 10px;max-width:320px;overflow:hidden;">
-      <span style="font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;" id="creditsUrlText">https://vmix-control.vercel.app/credits.html?p=${aktivProjektId}</span>
+      <span style="font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">https://vmix-control.vercel.app/credits.html?p=${aktivProjektId}</span>
       <button class="copy-btn icon-btn" id="creditsUrlCopy" title="Kopiér link">⎘</button>
-    </div>`;
+    </div>
+    ${projektType === 'kampdag' ? `
+    <div style="width:100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:4px;">
+      <span class="credits-speed-label">Kombineret overlay</span>
+      <div style="display:flex;align-items:center;gap:6px;background:#0d0d0d;border:1px solid #2e2e2e;border-radius:6px;padding:5px 10px;flex:1;max-width:320px;overflow:hidden;">
+        <span style="font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">https://vmix-control.vercel.app/overlay.html?p=${aktivProjektId}</span>
+        <button class="copy-btn icon-btn" id="overlayUrlCopy" title="Kopiér link">⎘</button>
+      </div>
+    </div>
+    <div style="width:100%;padding-top:10px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#555;text-transform:uppercase;margin-bottom:8px;">Lag-rækkefølge <span style="font-weight:400;letter-spacing:0;text-transform:none;color:#444;">(øverst → nederst)</span></div>
+      <div id="overlayLagList" style="display:flex;flex-direction:column;gap:4px;">
+        ${overlayLagOrder.map((id, idx) => {
+          const g = OVERLAY_GRAPHICS.find(x => x.id === id);
+          const label = g ? g.label : id;
+          const isFirst = idx === 0;
+          const isLast  = idx === overlayLagOrder.length - 1;
+          return `<div style="display:flex;align-items:center;gap:6px;">
+            <button class="btn btn-cancel btn-sm" data-lagid="${id}" data-lagdir="-1" ${isFirst ? 'disabled style="opacity:0.3"' : ''} title="Flyt op">▲</button>
+            <button class="btn btn-cancel btn-sm" data-lagid="${id}" data-lagdir="1"  ${isLast  ? 'disabled style="opacity:0.3"' : ''} title="Flyt ned">▼</button>
+            <span style="font-size:13px;color:#ccc;min-width:130px;">${label}</span>
+            <span style="font-size:11px;color:#444;">${idx === 0 ? 'øverst' : idx === overlayLagOrder.length - 1 ? 'nederst' : ''}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : ''}`;
   container.appendChild(speedBar);
   updateCreditsSendBtn();
   speedBar.querySelector('#speedSlider').addEventListener('input', e => {
@@ -1368,6 +1427,15 @@ function renderCredits() {
     frame.src = 'credits.html?preview=1&p=' + aktivProjektId + '&t=' + Date.now();
     modal.style.display = 'flex';
   });
+  if (projektType === 'kampdag') {
+    speedBar.querySelector('#overlayUrlCopy').addEventListener('click', () => copyText('https://vmix-control.vercel.app/overlay.html?p=' + aktivProjektId));
+    speedBar.querySelectorAll('[data-lagid]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        moveOverlayItem(btn.dataset.lagid, parseInt(btn.dataset.lagdir));
+      });
+    });
+  }
 
   // Two columns
   const cols = document.createElement('div');
@@ -2785,6 +2853,10 @@ sbClient.channel('db-changes')
         } else if (p.new.key === 'active_sub') {
           activeSubSlot = parseInt(p.new.value) || 0;
           subs.forEach((_, i) => rerenderSub(i));
+        } else if (p.new.key === 'overlay_lag_order') {
+          const raw = p.new.value || '';
+          overlayLagOrder = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_LAG_ORDER];
+          renderCredits();
         } else {
           refreshCredits();
         }

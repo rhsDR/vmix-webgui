@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <title>Overlay</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
+    iframe {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: transparent;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <iframe id="lower-third-frame" allowtransparency="true" src=""></iframe>
+  <iframe id="breaking-frame"    allowtransparency="true" src=""></iframe>
+  <iframe id="ticker-frame"      allowtransparency="true" src=""></iframe>
+  <iframe id="stilling-frame"    allowtransparency="true" src=""></iframe>
+  <iframe id="opstilling-frame"  allowtransparency="true" src=""></iframe>
+  <iframe id="credits-frame"     allowtransparency="true" src=""></iframe>
+
+  <script>
+    const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
+    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
+    const SB_HDR  = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON };
+
+    // Grafik-definitioner: id matcher iframe-id og Supabase-nøglen i overlay_lag_order
+    const GRAPHICS = [
+      { id: 'lower-third', file: 'lower-third.html'    },
+      { id: 'breaking',    file: 'breaking.html'        },
+      { id: 'ticker',      file: 'ticker-overlay.html'  },
+      { id: 'stilling',    file: 'stilling.html'        },
+      { id: 'opstilling',  file: 'opstilling.html'      },
+      { id: 'credits',     file: 'credits.html'         },
+    ];
+    const DEFAULT_ORDER = GRAPHICS.map(g => g.id); // top→bund
+
+    const params  = new URLSearchParams(window.location.search);
+    const pid     = params.get('p') || '';
+    const pf      = pid ? '&projekt_id=eq.' + encodeURIComponent(pid) : '';
+    const preview = params.get('preview') || '';
+
+    // Sæt iframe-sources (preview overstyre normale sources)
+    GRAPHICS.forEach(g => {
+      const frame = document.getElementById(g.id + '-frame');
+      if (!frame) return;
+      let src = g.file + '?p=' + pid;
+      if (preview === 'credits'             && g.id === 'credits')    src = g.file + '?preview=1&p=' + pid;
+      if ((preview === 'home' || preview === 'away') && g.id === 'opstilling') src = g.file + '?preview=' + preview + '&p=' + pid;
+      frame.src = src;
+    });
+
+    function applyOrder(order) {
+      const total = order.length;
+      order.forEach((id, idx) => {
+        const frame = document.getElementById(id + '-frame');
+        if (frame) frame.style.zIndex = (total - idx) * 10; // første = højest
+      });
+    }
+
+    async function pollLagOrder() {
+      try {
+        const rows = await fetch(
+          `${SB_URL}/rest/v1/settings?key=eq.overlay_lag_order&select=value${pf}`,
+          { headers: SB_HDR }
+        ).then(r => r.json());
+        const raw   = rows[0]?.value || '';
+        const order = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : DEFAULT_ORDER;
+        applyOrder(order);
+      } catch {}
+      setTimeout(pollLagOrder, 3000);
+    }
+
+    // Sæt standard-rækkefølge med det samme, poll derefter
+    applyOrder(DEFAULT_ORDER);
+    pollLagOrder();
+  </script>
+</body>
+</html>
