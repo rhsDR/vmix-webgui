@@ -51,6 +51,7 @@ function runAnimationIN(skipLabel){_spxVisible=true;
   tl.fromTo('#el2',{clipPath:'inset(0% 100% 0% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:1,ease:'power2.inOut'},0);
   _csPlay('el6',0.24,0.512,'wipe-step',3,1);
   _csPlay('el5',0.24,0.38,'irregular',3,1);
+  gsap.set('#el7',{opacity:1,immediateRender:true});
   if(!skipLabel){
   _labelShown=true;
   gsap.set('#el12',{opacity:1,x:0,y:0,scale:1,clipPath:'none'});
