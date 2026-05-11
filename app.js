@@ -80,7 +80,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
     if (btn.dataset.tab === 'live')   startLivePolling();
     else                              stopLivePolling();
-    if (btn.dataset.tab === 'grafik') renderGrafik();
+    if (btn.dataset.tab === 'grafik') refreshGrafiktState();
   });
 });
 
@@ -1295,15 +1295,16 @@ let creditsData = { items: [], speed: 30 };
 let creditNewCounter = 0;
 let creditsTriggerActive = false;
 const OVERLAY_GRAPHICS = [
-  { id: 'lower-third', label: 'Lower Third',     file: 'lower-third.html'    },
-  { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html'       },
-  { id: 'ticker',      label: 'Ticker',           file: 'ticker-overlay.html' },
-  { id: 'stilling',    label: 'Stilling',         file: 'stilling.html'       },
-  { id: 'opstilling',  label: 'Opstilling',       file: 'opstilling.html'     },
-  { id: 'credits',     label: 'Credits',          file: 'credits.html'        },
+  { id: 'lower-third', label: 'Lower Third',     file: 'lower-third.html',    triggerKey: 'lt_trigger',         type: 'simple'  },
+  { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html',       triggerKey: 'breaking_trigger',   type: 'simple'  },
+  { id: 'ticker',      label: 'Ticker',           file: 'ticker-overlay.html', triggerKey: 'ticker_ovl_trigger', type: 'simple'  },
+  { id: 'stilling',    label: 'Stilling',         file: 'stilling.html',       triggerKey: 'stilling_trigger',   type: 'simple'  },
+  { id: 'opstilling',  label: 'Opstilling',       file: 'opstilling.html',     triggerKey: 'lineup_trigger',     type: 'lineup'  },
+  { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits' },
 ];
 const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.map(g => g.id);
 let overlayLagOrder = [...DEFAULT_LAG_ORDER];
+let grafiktState    = {}; // { triggerKey: currentValue }
 
 function updateCreditsSendBtn() {
   const badge = document.getElementById('creditsTriggerBadge');
@@ -1347,23 +1348,29 @@ async function refreshCredits() {
   renderCredits();
 }
 
+async function refreshGrafiktState() {
+  const keys = OVERLAY_GRAPHICS.map(g => g.triggerKey).join(',');
+  try {
+    const rows = await sbGet('settings?select=key,value&key=in.(' + keys + ')&projekt_id=eq.' + aktivProjektId);
+    rows.forEach(r => { grafiktState[r.key] = r.value; });
+  } catch {}
+  renderGrafik();
+}
+
+async function setGrafiktTrigger(triggerKey, value) {
+  try {
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: triggerKey, value });
+    grafiktState[triggerKey] = value;
+    renderGrafik();
+  } catch { toast('Fejl ved trigger', 'err'); }
+}
+
 async function saveOverlayLagOrder() {
   try {
     await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'overlay_lag_order', value: overlayLagOrder.join(',') });
   } catch { toast('Fejl ved lag-gem', 'err'); }
 }
 
-function moveOverlayItem(id, dir) {
-  const idx = overlayLagOrder.indexOf(id);
-  if (idx < 0) return;
-  const newIdx = idx + dir;
-  if (newIdx < 0 || newIdx >= overlayLagOrder.length) return;
-  const arr = [...overlayLagOrder];
-  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
-  overlayLagOrder = arr;
-  renderGrafik();
-  saveOverlayLagOrder();
-}
 
 function renderCredits() {
   const container = document.getElementById('creditsList');
@@ -1527,65 +1534,135 @@ function renderGrafik() {
 
   const base = 'https://vmix-control.vercel.app/';
 
-  function urlRow(url) {
-    return `<div style="display:flex;align-items:center;gap:6px;background:#0d0d0d;border:1px solid #2e2e2e;border-radius:6px;padding:5px 10px;overflow:hidden;flex:1;min-width:0;">
-      <span style="font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;" title="${url}">${url}</span>
-      <button class="copy-btn icon-btn" data-copy="${url}" title="Kopiér link">⎘</button>
-    </div>`;
-  }
-
-  const lagRows = overlayLagOrder.map((id, idx) => {
-    const g       = OVERLAY_GRAPHICS.find(x => x.id === id);
-    const label   = g ? g.label : id;
-    const isFirst = idx === 0;
-    const isLast  = idx === overlayLagOrder.length - 1;
-    return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;">
-      <button class="btn btn-cancel btn-sm" data-lagid="${id}" data-lagdir="-1" ${isFirst ? 'disabled' : ''} style="${isFirst ? 'opacity:0.25;' : ''}" title="Flyt op">▲</button>
-      <button class="btn btn-cancel btn-sm" data-lagid="${id}" data-lagdir="1"  ${isLast  ? 'disabled' : ''} style="${isLast  ? 'opacity:0.25;' : ''}" title="Flyt ned">▼</button>
-      <span style="font-size:13px;color:#ccc;min-width:140px;">${label}</span>
-      <span style="font-size:11px;color:#444;">${idx === 0 ? 'øverst' : idx === overlayLagOrder.length - 1 ? 'nederst' : ''}</span>
-    </div>`;
-  }).join('');
-
-  const grafRows = overlayLagOrder.map(id => {
+  // Byg afvikling-rækker i lag-rækkefølge (øverst først)
+  const afviklingRows = overlayLagOrder.map(id => {
     const g = OVERLAY_GRAPHICS.find(x => x.id === id);
     if (!g) return '';
-    const url = base + g.file + '?p=' + aktivProjektId;
-    return `<div style="display:flex;align-items:center;gap:10px;padding:4px 0;">
-      <span style="font-size:12px;color:#888;min-width:140px;">${g.label}</span>
-      ${urlRow(url)}
+    const val    = grafiktState[g.triggerKey] || 'out';
+    const isLive = val !== 'out';
+    const url    = base + g.file + '?p=' + aktivProjektId;
+
+    let liveBadge = '';
+    if (isLive) {
+      const liveLabel = (g.type === 'lineup' && val !== 'in') ? val.toUpperCase() : 'LIVE';
+      liveBadge = `<span class="credits-live-badge visible" style="font-size:10px;gap:4px;">
+        <span class="credits-live-dot"></span>${liveLabel}
+      </span>`;
+    }
+
+    let buttons = '';
+    if (g.type === 'simple') {
+      buttons = `
+        <button class="btn btn-save btn-sm"   data-trig="${g.triggerKey}" data-val="in">PÅ</button>
+        <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out" ${!isLive ? 'disabled style="opacity:0.35;"' : ''}>AF</button>`;
+    } else if (g.type === 'lineup') {
+      const isHome = val === 'home';
+      const isAway = val === 'away';
+      buttons = `
+        <button class="btn btn-sm ${isHome ? 'btn-save' : 'btn-cancel'}" data-trig="${g.triggerKey}" data-val="home">HJEM</button>
+        <button class="btn btn-sm ${isAway ? 'btn-save' : 'btn-cancel'}" data-trig="${g.triggerKey}" data-val="away">UDE</button>
+        <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out" ${!isLive ? 'disabled style="opacity:0.35;"' : ''}>AF</button>`;
+    } else if (g.type === 'credits') {
+      buttons = `
+        <button class="btn btn-save btn-sm"   data-trig="${g.triggerKey}" data-val="in">PÅ</button>
+        <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out" ${!isLive ? 'disabled style="opacity:0.35;"' : ''}>AF</button>`;
+    }
+
+    return `<div class="grafik-row">
+      <span class="grafik-label">${g.label}</span>
+      <span class="grafik-live">${liveBadge}</span>
+      <span class="grafik-btns">${buttons}</span>
+      <div class="grafik-url">
+        <span title="${url}">${url}</span>
+        <button class="copy-btn icon-btn" data-copy="${url}" title="Kopiér link">⎘</button>
+      </div>
     </div>`;
   }).join('');
 
-  container.innerHTML = `
-    <div style="padding:20px 0 40px;">
+  // Byg drag-and-drop lag-liste
+  const lagRows = overlayLagOrder.map(id => {
+    const g = OVERLAY_GRAPHICS.find(x => x.id === id);
+    return `<div class="lag-row" draggable="true" data-lagid="${id}">
+      <span class="lag-handle">⠿</span>
+      <span class="lag-label">${g ? g.label : id}</span>
+    </div>`;
+  }).join('');
 
-      <div style="margin-bottom:28px;">
-        <div class="credits-speed-label" style="margin-bottom:10px;">Kombineret overlay (brug dette i vMix)</div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          ${urlRow(base + 'overlay.html?p=' + aktivProjektId)}
+  const overlayUrl = base + 'overlay.html?p=' + aktivProjektId;
+
+  container.innerHTML = `
+    <div class="grafik-wrap">
+
+      <div class="grafik-section">
+        <div class="credits-speed-label" style="margin-bottom:12px;">Afvikling</div>
+        <div id="grafik-afvikling">${afviklingRows}</div>
+      </div>
+
+      <div class="grafik-section">
+        <div class="credits-speed-label" style="margin-bottom:10px;">Kombineret overlay — brug dette i vMix</div>
+        <div class="grafik-url" style="max-width:480px;">
+          <span title="${overlayUrl}">${overlayUrl}</span>
+          <button class="copy-btn icon-btn" data-copy="${overlayUrl}" title="Kopiér link">⎘</button>
         </div>
       </div>
 
-      <div style="margin-bottom:28px;">
-        <div class="credits-speed-label" style="margin-bottom:10px;">Individuelle grafikker</div>
-        ${grafRows}
-      </div>
-
-      <div>
-        <div class="credits-speed-label" style="margin-bottom:10px;">Lag-rækkefølge (øverst → nederst)</div>
-        <div id="overlayLagList">${lagRows}</div>
+      <div class="grafik-section">
+        <div class="credits-speed-label" style="margin-bottom:10px;">Lag-rækkefølge <span style="font-weight:400;letter-spacing:0;text-transform:none;color:#555;">— træk for at omsortere (øverst = forrest)</span></div>
+        <div id="overlayLagList" class="lag-list">${lagRows}</div>
       </div>
 
     </div>`;
 
-  container.querySelectorAll('[data-copy]').forEach(btn => {
-    btn.addEventListener('click', () => copyText(btn.dataset.copy));
-  });
-  container.querySelectorAll('[data-lagid]').forEach(btn => {
+  // Copy-knapper
+  container.querySelectorAll('[data-copy]').forEach(btn =>
+    btn.addEventListener('click', () => copyText(btn.dataset.copy)));
+
+  // Trigger-knapper
+  container.querySelectorAll('[data-trig]').forEach(btn =>
     btn.addEventListener('click', () => {
       if (btn.disabled) return;
-      moveOverlayItem(btn.dataset.lagid, parseInt(btn.dataset.lagdir));
+      setGrafiktTrigger(btn.dataset.trig, btn.dataset.val);
+    }));
+
+  // Drag-and-drop
+  initLagDragDrop();
+}
+
+function initLagDragDrop() {
+  const list = document.getElementById('overlayLagList');
+  if (!list) return;
+  let dragSrcId = null;
+
+  list.querySelectorAll('.lag-row').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      dragSrcId = row.dataset.lagid;
+      e.dataTransfer.effectAllowed = 'move';
+      row.classList.add('dragging');
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      list.querySelectorAll('.lag-row').forEach(r => r.classList.remove('drag-over'));
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      list.querySelectorAll('.lag-row').forEach(r => r.classList.remove('drag-over'));
+      if (row.dataset.lagid !== dragSrcId) row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', e => {
+      e.stopPropagation();
+      row.classList.remove('drag-over');
+      if (!dragSrcId || dragSrcId === row.dataset.lagid) return;
+      const fromIdx = overlayLagOrder.indexOf(dragSrcId);
+      const toIdx   = overlayLagOrder.indexOf(row.dataset.lagid);
+      if (fromIdx < 0 || toIdx < 0) return;
+      const arr = [...overlayLagOrder];
+      arr.splice(fromIdx, 1);
+      arr.splice(toIdx, 0, dragSrcId);
+      overlayLagOrder = arr;
+      renderGrafik();
+      saveOverlayLagOrder();
     });
   });
 }
@@ -2895,9 +2972,14 @@ sbClient.channel('db-changes')
         } else if (p.new.key === 'overlay_lag_order') {
           const raw = p.new.value || '';
           overlayLagOrder = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_LAG_ORDER];
-          renderGrafik();
+          if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
         } else {
           refreshCredits();
+        }
+        // Opdater grafik-tab hvis det er åbent og en trigger-key ændrer sig
+        if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key)) {
+          grafiktState[p.new.key] = p.new.value;
+          if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
         }
       })
   .subscribe();
