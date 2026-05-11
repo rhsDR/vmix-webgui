@@ -2705,8 +2705,10 @@ function applyKampRow(row) {
   };
   const merged = { ...prev, ...data, editMode: false, collapsed: prev.collapsed, buf: prev.buf };
   if (prev.onAirPending) merged.onAir = prev.onAir;
+  const enetChanged = prev.enetpulseId !== data.enetpulseId;
   kampe[i] = merged;
   rerender(i);
+  if (enetChanged) fetchLiveMatches();
 }
 
 function applySubRow(row) {
