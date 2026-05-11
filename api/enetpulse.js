@@ -308,6 +308,7 @@ function normalizeEventDetails(raw, statsRaw, id) {
         name:    e.participant?.name || '',
         shirt:   e.shirt_number || '',
         pos:     posMap[typeFK] || '',
+        rawPos:  parseInt(e.pos || 0),
         enetPos: parseInt(e.enet_pos || 99),
         starter: typeFK >= 1 && typeFK <= 4,
         id:      e.participantFK || e.participant?.participantFK || e.participant?.id || ''
