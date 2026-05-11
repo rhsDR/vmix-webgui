@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/templates/softpix/Template_Pack_1.3/js/spx_interface.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
@@ -24,6 +25,7 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
 #grp-grp13{clip-path:inset(900px 0% 180px 0%);}
 
 </style>
+</head>
 <body>
 <div id="lt-wrap" class="pos-venstre">
   <div id="el2"></div>
@@ -34,11 +36,16 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
   <div id="el7" class="lt-text"><span style="opacity:0">S</span><span style="opacity:0">P</span><span style="opacity:0">O</span><span style="opacity:0">R</span><span style="opacity:0">T</span></div>
   </div>
 </div>
-
+<div id="hiddenSpxData">
+  <div id="f0"></div>
+  <div id="f1"></div>
+  <div id="f2"></div>
+</div>
 <script>
 function clean(v){return(!v||v==='$NA')?'':String(v).trim();}
 window.SPXGroups={"grp13":["el12","el7"]};
 var _WS_PTS=[[0,0],[0.08,0.09],[0.19,0.23],[0.31,0.36],[0.42,0.47],[0.54,0.58],[0.65,0.70],[0.76,0.81],[0.86,0.90],[0.94,0.97],[1.0,1.0]];function _csSteps(n,mode,count){if(!n)return[];if(mode==='one')return Array.from({length:n},function(_,i){return{t:i/n,show:i+1};});if(mode==='multi'){var k=Math.max(1,count||3),st=Math.ceil(n/k);return Array.from({length:st},function(_,i){return{t:i/Math.max(1,st),show:Math.min(n,(i+1)*k)};});}return _WS_PTS.map(function(pt){return{t:pt[0],show:Math.round(pt[1]*n)};});}function _csPlay(id,dur,delay,mode,count,op){var e=document.getElementById(id);if(!e)return;if(e._csT){e._csT.forEach(clearTimeout);e._csT=[];}gsap.set('#'+id,{opacity:1,immediateRender:true});var sp=e.querySelectorAll('span');sp.forEach(function(x){x.style.opacity='0';});e._csT=_csSteps(sp.length,mode,count).map(function(s){return setTimeout(function(){sp.forEach(function(x,i){x.style.opacity=i<s.show?op:'0';});},Math.round(delay*1000+s.t*dur*1000+80));});}
+function _prefetchAndPlay(cb){cb();}
 var _spxVisible=false;
 function _updateContent(data){
   (function(){var t=clean((data&&data.f0!=null)?String(data.f0):document.getElementById('f0').innerText);var _e=document.getElementById('el6');if(!_e)return;if(_e._csT){_e._csT.forEach(clearTimeout);_e._csT=[];}gsap.set('#el6',{opacity:0,immediateRender:true});_e.innerHTML=[...t].map(function(c){var esc=c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':c===' '?'&nbsp;':c;return'<span style="opacity:0">'+esc+'</span>';}).join('');})();
@@ -46,6 +53,8 @@ function _updateContent(data){
   (function(){var r=document.getElementById('el2');var s=document.getElementById('el5');if(r&&s){r.style.left=(s.offsetLeft+-38)+'px';r.style.width=Math.max(1,s.offsetWidth+337)+'px';}})();
   (function(){var v=clean((data&&data.f2!=null)?String(data.f2):document.getElementById('f2').innerText);var w=document.getElementById('lt-wrap');if(w)w.className=v&&v.toLowerCase().includes('jre')?'pos-hoejre':'pos-venstre';})();
 }
+function runTemplateUpdate(data){_updateContent(data);function _apply(){_prefetchAndPlay(function(){setTimeout(runAnimationIN,50);});}if(_spxVisible){runAnimationOUT();setTimeout(_apply,2102);}else{_apply();}}
+window.onSpxUpdate=function(data){_updateContent(data);};
 function runAnimationIN(){_spxVisible=true;
   var tl=gsap.timeline();
   tl.fromTo('#el2',{clipPath:'inset(0% 100% 0% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:1,ease:'power2.inOut'},0);
@@ -74,67 +83,15 @@ function runAnimationOUT(){_spxVisible=false;
   tl.to('#el7',{opacity:0,duration:0.16,ease:'power2.in'},1.728);  tl.to('#grp-grp13',{clipPath:'inset(900px 0% 180px 0%)',duration:0.3,ease:'power2.in'},1.669);
 
 }
-
-// ── SUPABASE POLLING ─────────────────────────────────────────
-const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
-const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
-const SB_HDR  = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Content-Type': 'application/json' };
-
-const pid = new URLSearchParams(window.location.search).get('p') || '';
-const pf  = pid ? '&projekt_id=eq.' + encodeURIComponent(pid) : '';
-
-let _animating   = false;
-let _currentSlot = null;
-
-async function pollTrigger() {
-  if (_animating) return;
-  try {
-    const rows = await fetch(
-      SB_URL + '/rest/v1/settings?select=key,value&key=in.(lt_trigger,lt_slot)' + pf,
-      { headers: SB_HDR }
-    ).then(r => r.json());
-    const trigger = rows.find(r => r.key === 'lt_trigger')?.value;
-    const slot    = rows.find(r => r.key === 'lt_slot')?.value;
-
-    if (trigger === 'in' && (!_spxVisible || slot !== _currentSlot)) {
-      if (!slot) { setTimeout(pollTrigger, 2000); return; }
-      _animating = true;
-      const subRows = await fetch(
-        SB_URL + '/rest/v1/subs?slot=eq.' + slot + '&select=navn,titel' + pf,
-        { headers: SB_HDR }
-      ).then(r => r.json());
-      const sub = subRows[0];
-      if (sub) {
-        const doShow = () => {
-          _currentSlot = slot;
-          _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'venstre' });
-          setTimeout(runAnimationIN, 50);
-          setTimeout(() => { _animating = false; setTimeout(pollTrigger, 2000); }, 2600);
-        };
-        if (_spxVisible) {
-          runAnimationOUT();
-          setTimeout(doShow, 2200);
-        } else {
-          doShow();
-        }
-        return;
-      }
-      _animating = false;
-    } else if (trigger === 'out' && _spxVisible) {
-      _animating = true;
-      runAnimationOUT();
-      setTimeout(() => {
-        _currentSlot = null;
-        _animating   = false;
-        setTimeout(pollTrigger, 2000);
-      }, 2500);
-      return;
-    }
-  } catch (e) { console.error(e); }
-  setTimeout(pollTrigger, 2000);
-}
-
-pollTrigger();
+window.SPXGCTemplateDefinition = {
+  "description": "Lower Third",
+  "DataFields": [
+    {"field":"f0","ftype":"textfield","title":"Felt 6","value":"Badmintonspiller"},
+    {"field":"f1","ftype":"textfield","title":"Felt 5","value":"Victor Axelsen"},
+    {"field":"f2","ftype":"dropdown","title":"Placering","value":"venstre","items":[{"text":"Venstre side","value":"venstre"},{"text":"H\u00f8jre side","value":"h\u00f8jre"}]}
+  ]
+};
 </script>
+
 </body>
 </html>
