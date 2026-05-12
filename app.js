@@ -1295,12 +1295,12 @@ let creditsData = { items: [], speed: 30 };
 let creditNewCounter = 0;
 let creditsTriggerActive = false;
 const OVERLAY_GRAPHICS = [
-  { id: 'lower-third', label: 'Lower Third',     file: 'lower-third.html',    triggerKey: 'lt_trigger',         type: 'lt'      },
-  { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html',       triggerKey: 'breaking_trigger',   type: 'simple'  },
-  { id: 'ticker',      label: 'Ticker',           file: 'ticker-overlay.html', triggerKey: 'ticker_ovl_trigger', type: 'simple'  },
-  { id: 'stilling',    label: 'Stilling',         file: 'stilling.html',       triggerKey: 'stilling_trigger',   type: 'simple'  },
-  { id: 'opstilling',  label: 'Opstilling',       file: 'opstilling.html',     triggerKey: 'lineup_trigger',     type: 'lineup'  },
-  { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits' },
+  { id: 'lower-third', label: 'Lower Third',     file: 'lower-third.html',    triggerKey: 'lt_trigger',         type: 'lt',      color: '#4a9eff' },
+  { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html',       triggerKey: 'breaking_trigger',   type: 'simple',  color: '#ff4444' },
+  { id: 'ticker',      label: 'Ticker',           file: 'ticker-overlay.html', triggerKey: 'ticker_ovl_trigger', type: 'simple',  color: '#aa66ff' },
+  { id: 'stilling',    label: 'Stilling',         file: 'stilling.html',       triggerKey: 'stilling_trigger',   type: 'simple',  color: '#44cc88' },
+  { id: 'opstilling',  label: 'Opstilling',       file: 'opstilling.html',     triggerKey: 'lineup_trigger',     type: 'lineup',  color: '#ff8833' },
+  { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits', color: '#ffcc44' },
 ];
 const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.map(g => g.id);
 let overlayLagOrder = [...DEFAULT_LAG_ORDER];
@@ -1565,7 +1565,7 @@ function renderGrafik() {
       ? (grafiktState[og.triggerKey] || 'out') !== 'out' || lineupOnAirMatchId !== null
       : (grafiktState[og.triggerKey] || 'out') !== 'out';
     const dot = isOnAir ? `<span class="grafik-v2-onair"></span>` : '';
-    return `<button class="grafik-v2-tab${isActive ? ' active' : ''}" data-gtab="${og.id}">${og.label.toUpperCase()}${dot}</button>`;
+    return `<button class="grafik-v2-tab${isActive ? ' active' : ''}" data-gtab="${og.id}" style="--tab-color:${og.color}">${og.label.toUpperCase()}${dot}</button>`;
   }).join('');
 
   // ── AKTIVT TAB INDHOLD ──────────────────────────────────────────
@@ -1586,44 +1586,44 @@ function renderGrafik() {
       if (!s.navn && !s.titel) return '';
       const slot    = i + 1;
       const slotAct = isLive && String(activeLtSlot) === String(slot);
-      return `<div class="grafik-sub-row">
-        <span class="grafik-sub-slot">${slot}</span>
-        <span class="grafik-sub-navn${!s.navn ? ' muted' : ''}">${s.navn || '—'}</span>
-        <span class="grafik-sub-titel">${s.titel || ''}</span>
-        <button class="btn btn-sm ${slotAct ? 'btn-save' : 'btn-cancel'} grafik-lt-paa"
-          data-slot="${slot}">${slotAct ? 'PÅ ●' : 'PÅ'}</button>
+      return `<div class="grafik-block${slotAct ? ' active' : ''}" style="--g-color:${g.color}">
+        <span class="grafik-block-num">${slot}</span>
+        <div class="grafik-block-info">
+          <span class="grafik-block-name${!s.navn ? ' muted' : ''}">${s.navn || '—'}</span>
+          ${s.titel ? `<span class="grafik-block-sub">${s.titel}</span>` : ''}
+        </div>
+        <div class="grafik-block-actions">
+          <button class="grafik-btn-af" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
+          <button class="grafik-btn-pa${slotAct ? ' on' : ''} grafik-lt-paa" data-slot="${slot}">PÅ</button>
+        </div>
       </div>`;
     }).filter(Boolean).join('');
-    contentHTML = `
-      <div class="grafik-v2-header">
-        <span class="grafik-v2-content-title">LOWER THIRD</span>
-        ${liveBadge}
-        <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
-      </div>
-      <div class="grafik-sub-list" style="border:none;padding-top:0;">
-        ${subRows || `<div class="grafik-v2-empty">Ingen subs — udfyld i SUBS-fanen</div>`}
-      </div>`;
+    contentHTML = subRows || `<div class="grafik-v2-empty">Ingen subs — udfyld i SUBS-fanen</div>`;
 
   } else if (g.type === 'simple') {
     contentHTML = `
-      <div class="grafik-v2-header">
-        <span class="grafik-v2-content-title">${g.label.toUpperCase()}</span>
-        ${liveBadge}
-      </div>
-      <div class="grafik-v2-simple-btns">
-        <button class="btn btn-save" data-trig="${g.triggerKey}" data-val="in">PÅ</button>
-        <button class="btn btn-cancel" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
+      <div class="grafik-block grafik-block-simple${isLive ? ' active' : ''}" style="--g-color:${g.color}">
+        <div class="grafik-block-info">
+          <span class="grafik-block-name">${g.label.toUpperCase()}</span>
+          <span class="grafik-block-sub"${isLive ? ` style="color:var(--g-color)"` : ''}>${isLive ? '● LIVE' : 'IKKE AKTIV'}</span>
+        </div>
+        <div class="grafik-block-actions">
+          <button class="grafik-btn-af" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
+          <button class="grafik-btn-pa${isLive ? ' on' : ''}" data-trig="${g.triggerKey}" data-val="in">PÅ</button>
+        </div>
       </div>`;
 
   } else if (g.type === 'credits') {
     contentHTML = `
-      <div class="grafik-v2-header">
-        <span class="grafik-v2-content-title">CREDITS</span>
-        ${liveBadge}
-      </div>
-      <div class="grafik-v2-simple-btns">
-        <button class="btn btn-save" data-trig="${g.triggerKey}" data-val="in">PÅ</button>
-        <button class="btn btn-cancel" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
+      <div class="grafik-block grafik-block-simple${isLive ? ' active' : ''}" style="--g-color:${g.color}">
+        <div class="grafik-block-info">
+          <span class="grafik-block-name">CREDITS</span>
+          <span class="grafik-block-sub"${isLive ? ` style="color:var(--g-color)"` : ''}>${isLive ? '● LIVE' : 'IKKE AKTIV'}</span>
+        </div>
+        <div class="grafik-block-actions">
+          <button class="grafik-btn-af" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
+          <button class="grafik-btn-pa${isLive ? ' on' : ''}" data-trig="${g.triggerKey}" data-val="in">PÅ</button>
+        </div>
       </div>`;
 
   } else if (g.type === 'lineup') {
@@ -1640,24 +1640,20 @@ function renderGrafik() {
         const awayActive = isActive && val === 'away';
         const hjemNavn   = k.hold1Lang || k.hold1Kort || '—';
         const udeNavn    = k.hold2Lang || k.hold2Kort || '—';
-        const badge = isActive
-          ? `<span class="credits-live-badge visible" style="font-size:10px;flex-shrink:0;"><span class="credits-live-dot"></span>${homeActive ? 'HJEM' : 'UDE'}</span>`
-          : `<span style="width:60px;flex-shrink:0;"></span>`;
-        return `<div class="grafik-sub-row">
-          ${badge}
-          <span class="grafik-lineup-match">${esc(hjemNavn)} <span class="muted">vs</span> ${esc(udeNavn)}</span>
-          <button class="btn btn-sm ${homeActive ? 'btn-save' : 'btn-cancel'} grafik-lu-btn" data-matchid="${matchId}" data-side="home">HJEM</button>
-          <button class="btn btn-sm ${awayActive ? 'btn-save' : 'btn-cancel'} grafik-lu-btn" data-matchid="${matchId}" data-side="away">UDE</button>
+        return `<div class="grafik-block${isActive ? ' active' : ''}" style="--g-color:${g.color}">
+          <div class="grafik-block-info">
+            <span class="grafik-block-name">${esc(hjemNavn)} <span class="muted">vs</span> ${esc(udeNavn)}</span>
+            ${isActive ? `<span class="grafik-block-sub" style="color:var(--g-color)">● ${homeActive ? 'HJEM' : 'UDE'}</span>` : ''}
+          </div>
+          <div class="grafik-block-actions">
+            <button class="grafik-btn-af grafik-lu-off-btn"${!isOnAir ? ' disabled' : ''}>AF</button>
+            <button class="grafik-btn-pa${homeActive ? ' on' : ''} grafik-lu-btn" data-matchid="${matchId}" data-side="home">HJEM</button>
+            <button class="grafik-btn-pa${awayActive ? ' on' : ''} grafik-lu-btn" data-matchid="${matchId}" data-side="away">UDE</button>
+          </div>
         </div>`;
       }).join('');
     }
-    contentHTML = `
-      <div class="grafik-v2-header">
-        <span class="grafik-v2-content-title">OPSTILLING</span>
-        ${liveBadge}
-        <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out"${!isOnAir ? ' disabled' : ''}>AF</button>
-      </div>
-      <div class="grafik-sub-list" style="border:none;padding-top:0;">${matchRows}</div>`;
+    contentHTML = matchRows;
   }
 
   // ── HØJRE PANEL: PREVIEW ─────────────────────────────────────────
@@ -1796,6 +1792,9 @@ function renderGrafik() {
 
   container.querySelectorAll('.grafik-lu-btn').forEach(btn =>
     btn.addEventListener('click', () => sendLineupSide(btn.dataset.matchid, btn.dataset.side)));
+
+  container.querySelectorAll('.grafik-lu-off-btn').forEach(btn =>
+    btn.addEventListener('click', () => { if (!btn.disabled) sendLineupOff(); }));
 
   container.querySelectorAll('.grafik-lt-paa').forEach(btn =>
     btn.addEventListener('click', async () => {
