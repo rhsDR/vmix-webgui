@@ -1694,8 +1694,8 @@ function renderGrafik() {
       <div class="grafik-preview-box">
         <iframe class="grafik-preview-iframe" src="${prvSrc}"></iframe>
       </div>
-      <button class="grafik-btn-out" id="grafik-prw-out-btn" style="width:100%;margin-top:6px;">&lt; PRW UD</button>
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+        <button class="grafik-btn-out" id="grafik-prw-out-btn" style="flex:1;font-size:10px;">&lt; PRW UD</button>
         <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${prvSrc}">Kopiér preview URL ⎘</button>
         <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${combinedUrl}">vMix overlay URL ⎘</button>
       </div>
