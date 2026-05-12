@@ -1301,7 +1301,6 @@ const OVERLAY_GRAPHICS = [
   { id: 'stilling',    label: 'Stilling',         file: 'stilling.html',       triggerKey: 'stilling_trigger',   type: 'simple',  color: '#44cc88' },
   { id: 'opstilling',  label: 'Opstilling',       file: 'opstilling.html',     triggerKey: 'lineup_trigger',     type: 'lineup',  color: '#ff8833' },
   { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits',   color: '#ffcc44' },
-  { id: 'vmixcalls',  label: 'vMix Calls',       file: null,                  triggerKey: null,                 type: 'vmixcalls', color: '#a855f7' },
 ];
 const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.filter(g => g.file !== null).map(g => g.id);
 let overlayLagOrder = [...DEFAULT_LAG_ORDER];
@@ -1607,7 +1606,28 @@ function renderGrafik() {
         </div>
       </div>`;
     }).filter(Boolean).join('');
-    contentHTML = subRows || `<div class="grafik-v2-empty">Ingen subs — udfyld i SUBS-fanen</div>`;
+    const vmixRows = vmixCalls.map((c, i) => {
+      if (!c.navn && !c.link) return '';
+      const prvId = `vmix-${i}`;
+      return `<div class="grafik-block" style="--g-color:#a855f7">
+        <span class="grafik-block-num">${i + 1}</span>
+        <div class="grafik-block-info">
+          <span class="grafik-block-name${!c.navn ? ' muted' : ''}">${esc(c.navn) || '—'}</span>
+          ${c.titel ? `<span class="grafik-block-sub">${esc(c.titel)}</span>` : ''}
+        </div>
+        <div class="grafik-block-actions">
+          <button class="grafik-btn-prw${grafiktActivePrvKey === prvId ? ' active' : ''}" data-prv-type="vmix" data-prv-id="${prvId}">PRW</button>
+          <button class="grafik-btn-out" disabled>&lt; OUT</button>
+          <button class="grafik-btn-in grafik-vmix-call-btn" data-idx="${i}"${!c.link ? ' disabled' : ''}>&gt; IN</button>
+        </div>
+      </div>`;
+    }).filter(Boolean).join('');
+
+    const vmixSection = vmixRows
+      ? `<div class="grafik-section-head">VMIX CALLS</div>${vmixRows}`
+      : '';
+
+    contentHTML = (subRows || `<div class="grafik-v2-empty">Ingen subs — udfyld i SUBS-fanen</div>`) + vmixSection;
 
   } else if (g.type === 'simple') {
     contentHTML = `
@@ -1666,24 +1686,6 @@ function renderGrafik() {
     }
     contentHTML = matchRows;
 
-  } else if (g.type === 'vmixcalls') {
-    const callRows = vmixCalls.map((c, i) => {
-      if (!c.navn && !c.link) return '';
-      const prvId = `vmix-${i}`;
-      return `<div class="grafik-block" style="--g-color:${g.color}">
-        <span class="grafik-block-num">${i + 1}</span>
-        <div class="grafik-block-info">
-          <span class="grafik-block-name${!c.navn ? ' muted' : ''}">${esc(c.navn) || '—'}</span>
-          ${c.titel ? `<span class="grafik-block-sub">${esc(c.titel)}</span>` : ''}
-        </div>
-        <div class="grafik-block-actions">
-          <button class="grafik-btn-prw${grafiktActivePrvKey === prvId ? ' active' : ''}" data-prv-type="vmix" data-prv-id="${prvId}">PRW</button>
-          <button class="grafik-btn-out" disabled>&lt; OUT</button>
-          <button class="grafik-btn-in grafik-vmix-call-btn" data-idx="${i}"${!c.link ? ' disabled' : ''}>&gt; IN</button>
-        </div>
-      </div>`;
-    }).filter(Boolean).join('');
-    contentHTML = callRows || `<div class="grafik-v2-empty">Ingen vMix Calls — udfyld i SUBS-fanen</div>`;
   }
 
   // ── HØJRE PANEL: PREVIEW ─────────────────────────────────────────
