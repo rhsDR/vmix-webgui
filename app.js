@@ -1607,7 +1607,7 @@ function renderGrafik() {
       </div>`;
     }).filter(Boolean).join('');
     const vmixRows = vmixCalls.map((c, i) => {
-      if (!c.navn && !c.link) return '';
+      if (!c.navn) return '';
       const prvId = `vmix-${i}`;
       return `<div class="grafik-block" style="--g-color:#a855f7">
         <span class="grafik-block-num">${i + 1}</span>
@@ -1862,7 +1862,7 @@ function renderGrafik() {
   container.querySelectorAll('.grafik-vmix-call-btn').forEach(btn =>
     btn.addEventListener('click', () => {
       const c = vmixCalls[+btn.dataset.idx];
-      if (c?.link) fetch(c.link).catch(() => toast('vMix Call fejlede', 'err'));
+      if (c?.link) { const img = new Image(); img.src = c.link; }
     }));
 
   container.querySelectorAll('[data-copy]').forEach(btn =>
