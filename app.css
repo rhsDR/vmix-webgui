@@ -1411,12 +1411,12 @@
     .lag-label { font-size: 13px; color: #ccc; }
 
     /* ── GRAFIK V2 — to-kolonnet layout ─────────────────────── */
-    #tab-grafik { padding: 0 clamp(8px, 22vw, 200px); overflow: hidden; }
+    #tab-grafik { padding: 20px clamp(8px, 22vw, 340px); overflow: hidden; }
 
     .grafik-v2-wrap {
       display: grid;
       grid-template-columns: 1fr 420px;
-      height: calc(100vh - 130px);
+      height: calc(100vh - 170px);
       overflow: hidden;
     }
     .grafik-v2-left {
@@ -1440,12 +1440,8 @@
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
-      padding: 10px 16px;
-      border-bottom: 1px solid #1a1a1a;
-      background: #0d0d0d;
-      position: sticky;
-      top: 0;
-      z-index: 2;
+      padding: 0 0 10px;
+      border-bottom: 1px solid #1e1e1e;
     }
     .grafik-v2-tab {
       background: transparent;
