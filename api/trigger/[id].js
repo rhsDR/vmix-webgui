@@ -6,6 +6,8 @@ const ALLOWED_KEYS = [
   'stilling_trigger',
   'lineup_trigger',
   'credits_trigger',
+  'lt_trigger',
+  'lt_slot',
 ];
 
 const HEADERS = {
@@ -15,6 +17,15 @@ const HEADERS = {
   'Prefer': 'return=minimal,resolution=merge-duplicates'
 };
 
+async function upsert(pid, key, value) {
+  const res = await fetch(`${SB_URL}/rest/v1/settings`, {
+    method: 'POST',
+    headers: HEADERS,
+    body: JSON.stringify({ projekt_id: pid, key, value })
+  });
+  if (!res.ok) throw new Error('Supabase fejl ' + res.status);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -23,18 +34,18 @@ export default async function handler(req, res) {
 
   const key   = req.query.key   || '';
   const value = req.query.value || '';
+  const slot  = req.query.slot  || '';
 
   if (!ALLOWED_KEYS.includes(key)) return res.status(400).json({ error: 'Ukendt key: ' + key });
   if (!value) return res.status(400).json({ error: 'value mangler' });
 
   try {
-    const sbRes = await fetch(`${SB_URL}/rest/v1/settings`, {
-      method: 'POST',
-      headers: HEADERS,
-      body: JSON.stringify({ projekt_id: id, key, value })
-    });
-    if (!sbRes.ok) throw new Error('Supabase fejl ' + sbRes.status);
-    res.status(200).json({ ok: true, key, value });
+    // Lower Third med slot: sæt lt_slot + lt_trigger i én request
+    if (key === 'lt_trigger' && value === 'in' && slot) {
+      await upsert(id, 'lt_slot', String(slot));
+    }
+    await upsert(id, key, value);
+    res.status(200).json({ ok: true, key, value, slot: slot || undefined });
   } catch (err) {
     res.status(502).json({ error: String(err.message) });
   }

@@ -1681,21 +1681,21 @@ function renderGrafik() {
     const slotRows = subs.map((s, i) => {
       if (!s.navn && !s.titel) return '';
       const slot = i + 1;
-      const url  = `${origin}/api/lt-trigger/${pid}?slot=${slot}`;
+      const url  = `${origin}/api/trigger/${pid}?key=lt_trigger&value=in&slot=${slot}`;
       return `<div class="grafik-companion-row">
         <span class="grafik-companion-lbl">Slot ${slot}</span>
         <span class="grafik-companion-url" title="${url}">${url}</span>
         <button class="copy-btn icon-btn" data-copy="${url}">⎘</button>
       </div>`;
     }).filter(Boolean).join('');
-    const afUrl = `${origin}/api/lt-trigger/${pid}`;
+    const afUrl = `${origin}/api/trigger/${pid}?key=lt_trigger&value=out`;
     companionRows = slotRows + `<div class="grafik-companion-row">
       <span class="grafik-companion-lbl">AF</span>
       <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
       <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
     </div>`;
   } else if (g.type === 'credits') {
-    const paUrl = `${origin}/api/credits-trigger/${pid}`;
+    const paUrl = `${origin}/api/trigger/${pid}?key=credits_trigger&value=in`;
     const afUrl = `${origin}/api/trigger/${pid}?key=credits_trigger&value=out`;
     companionRows = `
       <div class="grafik-companion-row">
