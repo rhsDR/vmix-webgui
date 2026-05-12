@@ -1305,6 +1305,7 @@ const OVERLAY_GRAPHICS = [
 const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.map(g => g.id);
 let overlayLagOrder = [...DEFAULT_LAG_ORDER];
 let grafiktState    = {}; // { triggerKey: currentValue }
+let grafiktActiveSubTab = 'lower-third';
 
 function updateCreditsSendBtn() {
   const badge = document.getElementById('creditsTriggerBadge');
@@ -1550,140 +1551,252 @@ function renderGrafik() {
   const container = document.getElementById('grafikList');
   if (!container) return;
 
-  const base = 'https://vmix-control.vercel.app/';
+  const origin = window.location.origin;
+  const pid    = aktivProjektId;
 
-  // Byg afvikling-rækker i lag-rækkefølge (øverst først)
-  const afviklingRows = overlayLagOrder.map(id => {
-    const g = OVERLAY_GRAPHICS.find(x => x.id === id);
-    if (!g) return '';
-    const val    = grafiktState[g.triggerKey] || 'out';
-    const isLive = val !== 'out';
-    const url    = base + g.file + '?p=' + aktivProjektId;
+  // Find aktivt grafik-objekt
+  let g = OVERLAY_GRAPHICS.find(x => x.id === grafiktActiveSubTab);
+  if (!g) { grafiktActiveSubTab = OVERLAY_GRAPHICS[0].id; g = OVERLAY_GRAPHICS[0]; }
 
-    let liveBadge = '';
-    if (isLive) {
-      const liveLabel = g.type === 'lineup'
-        ? (val === 'home' ? 'HJEM' : val === 'away' ? 'UDE' : 'LIVE')
-        : 'LIVE';
-      liveBadge = `<span class="credits-live-badge visible" style="font-size:10px;gap:4px;">
-        <span class="credits-live-dot"></span>${liveLabel}
-      </span>`;
-    }
-
-    let buttons = '';
-    let subRows = '';
-    if (g.type === 'simple' || g.type === 'lt') {
-      buttons = `
-        <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out" ${!isLive ? 'disabled style="opacity:0.35;"' : ''}>AF</button>`;
-    } else if (g.type === 'lineup') {
-      const isOnAir = isLive || lineupOnAirMatchId !== null;
-      buttons = `<button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out" ${!isOnAir ? 'disabled style="opacity:0.35;"' : ''}>AF</button>`;
-      const dashKampe = kampe.filter(k => k.enetpulseId);
-      if (!dashKampe.length) {
-        subRows = `<div style="font-size:12px;color:#444;padding:6px 0 6px 8px;">Ingen kampe i Dashboard — tilføj kampe i KAMPE-fanen</div>`;
-      } else {
-        subRows = dashKampe.map(k => {
-          const matchId    = String(k.enetpulseId);
-          const isActive   = String(lineupOnAirMatchId) === matchId;
-          const homeActive = isActive && val === 'home';
-          const awayActive = isActive && val === 'away';
-          const hjemNavn   = k.hold1Lang || k.hold1Kort || '—';
-          const udeNavn    = k.hold2Lang || k.hold2Kort || '—';
-          const badge      = isActive
-            ? `<span class="credits-live-badge visible" style="font-size:10px;flex-shrink:0;"><span class="credits-live-dot"></span>${homeActive ? 'HJEM' : 'UDE'}</span>`
-            : `<span style="width:60px;flex-shrink:0;"></span>`;
-          return `<div class="grafik-sub-row">
-            ${badge}
-            <span class="grafik-lineup-match">${esc(hjemNavn)} <span class="muted">vs</span> ${esc(udeNavn)}</span>
-            <button class="btn btn-sm ${homeActive ? 'btn-save' : 'btn-cancel'} grafik-lu-btn" data-matchid="${matchId}" data-side="home">HJEM</button>
-            <button class="btn btn-sm ${awayActive ? 'btn-save' : 'btn-cancel'} grafik-lu-btn" data-matchid="${matchId}" data-side="away">UDE</button>
-          </div>`;
-        }).join('');
-      }
-    } else if (g.type === 'credits') {
-      buttons = `
-        <button class="btn btn-save btn-sm"   data-trig="${g.triggerKey}" data-val="in">PÅ</button>
-        <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out" ${!isLive ? 'disabled style="opacity:0.35;"' : ''}>AF</button>`;
-    }
-
-    if (g.type === 'lt') {
-      const activeLtSlot = grafiktState['lt_slot'] || '';
-      subRows = subs.map((s, i) => {
-        if (!s.navn && !s.titel) return '';
-        const slot      = i + 1;
-        const isActive  = isLive && String(activeLtSlot) === String(slot);
-        return `<div class="grafik-sub-row">
-          <span class="grafik-sub-slot">${slot}</span>
-          <span class="grafik-sub-navn ${!s.navn ? 'muted' : ''}">${s.navn || '—'}</span>
-          <span class="grafik-sub-titel">${s.titel || ''}</span>
-          <button class="btn btn-sm ${isActive ? 'btn-save' : 'btn-cancel'} grafik-lt-paa"
-            data-slot="${slot}" title="${isActive ? 'Aktiv' : 'Sæt på'}">PÅ</button>
-        </div>`;
-      }).filter(Boolean).join('');
-      if (!subRows) subRows = `<div style="font-size:12px;color:#444;padding:6px 0;">Ingen subs indlæst — udfyld i SUBS-fanen</div>`;
-    }
-
-    return `<div class="grafik-row${g.type === 'lt' ? ' grafik-row--lt' : ''}">
-      <span class="grafik-label">${g.label}</span>
-      <span class="grafik-live">${liveBadge}</span>
-      <span class="grafik-btns">${buttons}</span>
-      <div class="grafik-url">
-        <span title="${url}">${url}</span>
-        <button class="copy-btn icon-btn" data-copy="${url}" title="Kopiér link">⎘</button>
-      </div>
-    </div>${subRows ? `<div class="grafik-sub-list">${subRows}</div>` : ''}`;
+  // ── SUB-TABS ────────────────────────────────────────────────────
+  const subTabsHTML = OVERLAY_GRAPHICS.map(og => {
+    const isActive = og.id === grafiktActiveSubTab;
+    const isOnAir  = og.type === 'lineup'
+      ? (grafiktState[og.triggerKey] || 'out') !== 'out' || lineupOnAirMatchId !== null
+      : (grafiktState[og.triggerKey] || 'out') !== 'out';
+    const dot = isOnAir ? `<span class="grafik-v2-onair"></span>` : '';
+    return `<button class="grafik-v2-tab${isActive ? ' active' : ''}" data-gtab="${og.id}">${og.label.toUpperCase()}${dot}</button>`;
   }).join('');
 
-  // Byg drag-and-drop lag-liste
+  // ── AKTIVT TAB INDHOLD ──────────────────────────────────────────
+  const val    = grafiktState[g.triggerKey] || 'out';
+  const isLive = val !== 'out';
+
+  const liveBadge = isLive
+    ? `<span class="credits-live-badge visible" style="font-size:10px;gap:4px;"><span class="credits-live-dot"></span>${
+        g.type === 'lineup' ? (val === 'home' ? 'HJEM' : 'UDE') : 'LIVE'
+      }</span>`
+    : '';
+
+  let contentHTML = '';
+
+  if (g.type === 'lt') {
+    const activeLtSlot = grafiktState['lt_slot'] || '';
+    const subRows = subs.map((s, i) => {
+      if (!s.navn && !s.titel) return '';
+      const slot    = i + 1;
+      const slotAct = isLive && String(activeLtSlot) === String(slot);
+      return `<div class="grafik-sub-row">
+        <span class="grafik-sub-slot">${slot}</span>
+        <span class="grafik-sub-navn${!s.navn ? ' muted' : ''}">${s.navn || '—'}</span>
+        <span class="grafik-sub-titel">${s.titel || ''}</span>
+        <button class="btn btn-sm ${slotAct ? 'btn-save' : 'btn-cancel'} grafik-lt-paa"
+          data-slot="${slot}">${slotAct ? 'PÅ ●' : 'PÅ'}</button>
+      </div>`;
+    }).filter(Boolean).join('');
+    contentHTML = `
+      <div class="grafik-v2-header">
+        <span class="grafik-v2-content-title">LOWER THIRD</span>
+        ${liveBadge}
+        <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
+      </div>
+      <div class="grafik-sub-list" style="border:none;padding-top:0;">
+        ${subRows || `<div class="grafik-v2-empty">Ingen subs — udfyld i SUBS-fanen</div>`}
+      </div>`;
+
+  } else if (g.type === 'simple') {
+    contentHTML = `
+      <div class="grafik-v2-header">
+        <span class="grafik-v2-content-title">${g.label.toUpperCase()}</span>
+        ${liveBadge}
+      </div>
+      <div class="grafik-v2-simple-btns">
+        <button class="btn btn-save" data-trig="${g.triggerKey}" data-val="in">PÅ</button>
+        <button class="btn btn-cancel" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
+      </div>`;
+
+  } else if (g.type === 'credits') {
+    contentHTML = `
+      <div class="grafik-v2-header">
+        <span class="grafik-v2-content-title">CREDITS</span>
+        ${liveBadge}
+      </div>
+      <div class="grafik-v2-simple-btns">
+        <button class="btn btn-save" data-trig="${g.triggerKey}" data-val="in">PÅ</button>
+        <button class="btn btn-cancel" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
+      </div>`;
+
+  } else if (g.type === 'lineup') {
+    const isOnAir   = isLive || lineupOnAirMatchId !== null;
+    const dashKampe = kampe.filter(k => k.enetpulseId);
+    let matchRows;
+    if (!dashKampe.length) {
+      matchRows = `<div class="grafik-v2-empty">Ingen kampe i Dashboard — tilføj i KAMPE-fanen</div>`;
+    } else {
+      matchRows = dashKampe.map(k => {
+        const matchId    = String(k.enetpulseId);
+        const isActive   = String(lineupOnAirMatchId) === matchId;
+        const homeActive = isActive && val === 'home';
+        const awayActive = isActive && val === 'away';
+        const hjemNavn   = k.hold1Lang || k.hold1Kort || '—';
+        const udeNavn    = k.hold2Lang || k.hold2Kort || '—';
+        const badge = isActive
+          ? `<span class="credits-live-badge visible" style="font-size:10px;flex-shrink:0;"><span class="credits-live-dot"></span>${homeActive ? 'HJEM' : 'UDE'}</span>`
+          : `<span style="width:60px;flex-shrink:0;"></span>`;
+        return `<div class="grafik-sub-row">
+          ${badge}
+          <span class="grafik-lineup-match">${esc(hjemNavn)} <span class="muted">vs</span> ${esc(udeNavn)}</span>
+          <button class="btn btn-sm ${homeActive ? 'btn-save' : 'btn-cancel'} grafik-lu-btn" data-matchid="${matchId}" data-side="home">HJEM</button>
+          <button class="btn btn-sm ${awayActive ? 'btn-save' : 'btn-cancel'} grafik-lu-btn" data-matchid="${matchId}" data-side="away">UDE</button>
+        </div>`;
+      }).join('');
+    }
+    contentHTML = `
+      <div class="grafik-v2-header">
+        <span class="grafik-v2-content-title">OPSTILLING</span>
+        ${liveBadge}
+        <button class="btn btn-cancel btn-sm" data-trig="${g.triggerKey}" data-val="out"${!isOnAir ? ' disabled' : ''}>AF</button>
+      </div>
+      <div class="grafik-sub-list" style="border:none;padding-top:0;">${matchRows}</div>`;
+  }
+
+  // ── HØJRE PANEL: PREVIEW ─────────────────────────────────────────
+  const overlayUrl  = `${origin}/${g.file}?p=${pid}`;
+  const combinedUrl = `${origin}/overlay.html?p=${pid}`;
+  const previewHTML = `
+    <div>
+      <div class="grafik-companion-head" style="margin-bottom:8px;">PREVIEW</div>
+      <div class="grafik-preview-box">
+        <iframe class="grafik-preview-iframe" src="${overlayUrl}"></iframe>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+        <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${overlayUrl}">Kopiér overlay URL ⎘</button>
+        <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${combinedUrl}">vMix overlay URL ⎘</button>
+      </div>
+    </div>`;
+
+  // ── HØJRE PANEL: COMPANION URLS ──────────────────────────────────
+  let companionRows = '';
+  if (g.type === 'lt') {
+    const slotRows = subs.map((s, i) => {
+      if (!s.navn && !s.titel) return '';
+      const slot = i + 1;
+      const url  = `${origin}/api/lt-trigger/${pid}?slot=${slot}`;
+      return `<div class="grafik-companion-row">
+        <span class="grafik-companion-lbl">Slot ${slot}</span>
+        <span class="grafik-companion-url" title="${url}">${url}</span>
+        <button class="copy-btn icon-btn" data-copy="${url}">⎘</button>
+      </div>`;
+    }).filter(Boolean).join('');
+    const afUrl = `${origin}/api/lt-trigger/${pid}`;
+    companionRows = slotRows + `<div class="grafik-companion-row">
+      <span class="grafik-companion-lbl">AF</span>
+      <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
+      <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
+    </div>`;
+  } else if (g.type === 'credits') {
+    const paUrl = `${origin}/api/credits-trigger/${pid}`;
+    const afUrl = `${origin}/api/trigger/${pid}?key=credits_trigger&value=out`;
+    companionRows = `
+      <div class="grafik-companion-row">
+        <span class="grafik-companion-lbl">PÅ</span>
+        <span class="grafik-companion-url" title="${paUrl}">${paUrl}</span>
+        <button class="copy-btn icon-btn" data-copy="${paUrl}">⎘</button>
+      </div>
+      <div class="grafik-companion-row">
+        <span class="grafik-companion-lbl">AF</span>
+        <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
+        <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
+      </div>`;
+  } else if (g.type === 'lineup') {
+    const hjemUrl = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=home`;
+    const udeUrl  = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=away`;
+    const afUrl   = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=out`;
+    companionRows = `
+      <div class="grafik-companion-row">
+        <span class="grafik-companion-lbl">HJEM</span>
+        <span class="grafik-companion-url" title="${hjemUrl}">${hjemUrl}</span>
+        <button class="copy-btn icon-btn" data-copy="${hjemUrl}">⎘</button>
+      </div>
+      <div class="grafik-companion-row">
+        <span class="grafik-companion-lbl">UDE</span>
+        <span class="grafik-companion-url" title="${udeUrl}">${udeUrl}</span>
+        <button class="copy-btn icon-btn" data-copy="${udeUrl}">⎘</button>
+      </div>
+      <div class="grafik-companion-row">
+        <span class="grafik-companion-lbl">AF</span>
+        <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
+        <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
+      </div>`;
+  } else {
+    const paUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=in`;
+    const afUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=out`;
+    companionRows = `
+      <div class="grafik-companion-row">
+        <span class="grafik-companion-lbl">PÅ</span>
+        <span class="grafik-companion-url" title="${paUrl}">${paUrl}</span>
+        <button class="copy-btn icon-btn" data-copy="${paUrl}">⎘</button>
+      </div>
+      <div class="grafik-companion-row">
+        <span class="grafik-companion-lbl">AF</span>
+        <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
+        <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
+      </div>`;
+  }
+  const companionHTML = `
+    <div class="grafik-companion-section">
+      <div class="grafik-companion-head">COMPANION (HTTP POST)</div>
+      ${companionRows}
+    </div>`;
+
+  // ── HØJRE PANEL: LAG-RÆKKEFØLGE ─────────────────────────────────
   const lagRows = overlayLagOrder.map(id => {
-    const g = OVERLAY_GRAPHICS.find(x => x.id === id);
+    const og = OVERLAY_GRAPHICS.find(x => x.id === id);
     return `<div class="lag-row" draggable="true" data-lagid="${id}">
       <span class="lag-handle">⠿</span>
-      <span class="lag-label">${g ? g.label : id}</span>
+      <span class="lag-label">${og ? og.label : id}</span>
     </div>`;
   }).join('');
+  const lagHTML = `
+    <details class="grafik-lag-details">
+      <summary class="grafik-lag-summary">▸ LAG-RÆKKEFØLGE</summary>
+      <div style="font-size:11px;color:#444;margin:8px 0 10px;">Øverst = forrest i vMix overlay. Træk for at omsortere.</div>
+      <div id="overlayLagList" class="lag-list">${lagRows}</div>
+    </details>`;
 
-  const overlayUrl = base + 'overlay.html?p=' + aktivProjektId;
-
+  // ── RENDER ───────────────────────────────────────────────────────
   container.innerHTML = `
-    <div class="grafik-wrap">
-
-      <div class="grafik-section">
-        <div class="credits-speed-label" style="margin-bottom:12px;">Afvikling</div>
-        <div id="grafik-afvikling">${afviklingRows}</div>
+    <div class="grafik-v2-wrap">
+      <div class="grafik-v2-left">
+        <div class="grafik-v2-subtabs">${subTabsHTML}</div>
+        <div class="grafik-v2-content">${contentHTML}</div>
       </div>
-
-      <div class="grafik-section">
-        <div class="credits-speed-label" style="margin-bottom:10px;">Kombineret overlay — brug dette i vMix</div>
-        <div class="grafik-url" style="max-width:480px;">
-          <span title="${overlayUrl}">${overlayUrl}</span>
-          <button class="copy-btn icon-btn" data-copy="${overlayUrl}" title="Kopiér link">⎘</button>
-        </div>
+      <div class="grafik-v2-right">
+        ${previewHTML}
+        ${companionHTML}
+        ${lagHTML}
       </div>
-
-      <div class="grafik-section">
-        <div class="credits-speed-label" style="margin-bottom:10px;">Lag-rækkefølge <span style="font-weight:400;letter-spacing:0;text-transform:none;color:#555;">— træk for at omsortere (øverst = forrest)</span></div>
-        <div id="overlayLagList" class="lag-list">${lagRows}</div>
-      </div>
-
     </div>`;
 
-  // Copy-knapper
+  // ── EVENT LISTENERS ──────────────────────────────────────────────
+  container.querySelectorAll('.grafik-v2-tab').forEach(btn =>
+    btn.addEventListener('click', () => {
+      grafiktActiveSubTab = btn.dataset.gtab;
+      renderGrafik();
+    }));
+
   container.querySelectorAll('[data-copy]').forEach(btn =>
     btn.addEventListener('click', () => copyText(btn.dataset.copy)));
 
-  // Trigger-knapper (generiske)
   container.querySelectorAll('[data-trig]').forEach(btn =>
     btn.addEventListener('click', () => {
       if (btn.disabled) return;
       setGrafiktTrigger(btn.dataset.trig, btn.dataset.val);
     }));
 
-  // Opstilling HJEM/UDE per kamp
   container.querySelectorAll('.grafik-lu-btn').forEach(btn =>
     btn.addEventListener('click', () => sendLineupSide(btn.dataset.matchid, btn.dataset.side)));
 
-  // Lower Third PÅ-knapper (per sub-slot)
   container.querySelectorAll('.grafik-lt-paa').forEach(btn =>
     btn.addEventListener('click', async () => {
       const slot = btn.dataset.slot;
@@ -1696,7 +1809,6 @@ function renderGrafik() {
       } catch { toast('Fejl ved lower third trigger', 'err'); }
     }));
 
-  // Drag-and-drop
   initLagDragDrop();
 }
 

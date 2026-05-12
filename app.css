@@ -1410,6 +1410,149 @@
     }
     .lag-label { font-size: 13px; color: #ccc; }
 
+    /* ── GRAFIK V2 — to-kolonnet layout ─────────────────────── */
+    #tab-grafik { padding: 0; overflow: hidden; }
+
+    .grafik-v2-wrap {
+      display: grid;
+      grid-template-columns: 1fr 290px;
+      height: calc(100vh - 130px);
+      overflow: hidden;
+    }
+    .grafik-v2-left {
+      overflow-y: auto;
+      height: 100%;
+    }
+    .grafik-v2-right {
+      height: 100%;
+      overflow-y: auto;
+      border-left: 1px solid #1a1a1a;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Sub-tabs */
+    .grafik-v2-subtabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 10px 16px;
+      border-bottom: 1px solid #1a1a1a;
+      background: #0d0d0d;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .grafik-v2-tab {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #555;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 6px 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: color 0.15s;
+    }
+    .grafik-v2-tab:hover { color: #aaa; }
+    .grafik-v2-tab.active { color: #fff; border-bottom-color: var(--orange); }
+    .grafik-v2-onair {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--red);
+      display: inline-block;
+      flex-shrink: 0;
+      animation: pulse-credits 1.4s ease-in-out infinite;
+    }
+
+    /* Tab indhold */
+    .grafik-v2-content { padding: 16px 20px 40px; }
+    .grafik-v2-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .grafik-v2-content-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #777;
+      flex: 1;
+    }
+    .grafik-v2-simple-btns { display: flex; gap: 10px; }
+    .grafik-v2-empty { font-size: 12px; color: #444; padding: 8px 0; }
+
+    /* Preview */
+    .grafik-preview-box {
+      background: #000;
+      border-radius: 4px;
+      overflow: hidden;
+      width: 258px;
+      height: 145px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .grafik-preview-iframe {
+      width: 1920px;
+      height: 1080px;
+      transform: scale(0.13438);
+      transform-origin: top left;
+      border: none;
+      pointer-events: none;
+    }
+
+    /* Companion URLs */
+    .grafik-companion-section { display: flex; flex-direction: column; gap: 5px; }
+    .grafik-companion-head {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #444;
+      margin-bottom: 2px;
+    }
+    .grafik-companion-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .grafik-companion-lbl {
+      font-size: 10px;
+      color: #555;
+      min-width: 48px;
+      flex-shrink: 0;
+    }
+    .grafik-companion-url {
+      font-size: 10px;
+      color: #3a3a3a;
+      font-family: monospace;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Lag-rækkefølge collapsible */
+    .grafik-lag-details { margin-top: auto; border-top: 1px solid #1a1a1a; padding-top: 12px; }
+    .grafik-lag-summary {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #444;
+      cursor: pointer;
+      list-style: none;
+      outline: none;
+    }
+    .grafik-lag-summary::-webkit-details-marker { display: none; }
+    .grafik-lag-details[open] .grafik-lag-summary { color: #888; }
+    .grafik-lag-details .lag-list { max-width: 258px; margin-top: 10px; }
+
     .preview-modal {
       position: fixed;
       inset: 0;
