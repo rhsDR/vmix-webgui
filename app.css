@@ -1529,6 +1529,13 @@
       line-height: 1;
       white-space: nowrap;
     }
+    .grafik-btn-prv {
+      border-color: #2a2a2a;
+      background: transparent;
+      color: #444;
+    }
+    .grafik-btn-prv:hover { border-color: #4a9eff; color: #4a9eff; }
+    .grafik-btn-prv.active { border-color: #4a9eff; color: #4a9eff; background: rgba(74,158,255,0.1); }
     .grafik-btn-af { border-color: #c0392b; background: transparent; color: #c0392b; }
     .grafik-btn-af:hover:not(:disabled) { background: #c0392b; color: #fff; }
     .grafik-btn-af:disabled { opacity: 0.2; cursor: default; }
@@ -1546,7 +1553,8 @@
       flex-shrink: 0;
       position: relative;
     }
-    .grafik-preview-iframe {
+    .grafik-preview-iframe,
+    .grafik-onair-iframe {
       width: 1920px;
       height: 1080px;
       transform: scale(0.17604);

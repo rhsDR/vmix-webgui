@@ -1306,6 +1306,7 @@ const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.map(g => g.id);
 let overlayLagOrder = [...DEFAULT_LAG_ORDER];
 let grafiktState    = {}; // { triggerKey: currentValue }
 let grafiktActiveSubTab = 'lower-third';
+let grafiktPreviewUrl   = '';
 
 function updateCreditsSendBtn() {
   const badge = document.getElementById('creditsTriggerBadge');
@@ -1593,6 +1594,7 @@ function renderGrafik() {
           ${s.titel ? `<span class="grafik-block-sub">${s.titel}</span>` : ''}
         </div>
         <div class="grafik-block-actions">
+          <button class="grafik-btn-prv" data-prv="${overlayUrl}">PRV</button>
           <button class="grafik-btn-af" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
           <button class="grafik-btn-pa${slotAct ? ' on' : ''} grafik-lt-paa" data-slot="${slot}">PÅ</button>
         </div>
@@ -1608,6 +1610,7 @@ function renderGrafik() {
           <span class="grafik-block-sub"${isLive ? ` style="color:var(--g-color)"` : ''}>${isLive ? '● LIVE' : 'IKKE AKTIV'}</span>
         </div>
         <div class="grafik-block-actions">
+          <button class="grafik-btn-prv" data-prv="${overlayUrl}">PRV</button>
           <button class="grafik-btn-af" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
           <button class="grafik-btn-pa${isLive ? ' on' : ''}" data-trig="${g.triggerKey}" data-val="in">PÅ</button>
         </div>
@@ -1621,6 +1624,7 @@ function renderGrafik() {
           <span class="grafik-block-sub"${isLive ? ` style="color:var(--g-color)"` : ''}>${isLive ? '● LIVE' : 'IKKE AKTIV'}</span>
         </div>
         <div class="grafik-block-actions">
+          <button class="grafik-btn-prv" data-prv="${overlayUrl}">PRV</button>
           <button class="grafik-btn-af" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
           <button class="grafik-btn-pa${isLive ? ' on' : ''}" data-trig="${g.triggerKey}" data-val="in">PÅ</button>
         </div>
@@ -1646,6 +1650,7 @@ function renderGrafik() {
             ${isActive ? `<span class="grafik-block-sub" style="color:var(--g-color)">● ${homeActive ? 'HJEM' : 'UDE'}</span>` : ''}
           </div>
           <div class="grafik-block-actions">
+            <button class="grafik-btn-prv" data-prv="${overlayUrl}">PRV</button>
             <button class="grafik-btn-af grafik-lu-off-btn"${!isOnAir ? ' disabled' : ''}>AF</button>
             <button class="grafik-btn-pa${homeActive ? ' on' : ''} grafik-lu-btn" data-matchid="${matchId}" data-side="home">HJEM</button>
             <button class="grafik-btn-pa${awayActive ? ' on' : ''} grafik-lu-btn" data-matchid="${matchId}" data-side="away">UDE</button>
@@ -1659,15 +1664,22 @@ function renderGrafik() {
   // ── HØJRE PANEL: PREVIEW ─────────────────────────────────────────
   const overlayUrl  = `${origin}/${g.file}?p=${pid}`;
   const combinedUrl = `${origin}/overlay.html?p=${pid}`;
+  if (!grafiktPreviewUrl) grafiktPreviewUrl = overlayUrl;
   const previewHTML = `
     <div>
-      <div class="grafik-companion-head" style="margin-bottom:8px;">PREVIEW</div>
+      <div class="grafik-companion-head" style="margin-bottom:6px;">PREVIEW</div>
       <div class="grafik-preview-box">
-        <iframe class="grafik-preview-iframe" src="${overlayUrl}"></iframe>
+        <iframe class="grafik-preview-iframe" src="${grafiktPreviewUrl}"></iframe>
       </div>
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-        <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${overlayUrl}">Kopiér overlay URL ⎘</button>
+        <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${grafiktPreviewUrl}">Kopiér overlay URL ⎘</button>
         <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${combinedUrl}">vMix overlay URL ⎘</button>
+      </div>
+    </div>
+    <div>
+      <div class="grafik-companion-head" style="margin-bottom:6px;">ON AIR</div>
+      <div class="grafik-preview-box">
+        <iframe class="grafik-onair-iframe" src="${combinedUrl}"></iframe>
       </div>
     </div>`;
 
@@ -1778,7 +1790,17 @@ function renderGrafik() {
   container.querySelectorAll('.grafik-v2-tab').forEach(btn =>
     btn.addEventListener('click', () => {
       grafiktActiveSubTab = btn.dataset.gtab;
+      grafiktPreviewUrl = '';
       renderGrafik();
+    }));
+
+  container.querySelectorAll('[data-prv]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      grafiktPreviewUrl = btn.dataset.prv;
+      const iframe = container.querySelector('.grafik-preview-iframe');
+      if (iframe) iframe.src = grafiktPreviewUrl;
+      container.querySelectorAll('[data-prv]').forEach(b =>
+        b.classList.toggle('active', b.dataset.prv === grafiktPreviewUrl));
     }));
 
   container.querySelectorAll('[data-copy]').forEach(btn =>
