@@ -1579,6 +1579,10 @@ function renderGrafik() {
       }</span>`
     : '';
 
+  const overlayUrl  = `${origin}/${g.file}?p=${pid}`;
+  const combinedUrl = `${origin}/overlay.html?p=${pid}`;
+  if (!grafiktPreviewUrl) grafiktPreviewUrl = overlayUrl;
+
   let contentHTML = '';
 
   if (g.type === 'lt') {
@@ -1662,9 +1666,6 @@ function renderGrafik() {
   }
 
   // ── HØJRE PANEL: PREVIEW ─────────────────────────────────────────
-  const overlayUrl  = `${origin}/${g.file}?p=${pid}`;
-  const combinedUrl = `${origin}/overlay.html?p=${pid}`;
-  if (!grafiktPreviewUrl) grafiktPreviewUrl = overlayUrl;
   const previewHTML = `
     <div>
       <div class="grafik-companion-head" style="margin-bottom:6px;">PREVIEW</div>
