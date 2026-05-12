@@ -1415,7 +1415,7 @@
 
     .grafik-v2-wrap {
       display: grid;
-      grid-template-columns: 1fr 370px;
+      grid-template-columns: 1fr 420px;
       height: calc(100vh - 130px);
       overflow: hidden;
     }
@@ -1548,8 +1548,8 @@
       background: #000;
       border-radius: 4px;
       overflow: hidden;
-      width: 338px;
-      height: 190px;
+      width: 388px;
+      height: 218px;
       flex-shrink: 0;
       position: relative;
     }
@@ -1557,7 +1557,7 @@
     .grafik-onair-iframe {
       width: 1920px;
       height: 1080px;
-      transform: scale(0.17604);
+      transform: scale(0.20208);
       transform-origin: top left;
       border: none;
       pointer-events: none;

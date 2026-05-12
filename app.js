@@ -1303,7 +1303,7 @@ const OVERLAY_GRAPHICS = [
   { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits',   color: '#ffcc44' },
   { id: 'vmixcalls',  label: 'vMix Calls',       file: null,                  triggerKey: null,                 type: 'vmixcalls', color: '#a855f7' },
 ];
-const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.map(g => g.id);
+const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.filter(g => g.file !== null).map(g => g.id);
 let overlayLagOrder = [...DEFAULT_LAG_ORDER];
 let grafiktState      = {}; // { triggerKey: currentValue }
 let grafiktActiveSubTab = 'lower-third';
@@ -1782,11 +1782,14 @@ function renderGrafik() {
     </div>`;
 
   // ── HØJRE PANEL: LAG-RÆKKEFØLGE ─────────────────────────────────
-  const lagRows = overlayLagOrder.map(id => {
+  const lagRows = overlayLagOrder.filter(id => {
+    const og = OVERLAY_GRAPHICS.find(x => x.id === id);
+    return og && og.file !== null;
+  }).map(id => {
     const og = OVERLAY_GRAPHICS.find(x => x.id === id);
     return `<div class="lag-row" draggable="true" data-lagid="${id}">
       <span class="lag-handle">⠿</span>
-      <span class="lag-label">${og ? og.label : id}</span>
+      <span class="lag-label">${og.label}</span>
     </div>`;
   }).join('');
   const lagHTML = `
