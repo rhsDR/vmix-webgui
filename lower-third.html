@@ -83,8 +83,10 @@ const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
 const SB_HDR  = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Content-Type': 'application/json' };
 
-const pid = new URLSearchParams(window.location.search).get('p') || '';
-const pf  = pid ? '&projekt_id=eq.' + encodeURIComponent(pid) : '';
+const pid       = new URLSearchParams(window.location.search).get('p') || '';
+const pf        = pid ? '&projekt_id=eq.' + encodeURIComponent(pid) : '';
+const isPreview = new URLSearchParams(window.location.search).has('preview');
+const sfx       = isPreview ? '_prv' : '';
 
 let _animating   = false;
 let _currentSlot = null;
@@ -94,11 +96,11 @@ async function pollTrigger() {
   if (_animating) return;
   try {
     const rows = await fetch(
-      SB_URL + '/rest/v1/settings?select=key,value&key=in.(lt_trigger,lt_slot)' + pf,
+      SB_URL + '/rest/v1/settings?select=key,value&key=in.(lt_trigger' + sfx + ',lt_slot' + sfx + ')' + pf,
       { headers: SB_HDR }
     ).then(r => r.json());
-    const trigger = rows.find(r => r.key === 'lt_trigger')?.value;
-    const slot    = rows.find(r => r.key === 'lt_slot')?.value;
+    const trigger = rows.find(r => r.key === 'lt_trigger' + sfx)?.value;
+    const slot    = rows.find(r => r.key === 'lt_slot'    + sfx)?.value;
 
     if (trigger === 'in' && (!_spxVisible || slot !== _currentSlot)) {
       if (!slot) { setTimeout(pollTrigger, 2000); return; }

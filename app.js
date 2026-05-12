@@ -1581,8 +1581,7 @@ function renderGrafik() {
 
   const overlayUrl       = `${origin}/${g.file}?p=${pid}`;
   const combinedUrl      = `${origin}/overlay.html?p=${pid}`;
-  const previewPid       = pid + '_prv';
-  const previewIframeUrl = `${origin}/${g.file}?p=${previewPid}`;
+  const previewIframeUrl = `${origin}/${g.file}?p=${pid}&preview=1`;
 
   let contentHTML = '';
 
@@ -1797,14 +1796,13 @@ function renderGrafik() {
 
   container.querySelectorAll('[data-prv-type]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const ppid = aktivProjektId + '_prv';
       const type = btn.dataset.prvType;
       try {
         if (type === 'lt') {
-          await sbUpsert('settings', { projekt_id: ppid, key: 'lt_slot',    value: btn.dataset.prvSlot });
-          await sbUpsert('settings', { projekt_id: ppid, key: 'lt_trigger', value: 'in' });
+          await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot_prv',    value: btn.dataset.prvSlot });
+          await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger_prv', value: 'in' });
         } else {
-          await sbUpsert('settings', { projekt_id: ppid, key: btn.dataset.prvKey, value: 'in' });
+          await sbUpsert('settings', { projekt_id: aktivProjektId, key: btn.dataset.prvKey + '_prv', value: 'in' });
         }
         grafiktActivePrvKey = btn.dataset.prvId;
         container.querySelectorAll('[data-prv-type]').forEach(b =>
