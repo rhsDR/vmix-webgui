@@ -1479,69 +1479,69 @@
     .grafik-block {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 11px 16px 11px 14px;
-      margin: 0 0 4px;
-      background: #111;
-      border-left: 3px solid var(--g-color, #333);
-      border-radius: 0 4px 4px 0;
-      transition: background 0.15s;
+      gap: 16px;
+      padding: 10px 12px 10px 16px;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-left: 3px solid var(--g-color, var(--blue));
+      border-radius: 6px;
+      margin-bottom: 10px;
+      min-height: 77px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
-    .grafik-block.active { background: #181818; }
-    .grafik-block-simple { padding: 15px 16px 15px 14px; }
     .grafik-block-num {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
-      color: var(--g-color);
-      min-width: 16px;
-      text-align: center;
+      min-width: 22px;
+      text-align: right;
+      align-self: flex-start;
+      padding-top: 2px;
+      color: var(--g-color, var(--blue));
       flex-shrink: 0;
-      opacity: 0.8;
     }
-    .grafik-block-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .grafik-block-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
     .grafik-block-name {
-      font-size: 13px;
-      color: #ccc;
-      font-weight: 500;
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .grafik-block.active .grafik-block-name { color: #eee; }
+    .grafik-block-name.muted { color: #333; }
     .grafik-block-sub {
-      font-size: 11px;
-      color: #555;
+      font-size: 14px;
+      font-weight: 400;
+      color: #888;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
     .grafik-block-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
-    .grafik-btn-af,
-    .grafik-btn-pa {
-      padding: 5px 11px;
+    .grafik-btn-in,
+    .grafik-btn-out,
+    .grafik-btn-prw {
+      padding: 4px 10px;
+      border-radius: 4px;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.5px;
-      border-radius: 3px;
-      border: 1px solid;
       cursor: pointer;
-      transition: background 0.1s, color 0.1s;
-      line-height: 1;
+      transition: filter 0.15s;
+      border: none;
       white-space: nowrap;
+      line-height: 1.4;
     }
-    .grafik-btn-prv {
-      border-color: #2a2a2a;
-      background: transparent;
-      color: #444;
-    }
-    .grafik-btn-prv:hover { border-color: #4a9eff; color: #4a9eff; }
-    .grafik-btn-prv.active { border-color: #4a9eff; color: #4a9eff; background: rgba(74,158,255,0.1); }
-    .grafik-btn-af { border-color: #c0392b; background: transparent; color: #c0392b; }
-    .grafik-btn-af:hover:not(:disabled) { background: #c0392b; color: #fff; }
-    .grafik-btn-af:disabled { opacity: 0.2; cursor: default; }
-    .grafik-btn-pa { border-color: #27ae60; background: transparent; color: #27ae60; }
-    .grafik-btn-pa:hover:not(:disabled) { background: #27ae60; color: #fff; }
-    .grafik-btn-pa.on { background: #27ae60; color: #fff; }
+    .grafik-btn-in { background: #1a6b32; color: #4ade80; }
+    .grafik-btn-in:hover:not(:disabled) { filter: brightness(1.25); }
+    .grafik-btn-in.on { background: #166534; color: #86efac; }
+    .grafik-btn-in:disabled { opacity: 0.2; cursor: default; }
+    .grafik-btn-out { background: #6b1a1a; color: #f87171; }
+    .grafik-btn-out:hover:not(:disabled) { filter: brightness(1.25); }
+    .grafik-btn-out:disabled { opacity: 0.2; cursor: default; }
+    .grafik-btn-prw { background: #1a2a3a; color: #60a5fa; border: 1px solid #2a4a6a; }
+    .grafik-btn-prw:hover { filter: brightness(1.3); }
+    .grafik-btn-prw.active { background: #1e3a5a; color: #93c5fd; border-color: #60a5fa; }
 
     /* Preview */
     .grafik-preview-box {

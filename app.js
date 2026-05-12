@@ -1300,7 +1300,8 @@ const OVERLAY_GRAPHICS = [
   { id: 'ticker',      label: 'Ticker',           file: 'ticker-overlay.html', triggerKey: 'ticker_ovl_trigger', type: 'simple',  color: '#aa66ff' },
   { id: 'stilling',    label: 'Stilling',         file: 'stilling.html',       triggerKey: 'stilling_trigger',   type: 'simple',  color: '#44cc88' },
   { id: 'opstilling',  label: 'Opstilling',       file: 'opstilling.html',     triggerKey: 'lineup_trigger',     type: 'lineup',  color: '#ff8833' },
-  { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits', color: '#ffcc44' },
+  { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits',   color: '#ffcc44' },
+  { id: 'vmixcalls',  label: 'vMix Calls',       file: null,                  triggerKey: null,                 type: 'vmixcalls', color: '#a855f7' },
 ];
 const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.map(g => g.id);
 let overlayLagOrder = [...DEFAULT_LAG_ORDER];
@@ -1562,9 +1563,11 @@ function renderGrafik() {
   // ── SUB-TABS ────────────────────────────────────────────────────
   const subTabsHTML = OVERLAY_GRAPHICS.map(og => {
     const isActive = og.id === grafiktActiveSubTab;
-    const isOnAir  = og.type === 'lineup'
-      ? (grafiktState[og.triggerKey] || 'out') !== 'out' || lineupOnAirMatchId !== null
-      : (grafiktState[og.triggerKey] || 'out') !== 'out';
+    const isOnAir  = og.triggerKey
+      ? (og.type === 'lineup'
+          ? (grafiktState[og.triggerKey] || 'out') !== 'out' || lineupOnAirMatchId !== null
+          : (grafiktState[og.triggerKey] || 'out') !== 'out')
+      : false;
     const dot = isOnAir ? `<span class="grafik-v2-onair"></span>` : '';
     return `<button class="grafik-v2-tab${isActive ? ' active' : ''}" data-gtab="${og.id}" style="--tab-color:${og.color}">${og.label.toUpperCase()}${dot}</button>`;
   }).join('');
@@ -1591,16 +1594,16 @@ function renderGrafik() {
       if (!s.navn && !s.titel) return '';
       const slot    = i + 1;
       const slotAct = isLive && String(activeLtSlot) === String(slot);
-      return `<div class="grafik-block${slotAct ? ' active' : ''}" style="--g-color:${g.color}">
+      return `<div class="grafik-block" style="--g-color:${g.color}">
         <span class="grafik-block-num">${slot}</span>
         <div class="grafik-block-info">
           <span class="grafik-block-name${!s.navn ? ' muted' : ''}">${s.navn || '—'}</span>
           ${s.titel ? `<span class="grafik-block-sub">${s.titel}</span>` : ''}
         </div>
         <div class="grafik-block-actions">
-          <button class="grafik-btn-prv${grafiktActivePrvKey === 'lt-'+slot ? ' active' : ''}" data-prv-type="lt" data-prv-slot="${slot}" data-prv-id="lt-${slot}">PRV</button>
-          <button class="grafik-btn-af" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
-          <button class="grafik-btn-pa${slotAct ? ' on' : ''} grafik-lt-paa" data-slot="${slot}">PÅ</button>
+          <button class="grafik-btn-prw${grafiktActivePrvKey === 'lt-'+slot ? ' active' : ''}" data-prv-type="lt" data-prv-slot="${slot}" data-prv-id="lt-${slot}">PRW</button>
+          <button class="grafik-btn-out" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>&lt; OUT</button>
+          <button class="grafik-btn-in${slotAct ? ' on' : ''} grafik-lt-paa" data-slot="${slot}">&gt; IN</button>
         </div>
       </div>`;
     }).filter(Boolean).join('');
@@ -1608,29 +1611,29 @@ function renderGrafik() {
 
   } else if (g.type === 'simple') {
     contentHTML = `
-      <div class="grafik-block grafik-block-simple${isLive ? ' active' : ''}" style="--g-color:${g.color}">
+      <div class="grafik-block" style="--g-color:${g.color}">
         <div class="grafik-block-info">
           <span class="grafik-block-name">${g.label.toUpperCase()}</span>
           <span class="grafik-block-sub"${isLive ? ` style="color:var(--g-color)"` : ''}>${isLive ? '● LIVE' : 'IKKE AKTIV'}</span>
         </div>
         <div class="grafik-block-actions">
-          <button class="grafik-btn-prv${grafiktActivePrvKey === g.id ? ' active' : ''}" data-prv-type="simple" data-prv-key="${g.triggerKey}" data-prv-id="${g.id}">PRV</button>
-          <button class="grafik-btn-af" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
-          <button class="grafik-btn-pa${isLive ? ' on' : ''}" data-trig="${g.triggerKey}" data-val="in">PÅ</button>
+          <button class="grafik-btn-prw${grafiktActivePrvKey === g.id ? ' active' : ''}" data-prv-type="simple" data-prv-key="${g.triggerKey}" data-prv-id="${g.id}">PRW</button>
+          <button class="grafik-btn-out" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>&lt; OUT</button>
+          <button class="grafik-btn-in${isLive ? ' on' : ''}" data-trig="${g.triggerKey}" data-val="in">&gt; IN</button>
         </div>
       </div>`;
 
   } else if (g.type === 'credits') {
     contentHTML = `
-      <div class="grafik-block grafik-block-simple${isLive ? ' active' : ''}" style="--g-color:${g.color}">
+      <div class="grafik-block" style="--g-color:${g.color}">
         <div class="grafik-block-info">
           <span class="grafik-block-name">CREDITS</span>
           <span class="grafik-block-sub"${isLive ? ` style="color:var(--g-color)"` : ''}>${isLive ? '● LIVE' : 'IKKE AKTIV'}</span>
         </div>
         <div class="grafik-block-actions">
-          <button class="grafik-btn-prv${grafiktActivePrvKey === g.id ? ' active' : ''}" data-prv-type="credits" data-prv-key="${g.triggerKey}" data-prv-id="${g.id}">PRV</button>
-          <button class="grafik-btn-af" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
-          <button class="grafik-btn-pa${isLive ? ' on' : ''}" data-trig="${g.triggerKey}" data-val="in">PÅ</button>
+          <button class="grafik-btn-prw${grafiktActivePrvKey === g.id ? ' active' : ''}" data-prv-type="credits" data-prv-key="${g.triggerKey}" data-prv-id="${g.id}">PRW</button>
+          <button class="grafik-btn-out" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>&lt; OUT</button>
+          <button class="grafik-btn-in${isLive ? ' on' : ''}" data-trig="${g.triggerKey}" data-val="in">&gt; IN</button>
         </div>
       </div>`;
 
@@ -1654,25 +1657,46 @@ function renderGrafik() {
             ${isActive ? `<span class="grafik-block-sub" style="color:var(--g-color)">● ${homeActive ? 'HJEM' : 'UDE'}</span>` : ''}
           </div>
           <div class="grafik-block-actions">
-            <button class="grafik-btn-af grafik-lu-off-btn"${!isOnAir ? ' disabled' : ''}>AF</button>
-            <button class="grafik-btn-pa${homeActive ? ' on' : ''} grafik-lu-btn" data-matchid="${matchId}" data-side="home">HJEM</button>
-            <button class="grafik-btn-pa${awayActive ? ' on' : ''} grafik-lu-btn" data-matchid="${matchId}" data-side="away">UDE</button>
+            <button class="grafik-btn-out grafik-lu-off-btn"${!isOnAir ? ' disabled' : ''}>&lt; OUT</button>
+            <button class="grafik-btn-in${homeActive ? ' on' : ''} grafik-lu-btn" data-matchid="${matchId}" data-side="home">HJEM</button>
+            <button class="grafik-btn-in${awayActive ? ' on' : ''} grafik-lu-btn" data-matchid="${matchId}" data-side="away">UDE</button>
           </div>
         </div>`;
       }).join('');
     }
     contentHTML = matchRows;
+
+  } else if (g.type === 'vmixcalls') {
+    const callRows = vmixCalls.map((c, i) => {
+      if (!c.navn && !c.link) return '';
+      const prvId = `vmix-${i}`;
+      return `<div class="grafik-block" style="--g-color:${g.color}">
+        <span class="grafik-block-num">${i + 1}</span>
+        <div class="grafik-block-info">
+          <span class="grafik-block-name${!c.navn ? ' muted' : ''}">${esc(c.navn) || '—'}</span>
+          ${c.titel ? `<span class="grafik-block-sub">${esc(c.titel)}</span>` : ''}
+        </div>
+        <div class="grafik-block-actions">
+          <button class="grafik-btn-prw${grafiktActivePrvKey === prvId ? ' active' : ''}" data-prv-type="vmix" data-prv-id="${prvId}">PRW</button>
+          <button class="grafik-btn-out" disabled>&lt; OUT</button>
+          <button class="grafik-btn-in grafik-vmix-call-btn" data-idx="${i}"${!c.link ? ' disabled' : ''}>&gt; IN</button>
+        </div>
+      </div>`;
+    }).filter(Boolean).join('');
+    contentHTML = callRows || `<div class="grafik-v2-empty">Ingen vMix Calls — udfyld i SUBS-fanen</div>`;
   }
 
   // ── HØJRE PANEL: PREVIEW ─────────────────────────────────────────
+  const prvSrc = g.type === 'vmixcalls' ? combinedUrl : previewIframeUrl;
   const previewHTML = `
     <div>
       <div class="grafik-companion-head" style="margin-bottom:6px;">PREVIEW</div>
       <div class="grafik-preview-box">
-        <iframe class="grafik-preview-iframe" src="${previewIframeUrl}"></iframe>
+        <iframe class="grafik-preview-iframe" src="${prvSrc}"></iframe>
       </div>
+      <button class="grafik-btn-out" id="grafik-prw-out-btn" style="width:100%;margin-top:6px;">&lt; PRW UD</button>
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-        <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${previewIframeUrl}">Kopiér preview URL ⎘</button>
+        <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${prvSrc}">Kopiér preview URL ⎘</button>
         <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${combinedUrl}">vMix overlay URL ⎘</button>
       </div>
     </div>
@@ -1801,15 +1825,36 @@ function renderGrafik() {
         if (type === 'lt') {
           await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot_prv',    value: btn.dataset.prvSlot });
           await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger_prv', value: 'in' });
+        } else if (type === 'vmix') {
+          // vMix calls bruger combined overlay som preview — intet Supabase-kald
         } else {
           await sbUpsert('settings', { projekt_id: aktivProjektId, key: btn.dataset.prvKey + '_prv', value: 'in' });
         }
         grafiktActivePrvKey = btn.dataset.prvId;
         container.querySelectorAll('[data-prv-type]').forEach(b =>
           b.classList.toggle('active', b.dataset.prvId === grafiktActivePrvKey));
-      } catch { toast('Fejl ved PRV', 'err'); }
+      } catch { toast('Fejl ved PRW', 'err'); }
     });
   });
+
+  const prwOutBtn = container.querySelector('#grafik-prw-out-btn');
+  if (prwOutBtn) prwOutBtn.addEventListener('click', async () => {
+    try {
+      if (g.type === 'lt') {
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger_prv', value: 'out' });
+      } else if (g.type !== 'vmixcalls') {
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: g.triggerKey + '_prv', value: 'out' });
+      }
+    } catch { toast('Fejl ved PRW UD', 'err'); }
+    grafiktActivePrvKey = '';
+    renderGrafik();
+  });
+
+  container.querySelectorAll('.grafik-vmix-call-btn').forEach(btn =>
+    btn.addEventListener('click', () => {
+      const c = vmixCalls[+btn.dataset.idx];
+      if (c?.link) fetch(c.link).catch(() => toast('vMix Call fejlede', 'err'));
+    }));
 
   container.querySelectorAll('[data-copy]').forEach(btn =>
     btn.addEventListener('click', () => copyText(btn.dataset.copy)));
