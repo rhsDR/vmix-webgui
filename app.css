@@ -1411,7 +1411,7 @@
     .lag-label { font-size: 13px; color: #ccc; }
 
     /* ── GRAFIK V2 — to-kolonnet layout ─────────────────────── */
-    #tab-grafik { padding: 0; overflow: hidden; }
+    #tab-grafik { padding: 0 24px; overflow: hidden; }
 
     .grafik-v2-wrap {
       display: grid;

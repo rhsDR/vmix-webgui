@@ -1687,7 +1687,9 @@ function renderGrafik() {
   }
 
   // ── HØJRE PANEL: PREVIEW ─────────────────────────────────────────
-  const prvSrc = g.type === 'vmixcalls' ? combinedUrl : previewIframeUrl;
+  const prvSrc = grafiktActivePrvKey
+    ? (g.type === 'vmixcalls' ? combinedUrl : previewIframeUrl)
+    : 'about:blank';
   const previewHTML = `
     <div>
       <div class="grafik-companion-head" style="margin-bottom:6px;">PREVIEW</div>
@@ -1836,6 +1838,8 @@ function renderGrafik() {
         grafiktActivePrvKey = btn.dataset.prvId;
         container.querySelectorAll('[data-prv-type]').forEach(b =>
           b.classList.toggle('active', b.dataset.prvId === grafiktActivePrvKey));
+        const prvIframe = container.querySelector('.grafik-preview-iframe');
+        if (prvIframe) prvIframe.src = g.type === 'vmixcalls' ? combinedUrl : previewIframeUrl;
       } catch { toast('Fejl ved PRW', 'err'); }
     });
   });
