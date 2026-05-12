@@ -1862,7 +1862,7 @@ function renderGrafik() {
   container.querySelectorAll('.grafik-vmix-call-btn').forEach(btn =>
     btn.addEventListener('click', () => {
       const c = vmixCalls[+btn.dataset.idx];
-      if (c?.link) { const img = new Image(); img.src = c.link; }
+      if (c?.link) fetch(c.link, { mode: 'no-cors' }).catch(() => {});
     }));
 
   container.querySelectorAll('[data-copy]').forEach(btn =>
