@@ -1304,9 +1304,9 @@ const OVERLAY_GRAPHICS = [
 ];
 const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.map(g => g.id);
 let overlayLagOrder = [...DEFAULT_LAG_ORDER];
-let grafiktState    = {}; // { triggerKey: currentValue }
+let grafiktState      = {}; // { triggerKey: currentValue }
 let grafiktActiveSubTab = 'lower-third';
-let grafiktPreviewUrl   = '';
+let grafiktActivePrvKey = '';
 
 function updateCreditsSendBtn() {
   const badge = document.getElementById('creditsTriggerBadge');
@@ -1579,9 +1579,10 @@ function renderGrafik() {
       }</span>`
     : '';
 
-  const overlayUrl  = `${origin}/${g.file}?p=${pid}`;
-  const combinedUrl = `${origin}/overlay.html?p=${pid}`;
-  if (!grafiktPreviewUrl) grafiktPreviewUrl = overlayUrl;
+  const overlayUrl       = `${origin}/${g.file}?p=${pid}`;
+  const combinedUrl      = `${origin}/overlay.html?p=${pid}`;
+  const previewPid       = pid + '_prv';
+  const previewIframeUrl = `${origin}/${g.file}?p=${previewPid}`;
 
   let contentHTML = '';
 
@@ -1598,7 +1599,7 @@ function renderGrafik() {
           ${s.titel ? `<span class="grafik-block-sub">${s.titel}</span>` : ''}
         </div>
         <div class="grafik-block-actions">
-          <button class="grafik-btn-prv" data-prv="${overlayUrl}">PRV</button>
+          <button class="grafik-btn-prv${grafiktActivePrvKey === 'lt-'+slot ? ' active' : ''}" data-prv-type="lt" data-prv-slot="${slot}" data-prv-id="lt-${slot}">PRV</button>
           <button class="grafik-btn-af" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
           <button class="grafik-btn-pa${slotAct ? ' on' : ''} grafik-lt-paa" data-slot="${slot}">PÅ</button>
         </div>
@@ -1614,7 +1615,7 @@ function renderGrafik() {
           <span class="grafik-block-sub"${isLive ? ` style="color:var(--g-color)"` : ''}>${isLive ? '● LIVE' : 'IKKE AKTIV'}</span>
         </div>
         <div class="grafik-block-actions">
-          <button class="grafik-btn-prv" data-prv="${overlayUrl}">PRV</button>
+          <button class="grafik-btn-prv${grafiktActivePrvKey === g.id ? ' active' : ''}" data-prv-type="simple" data-prv-key="${g.triggerKey}" data-prv-id="${g.id}">PRV</button>
           <button class="grafik-btn-af" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
           <button class="grafik-btn-pa${isLive ? ' on' : ''}" data-trig="${g.triggerKey}" data-val="in">PÅ</button>
         </div>
@@ -1628,7 +1629,7 @@ function renderGrafik() {
           <span class="grafik-block-sub"${isLive ? ` style="color:var(--g-color)"` : ''}>${isLive ? '● LIVE' : 'IKKE AKTIV'}</span>
         </div>
         <div class="grafik-block-actions">
-          <button class="grafik-btn-prv" data-prv="${overlayUrl}">PRV</button>
+          <button class="grafik-btn-prv${grafiktActivePrvKey === g.id ? ' active' : ''}" data-prv-type="credits" data-prv-key="${g.triggerKey}" data-prv-id="${g.id}">PRV</button>
           <button class="grafik-btn-af" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>AF</button>
           <button class="grafik-btn-pa${isLive ? ' on' : ''}" data-trig="${g.triggerKey}" data-val="in">PÅ</button>
         </div>
@@ -1654,7 +1655,6 @@ function renderGrafik() {
             ${isActive ? `<span class="grafik-block-sub" style="color:var(--g-color)">● ${homeActive ? 'HJEM' : 'UDE'}</span>` : ''}
           </div>
           <div class="grafik-block-actions">
-            <button class="grafik-btn-prv" data-prv="${overlayUrl}">PRV</button>
             <button class="grafik-btn-af grafik-lu-off-btn"${!isOnAir ? ' disabled' : ''}>AF</button>
             <button class="grafik-btn-pa${homeActive ? ' on' : ''} grafik-lu-btn" data-matchid="${matchId}" data-side="home">HJEM</button>
             <button class="grafik-btn-pa${awayActive ? ' on' : ''} grafik-lu-btn" data-matchid="${matchId}" data-side="away">UDE</button>
@@ -1670,10 +1670,10 @@ function renderGrafik() {
     <div>
       <div class="grafik-companion-head" style="margin-bottom:6px;">PREVIEW</div>
       <div class="grafik-preview-box">
-        <iframe class="grafik-preview-iframe" src="${grafiktPreviewUrl}"></iframe>
+        <iframe class="grafik-preview-iframe" src="${previewIframeUrl}"></iframe>
       </div>
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-        <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${grafiktPreviewUrl}">Kopiér overlay URL ⎘</button>
+        <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${previewIframeUrl}">Kopiér preview URL ⎘</button>
         <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${combinedUrl}">vMix overlay URL ⎘</button>
       </div>
     </div>
@@ -1791,18 +1791,27 @@ function renderGrafik() {
   container.querySelectorAll('.grafik-v2-tab').forEach(btn =>
     btn.addEventListener('click', () => {
       grafiktActiveSubTab = btn.dataset.gtab;
-      grafiktPreviewUrl = '';
+      grafiktActivePrvKey = '';
       renderGrafik();
     }));
 
-  container.querySelectorAll('[data-prv]').forEach(btn =>
-    btn.addEventListener('click', () => {
-      grafiktPreviewUrl = btn.dataset.prv;
-      const iframe = container.querySelector('.grafik-preview-iframe');
-      if (iframe) iframe.src = grafiktPreviewUrl;
-      container.querySelectorAll('[data-prv]').forEach(b =>
-        b.classList.toggle('active', b.dataset.prv === grafiktPreviewUrl));
-    }));
+  container.querySelectorAll('[data-prv-type]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const ppid = aktivProjektId + '_prv';
+      const type = btn.dataset.prvType;
+      try {
+        if (type === 'lt') {
+          await sbUpsert('settings', { projekt_id: ppid, key: 'lt_slot',    value: btn.dataset.prvSlot });
+          await sbUpsert('settings', { projekt_id: ppid, key: 'lt_trigger', value: 'in' });
+        } else {
+          await sbUpsert('settings', { projekt_id: ppid, key: btn.dataset.prvKey, value: 'in' });
+        }
+        grafiktActivePrvKey = btn.dataset.prvId;
+        container.querySelectorAll('[data-prv-type]').forEach(b =>
+          b.classList.toggle('active', b.dataset.prvId === grafiktActivePrvKey));
+      } catch { toast('Fejl ved PRV', 'err'); }
+    });
+  });
 
   container.querySelectorAll('[data-copy]').forEach(btn =>
     btn.addEventListener('click', () => copyText(btn.dataset.copy)));
