@@ -1754,21 +1754,32 @@ function renderGrafik() {
   let companionRows = '';
   if (g.type === 'lt') {
     const slotRows = subs.map((s, i) => {
-      if (!s.navn && !s.titel) return '';
       const slot = i + 1;
       const url  = `${origin}/api/trigger/${pid}?key=lt_trigger&value=in&slot=${slot}`;
       return `<div class="grafik-companion-row">
-        <span class="grafik-companion-lbl">Slot ${slot}</span>
+        <span class="grafik-companion-lbl">Sub ${slot}</span>
         <span class="grafik-companion-url" title="${url}">${url}</span>
         <button class="copy-btn icon-btn" data-copy="${url}">⎘</button>
       </div>`;
-    }).filter(Boolean).join('');
+    }).join('');
+    const vmixRows = vmixCalls.map((c, i) => {
+      const slot = i + 1;
+      const url  = `${origin}/api/trigger/${pid}?key=lt_trigger&value=vmixcall&slot=${slot}`;
+      return `<div class="grafik-companion-row">
+        <span class="grafik-companion-lbl" style="color:#a855f7">VMC ${slot}</span>
+        <span class="grafik-companion-url" title="${url}">${url}</span>
+        <button class="copy-btn icon-btn" data-copy="${url}">⎘</button>
+      </div>`;
+    }).join('');
     const afUrl = `${origin}/api/trigger/${pid}?key=lt_trigger&value=out`;
-    companionRows = slotRows + `<div class="grafik-companion-row">
+    const afRow = `<div class="grafik-companion-row">
       <span class="grafik-companion-lbl">AF</span>
       <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
       <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
     </div>`;
+    const vmixHead = vmixRows ? `<div class="grafik-companion-subhead">VMIX CALLS</div>` : '';
+    companionRows = (slotRows ? `<div class="grafik-companion-subhead">SUBS</div>${slotRows}` : '') +
+                   vmixHead + vmixRows + afRow;
   } else if (g.type === 'credits') {
     const paUrl = `${origin}/api/trigger/${pid}?key=credits_trigger&value=in`;
     const afUrl = `${origin}/api/trigger/${pid}?key=credits_trigger&value=out`;

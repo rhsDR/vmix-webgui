@@ -1584,6 +1584,15 @@
 
     /* Companion URLs */
     .grafik-companion-section { display: flex; flex-direction: column; gap: 5px; }
+    .grafik-companion-subhead {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #444;
+      margin-top: 6px;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+    }
     .grafik-companion-head {
       font-size: 10px;
       font-weight: 700;
@@ -1599,7 +1608,7 @@
     .grafik-companion-lbl {
       font-size: 10px;
       color: #555;
-      min-width: 48px;
+      min-width: 80px;
       flex-shrink: 0;
     }
     .grafik-companion-url {
