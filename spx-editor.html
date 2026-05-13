@@ -477,6 +477,7 @@ html.theme-kold{
   <button class="tb-btn primary" id="btn-st-export" style="display:none" onclick="exportSmartTicker()">&#11014; Smart Ticker</button>
   <button class="tb-btn" onclick="exportCanvasPNG()" title="Eksportér canvas som PNG">&#128247; PNG</button>
   <button class="tb-btn primary" id="btn-spx-export" onclick="exportSPX()">&#11014; Eksportér</button>
+  <button class="tb-btn" id="btn-export-supabase" onclick="exportSPX_Supabase()" title="Eksportér GSAP-animation med Supabase-integration (vMix WebGUI lower third)" style="background:#2d1a4a;color:#c084fc;border:1px solid #6b21a8;">Supabase LT &#11015;</button>
   <button class="tb-btn icon" onclick="document.getElementById('help-modal').classList.toggle('open')" title="Genvejstaster" style="font-size:13px;font-weight:700;width:26px">?</button>
   <!-- DROPDOWN MENUS -->
   <div id="edit-dropdown" class="mb-dropdown">
@@ -745,6 +746,28 @@ html.theme-kold{
     <div id="spx-field-footer">
       <button class="tb-btn" onclick="_closeSpxFieldDialog()">Annuller</button>
       <button class="tb-btn primary" onclick="_confirmSpxFieldDialog()">&#11014; Eksportér</button>
+    </div>
+  </div>
+</div>
+<div id="supabase-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000;display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,.7);display:flex;flex-direction:column;">
+    <h2 style="font-size:14px;font-weight:600;padding:15px 18px 11px;border-bottom:1px solid var(--border);color:var(--text);margin:0;">Supabase LT eksport</h2>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <label style="font-size:12px;color:#aaa;display:flex;flex-direction:column;gap:4px;">
+        Label-tekst (vises i #el7)
+        <input id="sb-label-inp" class="tb-input" style="width:100%;" value="SPORT" placeholder="SPORT">
+      </label>
+      <label style="font-size:12px;color:#aaa;display:flex;flex-direction:column;gap:4px;">
+        Placering
+        <select id="sb-side-sel" class="tb-input" style="width:100%;">
+          <option value="venstre">Venstre</option>
+          <option value="højre">Højre</option>
+        </select>
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);">
+      <button class="tb-btn" style="flex:1;" onclick="_closeSbModal()">Annullér</button>
+      <button class="tb-btn primary" style="flex:1;" onclick="_confirmSbModal()">&#11015; Eksportér</button>
     </div>
   </div>
 </div>
@@ -4047,6 +4070,9 @@ function _confirmSpxFieldDialog(){
   if(_spxFieldCallback){const cb=_spxFieldCallback;_spxFieldCallback=null;cb();}
 }
 function exportSPX(){if(!elements.length){toast('Ingen elementer');return;}_showExportFieldDialog(()=>{if(exportMode==='gsap')exportSPX_GSAP();else exportSPX_CSS();});}
+function exportSPX_Supabase(){if(!elements.length){toast('Ingen elementer');return;}document.getElementById('supabase-modal').style.display='flex';}
+function _closeSbModal(){document.getElementById('supabase-modal').style.display='none';}
+function _confirmSbModal(){_closeSbModal();const label=document.getElementById('sb-label-inp').value.trim()||'SPORT';const side=document.getElementById('sb-side-sel').value;exportSPX_GSAP({label,side});}
 
 function _textElCss(el){
   const jc=el.textAlign==='center'?'center':el.textAlign==='right'?'flex-end':'flex-start';
@@ -4252,7 +4278,7 @@ function exportSPX_CSS(){
   toast('CSS template downloadet!','ok');
 }
 
-function exportSPX_GSAP(){
+function exportSPX_GSAP(sbMode=null){
   const _ttype=document.getElementById('ttype').value;
   const isLT=_ttype==='lower_third';
   const spxEls=elements.filter(e=>(e.type==='text'||e.type==='ticker')&&e.spxField);
@@ -4392,14 +4418,15 @@ function exportSPX_GSAP(){
     :`${_gCleanFn}\n${_gPrefetchFn}\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}\nfunction runTemplateUpdate(data){_updateContent(data);_prefetchAndPlay(function(){setTimeout(runAnimationIN,50);});}\nwindow.onSpxUpdate=function(data){_updateContent(data);};${gExtraJS}`;
   const _gScFields=(scoreCycleSettings.fields||[]).filter(f=>f.field&&f.target);
   const _scScriptG=(scoreCycleSettings.enabled&&_gScFields.length)?`<script>\nwindow.ScoreCycle={\n  projectId:'${scoreCycleSettings.projectId}',\n  displayDuration:${scoreCycleSettings.displayDuration},\n  refreshInterval:${scoreCycleSettings.refreshInterval},\n  transition:'${scoreCycleSettings.transition}',\n  dataFields:${JSON.stringify(_gScFields)}\n};\n<\/script>\n<script>\n${_scPluginSrc()}\n<\/script>`:'';
-  _downloadHTML(_buildHTML(fontUrl,css+gTickerCSS,htmlLines,fieldDefs,tname,
-    _gUpdateFn,
-    `function runAnimationIN(){_spxVisible=true;\n${_buildGSAPPlay(elements)}${_grpGsapPlay}\n}`,
-    `function runAnimationOUT(){_spxVisible=false;\n${_buildGSAPStop(elements)}${_grpGsapStop}\n}`,
-    hiddenDivLines.join('\n'),
-    gsapTag+extraHeadG,_scScriptG
-  ),_projFilename('_gsap.html'));
-  toast('GSAP template downloadet!','ok');
+  const _animIn=`function runAnimationIN(){_spxVisible=true;\n${_buildGSAPPlay(elements)}${_grpGsapPlay}\n}`;
+  const _animOut=`function runAnimationOUT(){_spxVisible=false;\n${_buildGSAPStop(elements)}${_grpGsapStop}\n}`;
+  if(sbMode){
+    _downloadHTML(_buildHTML_Supabase(fontUrl,css+gTickerCSS,htmlLines,tname,_gUpdateFn,_animIn,_animOut,hiddenDivLines.join('\n'),gsapTag+extraHeadG,_scScriptG,sbMode.label,sbMode.side),_projFilename('_supabase.html'));
+    toast('Supabase LT eksporteret!','ok');
+  }else{
+    _downloadHTML(_buildHTML(fontUrl,css+gTickerCSS,htmlLines,fieldDefs,tname,_gUpdateFn,_animIn,_animOut,hiddenDivLines.join('\n'),gsapTag+extraHeadG,_scScriptG),_projFilename('_gsap.html'));
+    toast('GSAP template downloadet!','ok');
+  }
 }
 
 function _cssAnimOutTo(ao,el){
@@ -4606,6 +4633,84 @@ window.SPXGCTemplateDefinition = {
 ${fieldDefs}
   ]
 };
+<\/script>
+${pluginScript}
+</body>
+</html>`;
+}
+
+function _buildHTML_Supabase(fontUrl,css,htmlLines,tname,updateFn,animInFn,animOutFn,hiddenDivs='',extraHead='',pluginScript='',label='SPORT',side='venstre'){
+  const sbBlock=`var _spxVisible=false;
+/* ── SUPABASE INTEGRATION BLOCK ── START
+   Kopiér denne blok til nye versioner af lower-third.html.
+   Krav: _spxVisible, _updateContent(data), runAnimationIN(), runAnimationOUT() */
+const SB_URL='https://rxzxdcweqpbnvfkpnnrn.supabase.co';
+const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
+const SB_HDR={'apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON};
+const _params=new URLSearchParams(window.location.search);
+const _pid=_params.get('p')||'';
+const _pf=_pid?'&projekt_id=eq.'+encodeURIComponent(_pid):'';
+const _isPreview=_params.has('preview');
+const _sfx=_isPreview?'_prv':'';
+let _animating=false,_currentSlot=null;
+async function pollTrigger(){
+  if(_animating){setTimeout(pollTrigger,2000);return;}
+  try{
+    const rows=await fetch(SB_URL+'/rest/v1/settings?select=key,value&key=in.(lt_trigger'+_sfx+',lt_slot'+_sfx+')'+_pf,{headers:SB_HDR}).then(r=>r.json());
+    const trigger=rows.find(r=>r.key==='lt_trigger'+_sfx)?.value;
+    const slot=rows.find(r=>r.key==='lt_slot'+_sfx)?.value;
+    if(trigger==='in'&&(!_spxVisible||slot!==_currentSlot)){
+      if(!slot){setTimeout(pollTrigger,2000);return;}
+      _animating=true;
+      const subs=await fetch(SB_URL+'/rest/v1/subs?slot=eq.'+slot+'&select=navn,titel'+_pf,{headers:SB_HDR}).then(r=>r.json());
+      const sub=subs[0];
+      if(sub){
+        const doShow=(skipLabel)=>{
+          _currentSlot=slot;
+          _updateContent({f0:sub.titel||'',f1:sub.navn||'',f2:'${label.replace(/'/g,"\\'")}',f3:'${side}'});
+          var el7=document.getElementById('el7');if(el7)el7.textContent='${label.replace(/'/g,"\\'")}';
+          var wrap=document.getElementById('lt-wrap');if(wrap){wrap.classList.toggle('pos-hoejre','${side}'==='højre');wrap.classList.toggle('pos-venstre','${side}'!=='højre');}
+          setTimeout(()=>runAnimationIN(skipLabel),50);
+          setTimeout(()=>{_animating=false;setTimeout(pollTrigger,2000);},2700);
+        };
+        if(_spxVisible){runAnimationOUT(false);setTimeout(()=>doShow(true),2200);}else{doShow(false);}
+        return;
+      }
+      _animating=false;
+    }else if(trigger==='out'&&_spxVisible){
+      _animating=true;runAnimationOUT(false);
+      setTimeout(()=>{_currentSlot=null;_animating=false;setTimeout(pollTrigger,2000);},2600);
+      return;
+    }
+  }catch(e){console.error('LT poll fejl:',e);}
+  setTimeout(pollTrigger,2000);
+}
+pollTrigger();
+/* ── SUPABASE INTEGRATION BLOCK ── END ── */`;
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+${fontUrl?`<link href="${fontUrl}" rel="stylesheet">`:''}
+${extraHead}
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
+#hiddenSpxData{display:none;}
+${_customFontCSS()}
+${css}
+</style>
+</head>
+<body>
+${htmlLines.join('\n')}
+<div id="hiddenSpxData">
+${hiddenDivs}
+</div>
+<script>
+${updateFn}
+${animInFn}
+${animOutFn}
+${sbBlock}
 <\/script>
 ${pluginScript}
 </body>
