@@ -1893,6 +1893,11 @@ function renderGrafik() {
         <div class="grafik-companion-section" style="border:none;padding:0;margin-top:8px;">${companionRows}</div>`;
       if (grafiktCompanionOpen) companionEl.open = true;
     }
+    const lagListEl = existingWrap.querySelector('#overlayLagList');
+    if (lagListEl) {
+      lagListEl.innerHTML = lagRows;
+      delete lagListEl.dataset.dndInit;
+    }
   }
 
   // ── EVENT LISTENERS ──────────────────────────────────────────────
