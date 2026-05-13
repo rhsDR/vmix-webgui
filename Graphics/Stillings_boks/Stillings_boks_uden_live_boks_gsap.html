@@ -89,6 +89,7 @@ function _processSettings(row){
   if(row.projekt_id!==PROJEKT_ID)return;
   if(row.key==='ticker_ovl_trigger'&&row.value==='in'&&!_vis)_animIN();
   if(row.key==='score_trigger'&&row.value==='out'&&_vis)_animOUT();
+  if(row.key==='score_trigger'&&row.value==='in'&&!_vis)_animIN();
 }
 function _animIN(){
   _vis=true;_cols(_br);

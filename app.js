@@ -1298,6 +1298,7 @@ const OVERLAY_GRAPHICS = [
   { id: 'lower-third', label: 'Lower Third',     file: 'lower-third.html',    triggerKey: 'lt_trigger',         type: 'lt',      color: '#4a9eff' },
   { id: 'ticker',      label: 'Ticker',           file: 'ticker-overlay.html', triggerKey: 'ticker_ovl_trigger', type: 'ticker',  color: '#aa66ff' },
   { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html',       triggerKey: 'breaking_trigger',   type: 'simple',  color: '#ff4444', subOf: 'ticker' },
+  { id: 'score',       label: 'Stillings',        file: null,                  triggerKey: 'score_trigger',      type: 'simple',  color: '#44cc88', subOf: 'ticker' },
   { id: 'stilling',    label: 'Stilling',         file: 'stilling.html',       triggerKey: 'stilling_trigger',   type: 'simple',  color: '#44cc88' },
   { id: 'opstilling',  label: 'Opstilling',       file: 'opstilling.html',     triggerKey: 'lineup_trigger',     type: 'lineup',  color: '#ff8833' },
   { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits', color: '#ffcc44' },
@@ -1568,9 +1569,10 @@ function renderGrafik() {
     if (og.type === 'lineup') {
       isOnAir = (grafiktState[og.triggerKey] || 'out') !== 'out' || lineupOnAirMatchId !== null;
     } else if (og.type === 'ticker') {
-      // dot hvis ticker ELLER breaking er live
+      // dot hvis ticker ELLER breaking ELLER score er live
       isOnAir = (grafiktState[og.triggerKey] || 'out') !== 'out' ||
-                (grafiktState['breaking_trigger'] || 'out') !== 'out';
+                (grafiktState['breaking_trigger'] || 'out') !== 'out' ||
+                (grafiktState['score_trigger'] || 'out') !== 'out';
     } else {
       isOnAir = og.triggerKey ? (grafiktState[og.triggerKey] || 'out') !== 'out' : false;
     }
@@ -1643,6 +1645,8 @@ function renderGrafik() {
   } else if (g.type === 'ticker') {
     const breakingVal  = grafiktState['breaking_trigger'] || 'out';
     const breakingLive = breakingVal !== 'out';
+    const scoreVal     = grafiktState['score_trigger'] || 'out';
+    const scoreLive    = scoreVal !== 'out';
     contentHTML = `
       <div class="grafik-block" style="--g-color:${g.color}">
         <div class="grafik-block-info">
@@ -1665,6 +1669,17 @@ function renderGrafik() {
           <button class="grafik-btn-prw${grafiktActivePrvKey === 'breaking' ? ' active' : ''}" data-prv-type="simple" data-prv-key="breaking_trigger" data-prv-id="breaking">PRW</button>
           <button class="grafik-btn-out" data-trig="breaking_trigger" data-val="out"${!breakingLive ? ' disabled' : ''}>&lt; OUT</button>
           <button class="grafik-btn-in${breakingLive ? ' on' : ''}" data-trig="breaking_trigger" data-val="in">&gt; IN</button>
+        </div>
+      </div>
+      <div class="grafik-section-head">STILLINGS BOKS</div>
+      <div class="grafik-block" style="--g-color:#44cc88">
+        <div class="grafik-block-info">
+          <span class="grafik-block-name">STILLINGS BOKS</span>
+          <span class="grafik-block-sub"${scoreLive ? ' style="color:#44cc88"' : ''}>${scoreLive ? '● LIVE' : 'IKKE AKTIV'}</span>
+        </div>
+        <div class="grafik-block-actions">
+          <button class="grafik-btn-out" data-trig="score_trigger" data-val="out"${!scoreLive ? ' disabled' : ''}>&lt; OUT</button>
+          <button class="grafik-btn-in${scoreLive ? ' on' : ''}" data-trig="score_trigger" data-val="in">&gt; IN</button>
         </div>
       </div>`;
 
@@ -1819,11 +1834,15 @@ function renderGrafik() {
     const tAfUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=out`;
     const bPaUrl = `${origin}/api/trigger/${pid}?key=breaking_trigger&value=in`;
     const bAfUrl = `${origin}/api/trigger/${pid}?key=breaking_trigger&value=out`;
+    const sPaUrl = `${origin}/api/trigger/${pid}?key=score_trigger&value=in`;
+    const sAfUrl = `${origin}/api/trigger/${pid}?key=score_trigger&value=out`;
     companionRows = `
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#aa66ff">T PÅ</span><span class="grafik-companion-url" title="${tPaUrl}">${tPaUrl}</span><button class="copy-btn icon-btn" data-copy="${tPaUrl}">⎘</button></div>
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#aa66ff">T AF</span><span class="grafik-companion-url" title="${tAfUrl}">${tAfUrl}</span><button class="copy-btn icon-btn" data-copy="${tAfUrl}">⎘</button></div>
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff4444">B PÅ</span><span class="grafik-companion-url" title="${bPaUrl}">${bPaUrl}</span><button class="copy-btn icon-btn" data-copy="${bPaUrl}">⎘</button></div>
-      <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff4444">B AF</span><span class="grafik-companion-url" title="${bAfUrl}">${bAfUrl}</span><button class="copy-btn icon-btn" data-copy="${bAfUrl}">⎘</button></div>`;
+      <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff4444">B AF</span><span class="grafik-companion-url" title="${bAfUrl}">${bAfUrl}</span><button class="copy-btn icon-btn" data-copy="${bAfUrl}">⎘</button></div>
+      <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#44cc88">S PÅ</span><span class="grafik-companion-url" title="${sPaUrl}">${sPaUrl}</span><button class="copy-btn icon-btn" data-copy="${sPaUrl}">⎘</button></div>
+      <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#44cc88">S AF</span><span class="grafik-companion-url" title="${sAfUrl}">${sAfUrl}</span><button class="copy-btn icon-btn" data-copy="${sAfUrl}">⎘</button></div>`;
   } else {
     const paUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=in`;
     const afUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=out`;
