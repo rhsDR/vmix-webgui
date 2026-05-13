@@ -77,7 +77,25 @@ async function pollTrigger() {
     const trigger = rows.find(r => r.key === 'lt_trigger' + _sfx)?.value;
     const slot    = rows.find(r => r.key === 'lt_slot'    + _sfx)?.value;
 
-    if (trigger === 'in' && (!_spxVisible || slot !== _currentSlot)) {
+    if (trigger === 'update' && _spxVisible && slot && slot !== _currentSlot) {
+      // Kun tekst-skift — ingen OUT/IN animation
+      _animating = true;
+      const subs = await fetch(
+        SB_URL + '/rest/v1/subs?slot=eq.' + slot + '&select=navn,titel' + _pf,
+        { headers: SB_HDR }
+      ).then(r => r.json());
+      const sub = subs[0];
+      if (sub) {
+        _currentSlot = slot;
+        _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
+        // Animer kun navn og titel ind med irregular stagger
+        _csPlay('el5', 0.24, 0,    'irregular',  3, 1);
+        _csPlay('el6', 0.24, 0.08, 'wipe-step',  3, 1);
+        setTimeout(() => { _animating = false; setTimeout(pollTrigger, 2000); }, 900);
+        return;
+      }
+      _animating = false;
+    } else if (trigger === 'in' && (!_spxVisible || slot !== _currentSlot)) {
       if (!slot) { setTimeout(pollTrigger, 2000); return; }
       _animating = true;
       const subs = await fetch(

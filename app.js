@@ -1296,17 +1296,19 @@ let creditNewCounter = 0;
 let creditsTriggerActive = false;
 const OVERLAY_GRAPHICS = [
   { id: 'lower-third', label: 'Lower Third',     file: 'lower-third.html',    triggerKey: 'lt_trigger',         type: 'lt',      color: '#4a9eff' },
-  { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html',       triggerKey: 'breaking_trigger',   type: 'simple',  color: '#ff4444' },
-  { id: 'ticker',      label: 'Ticker',           file: 'ticker-overlay.html', triggerKey: 'ticker_ovl_trigger', type: 'simple',  color: '#aa66ff' },
+  { id: 'ticker',      label: 'Ticker',           file: 'ticker-overlay.html', triggerKey: 'ticker_ovl_trigger', type: 'ticker',  color: '#aa66ff' },
+  { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html',       triggerKey: 'breaking_trigger',   type: 'simple',  color: '#ff4444', subOf: 'ticker' },
   { id: 'stilling',    label: 'Stilling',         file: 'stilling.html',       triggerKey: 'stilling_trigger',   type: 'simple',  color: '#44cc88' },
   { id: 'opstilling',  label: 'Opstilling',       file: 'opstilling.html',     triggerKey: 'lineup_trigger',     type: 'lineup',  color: '#ff8833' },
-  { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits',   color: '#ffcc44' },
+  { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits', color: '#ffcc44' },
 ];
-const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.filter(g => g.file !== null).map(g => g.id);
+const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.filter(g => g.file !== null && !g.subOf).map(g => g.id);
 let overlayLagOrder = [...DEFAULT_LAG_ORDER];
-let grafiktState      = {}; // { triggerKey: currentValue }
+let grafiktState        = {}; // { triggerKey: currentValue }
 let grafiktActiveSubTab = 'lower-third';
 let grafiktActivePrvKey = '';
+let grafiktActivePrvUrl = '';
+let grafiktCompanionOpen = false;
 
 function updateCreditsSendBtn() {
   const badge = document.getElementById('creditsTriggerBadge');
@@ -1351,7 +1353,7 @@ async function refreshCredits() {
 }
 
 async function refreshGrafiktState() {
-  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey), 'lt_slot'].join(',');
+  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey), 'lt_slot', 'vmixcall_slot'].join(',');
   try {
     const rows = await sbGet('settings?select=key,value&key=in.(' + keys + ')&projekt_id=eq.' + aktivProjektId);
     rows.forEach(r => { grafiktState[r.key] = r.value; });
@@ -1560,13 +1562,18 @@ function renderGrafik() {
   if (!g) { grafiktActiveSubTab = OVERLAY_GRAPHICS[0].id; g = OVERLAY_GRAPHICS[0]; }
 
   // ── SUB-TABS ────────────────────────────────────────────────────
-  const subTabsHTML = OVERLAY_GRAPHICS.map(og => {
+  const subTabsHTML = OVERLAY_GRAPHICS.filter(og => !og.subOf).map(og => {
     const isActive = og.id === grafiktActiveSubTab;
-    const isOnAir  = og.triggerKey
-      ? (og.type === 'lineup'
-          ? (grafiktState[og.triggerKey] || 'out') !== 'out' || lineupOnAirMatchId !== null
-          : (grafiktState[og.triggerKey] || 'out') !== 'out')
-      : false;
+    let isOnAir;
+    if (og.type === 'lineup') {
+      isOnAir = (grafiktState[og.triggerKey] || 'out') !== 'out' || lineupOnAirMatchId !== null;
+    } else if (og.type === 'ticker') {
+      // dot hvis ticker ELLER breaking er live
+      isOnAir = (grafiktState[og.triggerKey] || 'out') !== 'out' ||
+                (grafiktState['breaking_trigger'] || 'out') !== 'out';
+    } else {
+      isOnAir = og.triggerKey ? (grafiktState[og.triggerKey] || 'out') !== 'out' : false;
+    }
     const dot = isOnAir ? `<span class="grafik-v2-onair"></span>` : '';
     return `<button class="grafik-v2-tab${isActive ? ' active' : ''}" data-gtab="${og.id}" style="--tab-color:${og.color}">${og.label.toUpperCase()}${dot}</button>`;
   }).join('');
@@ -1601,24 +1608,26 @@ function renderGrafik() {
         </div>
         <div class="grafik-block-actions">
           <button class="grafik-btn-prw${grafiktActivePrvKey === 'lt-'+slot ? ' active' : ''}" data-prv-type="lt" data-prv-slot="${slot}" data-prv-id="lt-${slot}">PRW</button>
-          <button class="grafik-btn-out" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>&lt; OUT</button>
+          <button class="grafik-btn-out" data-trig="${g.triggerKey}" data-val="out"${!slotAct ? ' disabled' : ''}>&lt; OUT</button>
           <button class="grafik-btn-in${slotAct ? ' on' : ''} grafik-lt-paa" data-slot="${slot}">&gt; IN</button>
         </div>
       </div>`;
     }).filter(Boolean).join('');
+    const activeVmixSlot = grafiktState['vmixcall_slot'] || '';
     const vmixRows = vmixCalls.map((c, i) => {
       if (!c.navn) return '';
-      const prvId = `vmix-${i}`;
+      const slot     = i + 1;
+      const vmixAct  = String(activeVmixSlot) === String(slot);
+      const vmixLive = activeVmixSlot !== '' && activeVmixSlot !== '0';
       return `<div class="grafik-block" style="--g-color:#a855f7">
-        <span class="grafik-block-num">${i + 1}</span>
+        <span class="grafik-block-num">${slot}</span>
         <div class="grafik-block-info">
-          <span class="grafik-block-name${!c.navn ? ' muted' : ''}">${esc(c.navn) || '—'}</span>
+          <span class="grafik-block-name">${esc(c.navn) || '—'}</span>
           ${c.titel ? `<span class="grafik-block-sub">${esc(c.titel)}</span>` : ''}
         </div>
         <div class="grafik-block-actions">
-          <button class="grafik-btn-prw${grafiktActivePrvKey === prvId ? ' active' : ''}" data-prv-type="vmix" data-prv-id="${prvId}">PRW</button>
-          <button class="grafik-btn-out" disabled>&lt; OUT</button>
-          <button class="grafik-btn-in grafik-vmix-call-btn" data-idx="${i}"${!c.link ? ' disabled' : ''}>&gt; IN</button>
+          <button class="grafik-btn-out grafik-vmix-out-btn" data-idx="${i}"${!vmixAct ? ' disabled' : ''}>&lt; OUT</button>
+          <button class="grafik-btn-in${vmixAct ? ' on' : ''} grafik-vmix-call-btn" data-idx="${i}">&gt; IN</button>
         </div>
       </div>`;
     }).filter(Boolean).join('');
@@ -1628,6 +1637,34 @@ function renderGrafik() {
       : '';
 
     contentHTML = (subRows || `<div class="grafik-v2-empty">Ingen subs — udfyld i SUBS-fanen</div>`) + vmixSection;
+
+  } else if (g.type === 'ticker') {
+    const breakingVal  = grafiktState['breaking_trigger'] || 'out';
+    const breakingLive = breakingVal !== 'out';
+    contentHTML = `
+      <div class="grafik-block" style="--g-color:${g.color}">
+        <div class="grafik-block-info">
+          <span class="grafik-block-name">TICKER</span>
+          <span class="grafik-block-sub"${isLive ? ` style="color:var(--g-color)"` : ''}>${isLive ? '● LIVE' : 'IKKE AKTIV'}</span>
+        </div>
+        <div class="grafik-block-actions">
+          <button class="grafik-btn-prw${grafiktActivePrvKey === g.id ? ' active' : ''}" data-prv-type="simple" data-prv-key="${g.triggerKey}" data-prv-id="${g.id}">PRW</button>
+          <button class="grafik-btn-out" data-trig="${g.triggerKey}" data-val="out"${!isLive ? ' disabled' : ''}>&lt; OUT</button>
+          <button class="grafik-btn-in${isLive ? ' on' : ''}" data-trig="${g.triggerKey}" data-val="in">&gt; IN</button>
+        </div>
+      </div>
+      <div class="grafik-section-head">BREAKING TICKER</div>
+      <div class="grafik-block" style="--g-color:#ff4444">
+        <div class="grafik-block-info">
+          <span class="grafik-block-name">BREAKING TICKER</span>
+          <span class="grafik-block-sub"${breakingLive ? ' style="color:#ff4444"' : ''}>${breakingLive ? '● LIVE' : 'IKKE AKTIV'}</span>
+        </div>
+        <div class="grafik-block-actions">
+          <button class="grafik-btn-prw${grafiktActivePrvKey === 'breaking' ? ' active' : ''}" data-prv-type="simple" data-prv-key="breaking_trigger" data-prv-id="breaking">PRW</button>
+          <button class="grafik-btn-out" data-trig="breaking_trigger" data-val="out"${!breakingLive ? ' disabled' : ''}>&lt; OUT</button>
+          <button class="grafik-btn-in${breakingLive ? ' on' : ''}" data-trig="breaking_trigger" data-val="in">&gt; IN</button>
+        </div>
+      </div>`;
 
   } else if (g.type === 'simple') {
     contentHTML = `
@@ -1700,7 +1737,7 @@ function renderGrafik() {
       </div>
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
         <button class="grafik-btn-out" id="grafik-prw-out-btn" style="flex:1;font-size:10px;">&lt; PRW UD</button>
-        <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${prvSrc}">Kopiér preview URL ⎘</button>
+        <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${previewIframeUrl}">Kopiér preview URL ⎘</button>
         <button class="btn btn-cancel btn-sm" style="flex:1;font-size:10px;min-width:0;" data-copy="${combinedUrl}">vMix overlay URL ⎘</button>
       </div>
     </div>
@@ -1764,6 +1801,16 @@ function renderGrafik() {
         <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
         <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
       </div>`;
+  } else if (g.type === 'ticker') {
+    const tPaUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=in`;
+    const tAfUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=out`;
+    const bPaUrl = `${origin}/api/trigger/${pid}?key=breaking_trigger&value=in`;
+    const bAfUrl = `${origin}/api/trigger/${pid}?key=breaking_trigger&value=out`;
+    companionRows = `
+      <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#aa66ff">T PÅ</span><span class="grafik-companion-url" title="${tPaUrl}">${tPaUrl}</span><button class="copy-btn icon-btn" data-copy="${tPaUrl}">⎘</button></div>
+      <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#aa66ff">T AF</span><span class="grafik-companion-url" title="${tAfUrl}">${tAfUrl}</span><button class="copy-btn icon-btn" data-copy="${tAfUrl}">⎘</button></div>
+      <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff4444">B PÅ</span><span class="grafik-companion-url" title="${bPaUrl}">${bPaUrl}</span><button class="copy-btn icon-btn" data-copy="${bPaUrl}">⎘</button></div>
+      <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff4444">B AF</span><span class="grafik-companion-url" title="${bAfUrl}">${bAfUrl}</span><button class="copy-btn icon-btn" data-copy="${bAfUrl}">⎘</button></div>`;
   } else {
     const paUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=in`;
     const afUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=out`;
@@ -1780,10 +1827,12 @@ function renderGrafik() {
       </div>`;
   }
   const companionHTML = `
-    <div class="grafik-companion-section">
-      <div class="grafik-companion-head">COMPANION (HTTP POST)</div>
-      ${companionRows}
-    </div>`;
+    <details class="grafik-lag-details"${grafiktCompanionOpen ? ' open' : ''} id="grafik-companion-details">
+      <summary class="grafik-lag-summary">▸ COMPANION (HTTP POST)</summary>
+      <div class="grafik-companion-section" style="border:none;padding:0;margin-top:8px;">
+        ${companionRows}
+      </div>
+    </details>`;
 
   // ── HØJRE PANEL: LAG-RÆKKEFØLGE ─────────────────────────────────
   const lagRows = overlayLagOrder.filter(id => {
@@ -1804,26 +1853,57 @@ function renderGrafik() {
     </details>`;
 
   // ── RENDER ───────────────────────────────────────────────────────
-  container.innerHTML = `
-    <div class="grafik-v2-wrap">
-      <div class="grafik-v2-left">
-        <div class="grafik-v2-subtabs">${subTabsHTML}</div>
-        <div class="grafik-v2-content">${contentHTML}</div>
-      </div>
-      <div class="grafik-v2-right">
-        ${previewHTML}
-        ${companionHTML}
-        ${lagHTML}
-      </div>
-    </div>`;
+  const existingWrap = container.querySelector('.grafik-v2-wrap');
+  if (!existingWrap) {
+    // Første render: byg hele shell inkl. iframes
+    container.innerHTML = `
+      <div class="grafik-v2-wrap">
+        <div class="grafik-v2-left">
+          <div class="grafik-v2-subtabs">${subTabsHTML}<button class="grafik-alle-af-btn" id="grafik-alle-af">■ ALLE AF</button></div>
+          <div class="grafik-v2-content">${contentHTML}</div>
+        </div>
+        <div class="grafik-v2-right">
+          ${previewHTML}
+          ${companionHTML}
+          ${lagHTML}
+        </div>
+      </div>`;
+  } else {
+    // Efterfølgende render: opdater kun venstre panel og companion — bevar iframes
+    existingWrap.querySelector('.grafik-v2-subtabs').innerHTML =
+      subTabsHTML + `<button class="grafik-alle-af-btn" id="grafik-alle-af">■ ALLE AF</button>`;
+    existingWrap.querySelector('.grafik-v2-content').innerHTML = contentHTML;
+    const companionEl = existingWrap.querySelector('#grafik-companion-details');
+    if (companionEl) {
+      companionEl.innerHTML = `
+        <summary class="grafik-lag-summary">▸ COMPANION (HTTP POST)</summary>
+        <div class="grafik-companion-section" style="border:none;padding:0;margin-top:8px;">${companionRows}</div>`;
+      if (grafiktCompanionOpen) companionEl.open = true;
+    }
+  }
 
   // ── EVENT LISTENERS ──────────────────────────────────────────────
   container.querySelectorAll('.grafik-v2-tab').forEach(btn =>
     btn.addEventListener('click', () => {
       grafiktActiveSubTab = btn.dataset.gtab;
-      grafiktActivePrvKey = '';
-      renderGrafik();
+      renderGrafik(); // grafiktActivePrvKey/-Url bevares — iframes reloades ikke
     }));
+
+  const alleAfBtn = container.querySelector('#grafik-alle-af');
+  if (alleAfBtn) alleAfBtn.addEventListener('click', async () => {
+    const allKeys = OVERLAY_GRAPHICS.map(og => og.triggerKey);
+    OVERLAY_GRAPHICS.forEach(og => { grafiktState[og.triggerKey] = 'out'; });
+    grafiktState['lt_slot']      = '';
+    grafiktState['vmixcall_slot'] = '0';
+    renderGrafik();
+    try {
+      await Promise.all([
+        ...allKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })),
+        sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot',      value: '' }),
+        sbUpsert('settings', { projekt_id: aktivProjektId, key: 'vmixcall_slot', value: '0' }),
+      ]);
+    } catch { toast('Fejl ved ALLE AF', 'err'); }
+  });
 
   container.querySelectorAll('[data-prv-type]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -1838,10 +1918,11 @@ function renderGrafik() {
           await sbUpsert('settings', { projekt_id: aktivProjektId, key: btn.dataset.prvKey + '_prv', value: 'in' });
         }
         grafiktActivePrvKey = btn.dataset.prvId;
+        grafiktActivePrvUrl = g.type === 'vmixcalls' ? combinedUrl : previewIframeUrl;
         container.querySelectorAll('[data-prv-type]').forEach(b =>
           b.classList.toggle('active', b.dataset.prvId === grafiktActivePrvKey));
         const prvIframe = container.querySelector('.grafik-preview-iframe');
-        if (prvIframe) prvIframe.src = g.type === 'vmixcalls' ? combinedUrl : previewIframeUrl;
+        if (prvIframe) prvIframe.src = grafiktActivePrvUrl;
       } catch { toast('Fejl ved PRW', 'err'); }
     });
   });
@@ -1856,13 +1937,32 @@ function renderGrafik() {
       }
     } catch { toast('Fejl ved PRW UD', 'err'); }
     grafiktActivePrvKey = '';
+    grafiktActivePrvUrl = '';
+    const prvIframe = container.querySelector('.grafik-preview-iframe');
+    if (prvIframe) prvIframe.src = 'about:blank';
     renderGrafik();
   });
 
   container.querySelectorAll('.grafik-vmix-call-btn').forEach(btn =>
-    btn.addEventListener('click', () => {
-      const c = vmixCalls[+btn.dataset.idx];
+    btn.addEventListener('click', async () => {
+      const idx  = +btn.dataset.idx;
+      const slot = idx + 1;
+      const c    = vmixCalls[idx];
+      grafiktState['vmixcall_slot'] = String(slot);
+      renderGrafik();
+      try {
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'vmixcall_slot', value: String(slot) });
+      } catch { toast('Fejl ved vmixcall trigger', 'err'); }
       if (c?.link) fetch(c.link, { mode: 'no-cors' }).catch(() => {});
+    }));
+
+  container.querySelectorAll('.grafik-vmix-out-btn').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      grafiktState['vmixcall_slot'] = '0';
+      renderGrafik();
+      try {
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'vmixcall_slot', value: '0' });
+      } catch { toast('Fejl ved vmixcall AF', 'err'); }
     }));
 
   container.querySelectorAll('[data-copy]').forEach(btn =>
@@ -1882,22 +1982,33 @@ function renderGrafik() {
 
   container.querySelectorAll('.grafik-lt-paa').forEach(btn =>
     btn.addEventListener('click', async () => {
-      const slot = btn.dataset.slot;
+      const slot        = btn.dataset.slot;
+      const currentSlot = grafiktState['lt_slot'] || '';
+      const currentVal  = grafiktState['lt_trigger'] || 'out';
+      const isAlreadyOn = currentVal !== 'out' && currentSlot !== '';
+      // Skift kun tekst (update) hvis en sub allerede er on air — ellers fuld IN
+      const triggerVal  = isAlreadyOn ? 'update' : 'in';
       grafiktState['lt_slot']    = slot;
-      grafiktState['lt_trigger'] = 'in';
+      grafiktState['lt_trigger'] = triggerVal;
       renderGrafik();
       try {
         await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot',    value: slot });
-        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: 'in' });
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: triggerVal });
       } catch { toast('Fejl ved lower third trigger', 'err'); }
     }));
+
+  const companionDetails = container.querySelector('#grafik-companion-details');
+  if (companionDetails) {
+    companionDetails.addEventListener('toggle', () => { grafiktCompanionOpen = companionDetails.open; });
+  }
 
   initLagDragDrop();
 }
 
 function initLagDragDrop() {
   const list = document.getElementById('overlayLagList');
-  if (!list) return;
+  if (!list || list.dataset.dndInit) return;
+  list.dataset.dndInit = '1';
   let dragSrcId = null;
 
   list.querySelectorAll('.lag-row').forEach(row => {
@@ -3190,6 +3301,7 @@ function applySubRow(row) {
   if (subs[i].editMode || subs[i].savePending) return;
   subs[i] = { ...subs[i], navn: row.navn || '', titel: row.titel || '' };
   rerenderSub(i);
+  if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
 }
 
 function applyVmixCallRow(row) {
@@ -3199,6 +3311,7 @@ function applyVmixCallRow(row) {
   if (vmixCalls[i].editMode || vmixCalls[i].savePending) return;
   vmixCalls[i] = { ...vmixCalls[i], navn: row.navn || '', titel: row.titel || '', link: row.link || '' };
   rerenderVmixCall(i);
+  if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
 }
 
 function applyTickerRow(row) {
@@ -3243,8 +3356,8 @@ sbClient.channel('db-changes')
         } else {
           refreshCredits();
         }
-        // Opdater grafik-tab hvis det er åbent og en trigger-key eller lt_slot ændrer sig
-        if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot') {
+        // Opdater grafik-tab hvis det er åbent og en trigger-key, lt_slot eller vmixcall_slot ændrer sig
+        if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot' || p.new.key === 'vmixcall_slot') {
           grafiktState[p.new.key] = p.new.value;
           if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
         }

@@ -1428,12 +1428,28 @@
     .grafik-v2-right {
       height: 100%;
       overflow-y: auto;
+      scrollbar-width: none;
       border-left: 1px solid #1a1a1a;
       padding: 16px;
       display: flex;
       flex-direction: column;
       gap: 16px;
     }
+    .grafik-v2-right::-webkit-scrollbar { display: none; }
+
+    .grafik-alle-af-btn {
+      margin-left: auto;
+      padding: 4px 12px;
+      background: #3d1010;
+      color: #f87171;
+      border: 1px solid #6b1a1a;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+    }
+    .grafik-alle-af-btn:hover { background: #5a1a1a; }
 
     /* Sub-tabs */
     .grafik-v2-subtabs {
