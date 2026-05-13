@@ -219,7 +219,7 @@ function flashSaved(el, color = 'blue') {
 
 // ── TITLE CASE ────────────────────────────────────────────────
 function toTitleCase(str) {
-  return str.replace(/\b\w/g, c => c.toUpperCase());
+  return str.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1) : w).join(' ');
 }
 function titleCaseInput(el, buf, key) {
   el.addEventListener('blur', () => {
