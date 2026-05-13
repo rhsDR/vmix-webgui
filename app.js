@@ -1296,7 +1296,7 @@ let creditNewCounter = 0;
 let creditsTriggerActive = false;
 const OVERLAY_GRAPHICS = [
   { id: 'lower-third', label: 'Lower Third',     file: 'lower-third.html',    triggerKey: 'lt_trigger',         type: 'lt',      color: '#4a9eff' },
-  { id: 'ticker',      label: 'Ticker',           file: 'ticker-overlay.html', triggerKey: 'ticker_ovl_trigger', type: 'ticker',  color: '#aa66ff' },
+  { id: 'ticker',      label: 'Ticker',           file: 'Graphics/Ticker/Ticker_gsap.html', triggerKey: 'ticker_ovl_trigger', type: 'ticker',  color: '#aa66ff' },
   { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html',       triggerKey: 'breaking_trigger',   type: 'simple',  color: '#ff4444', subOf: 'ticker' },
   { id: 'score',       label: 'Stillings',        file: null,                  triggerKey: 'score_trigger',      type: 'simple',  color: '#44cc88', subOf: 'ticker' },
   { id: 'stilling',    label: 'Stilling',         file: 'stilling.html',       triggerKey: 'stilling_trigger',   type: 'simple',  color: '#44cc88' },
