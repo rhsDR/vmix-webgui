@@ -64,8 +64,9 @@ const _pid       = _params.get('p') || '';
 const _pf        = _pid ? '&projekt_id=eq.' + encodeURIComponent(_pid) : '';
 const _isPreview = _params.has('preview');
 const _sfx       = _isPreview ? '_prv' : '';
-let _animating   = false;
-let _currentSlot = null;
+let _animating      = false;
+let _currentSlot    = null;
+let _currentTrigger = null; // 'in' | 'vmixcall' — hvilken type er på air
 
 async function pollTrigger() {
   if (_animating) { setTimeout(pollTrigger, 2000); return; }
@@ -77,8 +78,8 @@ async function pollTrigger() {
     const trigger = rows.find(r => r.key === 'lt_trigger' + _sfx)?.value;
     const slot    = rows.find(r => r.key === 'lt_slot'    + _sfx)?.value;
 
-    if (trigger === 'update' && _spxVisible && slot && slot !== _currentSlot) {
-      // Kun tekst-skift — ingen OUT/IN animation
+    if (trigger === 'update' && _spxVisible && slot && slot !== _currentSlot && _currentTrigger !== 'vmixcall') {
+      // Kun tekst-skift (sub→sub) — ingen OUT/IN animation
       _animating = true;
       const subs = await fetch(
         SB_URL + '/rest/v1/subs?slot=eq.' + slot + '&select=navn,titel' + _pf,
@@ -86,16 +87,38 @@ async function pollTrigger() {
       ).then(r => r.json());
       const sub = subs[0];
       if (sub) {
-        _currentSlot = slot;
+        _currentSlot    = slot;
+        _currentTrigger = 'in';
         _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
-        // Animer kun navn og titel ind med irregular stagger
         _csPlay('el5', 0.24, 0,    'irregular',  3, 1);
         _csPlay('el6', 0.24, 0.08, 'wipe-step',  3, 1);
         setTimeout(() => { _animating = false; setTimeout(pollTrigger, 2000); }, 900);
         return;
       }
       _animating = false;
-    } else if (trigger === 'in' && (!_spxVisible || slot !== _currentSlot)) {
+    } else if (trigger === 'vmixcall' && (!_spxVisible || slot !== _currentSlot || _currentTrigger !== 'vmixcall')) {
+      // vmixcall på lower third
+      if (!slot) { setTimeout(pollTrigger, 2000); return; }
+      _animating = true;
+      const calls = await fetch(
+        SB_URL + '/rest/v1/vmix_calls?slot=eq.' + slot + '&select=navn,titel' + _pf,
+        { headers: SB_HDR }
+      ).then(r => r.json());
+      const call = calls[0];
+      if (call) {
+        const doShow = (skipLabel) => {
+          _currentSlot    = slot;
+          _currentTrigger = 'vmixcall';
+          _updateContent({ f0: call.titel || '', f1: call.navn || '', f2: 'SPORT', f3: 'venstre' });
+          setTimeout(() => runAnimationIN(skipLabel), 50);
+          setTimeout(() => { _animating = false; setTimeout(pollTrigger, 2000); }, 2700);
+        };
+        if (_spxVisible) { runAnimationOUT(false); setTimeout(() => doShow(true), 2200); }
+        else              { doShow(false); }
+        return;
+      }
+      _animating = false;
+    } else if (trigger === 'in' && (!_spxVisible || slot !== _currentSlot || _currentTrigger === 'vmixcall')) {
       if (!slot) { setTimeout(pollTrigger, 2000); return; }
       _animating = true;
       const subs = await fetch(
@@ -105,7 +128,8 @@ async function pollTrigger() {
       const sub = subs[0];
       if (sub) {
         const doShow = (skipLabel) => {
-          _currentSlot = slot;
+          _currentSlot    = slot;
+          _currentTrigger = 'in';
           _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
           setTimeout(() => runAnimationIN(skipLabel), 50);
           setTimeout(() => { _animating = false; setTimeout(pollTrigger, 2000); }, 2700);
@@ -118,7 +142,7 @@ async function pollTrigger() {
     } else if (trigger === 'out' && _spxVisible) {
       _animating = true;
       runAnimationOUT(false);
-      setTimeout(() => { _currentSlot = null; _animating = false; setTimeout(pollTrigger, 2000); }, 2600);
+      setTimeout(() => { _currentSlot = null; _currentTrigger = null; _animating = false; setTimeout(pollTrigger, 2000); }, 2600);
       return;
     }
   } catch(e) { console.error('LT poll fejl:', e); }

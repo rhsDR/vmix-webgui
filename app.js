@@ -1353,7 +1353,7 @@ async function refreshCredits() {
 }
 
 async function refreshGrafiktState() {
-  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey), 'lt_slot', 'vmixcall_slot'].join(',');
+  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey), 'lt_slot'].join(',');
   try {
     const rows = await sbGet('settings?select=key,value&key=in.(' + keys + ')&projekt_id=eq.' + aktivProjektId);
     rows.forEach(r => { grafiktState[r.key] = r.value; });
@@ -1596,10 +1596,13 @@ function renderGrafik() {
 
   if (g.type === 'lt') {
     const activeLtSlot = grafiktState['lt_slot'] || '';
+    const activeLtTrig = grafiktState['lt_trigger'] || 'out';
+    const ltSubMode    = activeLtTrig === 'in' || activeLtTrig === 'update';
+    const ltVmixMode   = activeLtTrig === 'vmixcall';
     const subRows = subs.map((s, i) => {
       if (!s.navn && !s.titel) return '';
       const slot    = i + 1;
-      const slotAct = isLive && String(activeLtSlot) === String(slot);
+      const slotAct = ltSubMode && String(activeLtSlot) === String(slot);
       return `<div class="grafik-block" style="--g-color:${g.color}">
         <span class="grafik-block-num">${slot}</span>
         <div class="grafik-block-info">
@@ -1613,12 +1616,10 @@ function renderGrafik() {
         </div>
       </div>`;
     }).filter(Boolean).join('');
-    const activeVmixSlot = grafiktState['vmixcall_slot'] || '';
     const vmixRows = vmixCalls.map((c, i) => {
       if (!c.navn) return '';
-      const slot     = i + 1;
-      const vmixAct  = String(activeVmixSlot) === String(slot);
-      const vmixLive = activeVmixSlot !== '' && activeVmixSlot !== '0';
+      const slot    = i + 1;
+      const vmixAct = ltVmixMode && String(activeLtSlot) === String(slot);
       return `<div class="grafik-block" style="--g-color:#a855f7">
         <span class="grafik-block-num">${slot}</span>
         <div class="grafik-block-info">
@@ -1626,6 +1627,7 @@ function renderGrafik() {
           ${c.titel ? `<span class="grafik-block-sub">${esc(c.titel)}</span>` : ''}
         </div>
         <div class="grafik-block-actions">
+          <button class="grafik-btn-prw${grafiktActivePrvKey === 'vmc-'+slot ? ' active' : ''}" data-prv-type="vmixcall" data-prv-slot="${slot}" data-prv-id="vmc-${slot}">PRW</button>
           <button class="grafik-btn-out grafik-vmix-out-btn" data-idx="${i}"${!vmixAct ? ' disabled' : ''}>&lt; OUT</button>
           <button class="grafik-btn-in${vmixAct ? ' on' : ''} grafik-vmix-call-btn" data-idx="${i}">&gt; IN</button>
         </div>
@@ -1893,14 +1895,12 @@ function renderGrafik() {
   if (alleAfBtn) alleAfBtn.addEventListener('click', async () => {
     const allKeys = OVERLAY_GRAPHICS.map(og => og.triggerKey);
     OVERLAY_GRAPHICS.forEach(og => { grafiktState[og.triggerKey] = 'out'; });
-    grafiktState['lt_slot']      = '';
-    grafiktState['vmixcall_slot'] = '0';
+    grafiktState['lt_slot'] = '';
     renderGrafik();
     try {
       await Promise.all([
         ...allKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })),
-        sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot',      value: '' }),
-        sbUpsert('settings', { projekt_id: aktivProjektId, key: 'vmixcall_slot', value: '0' }),
+        sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: '' }),
       ]);
     } catch { toast('Fejl ved ALLE AF', 'err'); }
   });
@@ -1912,13 +1912,15 @@ function renderGrafik() {
         if (type === 'lt') {
           await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot_prv',    value: btn.dataset.prvSlot });
           await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger_prv', value: 'in' });
-        } else if (type === 'vmix') {
-          // vMix calls bruger combined overlay som preview — intet Supabase-kald
+        } else if (type === 'vmixcall') {
+          // vmixcall bruger lower-third med vmixcall-trigger til preview
+          await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot_prv',    value: btn.dataset.prvSlot });
+          await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger_prv', value: 'vmixcall' });
         } else {
           await sbUpsert('settings', { projekt_id: aktivProjektId, key: btn.dataset.prvKey + '_prv', value: 'in' });
         }
         grafiktActivePrvKey = btn.dataset.prvId;
-        grafiktActivePrvUrl = g.type === 'vmixcalls' ? combinedUrl : previewIframeUrl;
+        grafiktActivePrvUrl = previewIframeUrl; // lower-third.html for alle lt-typer
         container.querySelectorAll('[data-prv-type]').forEach(b =>
           b.classList.toggle('active', b.dataset.prvId === grafiktActivePrvKey));
         const prvIframe = container.querySelector('.grafik-preview-iframe');
@@ -1948,20 +1950,23 @@ function renderGrafik() {
       const idx  = +btn.dataset.idx;
       const slot = idx + 1;
       const c    = vmixCalls[idx];
-      grafiktState['vmixcall_slot'] = String(slot);
+      grafiktState['lt_slot']    = String(slot);
+      grafiktState['lt_trigger'] = 'vmixcall';
       renderGrafik();
       try {
-        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'vmixcall_slot', value: String(slot) });
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot',    value: String(slot) });
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: 'vmixcall' });
       } catch { toast('Fejl ved vmixcall trigger', 'err'); }
       if (c?.link) fetch(c.link, { mode: 'no-cors' }).catch(() => {});
     }));
 
   container.querySelectorAll('.grafik-vmix-out-btn').forEach(btn =>
     btn.addEventListener('click', async () => {
-      grafiktState['vmixcall_slot'] = '0';
+      grafiktState['lt_slot']    = '';
+      grafiktState['lt_trigger'] = 'out';
       renderGrafik();
       try {
-        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'vmixcall_slot', value: '0' });
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: 'out' });
       } catch { toast('Fejl ved vmixcall AF', 'err'); }
     }));
 
@@ -3357,7 +3362,7 @@ sbClient.channel('db-changes')
           refreshCredits();
         }
         // Opdater grafik-tab hvis det er åbent og en trigger-key, lt_slot eller vmixcall_slot ændrer sig
-        if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot' || p.new.key === 'vmixcall_slot') {
+        if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot') {
           grafiktState[p.new.key] = p.new.value;
           if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
         }
