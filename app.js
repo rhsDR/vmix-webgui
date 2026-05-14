@@ -2208,7 +2208,10 @@ function renderEgneGrafik(leftPanel) {
         document.querySelectorAll('[data-prv-type]').forEach(b =>
           b.classList.toggle('active', b.dataset.prvId === grafiktActivePrvKey));
         const prvIframe = document.querySelector('.grafik-preview-iframe');
-        if (prvIframe) { prvIframe.removeAttribute('src'); prvIframe.srcdoc = content; }
+        if (prvIframe) {
+          const blob = new Blob([content], { type: 'text/html' });
+          prvIframe.src = URL.createObjectURL(blob);
+        }
       } catch { toast('Fejl ved PRW', 'err'); }
     }));
 }

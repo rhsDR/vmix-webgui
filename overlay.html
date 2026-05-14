@@ -116,10 +116,12 @@
         try { html = await fetch(g.file_url).then(r => r.text()); } catch { return; }
         const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(pid)};window.__IS_PREVIEW=false;<\/script>`;
         html = html.replace(/(<html[^>]*>)/i, '$1' + inject);
+        const blob = new Blob([html], { type: 'text/html' });
+        const blobUrl = URL.createObjectURL(blob);
         const iframe = document.createElement('iframe');
         iframe.id = frameId;
         iframe.allowTransparency = true;
-        iframe.srcdoc = html;
+        iframe.src = blobUrl;
         iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;';
         document.body.appendChild(iframe);
         DEFAULT_ORDER.push('custom-' + g.id.slice(0, 8));
