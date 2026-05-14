@@ -1363,6 +1363,15 @@ async function loadKunstomGrafik() {
   try {
     customGrafik = await sbGet('projekt_grafik?projekt_id=eq.' + aktivProjektId + '&order=sort_order');
   } catch { customGrafik = []; }
+  // Synkroniser overlayLagOrder med custom grafik
+  const validCustomIds = new Set(customGrafik.map(g => 'custom-' + g.id.slice(0, 8)));
+  // Fjern udgaaede custom-IDs
+  overlayLagOrder = overlayLagOrder.filter(id => !id.startsWith('custom-') || validCustomIds.has(id));
+  // Tilfoej nye custom-IDs sidst hvis de ikke allerede er der
+  customGrafik.forEach(g => {
+    const shortId = 'custom-' + g.id.slice(0, 8);
+    if (!overlayLagOrder.includes(shortId)) overlayLagOrder.push(shortId);
+  });
 }
 
 async function refreshGrafiktState() {
@@ -1937,24 +1946,32 @@ function renderGrafik() {
       <span class="lag-label" style="color:${m.color}">${m.label}</span>
     </div>`;
   }).join('') : '';
-  const lagRows = overlayLagOrder.filter(id => {
+  const lagRows = overlayLagOrder.map(id => {
     const og = OVERLAY_GRAPHICS.find(x => x.id === id);
-    return og && og.file !== null;
-  }).map(id => {
-    const og = OVERLAY_GRAPHICS.find(x => x.id === id);
-    if (id === 'ticker') {
+    if (og) {
+      if (!og.file) return '';
+      if (id === 'ticker') {
+        return `<div class="lag-row" draggable="true" data-lagid="${id}">
+          <span class="lag-handle">⠿</span>
+          <span class="lag-label">${og.label}</span>
+          <button class="lag-sub-toggle${tickerSubExpanded ? ' open' : ''}" id="tickerSubToggle">${tickerSubExpanded ? '▾' : '▸'} 4 lag</button>
+        </div>
+        ${tickerSubExpanded ? `<div class="lag-sublist" id="tickerSubLagList">${tickerSubRows}</div>` : ''}`;
+      }
       return `<div class="lag-row" draggable="true" data-lagid="${id}">
         <span class="lag-handle">⠿</span>
         <span class="lag-label">${og.label}</span>
-        <button class="lag-sub-toggle${tickerSubExpanded ? ' open' : ''}" id="tickerSubToggle">${tickerSubExpanded ? '▾' : '▸'} 4 lag</button>
-      </div>
-      ${tickerSubExpanded ? `<div class="lag-sublist" id="tickerSubLagList">${tickerSubRows}</div>` : ''}`;
+      </div>`;
     }
+    const cg = id.startsWith('custom-')
+      ? customGrafik.find(g => 'custom-' + g.id.slice(0, 8) === id)
+      : null;
+    if (!cg) return '';
     return `<div class="lag-row" draggable="true" data-lagid="${id}">
       <span class="lag-handle">⠿</span>
-      <span class="lag-label">${og.label}</span>
+      <span class="lag-label" style="color:${cg.color || '#888888'}">${esc(cg.label.toUpperCase())}</span>
     </div>`;
-  }).join('');
+  }).filter(Boolean).join('');
   const lagHTML = `
     <details class="grafik-lag-details">
       <summary class="grafik-lag-summary">▸ LAG-RÆKKEFØLGE</summary>
