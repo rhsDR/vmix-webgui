@@ -88,6 +88,7 @@ function _processSettings(row){
   if(row.key==='ticker_ovl_trigger'&&row.value==='in'&&!_vis)_animIN();
   if(row.key==='score_trigger'&&row.value==='out'&&_vis)_animOUT();
   if(row.key==='score_trigger'&&row.value==='in'&&!_vis)_animIN();
+  if(row.key==='breaking_trigger'){var nb=row.value==='in';if(nb!==_br){_br=nb;_cols(_br);}}
 }
 function _animIN(){
   _vis=true;_cols(_br);
@@ -109,23 +110,18 @@ function _loadInitial(){
   fetch(SB_URL+'/rest/v1/kampe?select=slot,hold1_kort,hold2_kort,hold1_score,hold2_score,on_air',{headers:h})
     .then(function(r){return r.json();})
     .then(function(rows){rows.forEach(_processKampRow);_rebuildMatches();});
-  fetch(SB_URL+'/rest/v1/tickers?select=slot,breaking,on_air&projekt_id=eq.'+PROJEKT_ID,{headers:h})
-    .then(function(r){return r.json();})
-    .then(function(rows){
-      rows.forEach(function(r){if(r.breaking&&r.on_air)_breakingSlots[r.slot]=true;});
-      var nb=Object.keys(_breakingSlots).length>0;
-      if(nb!==_br){_br=nb;_cols(_br);}
-    });
 }
 document.addEventListener('DOMContentLoaded',function(){
   _cols(false);
   _loadInitial();
+  var _h={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+  fetch(SB_URL+'/rest/v1/settings?key=eq.breaking_trigger&projekt_id=eq.'+PROJEKT_ID+'&select=value',{headers:_h})
+    .then(function(r){return r.json();})
+    .then(function(rows){if(rows[0]&&rows[0].value==='in'){_br=true;_cols(true);}});
   var _sb=window.supabase.createClient(SB_URL,SB_KEY);
   _sb.channel('score-live')
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'kampe'},
         function(p){_processKampRow(p.new);_rebuildMatches();})
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'tickers',filter:'projekt_id=eq.'+PROJEKT_ID},
-        function(p){_processTicker(p.new);})
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},
         function(p){_processSettings(p.new);})
     .subscribe();
