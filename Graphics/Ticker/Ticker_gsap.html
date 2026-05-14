@@ -61,9 +61,9 @@ function _step(ts){
   if(half>0&&_pos<-half){if(_pending!==null){_doWipe(_pending);_pending=null;requestAnimationFrame(_step);return;}_pos=_wrap.offsetWidth;}
   _inner.style.transform='translateX('+Math.round(_pos)+'px)';requestAnimationFrame(_step);
 }
-function _toB(){if(_tr)return;_tr=true;function go(){_cols(true);_inner.textContent=_mk(_bt);_pos=_wrap.offsetWidth;_br=true;_tr=false;}if(_spxVisible){runAnimationOUT();setTimeout(function(){go();runAnimationIN();},600);}else{go();}}
+function _toB(){if(_tr)return;_tr=true;function go(){_cols(true);var t=_mk(_bt);if(t)_inner.textContent=t;_pos=_wrap.offsetWidth;_br=true;_tr=false;}if(_spxVisible){runAnimationOUT();setTimeout(function(){go();runAnimationIN();},600);}else{go();}}
 function _toN(){if(_tr)return;_tr=true;function go(){_cols(false);var t=_mk(_nt);if(t)_inner.textContent=t;_pos=_wrap.offsetWidth;_br=false;_tr=false;}if(_spxVisible){runAnimationOUT();setTimeout(function(){go();runAnimationIN();},600);}else{go();}}
-function _poll(){if(!APIURL)return;fetch(APIURL).then(function(r){return r.json();}).then(function(d){var o=Array.isArray(d)?d[0]:d;var n=_strip(String(o.ticker_normal||'')).trim();var b=_strip(String(o.ticker_breaking||'')).trim();if(!_tr){if(!_br&&b){_bt=b;_nt=n;_toB();}else if(_br&&!b){_bt='';_nt=n;_toN();}else if(_br&&b!==_bt){_bt=b;_pending=_mk(b);}else if(!_br&&n!==_nt){_nt=n;_pending=_mk(n);}}}).catch(function(){});}
+function _poll(){if(!APIURL)return;fetch(APIURL).then(function(r){return r.json();}).then(function(d){var o=Array.isArray(d)?d[0]:d;var n=_strip(String(o.ticker_normal||'')).trim();var b=_strip(String(o.ticker_breaking||'')).trim();if(!_tr){if(_br){if(b&&b!==_bt)_pending=_mk(b);}else{if(n!==_nt)_pending=_mk(n);}}_nt=n;_bt=b;}).catch(function(){});}
 function runAnimationIN(){_spxVisible=true;
   _cols(_br);
   var t=_br?_mk(_bt):_mk(_nt);if(t&&!_inner.textContent){_inner.textContent=t;_pos=_wrap.offsetWidth;}
@@ -88,12 +88,19 @@ document.addEventListener('DOMContentLoaded',function(){
     .then(function(r){return r.json();})
     .then(function(rows){if(rows[0]&&rows[0].value==='in')runAnimationIN();});
   var _sb=window.supabase.createClient(SB_URL,SB_KEY);
+  fetch(SB_URL+'/rest/v1/settings?key=eq.breaking_trigger&projekt_id=eq.'+PROJEKT_ID+'&select=value',{headers:_h})
+    .then(function(r){return r.json();})
+    .then(function(rows){if(rows[0]&&rows[0].value==='in'&&!_br)_toB();});
   _sb.channel('ticker-trigger')
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(p){
       if(p.new.projekt_id!==PROJEKT_ID)return;
       if(p.new.key==='ticker_ovl_trigger'){
         if(p.new.value==='in'&&!_spxVisible)runAnimationIN();
         if(p.new.value==='out'&&_spxVisible)runAnimationOUT();
+      }
+      if(p.new.key==='breaking_trigger'){
+        if(p.new.value==='in'&&!_br)_toB();
+        if(p.new.value==='out'&&_br)_toN();
       }
     })
     .subscribe();
