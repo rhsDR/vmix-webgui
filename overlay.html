@@ -107,8 +107,9 @@
           { headers: SB_HDR }
         ).then(r => r.json());
       } catch { return; }
-      if (!Array.isArray(rows)) return;
+      if (!Array.isArray(rows) || !rows.length) return;
 
+      const customFrameMap = {};
       await Promise.all(rows.map(async g => {
         const frameId = 'custom-' + g.id.slice(0, 8) + '-frame';
         if (document.getElementById(frameId)) return;
@@ -125,8 +126,38 @@
         iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;';
         document.body.appendChild(iframe);
         DEFAULT_ORDER.push('custom-' + g.id.slice(0, 8));
+        customFrameMap[g.trigger_key] = iframe;
       }));
       applyOrder(DEFAULT_ORDER);
+
+      // Overlay.html poller selv for trigger-aendringer og kalder
+      // animationsfunktionerne direkte i iframens contentWindow.
+      // Dette undgaar afhengighed af at iframen selv kan lave WebSocket.
+      const trigKeys = Object.keys(customFrameMap);
+      if (!trigKeys.length) return;
+      const customState = {};
+      async function pollCustomTriggers() {
+        try {
+          const data = await fetch(
+            `${SB_URL}/rest/v1/settings?key=in.(${trigKeys.join(',')})&projekt_id=eq.${encodeURIComponent(pid)}&select=key,value`,
+            { headers: SB_HDR }
+          ).then(r => r.json());
+          if (Array.isArray(data)) {
+            for (const row of data) {
+              if (customState[row.key] === row.value) continue;
+              customState[row.key] = row.value;
+              const iframe = customFrameMap[row.key];
+              if (!iframe) continue;
+              try {
+                if (row.value === 'in') iframe.contentWindow?.runAnimationIN?.();
+                else if (row.value === 'out') iframe.contentWindow?.runAnimationOUT?.();
+              } catch {}
+            }
+          }
+        } catch {}
+        setTimeout(pollCustomTriggers, 1500);
+      }
+      pollCustomTriggers();
     }
 
     // Sæt standard-rækkefølge med det samme, poll derefter
