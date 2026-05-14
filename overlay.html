@@ -21,8 +21,10 @@
   <iframe id="lower-third-frame" allowtransparency="true" src=""></iframe>
   <iframe id="live-boks-frame"   allowtransparency="true" src=""></iframe>
   <iframe id="breaking-frame"    allowtransparency="true" src=""></iframe>
-  <iframe id="ticker-frame"      allowtransparency="true" src=""></iframe>
-  <iframe id="score-frame"       allowtransparency="true" src=""></iframe>
+  <iframe id="ticker-frame"         allowtransparency="true" src=""></iframe>
+  <iframe id="ticker-breaking-frame" allowtransparency="true" src=""></iframe>
+  <iframe id="score-frame"          allowtransparency="true" src=""></iframe>
+  <iframe id="score-breaking-frame"  allowtransparency="true" src=""></iframe>
   <iframe id="stilling-frame"    allowtransparency="true" src=""></iframe>
   <iframe id="opstilling-frame"  allowtransparency="true" src=""></iframe>
   <iframe id="credits-frame"     allowtransparency="true" src=""></iframe>
@@ -37,14 +39,16 @@
       { id: 'lower-third', file: 'lower-third.html'    },
       { id: 'live-boks',   file: 'Graphics/LIve_bokse/Live_BOKS_gsap.html' },
       { id: 'breaking',    file: 'breaking.html'        },
-      { id: 'ticker',      file: 'Graphics/Ticker/Ticker_gsap.html'  },
-      { id: 'score',       file: 'Graphics/Stillings_boks/Stillings_boks_uden_live_boks_gsap.html' },
+      { id: 'ticker',          file: 'Graphics/Ticker/Ticker_gsap.html'  },
+      { id: 'ticker-breaking', file: 'Graphics/Ticker/Ticker_breaking_gsap.html' },
+      { id: 'score',           file: 'Graphics/Stillings_boks/Stillings_boks_uden_live_boks_gsap.html' },
+      { id: 'score-breaking',  file: 'Graphics/Stillings_boks/Stillings_boks_BREAKING_uden_live_boks_gsap.html' },
       { id: 'stilling',    file: 'stilling.html'        },
       { id: 'opstilling',  file: 'opstilling.html'      },
       { id: 'credits',     file: 'credits.html'         },
     ];
     const DEFAULT_ORDER = GRAPHICS.map(g => g.id); // top→bund
-    const DEFAULT_TICKER_SUB_ORDER = ['live-boks', 'breaking', 'ticker', 'score'];
+    const DEFAULT_TICKER_SUB_ORDER = ['live-boks', 'breaking', 'ticker-breaking', 'score-breaking', 'ticker', 'score'];
     let tickerSubOrder = [...DEFAULT_TICKER_SUB_ORDER];
 
     const params  = new URLSearchParams(window.location.search);
