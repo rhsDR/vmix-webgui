@@ -1559,6 +1559,7 @@ function _renderRibbonAnim(){
     <button class="tb-btn" onclick="addSizeKf()" title="Størrelse KF @ scrub">▸ Scale</button>
     <button class="tb-btn" onclick="addRotationKf()" title="Rotation KF @ scrub">▸ Rot</button>
     <button class="tb-btn" onclick="addOpacityKf()" title="Opacity KF @ scrub">▸ Op</button>
+    <button class="tb-btn" onclick="addCropKf()" title="Crop KF @ scrub">▸ Crop</button>
     <button class="tb-btn" onclick="previewAnim()">&#9654; Preview</button>`;
   const cbn=(id,fn)=>{const inp=document.getElementById(id);if(inp){inp.addEventListener('input',e=>{fn(parseFloat(e.target.value)||0);render();});inp.addEventListener('change',()=>saveState());}};
   const cbs=(id,fn)=>{const inp=document.getElementById(id);if(inp)inp.addEventListener('change',e=>{saveState();fn(e.target.value);renderTimeline();renderRibbonBar();});};
@@ -1691,7 +1692,7 @@ function _propTracksToKfs(el){
   if(!times.length)return[];
   return times.map(t=>{
     const kf={t};
-    ['x','y','w','h','opacity'].forEach(prop=>{
+    ['x','y','w','h','opacity','rotation','cropT','cropB','cropL','cropR'].forEach(prop=>{
       const v=_interpTrack(el.propTracks[prop]||[],t);
       if(v!=null)kf[prop]=v;
     });
@@ -3889,6 +3890,34 @@ function previewAnim(){
     if(_grpAnimEls.has(el.id)){const ga=groupAnimations[el.groupId];const ao2=resolveAnimOut({animation:ga.animation,animOut:ga.animOut||'auto',wipeDir:ga.wipeDir||'→'});const outDl=ga.animOutDelay??0;const outDur=ga.animOutDuration??0.3;const inDl=ga.animDelay||0,inDur=ga.animDuration||0.45;const os=outDl>0?outDl:inDl+inDur;return Math.max(m,ao2!=='none'?os+outDur:inDl+inDur);}
     const outDelay=el.animOutDelay??0;const outDur=el.animOutDuration??0.3;const ao=resolveAnimOut(el);return Math.max(m,el.animDelay+el.animDuration+(ao!=='none'?outDelay+outDur:0));
   },0);
+  // RAF loop for elements driven by propTracks keyframes
+  const _pkEls=elements.filter(_hasPropKfs);
+  if(_pkEls.length){
+    const _pkMaxT=Math.max(..._pkEls.flatMap(el=>Object.values(el.propTracks||{}).flatMap(tr=>tr.map(k=>k.t))),0);
+    const _pvStart=performance.now();
+    (function _pvRaf(){
+      const elapsed=(performance.now()-_pvStart)/1000;
+      const t=elapsed;
+      _pkEls.forEach(el=>{
+        const div=canvas.querySelector(`[data-id="${el.id}"]`);if(!div)return;
+        const cw=div.querySelector('.el-content');
+        const pt=el.propTracks;
+        const vx=_interpTrack(pt.x,t);const vy=_interpTrack(pt.y,t);
+        const vw=_interpTrack(pt.w,t);const vh=_interpTrack(pt.h,t);
+        const vop=_interpTrack(pt.opacity,t);const vrot=_interpTrack(pt.rotation,t);
+        if(vx!=null)div.style.left=Math.round(vx*scale)+'px';
+        if(vy!=null)div.style.top=Math.round(vy*scale)+'px';
+        if(vw!=null)div.style.width=Math.round(vw*scale)+'px';
+        if(vh!=null)div.style.height=Math.round(vh*scale)+'px';
+        if(vop!=null)div.style.opacity=vop;
+        div.style.rotate=(vrot!=null?vrot:(el.rotation||0))+'deg';
+        div.style.transform='none';div.style.transition='none';
+        const _hasCropKf=pt.cropT?.length||pt.cropB?.length||pt.cropL?.length||pt.cropR?.length;
+        if(_hasCropKf){const vct=_interpTrack(pt.cropT,t)??0;const vcb=_interpTrack(pt.cropB,t)??0;const vcl=_interpTrack(pt.cropL,t)??0;const vcr=_interpTrack(pt.cropR,t)??0;if(cw)cw.style.clipPath=`inset(${vct}% ${vcr}% ${vcb}% ${vcl}%)`;}
+      });
+      if(elapsed<_pkMaxT+0.1)requestAnimationFrame(_pvRaf);
+    })();
+  }
   animatePlayhead(maxEnd+0.2);toast('Animation spiller...');
 }
 function resolveAnimOut(el){const mirror={'slide-left':'slide-right','slide-right':'slide-left','slide-up':'slide-down','slide-down':'slide-up',wipe:'wipe','wipe-step':'wipe-step','char-step':'char-step',reveal:'reveal','reveal-h':'reveal-h',fade:'fade',scale:'scale',none:'none'};const ao=el.animOut||'auto';return ao==='auto'?(mirror[el.animation]||el.animation):ao;}
@@ -4138,6 +4167,8 @@ function exportSPX_CSS(){
         let props=`left:${Math.round(kf.x??el.x)}px;top:${Math.round(kf.y??el.y)}px;opacity:${(kf.opacity??el.opacity).toFixed(3)};`;
         if(kf.w!=null)props+=`width:${Math.round(kf.w)}px;`;
         if(kf.h!=null)props+=`height:${Math.round(kf.h)}px;`;
+        if(kf.rotation!=null)props+=`rotate:${kf.rotation.toFixed(2)}deg;`;
+        if(kf.cropT!=null||kf.cropB!=null||kf.cropL!=null||kf.cropR!=null)props+=`clip-path:inset(${(kf.cropT??0).toFixed(2)}% ${(kf.cropR??0).toFixed(2)}% ${(kf.cropB??0).toFixed(2)}% ${(kf.cropL??0).toFixed(2)}%);`;
         if(ki<kfs.length-1)props+=`animation-timing-function:${_EASE_CSS_MAP[_getSegEaseAtTime(el,kf.t)]||'ease-in-out'};`;
         return`  ${pct}%{${props}}`;
       }).join('\n');
@@ -4146,7 +4177,7 @@ function exportSPX_CSS(){
       if(el.type==='rect')css+=`background:${_bgCss(el)};border-radius:${el.borderRadius}px;`;
       if(el.type==='line')css+=`background:${el.bgColor==='transparent'?el.color:el.bgColor};border-radius:2px;`;
       if(el.type==='image'||el.type==='lottie'||el.type==='pngseq')css+=`overflow:hidden;`;
-      {const cr=el.crop;if(cr&&(cr.t||cr.r||cr.b||cr.l))css+=`clip-path:inset(${cr.t}% ${cr.r}% ${cr.b}% ${cr.l}%);`;}
+      {const _hasCropKf=el.propTracks?.cropT?.length||el.propTracks?.cropB?.length||el.propTracks?.cropL?.length||el.propTracks?.cropR?.length;if(_hasCropKf){css+=`clip-path:inset(0% 0% 0% 0%);`;}else{const cr=el.crop;if(cr&&(cr.t||cr.r||cr.b||cr.l))css+=`clip-path:inset(${cr.t}% ${cr.r}% ${cr.b}% ${cr.l}%);`;}}
       css+=`animation:${id}-kf ${kfDur.toFixed(2)}s linear ${kfDelay.toFixed(2)}s both;}\n`;
       css+=`@keyframes ${id}-kf{\n${kfRules}\n}\n`;
     }else{
