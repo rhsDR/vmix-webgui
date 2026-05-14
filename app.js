@@ -1604,11 +1604,17 @@ function renderGrafik() {
     if (og.type === 'lineup') {
       isOnAir = (grafiktState[og.triggerKey] || 'out') !== 'out' || lineupOnAirMatchId !== null;
     } else if (og.type === 'ticker') {
-      // dot hvis ticker ELLER breaking ELLER score er live
+      // dot hvis ticker ELLER breaking ELLER score ELLER custom-i-ticker er live
+      const customTickerLive = tickerLagOrder.some(id => {
+        if (!id.startsWith('custom-')) return false;
+        const cg = customGrafik.find(g => 'custom-' + g.id.slice(0, 8) === id);
+        return cg && (grafiktState[cg.trigger_key] || 'out') !== 'out';
+      });
       isOnAir = (grafiktState[og.triggerKey] || 'out') !== 'out' ||
                 (grafiktState['breaking_trigger'] || 'out') !== 'out' ||
                 (grafiktState['score_trigger'] || 'out') !== 'out' ||
-                (grafiktState['live_boks_trigger'] || 'out') !== 'out';
+                (grafiktState['live_boks_trigger'] || 'out') !== 'out' ||
+                customTickerLive;
     } else {
       isOnAir = og.triggerKey ? (grafiktState[og.triggerKey] || 'out') !== 'out' : false;
     }
