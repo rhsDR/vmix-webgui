@@ -44,6 +44,8 @@
       { id: 'credits',     file: 'credits.html'         },
     ];
     const DEFAULT_ORDER = GRAPHICS.map(g => g.id); // top→bund
+    const DEFAULT_TICKER_SUB_ORDER = ['live-boks', 'breaking', 'ticker', 'score'];
+    let tickerSubOrder = [...DEFAULT_TICKER_SUB_ORDER];
 
     const params  = new URLSearchParams(window.location.search);
     const pid     = params.get('p') || '';
@@ -60,23 +62,34 @@
       frame.src = src;
     });
 
-    function applyOrder(order) {
-      const total = order.length;
-      order.forEach((id, idx) => {
-        const frame = document.getElementById(id + '-frame');
-        if (frame) frame.style.zIndex = (total - idx) * 10; // første = højest
+    function applyOrder(mainOrder) {
+      const total = mainOrder.length;
+      mainOrder.forEach((id, idx) => {
+        const baseZ = (total - idx) * 1000; // første = højest, store gap giver plads til sub-items
+        if (id === 'ticker') {
+          // Placer de 4 ticker-sub-items inden for dette slots z-zone
+          tickerSubOrder.forEach((subId, subIdx) => {
+            const frame = document.getElementById(subId + '-frame');
+            if (frame) frame.style.zIndex = baseZ - subIdx * 10;
+          });
+        } else {
+          const frame = document.getElementById(id + '-frame');
+          if (frame) frame.style.zIndex = baseZ;
+        }
       });
     }
 
     async function pollLagOrder() {
       try {
-        const rows = await fetch(
-          `${SB_URL}/rest/v1/settings?key=eq.overlay_lag_order&select=value${pf}`,
-          { headers: SB_HDR }
-        ).then(r => r.json());
-        const raw   = rows[0]?.value || '';
-        const order = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : DEFAULT_ORDER;
-        applyOrder(order);
+        const [mainRows, subRows] = await Promise.all([
+          fetch(`${SB_URL}/rest/v1/settings?key=eq.overlay_lag_order&select=value${pf}`, { headers: SB_HDR }).then(r => r.json()),
+          fetch(`${SB_URL}/rest/v1/settings?key=eq.ticker_lag_order&select=value${pf}`,  { headers: SB_HDR }).then(r => r.json()),
+        ]);
+        const rawMain = mainRows[0]?.value || '';
+        const rawSub  = subRows[0]?.value  || '';
+        const mainOrder = rawMain ? rawMain.split(',').map(s => s.trim()).filter(Boolean) : DEFAULT_ORDER;
+        tickerSubOrder  = rawSub  ? rawSub.split(',').map(s => s.trim()).filter(Boolean)  : DEFAULT_TICKER_SUB_ORDER;
+        applyOrder(mainOrder);
       } catch {}
       setTimeout(pollLagOrder, 3000);
     }

@@ -1305,7 +1305,10 @@ const OVERLAY_GRAPHICS = [
   { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits', color: '#ffcc44' },
 ];
 const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.filter(g => g.file !== null && !g.subOf).map(g => g.id);
-let overlayLagOrder = [...DEFAULT_LAG_ORDER];
+const DEFAULT_TICKER_SUB_ORDER = ['live-boks', 'breaking', 'ticker', 'score'];
+let overlayLagOrder   = [...DEFAULT_LAG_ORDER];
+let tickerLagOrder    = [...DEFAULT_TICKER_SUB_ORDER];
+let tickerSubExpanded = false;
 let grafiktState        = {}; // { triggerKey: currentValue }
 let grafiktActiveSubTab = 'lower-third';
 let grafiktActivePrvKey = '';
@@ -1355,10 +1358,16 @@ async function refreshCredits() {
 }
 
 async function refreshGrafiktState() {
-  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey), 'lt_slot'].join(',');
+  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey), 'lt_slot', 'ticker_lag_order'].join(',');
   try {
     const rows = await sbGet('settings?select=key,value&key=in.(' + keys + ')&projekt_id=eq.' + aktivProjektId);
-    rows.forEach(r => { grafiktState[r.key] = r.value; });
+    rows.forEach(r => {
+      if (r.key === 'ticker_lag_order') {
+        tickerLagOrder = r.value ? r.value.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_TICKER_SUB_ORDER];
+      } else {
+        grafiktState[r.key] = r.value;
+      }
+    });
   } catch {}
   renderGrafik();
 }
@@ -1375,6 +1384,12 @@ async function saveOverlayLagOrder() {
   try {
     await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'overlay_lag_order', value: overlayLagOrder.join(',') });
   } catch { toast('Fejl ved lag-gem', 'err'); }
+}
+
+async function saveTickerLagOrder() {
+  try {
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'ticker_lag_order', value: tickerLagOrder.join(',') });
+  } catch { toast('Fejl ved ticker-lag-gem', 'err'); }
 }
 
 
@@ -1887,11 +1902,32 @@ function renderGrafik() {
     </details>`;
 
   // ── HØJRE PANEL: LAG-RÆKKEFØLGE ─────────────────────────────────
+  const TICKER_SUB_META = {
+    'live-boks': { label: 'Live Boks',       color: '#ff2244' },
+    'breaking':  { label: 'Breaking Ticker', color: '#ff4444' },
+    'ticker':    { label: 'Ticker',          color: '#aa66ff' },
+    'score':     { label: 'Stillings Boks',  color: '#44cc88' },
+  };
+  const tickerSubRows = tickerSubExpanded ? tickerLagOrder.map(subId => {
+    const m = TICKER_SUB_META[subId] || { label: subId, color: '#888' };
+    return `<div class="lag-subrow" draggable="true" data-sublagid="${subId}">
+      <span class="lag-handle">⠿</span>
+      <span class="lag-label" style="color:${m.color}">${m.label}</span>
+    </div>`;
+  }).join('') : '';
   const lagRows = overlayLagOrder.filter(id => {
     const og = OVERLAY_GRAPHICS.find(x => x.id === id);
     return og && og.file !== null;
   }).map(id => {
     const og = OVERLAY_GRAPHICS.find(x => x.id === id);
+    if (id === 'ticker') {
+      return `<div class="lag-row" draggable="true" data-lagid="${id}">
+        <span class="lag-handle">⠿</span>
+        <span class="lag-label">${og.label}</span>
+        <button class="lag-sub-toggle${tickerSubExpanded ? ' open' : ''}" id="tickerSubToggle">${tickerSubExpanded ? '▾' : '▸'} 4 lag</button>
+      </div>
+      ${tickerSubExpanded ? `<div class="lag-sublist" id="tickerSubLagList">${tickerSubRows}</div>` : ''}`;
+    }
     return `<div class="lag-row" draggable="true" data-lagid="${id}">
       <span class="lag-handle">⠿</span>
       <span class="lag-label">${og.label}</span>
@@ -2063,6 +2099,16 @@ function renderGrafik() {
   }
 
   initLagDragDrop();
+  initTickerSubLagDragDrop();
+
+  const tickerSubToggle = container.querySelector('#tickerSubToggle');
+  if (tickerSubToggle) {
+    tickerSubToggle.addEventListener('click', e => {
+      e.stopPropagation(); // undgå at trække ticker-rækken
+      tickerSubExpanded = !tickerSubExpanded;
+      renderGrafik();
+    });
+  }
 }
 
 function initLagDragDrop() {
@@ -2073,6 +2119,7 @@ function initLagDragDrop() {
 
   list.querySelectorAll('.lag-row').forEach(row => {
     row.addEventListener('dragstart', e => {
+      if (e.target.classList.contains('lag-sub-toggle')) { e.preventDefault(); return; }
       dragSrcId = row.dataset.lagid;
       e.dataTransfer.effectAllowed = 'move';
       row.classList.add('dragging');
@@ -2101,6 +2148,46 @@ function initLagDragDrop() {
       overlayLagOrder = arr;
       renderGrafik();
       saveOverlayLagOrder();
+    });
+  });
+}
+
+function initTickerSubLagDragDrop() {
+  const list = document.getElementById('tickerSubLagList');
+  if (!list || list.dataset.dndInit) return;
+  list.dataset.dndInit = '1';
+  let dragSrcId = null;
+
+  list.querySelectorAll('.lag-subrow').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      dragSrcId = row.dataset.sublagid;
+      e.dataTransfer.effectAllowed = 'move';
+      row.classList.add('dragging');
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      list.querySelectorAll('.lag-subrow').forEach(r => r.classList.remove('drag-over'));
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      list.querySelectorAll('.lag-subrow').forEach(r => r.classList.remove('drag-over'));
+      if (row.dataset.sublagid !== dragSrcId) row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', e => {
+      e.stopPropagation();
+      row.classList.remove('drag-over');
+      if (!dragSrcId || dragSrcId === row.dataset.sublagid) return;
+      const fromIdx = tickerLagOrder.indexOf(dragSrcId);
+      const toIdx   = tickerLagOrder.indexOf(row.dataset.sublagid);
+      if (fromIdx < 0 || toIdx < 0) return;
+      const arr = [...tickerLagOrder];
+      arr.splice(fromIdx, 1);
+      arr.splice(toIdx, 0, dragSrcId);
+      tickerLagOrder = arr;
+      renderGrafik();
+      saveTickerLagOrder();
     });
   });
 }
@@ -3412,6 +3499,10 @@ sbClient.channel('db-changes')
         } else if (p.new.key === 'overlay_lag_order') {
           const raw = p.new.value || '';
           overlayLagOrder = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_LAG_ORDER];
+          if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
+        } else if (p.new.key === 'ticker_lag_order') {
+          const raw = p.new.value || '';
+          tickerLagOrder = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_TICKER_SUB_ORDER];
           if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
         } else {
           refreshCredits();

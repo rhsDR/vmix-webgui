@@ -1410,6 +1410,40 @@
     }
     .lag-label { font-size: 13px; color: #ccc; }
 
+    /* Ticker undermenu-toggle */
+    .lag-sub-toggle {
+      margin-left: auto;
+      font-size: 10px;
+      color: #555;
+      background: none;
+      border: 1px solid #2a2a2a;
+      border-radius: 4px;
+      padding: 2px 6px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .lag-sub-toggle:hover, .lag-sub-toggle.open { color: #aaa; border-color: #444; }
+    .lag-sub-toggle { pointer-events: auto; }
+
+    /* Ticker undermenu-rækker */
+    .lag-sublist { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 4px 18px; }
+    .lag-subrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: #0d0d0d;
+      border: 1px solid #222;
+      border-top: 2px solid transparent;
+      border-radius: 5px;
+      cursor: grab;
+      user-select: none;
+      transition: border-top-color 0.1s, opacity 0.15s;
+    }
+    .lag-subrow:active { cursor: grabbing; }
+    .lag-subrow.dragging  { opacity: 0.35; }
+    .lag-subrow.drag-over { border-top-color: var(--orange); }
+
     /* ── GRAFIK V2 — to-kolonnet layout ─────────────────────── */
     #tab-grafik { padding: 20px clamp(8px, 22vw, 340px); overflow: hidden; }
 
