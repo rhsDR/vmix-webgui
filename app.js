@@ -1685,9 +1685,19 @@ function renderGrafik() {
           <span class="grafik-block-sub"${breakingLive ? ' style="color:#ff4444"' : ''}>${breakingLive ? '● LIVE' : 'IKKE AKTIV'}</span>
         </div>
         <div class="grafik-block-actions">
-          <button class="grafik-btn-prw${grafiktActivePrvKey === 'breaking' ? ' active' : ''}" data-prv-type="simple" data-prv-key="breaking_trigger" data-prv-id="breaking">PRW</button>
+          <button class="grafik-btn-prw${grafiktActivePrvKey === 'ticker-breaking' ? ' active' : ''}" data-prv-type="simple" data-prv-key="breaking_trigger" data-prv-id="ticker-breaking" data-prv-url="${origin}/Graphics/Ticker/Ticker_breaking_gsap.html?p=${pid}&preview=1">PRW</button>
           <button class="grafik-btn-out" data-trig="breaking_trigger" data-val="out"${!breakingLive ? ' disabled' : ''}>&lt; OUT</button>
           <button class="grafik-btn-in${breakingLive ? ' on' : ''}" data-trig="breaking_trigger" data-val="in">&gt; IN</button>
+        </div>
+      </div>
+      <div class="grafik-section-head">BREAKING STILLINGS BOKS</div>
+      <div class="grafik-block" style="--g-color:#ff4444">
+        <div class="grafik-block-info">
+          <span class="grafik-block-name">BREAKING STILLINGS BOKS</span>
+          <span class="grafik-block-sub"${breakingLive ? ' style="color:#ff4444"' : ''}>${breakingLive ? '● LIVE' : 'IKKE AKTIV'}</span>
+        </div>
+        <div class="grafik-block-actions">
+          <button class="grafik-btn-prw${grafiktActivePrvKey === 'score-breaking' ? ' active' : ''}" data-prv-type="simple" data-prv-key="breaking_trigger" data-prv-id="score-breaking" data-prv-url="${origin}/Graphics/Stillings_boks/Stillings_boks_BREAKING_uden_live_boks_supabase.html?p=${pid}&preview=1">PRW</button>
         </div>
       </div>
       <div class="grafik-section-head">STILLINGS BOKS</div>
@@ -2011,7 +2021,7 @@ function renderGrafik() {
           await sbUpsert('settings', { projekt_id: aktivProjektId, key: btn.dataset.prvKey + '_prv', value: 'in' });
         }
         grafiktActivePrvKey = btn.dataset.prvId;
-        grafiktActivePrvUrl = previewIframeUrl; // lower-third.html for alle lt-typer
+        grafiktActivePrvUrl = btn.dataset.prvUrl || previewIframeUrl;
         container.querySelectorAll('[data-prv-type]').forEach(b =>
           b.classList.toggle('active', b.dataset.prvId === grafiktActivePrvKey));
         const prvIframe = container.querySelector('.grafik-preview-iframe');
