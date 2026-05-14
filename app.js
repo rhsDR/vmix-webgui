@@ -2229,6 +2229,32 @@ function openEgneGrafikModal() {
   document.getElementById('egne-trig-sel').onchange = function() {
     document.getElementById('egne-trig-custom').style.display = this.value === 'custom' ? 'inline-block' : 'none';
   };
+  document.getElementById('egne-file-inp').onchange = function() {
+    const file = this.files[0];
+    if (!file) return;
+    // Foreslå label fra filnavn hvis tomt
+    const labelInp = document.getElementById('egne-label-inp');
+    if (!labelInp.value) labelInp.value = file.name.replace(/\.html?$/i, '').replace(/[_-]/g, ' ');
+    // Læs filen og udtræk trigger-nøgle
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const m = e.target.result.match(/var _trigKey='([^']+)'\+/);
+      if (!m) return;
+      const key = m[1];
+      const sel = document.getElementById('egne-trig-sel');
+      const opt = Array.from(sel.options).find(o => o.value === key);
+      if (opt) {
+        sel.value = key;
+        document.getElementById('egne-trig-custom').style.display = 'none';
+      } else {
+        sel.value = 'custom';
+        const customInp = document.getElementById('egne-trig-custom');
+        customInp.style.display = 'inline-block';
+        customInp.value = key;
+      }
+    };
+    reader.readAsText(file);
+  };
   modal.style.display = 'flex';
 }
 
