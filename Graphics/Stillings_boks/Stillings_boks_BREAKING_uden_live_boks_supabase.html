@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
@@ -30,73 +31,93 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
   <div id="f1"></div>
 </div>
 <script>
-function clean(v){return(!v||v==='$NA')?'':String(v).trim();}
-function _prefetchAndPlay(cb){cb();}
-var _spxVisible=false;
-function _updateContent(data){
-  document.getElementById('el17').innerHTML=clean((data&&data.f0!=null)?String(data.f0):document.getElementById('f0').innerText);
-  (function(){var r=document.getElementById('el2');var s=document.getElementById('el5');if(r&&s){r.style.left=(s.offsetLeft+-38)+'px';r.style.width=Math.max(1,s.offsetWidth+337)+'px';}})();
-  (function(){var v=clean((data&&data.f1!=null)?String(data.f1):document.getElementById('f1').innerText);var w=document.getElementById('lt-wrap');if(w)w.className=v&&v.toLowerCase().includes('jre')?'pos-hoejre':'pos-venstre';})();
+var SB_URL="https://rxzxdcweqpbnvfkpnnrn.supabase.co";
+var SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU";
+var PROJEKT_ID="c2b06b16-6ede-4fa7-9f43-a9029f935157";
+var BBG="#eab308",BCOL="#111111";
+var _vis=false,_matches=[],_matchIdx=0,_cycleTimer=null;
+var _kampeBySlot={};
+function _fmtMatch(m){return m.h1+'  '+m.s1+' - '+m.s2+'  '+m.h2;}
+function _cols(){
+  var bg=document.getElementById('el2');var tx=document.getElementById('el17');
+  if(bg)bg.style.background='linear-gradient(to right,'+BBG+' 0%,'+BBG+' 100%)';
+  if(tx)tx.style.color=BCOL;
 }
-function runTemplateUpdate(data){_updateContent(data);function _apply(){_prefetchAndPlay(function(){setTimeout(runAnimationIN,50);});}if(_spxVisible){runAnimationOUT();setTimeout(_apply,1245);}else{_apply();}}
-window.onSpxUpdate=function(data){_updateContent(data);};
-function runAnimationIN(){_spxVisible=true;
+function _showMatch(m,animate){
+  var el=document.getElementById('el17');if(!el)return;
+  var txt=_fmtMatch(m);
+  if(animate&&_vis){
+    gsap.timeline()
+      .to(el,{opacity:0,duration:0.18,ease:'power2.in'})
+      .call(function(){el.textContent=txt;})
+      .to(el,{opacity:1,duration:0.22,ease:'power3.out'});
+  }else{el.textContent=txt;}
+}
+function _nextMatch(){
+  if(!_matches.length)return;
+  _matchIdx=(_matchIdx+1)%_matches.length;
+  _showMatch(_matches[_matchIdx],true);
+}
+function _startCycle(){
+  if(_cycleTimer)clearInterval(_cycleTimer);
+  _cycleTimer=null;
+  if(_matches.length>1)_cycleTimer=setInterval(_nextMatch,6000);
+}
+function _processKampRow(row){
+  if(row.on_air){
+    _kampeBySlot[row.slot]={h1:row.hold1_kort||'',h2:row.hold2_kort||'',
+      s1:String(row.hold1_score||0),s2:String(row.hold2_score||0)};
+  }else{delete _kampeBySlot[row.slot];}
+}
+function _rebuildMatches(){
+  var slots=Object.keys(_kampeBySlot).map(Number).sort();
+  var newMatches=slots.map(function(s){return _kampeBySlot[s];});
+  if(_vis&&_matchIdx<_matches.length&&_matchIdx<newMatches.length){
+    var cur=_matches[_matchIdx];var nxt=newMatches[_matchIdx];
+    if(cur.s1!==nxt.s1||cur.s2!==nxt.s2)_showMatch(nxt,true);
+  }
+  _matches=newMatches;
+  if(_matchIdx>=_matches.length)_matchIdx=0;
+  if(_vis&&!_cycleTimer&&_matches.length>1)_startCycle();
+}
+function _animIN(){
+  _vis=true;_cols();
+  if(_matches.length)document.getElementById('el17').textContent=_fmtMatch(_matches[_matchIdx]);
+  if(_matches.length>1)_startCycle();
   var tl=gsap.timeline();
   tl.fromTo('#el2',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
   tl.fromTo('#el17',{opacity:0,immediateRender:true},{opacity:1,duration:0.28,ease:'power3.out'},0.48);
 }
-function runAnimationOUT(){_spxVisible=false;
+function _animOUT(){
+  _vis=false;
+  if(_cycleTimer){clearInterval(_cycleTimer);_cycleTimer=null;}
   var tl=gsap.timeline();
   tl.to('#el2',{clipPath:'inset(50% 0% 50% 0%)',duration:0.34,ease:'power2.in'},0.805);
   tl.to('#el17',{opacity:0,duration:0.32,ease:'power2.in'},0.764);
 }
-var _spxVisible=false;
-/* ── SUPABASE INTEGRATION BLOCK ── START
-   Kopiér denne blok til nye versioner af lower-third.html.
-   Krav: _spxVisible, _updateContent(data), runAnimationIN(), runAnimationOUT() */
-const SB_URL='https://rxzxdcweqpbnvfkpnnrn.supabase.co';
-const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
-const SB_HDR={'apikey':SB_ANON,'Authorization':'Bearer '+SB_ANON};
-const _params=new URLSearchParams(window.location.search);
-const _pid=_params.get('p')||'';
-const _pf=_pid?'&projekt_id=eq.'+encodeURIComponent(_pid):'';
-const _isPreview=_params.has('preview');
-const _sfx=_isPreview?'_prv':'';
-let _animating=false,_currentSlot=null;
-async function pollTrigger(){
-  if(_animating){setTimeout(pollTrigger,2000);return;}
-  try{
-    const rows=await fetch(SB_URL+'/rest/v1/settings?select=key,value&key=in.(lt_trigger'+_sfx+',lt_slot'+_sfx+')'+_pf,{headers:SB_HDR}).then(r=>r.json());
-    const trigger=rows.find(r=>r.key==='lt_trigger'+_sfx)?.value;
-    const slot=rows.find(r=>r.key==='lt_slot'+_sfx)?.value;
-    if(trigger==='in'&&(!_spxVisible||slot!==_currentSlot)){
-      if(!slot){setTimeout(pollTrigger,2000);return;}
-      _animating=true;
-      const subs=await fetch(SB_URL+'/rest/v1/subs?slot=eq.'+slot+'&select=navn,titel'+_pf,{headers:SB_HDR}).then(r=>r.json());
-      const sub=subs[0];
-      if(sub){
-        const doShow=(skipLabel)=>{
-          _currentSlot=slot;
-          _updateContent({f0:sub.titel||'',f1:sub.navn||'',f2:'SPORT',f3:'venstre'});
-          var el7=document.getElementById('el7');if(el7)el7.textContent='SPORT';
-          var wrap=document.getElementById('lt-wrap');if(wrap){wrap.classList.toggle('pos-hoejre','venstre'==='højre');wrap.classList.toggle('pos-venstre','venstre'!=='højre');}
-          setTimeout(()=>runAnimationIN(skipLabel),50);
-          setTimeout(()=>{_animating=false;setTimeout(pollTrigger,2000);},2700);
-        };
-        if(_spxVisible){runAnimationOUT(false);setTimeout(()=>doShow(true),2200);}else{doShow(false);}
-        return;
-      }
-      _animating=false;
-    }else if(trigger==='out'&&_spxVisible){
-      _animating=true;runAnimationOUT(false);
-      setTimeout(()=>{_currentSlot=null;_animating=false;setTimeout(pollTrigger,2000);},2600);
-      return;
-    }
-  }catch(e){console.error('LT poll fejl:',e);}
-  setTimeout(pollTrigger,2000);
-}
-pollTrigger();
-/* ── SUPABASE INTEGRATION BLOCK ── END ── */
+document.addEventListener('DOMContentLoaded',function(){
+  _cols();
+  var h={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+  fetch(SB_URL+'/rest/v1/kampe?select=slot,hold1_kort,hold2_kort,hold1_score,hold2_score,on_air',{headers:h})
+    .then(function(r){return r.json();})
+    .then(function(rows){rows.forEach(_processKampRow);_rebuildMatches();});
+  fetch(SB_URL+'/rest/v1/settings?key=eq.breaking_trigger&projekt_id=eq.'+PROJEKT_ID+'&select=value',{headers:h})
+    .then(function(r){return r.json();})
+    .then(function(rows){if(rows[0]&&rows[0].value==='in')_animIN();});
+  var _sb=window.supabase.createClient(SB_URL,SB_KEY);
+  _sb.channel('score-breaking-live')
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'kampe'},
+        function(p){_processKampRow(p.new);_rebuildMatches();})
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},
+        function(p){
+          if(p.new.projekt_id!==PROJEKT_ID)return;
+          if(p.new.key==='breaking_trigger'){
+            if(p.new.value==='in'&&!_vis)_animIN();
+            if(p.new.value==='out'&&_vis)_animOUT();
+          }
+        })
+    .subscribe();
+});
 </script>
 
 </body>
