@@ -55,7 +55,7 @@ var _SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var _SB_HDR={'apikey':_SB_ANON,'Authorization':'Bearer '+_SB_ANON};
 var _pid=window.__PROJEKT_ID||new URLSearchParams(window.location.search).get('p')||'';
 var _prv=window.__IS_PREVIEW||new URLSearchParams(window.location.search).has('preview');
-var _trigKey='score_trigger'+(_prv?'_prv':'');
+var _trigKey='LIVE_bund'+(_prv?'_prv':'');
 document.addEventListener('DOMContentLoaded',function(){
   if(!_pid)return;
   fetch(_SB_URL+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+_pid+'&select=value',{headers:_SB_HDR})
