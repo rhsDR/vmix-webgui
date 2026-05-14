@@ -109,7 +109,7 @@ function _loadInitial(){
   fetch(SB_URL+'/rest/v1/kampe?select=slot,hold1_kort,hold2_kort,hold1_score,hold2_score,on_air',{headers:h})
     .then(function(r){return r.json();})
     .then(function(rows){rows.forEach(_processKampRow);_rebuildMatches();});
-  fetch(SB_URL+'/rest/v1/tickers?select=slot,breaking,on_air',{headers:h})
+  fetch(SB_URL+'/rest/v1/tickers?select=slot,breaking,on_air&projekt_id=eq.'+PROJEKT_ID,{headers:h})
     .then(function(r){return r.json();})
     .then(function(rows){
       rows.forEach(function(r){if(r.breaking&&r.on_air)_breakingSlots[r.slot]=true;});
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded',function(){
   _sb.channel('score-live')
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'kampe'},
         function(p){_processKampRow(p.new);_rebuildMatches();})
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'tickers'},
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'tickers',filter:'projekt_id=eq.'+PROJEKT_ID},
         function(p){_processTicker(p.new);})
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},
         function(p){_processSettings(p.new);})
