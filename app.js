@@ -1363,14 +1363,15 @@ async function loadKunstomGrafik() {
   try {
     customGrafik = await sbGet('projekt_grafik?projekt_id=eq.' + aktivProjektId + '&order=sort_order');
   } catch { customGrafik = []; }
-  // Synkroniser overlayLagOrder med custom grafik
   const validCustomIds = new Set(customGrafik.map(g => 'custom-' + g.id.slice(0, 8)));
-  // Fjern udgaaede custom-IDs
+  // Fjern udgaaede custom-IDs fra begge lister
   overlayLagOrder = overlayLagOrder.filter(id => !id.startsWith('custom-') || validCustomIds.has(id));
-  // Tilfoej nye custom-IDs sidst hvis de ikke allerede er der
+  tickerLagOrder  = tickerLagOrder.filter(id => !id.startsWith('custom-') || validCustomIds.has(id));
+  // Tilfoej nye custom-IDs til overlayLagOrder hvis de ikke er i hverken main eller ticker
   customGrafik.forEach(g => {
     const shortId = 'custom-' + g.id.slice(0, 8);
-    if (!overlayLagOrder.includes(shortId)) overlayLagOrder.push(shortId);
+    if (!overlayLagOrder.includes(shortId) && !tickerLagOrder.includes(shortId))
+      overlayLagOrder.push(shortId);
   });
 }
 
@@ -1939,11 +1940,17 @@ function renderGrafik() {
     'ticker':    { label: 'Ticker',          color: '#aa66ff' },
     'score':     { label: 'Stillings Boks',  color: '#44cc88' },
   };
+  const tickerSubCount = tickerLagOrder.length;
   const tickerSubRows = tickerSubExpanded ? tickerLagOrder.map(subId => {
-    const m = TICKER_SUB_META[subId] || { label: subId, color: '#888' };
+    const cg = subId.startsWith('custom-')
+      ? customGrafik.find(g => 'custom-' + g.id.slice(0, 8) === subId) : null;
+    const m = cg
+      ? { label: cg.label.toUpperCase(), color: cg.color || '#888888' }
+      : (TICKER_SUB_META[subId] || { label: subId, color: '#888' });
     return `<div class="lag-subrow" draggable="true" data-sublagid="${subId}">
       <span class="lag-handle">⠿</span>
       <span class="lag-label" style="color:${m.color}">${m.label}</span>
+      ${cg ? `<button class="lag-ticker-out-btn" data-customid="${subId}" style="margin-left:auto;font-size:9px;padding:1px 6px;background:none;border:1px solid #555;color:#aaa;border-radius:3px;cursor:pointer;">◂ Ud</button>` : ''}
     </div>`;
   }).join('') : '';
   const lagRows = overlayLagOrder.map(id => {
@@ -1954,7 +1961,7 @@ function renderGrafik() {
         return `<div class="lag-row" draggable="true" data-lagid="${id}">
           <span class="lag-handle">⠿</span>
           <span class="lag-label">${og.label}</span>
-          <button class="lag-sub-toggle${tickerSubExpanded ? ' open' : ''}" id="tickerSubToggle">${tickerSubExpanded ? '▾' : '▸'} 4 lag</button>
+          <button class="lag-sub-toggle${tickerSubExpanded ? ' open' : ''}" id="tickerSubToggle">${tickerSubExpanded ? '▾' : '▸'} ${tickerSubCount} lag</button>
         </div>
         ${tickerSubExpanded ? `<div class="lag-sublist" id="tickerSubLagList">${tickerSubRows}</div>` : ''}`;
       }
@@ -1970,6 +1977,7 @@ function renderGrafik() {
     return `<div class="lag-row" draggable="true" data-lagid="${id}">
       <span class="lag-handle">⠿</span>
       <span class="lag-label" style="color:${cg.color || '#888888'}">${esc(cg.label.toUpperCase())}</span>
+      <button class="lag-ticker-in-btn" data-customid="${id}" style="margin-left:auto;font-size:9px;padding:1px 6px;background:none;border:1px solid #555;color:#aaa;border-radius:3px;cursor:pointer;">Ticker ▸</button>
     </div>`;
   }).filter(Boolean).join('');
   const lagHTML = `
@@ -2377,6 +2385,19 @@ function initLagDragDrop() {
       saveOverlayLagOrder();
     });
   });
+
+  list.querySelectorAll('.lag-ticker-in-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = btn.dataset.customid;
+      overlayLagOrder = overlayLagOrder.filter(x => x !== id);
+      if (!tickerLagOrder.includes(id)) tickerLagOrder.push(id);
+      tickerSubExpanded = true;
+      renderGrafik();
+      saveOverlayLagOrder();
+      saveTickerLagOrder();
+    });
+  });
 }
 
 function initTickerSubLagDragDrop() {
@@ -2414,6 +2435,18 @@ function initTickerSubLagDragDrop() {
       arr.splice(toIdx, 0, dragSrcId);
       tickerLagOrder = arr;
       renderGrafik();
+      saveTickerLagOrder();
+    });
+  });
+
+  list.querySelectorAll('.lag-ticker-out-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = btn.dataset.customid;
+      tickerLagOrder = tickerLagOrder.filter(x => x !== id);
+      if (!overlayLagOrder.includes(id)) overlayLagOrder.push(id);
+      renderGrafik();
+      saveOverlayLagOrder();
       saveTickerLagOrder();
     });
   });
