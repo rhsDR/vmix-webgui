@@ -135,7 +135,8 @@
       // Dette undgaar afhengighed af at iframen selv kan lave WebSocket.
       const trigKeys = Object.keys(customFrameMap);
       if (!trigKeys.length) return;
-      const customState = {};
+      // Initialiser state som 'out' saa foerste poll ikke kalder runAnimationOUT unødigt
+      const customState = Object.fromEntries(trigKeys.map(k => [k, 'out']));
       async function pollCustomTriggers() {
         try {
           const data = await fetch(
