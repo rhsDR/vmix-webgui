@@ -2032,12 +2032,15 @@ function renderGrafik() {
   const alleAfBtn = container.querySelector('#grafik-alle-af');
   if (alleAfBtn) alleAfBtn.addEventListener('click', async () => {
     const allKeys = OVERLAY_GRAPHICS.map(og => og.triggerKey);
+    const customKeys = customGrafik.map(g => g.trigger_key);
     OVERLAY_GRAPHICS.forEach(og => { grafiktState[og.triggerKey] = 'out'; });
+    customKeys.forEach(k => { grafiktState[k] = 'out'; });
     grafiktState['lt_slot'] = '';
     renderGrafik();
     try {
       await Promise.all([
         ...allKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })),
+        ...customKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })),
         sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: '' }),
       ]);
     } catch { toast('Fejl ved ALLE AF', 'err'); }
