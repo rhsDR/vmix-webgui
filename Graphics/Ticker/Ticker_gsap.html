@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
@@ -30,6 +31,9 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
 </div>
 <div id="wipe-bar"></div>
 <script>
+var SB_URL="https://rxzxdcweqpbnvfkpnnrn.supabase.co";
+var SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU";
+var PROJEKT_ID="c2b06b16-6ede-4fa7-9f43-a9029f935157";
 var NBG="linear-gradient(to right,#00004b 0%,rgba(0,0,0,0.12) 100%)",NCOL="#ffffff";
 var BBG="#eab308",BCOL="#111111";
 var APIURL="https://vmix-control.vercel.app/api/vmix/c2b06b16-6ede-4fa7-9f43-a9029f935157",APIIVL=15,SPD=120,SEP="  •  ";
@@ -79,6 +83,20 @@ document.addEventListener('DOMContentLoaded',function(){
   _wipeBar=document.getElementById('wipe-bar');
   _cols(false);
   if(APIURL){_poll();setInterval(_poll,APIIVL*1000);}
+  var _h={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+  fetch(SB_URL+'/rest/v1/settings?key=eq.ticker_ovl_trigger&projekt_id=eq.'+PROJEKT_ID+'&select=value',{headers:_h})
+    .then(function(r){return r.json();})
+    .then(function(rows){if(rows[0]&&rows[0].value==='in')runAnimationIN();});
+  var _sb=window.supabase.createClient(SB_URL,SB_KEY);
+  _sb.channel('ticker-trigger')
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(p){
+      if(p.new.projekt_id!==PROJEKT_ID)return;
+      if(p.new.key==='ticker_ovl_trigger'){
+        if(p.new.value==='in'&&!_spxVisible)runAnimationIN();
+        if(p.new.value==='out'&&_spxVisible)runAnimationOUT();
+      }
+    })
+    .subscribe();
 });
 </script>
 
