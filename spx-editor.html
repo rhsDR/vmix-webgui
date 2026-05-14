@@ -1634,7 +1634,8 @@ function canvasApiFieldInsert(key){
 function copySel(){if(selIds.length){clipboard=selIds.map(id=>JSON.parse(JSON.stringify(elements.find(x=>x.id===id)))).filter(Boolean);toast(clipboard.length+' kopieret');}}
 function _groupColor(gid){const p=['#3b82f6','#22c55e','#f59e0b','#a855f7','#e8593c','#06b6d4','#ec4899'];let h=0;for(let i=0;i<gid.length;i++)h=(h*31+gid.charCodeAt(i))>>>0;return p[h%p.length];}
 const _EL_PALETTE=['#3b82f6','#22c55e','#f59e0b','#a855f7','#06b6d4','#f97316','#ec4899','#84cc16','#14b8a6','#8b5cf6','#6366f1','#64748b'];
-function _elColor(el){return el.groupId?_groupColor(el.groupId):_EL_PALETTE[el.id%_EL_PALETTE.length];}
+const _EL_TYPE_COLOR={text:'#3b82f6',rect:'#22c55e',circle:'#eab308',image:'#ef4444',pngseq:'#a855f7',lottie:'#a855f7',line:'#94a3b8',ticker:'#f97316'};
+function _elColor(el){return el.groupId?_groupColor(el.groupId):(_EL_TYPE_COLOR[el.type]||'#64748b');}
 // --- Per-property keyframe system ---
 const _EASE_CSS_MAP={linear:'linear',easeIn:'cubic-bezier(0.55,0,1,0.45)',easeOut:'cubic-bezier(0,0,0.45,1)',easeInOut:'ease-in-out',hold:'steps(1,end)'};
 const _EASE_GSAP_MAP={linear:'none',easeIn:'power2.in',easeOut:'power2.out',easeInOut:'power2.inOut',hold:'steps(1)'};
