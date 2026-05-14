@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="da">
 <head>
 <meta charset="UTF-8">
@@ -478,6 +478,7 @@ html.theme-kold{
   <button class="tb-btn" onclick="exportCanvasPNG()" title="Eksportér canvas som PNG">&#128247; PNG</button>
   <button class="tb-btn primary" id="btn-spx-export" onclick="exportSPX()">&#11014; Eksportér</button>
   <button class="tb-btn" id="btn-export-supabase" onclick="exportSPX_Supabase()" title="Eksportér GSAP-animation med Supabase-integration (vMix WebGUI lower third)" style="background:#2d1a4a;color:#c084fc;border:1px solid #6b21a8;">Supabase LT &#11015;</button>
+  <button class="tb-btn" id="btn-export-produktion" onclick="exportSPX_Produktion()" title="Eksporter med generisk Supabase-trigger" style="background:#14532d;color:#86efac;border:1px solid #166534;">&rarr; Produktion &#11015;</button>
   <button class="tb-btn icon" onclick="document.getElementById('help-modal').classList.toggle('open')" title="Genvejstaster" style="font-size:13px;font-weight:700;width:26px">?</button>
   <!-- DROPDOWN MENUS -->
   <div id="edit-dropdown" class="mb-dropdown">
@@ -771,7 +772,39 @@ html.theme-kold{
     </div>
   </div>
 </div>
-
+<div id="produktion-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000;display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,.7);display:flex;flex-direction:column;">
+    <h2 style="font-size:14px;font-weight:600;padding:15px 18px 11px;border-bottom:1px solid var(--border);color:var(--text);margin:0;">Eksporter til Produktion</h2>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <label style="font-size:12px;color:#aaa;display:flex;flex-direction:column;gap:4px;">
+        Trigger-noegle
+        <div style="display:flex;gap:6px;">
+          <select id="prod-trig-sel" class="tb-input" style="flex:1;">
+            <option value="ticker_ovl_trigger">ticker_ovl_trigger</option>
+            <option value="breaking_trigger">breaking_trigger</option>
+            <option value="score_trigger">score_trigger</option>
+            <option value="stilling_trigger">stilling_trigger</option>
+            <option value="credits_trigger">credits_trigger</option>
+            <option value="custom">Brugerdefineret...</option>
+          </select>
+          <input id="prod-trig-custom" class="tb-input" type="text" placeholder="min_trigger" style="display:none;flex:1;">
+        </div>
+      </label>
+      <label style="font-size:12px;color:#aaa;display:flex;flex-direction:column;gap:4px;">
+        Live API URL (valgfri)
+        <input id="prod-api-url" class="tb-input" type="text" placeholder="https://..." style="width:100%;">
+      </label>
+      <label style="font-size:12px;color:#aaa;display:flex;flex-direction:column;gap:4px;">
+        Polling interval (sek)
+        <input id="prod-api-interval" class="tb-input" type="number" value="15" min="5" max="300" style="width:80px;">
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);">
+      <button class="tb-btn" style="flex:1;" onclick="_closeProdModal()">Annuller</button>
+      <button class="tb-btn primary" style="flex:2;" onclick="_confirmProdModal()">&#11015; Download .html</button>
+    </div>
+  </div>
+</div>
 <script>
 const CW=1920,CH=1080;
 let scale=1,canvasZoom=1,tool='select',elements=[],selIds=[],elCtr=0;
@@ -4103,6 +4136,78 @@ function exportSPX(){if(!elements.length){toast('Ingen elementer');return;}_show
 function exportSPX_Supabase(){if(!elements.length){toast('Ingen elementer');return;}document.getElementById('supabase-modal').style.display='flex';}
 function _closeSbModal(){document.getElementById('supabase-modal').style.display='none';}
 function _confirmSbModal(){_closeSbModal();const label=document.getElementById('sb-label-inp').value.trim()||'SPORT';const side=document.getElementById('sb-side-sel').value;exportSPX_GSAP({label,side});}
+function exportSPX_Produktion(){
+  if(!elements.length){toast('Ingen elementer');return;}
+  document.getElementById('produktion-modal').style.display='flex';
+  document.getElementById('prod-trig-sel').onchange=function(){
+    document.getElementById('prod-trig-custom').style.display=this.value==='custom'?'block':'none';
+  };
+}
+function _closeProdModal(){document.getElementById('produktion-modal').style.display='none';}
+function _confirmProdModal(){
+  _closeProdModal();
+  const sel=document.getElementById('prod-trig-sel').value;
+  const triggerKey=sel==='custom'?(document.getElementById('prod-trig-custom').value.trim()||'my_trigger'):sel;
+  const apiUrl=document.getElementById('prod-api-url').value.trim();
+  const apiInterval=parseInt(document.getElementById('prod-api-interval').value)||15;
+  exportSPX_GSAP(null,{triggerKey,apiUrl,apiInterval});
+}
+
+function _buildSupabaseBlock_Generic(triggerKey,apiUrl,apiInterval){
+  const _sbUrl='https://rxzxdcweqpbnvfkpnnrn.supabase.co';
+  const _sbAnon='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
+  const apiPollBlock=apiUrl
+    ? '\n  (function _apiPoll(){\n    fetch('+JSON.stringify(apiUrl)+')\n      .then(r=>r.json()).then(d=>{if(_spxVisible)_updateContent(d);})\n      .catch(()=>{});\n    setTimeout(_apiPoll,'+(apiInterval*1000)+');\n  })();'
+    : '';
+  return '\n// ── SUPABASE INTEGRATION ──\n'
+    +'var _SB_URL=\''+_sbUrl+'\';\n'
+    +'var _SB_ANON=\''+_sbAnon+'\';\n'
+    +'var _SB_HDR={\'apikey\':_SB_ANON,\'Authorization\':\'Bearer \'+_SB_ANON};\n'
+    +'var _pid=window.__PROJEKT_ID||new URLSearchParams(window.location.search).get(\'p\')||\'\';\n'
+    +'var _prv=window.__IS_PREVIEW||new URLSearchParams(window.location.search).has(\'preview\');\n'
+    +'var _trigKey=\''+triggerKey+'\'+(_prv?\'_prv\':\'\');\n'
+    +'document.addEventListener(\'DOMContentLoaded\',function(){\n'
+    +'  if(!_pid)return;'+apiPollBlock+'\n'
+    +'  fetch(_SB_URL+\'/rest/v1/settings?key=eq.\'+_trigKey+\'&projekt_id=eq.\'+_pid+\'&select=value\',{headers:_SB_HDR})\n'
+    +'    .then(r=>r.json()).then(rows=>{if(rows[0]?.value===\'in\'&&!_spxVisible)runAnimationIN();});\n'
+    +'  var _sb=window.supabase.createClient(_SB_URL,_SB_ANON);\n'
+    +'  _sb.channel(\'prod-\'+_trigKey+\'-\'+_pid)\n'
+    +'    .on(\'postgres_changes\',{event:\'UPDATE\',schema:\'public\',table:\'settings\'},function(p){\n'
+    +'      if(p.new.projekt_id!==_pid)return;\n'
+    +'      if(p.new.key===_trigKey){\n'
+    +'        if(p.new.value===\'in\'&&!_spxVisible)runAnimationIN();\n'
+    +'        if(p.new.value===\'out\'&&_spxVisible)runAnimationOUT();\n'
+    +'      }\n'
+    +'    }).subscribe();\n'
+    +'});\n'
+    +'// ── END SUPABASE INTEGRATION ──';
+}
+
+function _buildHTML_Produktion(fontUrl,css,htmlLines,tname,updateFn,animInFn,animOutFn,hiddenDivs,extraHead,triggerKey,apiUrl,apiInterval){
+  const sbBlock=_buildSupabaseBlock_Generic(triggerKey,apiUrl||'',apiInterval||15);
+  const sbScript='<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"><\/script>';
+  const fontLink=fontUrl?'\n<link href="'+fontUrl+'" rel="stylesheet">':'';
+  const extraH=extraHead?'\n'+extraHead:'';
+  const customFontCss=_customFontCSS();
+  return '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">'
+    +'\n'+sbScript
+    +fontLink
+    +extraH
+    +'\n<style>\n*{margin:0;padding:0;box-sizing:border-box;}\nbody{width:1920px;height:1080px;overflow:hidden;background:transparent;}\n#hiddenSpxData{display:none;}\n'
+    +customFontCss
+    +'\n'+css
+    +'\n</style>\n</head>\n<body>\n'
+    +htmlLines.join('\n')
+    +'\n<div id="hiddenSpxData">'+hiddenDivs+'</div>\n'
+    +'<script>\n'
+    +updateFn+'\n'
+    +animInFn+'\n'
+    +animOutFn+'\n'
+    +sbBlock+'\n'
+    +'window.SPXGCTemplateDefinition={"description":"'+tname+'","DataFields":[]};\n'
+    +'<\/script>\n</body>\n</html>';
+}
+
 
 function _textElCss(el){
   const jc=el.textAlign==='center'?'center':el.textAlign==='right'?'flex-end':'flex-start';
@@ -4310,7 +4415,7 @@ function exportSPX_CSS(){
   toast('CSS template downloadet!','ok');
 }
 
-function exportSPX_GSAP(sbMode=null){
+function exportSPX_GSAP(sbMode=null,prodConfig=null){
   const _ttype=document.getElementById('ttype').value;
   const isLT=_ttype==='lower_third';
   const spxEls=elements.filter(e=>(e.type==='text'||e.type==='ticker')&&e.spxField);
@@ -4455,6 +4560,9 @@ function exportSPX_GSAP(sbMode=null){
   if(sbMode){
     _downloadHTML(_buildHTML_Supabase(fontUrl,css+gTickerCSS,htmlLines,tname,_gUpdateFn,_animIn,_animOut,hiddenDivLines.join('\n'),gsapTag+extraHeadG,_scScriptG,sbMode.label,sbMode.side),_projFilename('_supabase.html'));
     toast('Supabase LT eksporteret!','ok');
+  }else if(prodConfig){
+    _downloadHTML(_buildHTML_Produktion(fontUrl,css+gTickerCSS,htmlLines,tname,_gUpdateFn,_animIn,_animOut,hiddenDivLines.join('\n'),gsapTag+extraHeadG,prodConfig.triggerKey,prodConfig.apiUrl,prodConfig.apiInterval),_projFilename('_produktion.html'));
+    toast('Produktion template downloadet!','ok');
   }else{
     _downloadHTML(_buildHTML(fontUrl,css+gTickerCSS,htmlLines,fieldDefs,tname,_gUpdateFn,_animIn,_animOut,hiddenDivLines.join('\n'),gsapTag+extraHeadG,_scScriptG),_projFilename('_gsap.html'));
     toast('GSAP template downloadet!','ok');

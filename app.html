@@ -130,6 +130,49 @@
   </div>
 </div>
 
+<!-- EGNE GRAFIK: UPLOAD MODAL -->
+<div id="egne-grafik-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9000;display:none;align-items:center;justify-content:center;">
+  <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,.7);display:flex;flex-direction:column;">
+    <div style="padding:14px 16px;border-bottom:1px solid #2a2a2a;font-size:12px;letter-spacing:2px;color:#aaa;">TILFØJ GRAFIK</div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">HTML-FIL</label>
+        <input id="egne-file-inp" type="file" accept=".html"
+          style="width:100%;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
+      </div>
+      <div>
+        <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">LABEL</label>
+        <input id="egne-label-inp" type="text" placeholder="Min grafik…"
+          style="width:100%;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:12px;">
+      </div>
+      <div>
+        <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">TRIGGER-NØGLE</label>
+        <div style="display:flex;gap:6px;">
+          <select id="egne-trig-sel" style="flex:1;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
+            <option value="ticker_ovl_trigger">ticker_ovl_trigger</option>
+            <option value="breaking_trigger">breaking_trigger</option>
+            <option value="score_trigger">score_trigger</option>
+            <option value="stilling_trigger">stilling_trigger</option>
+            <option value="credits_trigger">credits_trigger</option>
+            <option value="custom">Brugerdefineret…</option>
+          </select>
+          <input id="egne-trig-custom" type="text" placeholder="min_trigger"
+            style="display:none;flex:1;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">FARVE</label>
+        <input id="egne-color-inp" type="color" value="#888888"
+          style="height:32px;width:60px;background:#111;border:1px solid #333;border-radius:6px;cursor:pointer;padding:2px;">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid #2a2a2a;">
+      <button onclick="closeEgneGrafikModal()" style="flex:1;padding:8px;background:#222;border:1px solid #333;color:#aaa;border-radius:6px;cursor:pointer;font-size:11px;">Annuller</button>
+      <button id="egne-upload-btn" onclick="_confirmEgneGrafik()" style="flex:2;padding:8px;background:#1a3a1a;border:1px solid #2d5a2d;color:#86efac;border-radius:6px;cursor:pointer;font-size:11px;letter-spacing:1px;">↑ UPLOAD &amp; TILFØJ</button>
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>

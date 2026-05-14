@@ -80,7 +80,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
     if (btn.dataset.tab === 'live')   startLivePolling();
     else                              stopLivePolling();
-    if (btn.dataset.tab === 'grafik') { refreshGrafiktState(); fetchLineupDataForGrafik(); }
+    if (btn.dataset.tab === 'grafik') { loadKunstomGrafik().then(() => refreshGrafiktState()); fetchLineupDataForGrafik(); }
   });
 });
 
@@ -1310,6 +1310,7 @@ let overlayLagOrder   = [...DEFAULT_LAG_ORDER];
 let tickerLagOrder    = [...DEFAULT_TICKER_SUB_ORDER];
 let tickerSubExpanded = false;
 let grafiktState        = {}; // { triggerKey: currentValue }
+let customGrafik        = []; // rækker fra projekt_grafik-tabellen
 let grafiktActiveSubTab = 'lower-third';
 let grafiktActivePrvKey = '';
 let grafiktActivePrvUrl = '';
@@ -1357,8 +1358,16 @@ async function refreshCredits() {
   renderCredits();
 }
 
+async function loadKunstomGrafik() {
+  if (!aktivProjektId) return;
+  try {
+    customGrafik = await sbGet('projekt_grafik?projekt_id=eq.' + aktivProjektId + '&order=sort_order');
+  } catch { customGrafik = []; }
+}
+
 async function refreshGrafiktState() {
-  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey), 'lt_slot', 'ticker_lag_order'].join(',');
+  const customKeys = customGrafik.map(g => g.trigger_key);
+  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey), ...customKeys, 'lt_slot', 'ticker_lag_order'].join(',');
   try {
     const rows = await sbGet('settings?select=key,value&key=in.(' + keys + ')&projekt_id=eq.' + aktivProjektId);
     rows.forEach(r => {
@@ -2033,7 +2042,11 @@ function renderGrafik() {
   const prwOutBtn = container.querySelector('#grafik-prw-out-btn');
   if (prwOutBtn) prwOutBtn.addEventListener('click', async () => {
     try {
-      if (g.type === 'lt') {
+      if (grafiktActivePrvKey.startsWith('custom-')) {
+        const cId = grafiktActivePrvKey.slice(7);
+        const cg  = customGrafik.find(x => x.id === cId);
+        if (cg) await sbUpsert('settings', { projekt_id: aktivProjektId, key: cg.trigger_key + '_prv', value: 'out' });
+      } else if (g.type === 'lt') {
         await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger_prv', value: 'out' });
       } else if (g.type !== 'vmixcalls') {
         await sbUpsert('settings', { projekt_id: aktivProjektId, key: g.triggerKey + '_prv', value: 'out' });
@@ -2042,7 +2055,7 @@ function renderGrafik() {
     grafiktActivePrvKey = '';
     grafiktActivePrvUrl = '';
     const prvIframe = container.querySelector('.grafik-preview-iframe');
-    if (prvIframe) prvIframe.src = 'about:blank';
+    if (prvIframe) { prvIframe.removeAttribute('srcdoc'); prvIframe.src = 'about:blank'; }
     renderGrafik();
   });
 
@@ -2119,6 +2132,161 @@ function renderGrafik() {
       renderGrafik();
     });
   }
+
+  // EGNE GRAFIK sektion (custom uploadede grafik-filer)
+  const leftPanel = container.querySelector('.grafik-v2-left');
+  if (leftPanel) renderEgneGrafik(leftPanel);
+}
+
+function renderEgneGrafik(leftPanel) {
+  let wrap = leftPanel.querySelector('.egne-grafik-wrap');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.className = 'egne-grafik-wrap';
+    leftPanel.appendChild(wrap);
+  }
+
+  let html = `
+    <div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;">
+      EGNE GRAFIK
+      <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;"
+        onclick="openEgneGrafikModal()">＋ Tilføj</button>
+    </div>`;
+
+  if (!customGrafik.length) {
+    html += `<div class="grafik-v2-empty">Ingen egne grafik — klik ＋ Tilføj for at uploade en fil</div>`;
+  } else {
+    customGrafik.forEach(g => {
+      const isLive = (grafiktState[g.trigger_key] || 'out') !== 'out';
+      const prvActive = grafiktActivePrvKey === 'custom-' + g.id;
+      html += `
+      <div class="grafik-block" style="--g-color:${g.color || '#888888'}">
+        <div class="grafik-block-info">
+          <span class="grafik-block-name">${esc(g.label.toUpperCase())}</span>
+          <span class="grafik-block-sub"${isLive ? ` style="color:var(--g-color)"` : ''}>${isLive ? '● LIVE' : esc(g.trigger_key)}</span>
+        </div>
+        <div class="grafik-block-actions">
+          <button class="grafik-btn-prw${prvActive ? ' active' : ''}"
+            data-prv-type="custom"
+            data-prv-key="${esc(g.trigger_key)}"
+            data-prv-id="custom-${g.id}"
+            data-custom-file-url="${esc(g.file_url)}">PRW</button>
+          <button class="grafik-btn-out" data-trig="${esc(g.trigger_key)}" data-val="out"${!isLive ? ' disabled' : ''}>&lt; OUT</button>
+          <button class="grafik-btn-in${isLive ? ' on' : ''}" data-trig="${esc(g.trigger_key)}" data-val="in">&gt; IN</button>
+          <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:4px 6px;"
+            title="Slet" onclick="deleteEgneGrafik(this)"
+            data-custom-id="${g.id}"
+            data-custom-path="${esc(g.file_path)}">🗑</button>
+        </div>
+      </div>`;
+    });
+  }
+
+  wrap.innerHTML = html;
+
+  // IN/OUT knapper
+  wrap.querySelectorAll('[data-trig]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      setGrafiktTrigger(btn.dataset.trig, btn.dataset.val);
+    }));
+
+  // Custom PRW knapper
+  wrap.querySelectorAll('[data-prv-type="custom"]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      try {
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: btn.dataset.prvKey + '_prv', value: 'in' });
+        const fileUrl = btn.dataset.customFileUrl;
+        const htmlContent = await fetch(fileUrl).then(r => r.text());
+        const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(aktivProjektId)};window.__IS_PREVIEW=true;<\/script>`;
+        const content = htmlContent.replace(/(<html[^>]*>)/i, '$1' + inject);
+        grafiktActivePrvKey = btn.dataset.prvId;
+        grafiktActivePrvUrl = '';
+        document.querySelectorAll('[data-prv-type]').forEach(b =>
+          b.classList.toggle('active', b.dataset.prvId === grafiktActivePrvKey));
+        const prvIframe = document.querySelector('.grafik-preview-iframe');
+        if (prvIframe) { prvIframe.removeAttribute('src'); prvIframe.srcdoc = content; }
+      } catch { toast('Fejl ved PRW', 'err'); }
+    }));
+}
+
+function openEgneGrafikModal() {
+  const modal = document.getElementById('egne-grafik-modal');
+  if (!modal) return;
+  // Reset felter
+  document.getElementById('egne-file-inp').value = '';
+  document.getElementById('egne-label-inp').value = '';
+  document.getElementById('egne-trig-sel').value = 'ticker_ovl_trigger';
+  document.getElementById('egne-trig-custom').style.display = 'none';
+  document.getElementById('egne-trig-custom').value = '';
+  document.getElementById('egne-color-inp').value = '#888888';
+  document.getElementById('egne-trig-sel').onchange = function() {
+    document.getElementById('egne-trig-custom').style.display = this.value === 'custom' ? 'inline-block' : 'none';
+  };
+  modal.style.display = 'flex';
+}
+
+function closeEgneGrafikModal() {
+  const modal = document.getElementById('egne-grafik-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function _confirmEgneGrafik() {
+  const file  = document.getElementById('egne-file-inp').files[0];
+  const label = document.getElementById('egne-label-inp').value.trim();
+  const tSel  = document.getElementById('egne-trig-sel').value;
+  const trigKey = tSel === 'custom'
+    ? document.getElementById('egne-trig-custom').value.trim()
+    : tSel;
+  const color = document.getElementById('egne-color-inp').value;
+  if (!file)    { toast('Vælg en HTML-fil', 'err'); return; }
+  if (!label)   { toast('Udfyld label', 'err'); return; }
+  if (!trigKey) { toast('Udfyld trigger-nøgle', 'err'); return; }
+
+  const uploadBtn = document.getElementById('egne-upload-btn');
+  if (uploadBtn) { uploadBtn.disabled = true; uploadBtn.textContent = 'Uploader…'; }
+
+  const filePath = aktivProjektId + '/' + file.name;
+  const { error: upErr } = await sbClient.storage
+    .from('grafik')
+    .upload(filePath, file, { contentType: 'text/html', upsert: true });
+  if (upErr) {
+    toast('Upload fejlede: ' + upErr.message, 'err');
+    if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = '↑ UPLOAD & TILFØJ'; }
+    return;
+  }
+
+  const { data: urlData } = sbClient.storage.from('grafik').getPublicUrl(filePath);
+  const fileUrl = urlData.publicUrl;
+
+  const { error: dbErr } = await sbClient.from('projekt_grafik').insert({
+    projekt_id: aktivProjektId, label, trigger_key: trigKey, file_url: fileUrl, file_path: filePath, color
+  });
+  if (dbErr) {
+    toast('DB fejl: ' + dbErr.message, 'err');
+    if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = '↑ UPLOAD & TILFØJ'; }
+    return;
+  }
+
+  toast('Grafik tilføjet!', 'ok');
+  closeEgneGrafikModal();
+  await loadKunstomGrafik();
+  renderGrafik();
+}
+
+async function deleteEgneGrafik(btn) {
+  if (!confirm('Slet "' + (btn.closest('.grafik-block')?.querySelector('.grafik-block-name')?.textContent || 'grafik') + '"?')) return;
+  const id   = btn.dataset.customId;
+  const path = btn.dataset.customPath;
+  try {
+    await sbClient.storage.from('grafik').remove([path]);
+  } catch {} // fortsæt selvom Storage-slet fejler
+  try {
+    await sbDelete('projekt_grafik?id=eq.' + id);
+  } catch { toast('Fejl ved slet', 'err'); return; }
+  await loadKunstomGrafik();
+  renderGrafik();
+  toast('Grafik slettet');
 }
 
 function initLagDragDrop() {
