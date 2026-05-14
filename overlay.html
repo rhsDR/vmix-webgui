@@ -115,7 +115,8 @@
         if (document.getElementById(frameId)) return;
         let html;
         try { html = await fetch(g.file_url).then(r => r.text()); } catch { return; }
-        const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(pid)};window.__IS_PREVIEW=false;<\/script>`;
+        // Bloker Supabase realtime i iframen — overlay.html poller og kalder contentWindow.runAnimationIN/OUT direkte
+        const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(pid)};window.__IS_PREVIEW=false;Object.defineProperty(window,'supabase',{value:{createClient:()=>({channel:()=>({on:()=>({on:()=>({subscribe:()=>{}}),subscribe:()=>{}}),subscribe:()=>{}})})},writable:false,configurable:false});<\/script>`;
         html = html.replace(/(<html[^>]*>)/i, '$1' + inject);
         const blob = new Blob([html], { type: 'text/html' });
         const blobUrl = URL.createObjectURL(blob);
