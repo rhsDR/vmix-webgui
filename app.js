@@ -1299,6 +1299,7 @@ const OVERLAY_GRAPHICS = [
   { id: 'ticker',      label: 'Ticker',           file: 'Graphics/Ticker/Ticker_gsap.html', triggerKey: 'ticker_ovl_trigger', type: 'ticker',  color: '#aa66ff' },
   { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html',       triggerKey: 'breaking_trigger',   type: 'simple',  color: '#ff4444', subOf: 'ticker' },
   { id: 'score',       label: 'Stillings',        file: null,                  triggerKey: 'score_trigger',      type: 'simple',  color: '#44cc88', subOf: 'ticker' },
+  { id: 'live-boks',  label: 'Live Boks',        file: 'Graphics/LIve_bokse/Live_BOKS_gsap.html', triggerKey: 'live_boks_trigger', type: 'simple', color: '#ff2244', subOf: 'ticker' },
   { id: 'stilling',    label: 'Stilling',         file: 'stilling.html',       triggerKey: 'stilling_trigger',   type: 'simple',  color: '#44cc88' },
   { id: 'opstilling',  label: 'Opstilling',       file: 'opstilling.html',     triggerKey: 'lineup_trigger',     type: 'lineup',  color: '#ff8833' },
   { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits', color: '#ffcc44' },
@@ -1572,7 +1573,8 @@ function renderGrafik() {
       // dot hvis ticker ELLER breaking ELLER score er live
       isOnAir = (grafiktState[og.triggerKey] || 'out') !== 'out' ||
                 (grafiktState['breaking_trigger'] || 'out') !== 'out' ||
-                (grafiktState['score_trigger'] || 'out') !== 'out';
+                (grafiktState['score_trigger'] || 'out') !== 'out' ||
+                (grafiktState['live_boks_trigger'] || 'out') !== 'out';
     } else {
       isOnAir = og.triggerKey ? (grafiktState[og.triggerKey] || 'out') !== 'out' : false;
     }
@@ -1647,6 +1649,8 @@ function renderGrafik() {
     const breakingLive = breakingVal !== 'out';
     const scoreVal     = grafiktState['score_trigger'] || 'out';
     const scoreLive    = scoreVal !== 'out';
+    const liveBoksVal  = grafiktState['live_boks_trigger'] || 'out';
+    const liveBoksLive = liveBoksVal !== 'out';
     contentHTML = `
       <div class="grafik-block" style="--g-color:${g.color}">
         <div class="grafik-block-info">
@@ -1680,6 +1684,18 @@ function renderGrafik() {
         <div class="grafik-block-actions">
           <button class="grafik-btn-out" data-trig="score_trigger" data-val="out"${!scoreLive ? ' disabled' : ''}>&lt; OUT</button>
           <button class="grafik-btn-in${scoreLive ? ' on' : ''}" data-trig="score_trigger" data-val="in">&gt; IN</button>
+        </div>
+      </div>
+      <div class="grafik-section-head">LIVE BOKS</div>
+      <div class="grafik-block" style="--g-color:#ff2244">
+        <div class="grafik-block-info">
+          <span class="grafik-block-name">LIVE BOKS</span>
+          <span class="grafik-block-sub"${liveBoksLive ? ' style="color:#ff2244"' : ''}>${liveBoksLive ? '● LIVE' : 'IKKE AKTIV'}</span>
+        </div>
+        <div class="grafik-block-actions">
+          <button class="grafik-btn-prw${grafiktActivePrvKey === 'live-boks' ? ' active' : ''}" data-prv-type="simple" data-prv-key="live_boks_trigger" data-prv-id="live-boks">PRW</button>
+          <button class="grafik-btn-out" data-trig="live_boks_trigger" data-val="out"${!liveBoksLive ? ' disabled' : ''}>&lt; OUT</button>
+          <button class="grafik-btn-in${liveBoksLive ? ' on' : ''}" data-trig="live_boks_trigger" data-val="in">&gt; IN</button>
         </div>
       </div>`;
 
@@ -1836,13 +1852,17 @@ function renderGrafik() {
     const bAfUrl = `${origin}/api/trigger/${pid}?key=breaking_trigger&value=out`;
     const sPaUrl = `${origin}/api/trigger/${pid}?key=score_trigger&value=in`;
     const sAfUrl = `${origin}/api/trigger/${pid}?key=score_trigger&value=out`;
+    const lPaUrl = `${origin}/api/trigger/${pid}?key=live_boks_trigger&value=in`;
+    const lAfUrl = `${origin}/api/trigger/${pid}?key=live_boks_trigger&value=out`;
     companionRows = `
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#aa66ff">T PÅ</span><span class="grafik-companion-url" title="${tPaUrl}">${tPaUrl}</span><button class="copy-btn icon-btn" data-copy="${tPaUrl}">⎘</button></div>
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#aa66ff">T AF</span><span class="grafik-companion-url" title="${tAfUrl}">${tAfUrl}</span><button class="copy-btn icon-btn" data-copy="${tAfUrl}">⎘</button></div>
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff4444">B PÅ</span><span class="grafik-companion-url" title="${bPaUrl}">${bPaUrl}</span><button class="copy-btn icon-btn" data-copy="${bPaUrl}">⎘</button></div>
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff4444">B AF</span><span class="grafik-companion-url" title="${bAfUrl}">${bAfUrl}</span><button class="copy-btn icon-btn" data-copy="${bAfUrl}">⎘</button></div>
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#44cc88">S PÅ</span><span class="grafik-companion-url" title="${sPaUrl}">${sPaUrl}</span><button class="copy-btn icon-btn" data-copy="${sPaUrl}">⎘</button></div>
-      <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#44cc88">S AF</span><span class="grafik-companion-url" title="${sAfUrl}">${sAfUrl}</span><button class="copy-btn icon-btn" data-copy="${sAfUrl}">⎘</button></div>`;
+      <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#44cc88">S AF</span><span class="grafik-companion-url" title="${sAfUrl}">${sAfUrl}</span><button class="copy-btn icon-btn" data-copy="${sAfUrl}">⎘</button></div>
+      <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff2244">L PÅ</span><span class="grafik-companion-url" title="${lPaUrl}">${lPaUrl}</span><button class="copy-btn icon-btn" data-copy="${lPaUrl}">⎘</button></div>
+      <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff2244">L AF</span><span class="grafik-companion-url" title="${lAfUrl}">${lAfUrl}</span><button class="copy-btn icon-btn" data-copy="${lAfUrl}">⎘</button></div>`;
   } else {
     const paUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=in`;
     const afUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=out`;
