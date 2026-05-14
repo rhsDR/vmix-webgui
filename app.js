@@ -1707,6 +1707,8 @@ function renderGrafik() {
         </div>
         <div class="grafik-block-actions">
           <button class="grafik-btn-prw${grafiktActivePrvKey === 'score-breaking' ? ' active' : ''}" data-prv-type="simple" data-prv-key="breaking_trigger" data-prv-id="score-breaking" data-prv-url="${origin}/Graphics/Stillings_boks/Stillings_boks_BREAKING_uden_live_boks_supabase.html?p=${pid}&preview=1">PRW</button>
+          <button class="grafik-btn-out" data-trig="breaking_trigger" data-val="out"${!breakingLive ? ' disabled' : ''}>&lt; OUT</button>
+          <button class="grafik-btn-in${breakingLive ? ' on' : ''}" data-trig="breaking_trigger" data-val="in">&gt; IN</button>
         </div>
       </div>
       <div class="grafik-section-head">STILLINGS BOKS</div>
@@ -1716,6 +1718,7 @@ function renderGrafik() {
           <span class="grafik-block-sub"${scoreLive ? ' style="color:#44cc88"' : ''}>${scoreLive ? '● LIVE' : 'IKKE AKTIV'}</span>
         </div>
         <div class="grafik-block-actions">
+          <button class="grafik-btn-prw${grafiktActivePrvKey === 'score' ? ' active' : ''}" data-prv-type="simple" data-prv-key="score_trigger" data-prv-id="score" data-prv-url="${origin}/Graphics/Stillings_boks/Stillings_boks_uden_live_boks_gsap.html?p=${pid}&preview=1">PRW</button>
           <button class="grafik-btn-out" data-trig="score_trigger" data-val="out"${!scoreLive ? ' disabled' : ''}>&lt; OUT</button>
           <button class="grafik-btn-in${scoreLive ? ' on' : ''}" data-trig="score_trigger" data-val="in">&gt; IN</button>
         </div>
