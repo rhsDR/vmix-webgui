@@ -8,6 +8,7 @@ const ALLOWED_KEYS = [
   'credits_trigger',
   'lt_trigger',
   'lt_slot',
+  'live_boks_trigger',
 ];
 
 const HEADERS = {

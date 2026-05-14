@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/templates/softpix/Template_Pack_1.3/js/spx_interface.js"></script>
 <style>
@@ -57,6 +58,29 @@ window.SPXGCTemplateDefinition = {
     {"field":"f1","ftype":"dropdown","title":"Placering","value":"venstre","items":[{"text":"Venstre side","value":"venstre"},{"text":"H\u00f8jre side","value":"h\u00f8jre"}]}
   ]
 };
+(function(){
+  var SB_URL='https://rxzxdcweqpbnvfkpnnrn.supabase.co';
+  var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
+  var PROJEKT_ID=new URLSearchParams(window.location.search).get('p')||'c2b06b16-6ede-4fa7-9f43-a9029f935157';
+  var h={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+  function _init(){
+    fetch(SB_URL+'/rest/v1/settings?key=eq.live_boks_trigger&projekt_id=eq.'+PROJEKT_ID+'&select=value',{headers:h})
+      .then(function(r){return r.json();})
+      .then(function(rows){
+        if(rows[0]&&rows[0].value==='in'&&!_spxVisible)runAnimationIN();
+      }).catch(function(){});
+    var _sb=window.supabase.createClient(SB_URL,SB_KEY);
+    _sb.channel('live-boks-trigger')
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(payload){
+        var row=payload.new;
+        if(row.projekt_id!==PROJEKT_ID)return;
+        if(row.key==='live_boks_trigger'&&row.value==='in'&&!_spxVisible)runAnimationIN();
+        if(row.key==='live_boks_trigger'&&row.value==='out'&&_spxVisible)runAnimationOUT();
+      })
+      .subscribe();
+  }
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',_init);}else{_init();}
+})();
 </script>
 
 </body>
