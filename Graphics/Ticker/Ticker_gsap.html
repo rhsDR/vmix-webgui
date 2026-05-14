@@ -21,6 +21,8 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
 #lt-wrap.pos-hoejre .lt-text{transform:scaleX(-1);}
 #el19{overflow:hidden;display:flex;align-items:center;}
 #el19-inner{white-space:nowrap;display:inline-block;font-size:24px;font-weight:400;font-family:'DM Sans',sans-serif;color:#ffffff;}
+#el19b{position:absolute;left:452px;top:987px;width:1479px;height:79px;transform-origin:center center;opacity:0;overflow:hidden;display:flex;align-items:center;}
+#el19b-inner{white-space:nowrap;display:inline-block;font-size:24px;font-weight:400;font-family:'DM Sans',sans-serif;color:#ffffff;}
 
 </style>
 </head>
@@ -28,6 +30,7 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
 <div id="lt-wrap" class="pos-venstre">
   <div id="el2"></div>
   <div id="el19"><div id="el19-inner"></div></div>
+  <div id="el19b"><div id="el19b-inner"></div></div>
 </div>
 <div id="wipe-bar"></div>
 <script>
@@ -38,18 +41,20 @@ var NBG="linear-gradient(to right,#00004b 0%,rgba(0,0,0,0.12) 100%)",NCOL="#ffff
 var BBG="#eab308",BCOL="#111111";
 var APIURL="https://vmix-control.vercel.app/api/vmix/c2b06b16-6ede-4fa7-9f43-a9029f935157",APIIVL=15,SPD=120,SEP="  •  ";
 var _br=false,_tr=false,_nt='',_bt='';
-var _wrap,_inner,_wipeBar;
+var _wrap,_inner,_wipeBar,_innerB,_posB=0;
 var _pos=1920,_pending=null,_last=null,_wiping=false;
 var _spxVisible=false;
 function _mk(raw){var p=raw.split('|').map(function(s){return s.trim();}).filter(Boolean);if(!p.length)return'';return p.join(SEP)+SEP+p.join(SEP);}
 function _strip(s){var t=document.createElement('textarea');t.innerHTML=s.replace(/<[^>]*>/g,'').replace(/&bull;/g,'|');return t.value.replace(/ /g,' ');}
-function _cols(br){document.getElementById('el2').style.background=br?BBG:'';_inner.style.color=br?BCOL:NCOL;}
+function _cols(br){document.getElementById('el2').style.background=br?BBG:'';_inner.style.color=br?BCOL:NCOL;if(_innerB)_innerB.style.color=br?BCOL:NCOL;}
 function _doWipe(newText){
-  _wiping=true;_pos=_wrap.offsetWidth;
+  _wiping=true;
+  if(_br){_posB=_wrap.offsetWidth;}else{_pos=_wrap.offsetWidth;}
   _wipeBar.style.background=_br?BBG:NBG;
+  var target=_br?_innerB:_inner;
   gsap.timeline()
     .to(_wipeBar,{scaleX:1,duration:0.22,ease:'power2.in',transformOrigin:'left center'})
-    .call(function(){_inner.textContent=newText;})
+    .call(function(){target.textContent=newText;})
     .set(_wipeBar,{transformOrigin:'right center'})
     .to(_wipeBar,{scaleX:0,duration:0.22,ease:'power2.out'})
     .call(function(){_wiping=false;});
@@ -57,31 +62,43 @@ function _doWipe(newText){
 function _step(ts){
   if(_wiping){_last=ts;requestAnimationFrame(_step);return;}
   if(_last===null){_last=ts;requestAnimationFrame(_step);return;}
-  var dt=(ts-_last)/1000;_last=ts;_pos-=SPD*dt;
+  var dt=(ts-_last)/1000;_last=ts;
+  _pos-=SPD*dt;
   var half=_inner.scrollWidth/2;
-  if(half>0&&_pos<-half){if(_pending!==null){_doWipe(_pending);_pending=null;requestAnimationFrame(_step);return;}_pos+=half;}
-  _inner.style.transform='translateX('+Math.round(_pos)+'px)';requestAnimationFrame(_step);
+  if(half>0&&_pos<-half){if(!_br&&_pending!==null){_doWipe(_pending);_pending=null;requestAnimationFrame(_step);return;}_pos+=half;}
+  _inner.style.transform='translateX('+Math.round(_pos)+'px)';
+  if(_br){
+    _posB-=SPD*dt;
+    var halfB=_innerB.scrollWidth/2;
+    if(halfB>0&&_posB<-halfB){if(_pending!==null){_doWipe(_pending);_pending=null;requestAnimationFrame(_step);return;}_posB+=halfB;}
+    _innerB.style.transform='translateX('+Math.round(_posB)+'px)';
+  }
+  requestAnimationFrame(_step);
 }
-function _toB(){if(_br)return;_br=true;_cols(true);var t=_mk(_bt);if(_spxVisible&&!_wiping&&t)_doWipe(t);}
-function _toN(){if(!_br)return;_br=false;_cols(false);var t=_mk(_nt);if(_spxVisible&&!_wiping&&t)_doWipe(t);}
+function _toB(){if(_br)return;_br=true;_cols(true);var t=_mk(_bt);if(t){_innerB.textContent=t;_posB=_wrap.offsetWidth;_innerB.style.transform='translateX('+_posB+'px)';}if(_spxVisible){gsap.to('#el19b',{opacity:1,duration:0.3,ease:'power2.out'});gsap.to('#el19',{opacity:0,duration:0.3,ease:'power2.out'});}}
+function _toN(){if(!_br)return;_br=false;_cols(false);_innerB.textContent='';if(_spxVisible){gsap.to('#el19',{opacity:1,duration:0.3,ease:'power2.out'});gsap.to('#el19b',{opacity:0,duration:0.3,ease:'power2.out'});var t=_mk(_nt);if(t)_pending=t;}}
 function _poll(){if(!APIURL)return;fetch(APIURL).then(function(r){return r.arrayBuffer();}).then(function(buf){var s;try{s=new TextDecoder('utf-8',{fatal:true}).decode(buf);}catch(e){s=new TextDecoder('windows-1252').decode(buf);}var d;try{d=JSON.parse(s);}catch(e){return;}var o=Array.isArray(d)?d[0]:d;var n=_strip(String(o.ticker_normal||'')).trim();var b=_strip(String(o.ticker_breaking||'')).trim();if(!_tr){if(_br){if(b&&b!==_bt)_pending=_mk(b);}else{if(n!==_nt)_pending=_mk(n);}}_nt=n;_bt=b;}).catch(function(){});}
 function runAnimationIN(){_spxVisible=true;
   _cols(_br);
-  var t=_br?_mk(_bt):_mk(_nt);if(t&&!_inner.textContent){_inner.textContent=t;_pos=_wrap.offsetWidth;}
+  var activeInner=_br?_innerB:_inner;
+  var t=_br?_mk(_bt):_mk(_nt);
+  if(t&&!activeInner.textContent){activeInner.textContent=t;if(_br){_posB=_wrap.offsetWidth;_innerB.style.transform='translateX('+_posB+'px)';}else{_pos=_wrap.offsetWidth;}}
   if(_last===null)requestAnimationFrame(_step);
+  var textEl=_br?'#el19b':'#el19';
   var tl=gsap.timeline();
   tl.fromTo('#el2',{clipPath:'inset(100% 0% 0% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
-  tl.fromTo('#el19',{opacity:0,immediateRender:true},{opacity:1,duration:0.45,ease:'power3.out'},0.398);
+  tl.fromTo(textEl,{opacity:0,immediateRender:true},{opacity:1,duration:0.45,ease:'power3.out'},0.398);
 }
 function runAnimationOUT(){_spxVisible=false;
   var tl=gsap.timeline();
   tl.to('#el2',{clipPath:'inset(100% 0% 0% 0%)',duration:0.34,ease:'power2.in'},0.881);
-  tl.to('#el19',{opacity:0,duration:0.18,ease:'power2.in'},1.041);
+  tl.to(['#el19','#el19b'],{opacity:0,duration:0.18,ease:'power2.in'},1.041);
 }
 document.addEventListener('DOMContentLoaded',function(){
   _wrap=document.getElementById('el19');
   _inner=document.getElementById('el19-inner');
   _wipeBar=document.getElementById('wipe-bar');
+  _innerB=document.getElementById('el19b-inner');
   _cols(false);
   if(APIURL){_poll();setInterval(_poll,APIIVL*1000);}
   var _h={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
