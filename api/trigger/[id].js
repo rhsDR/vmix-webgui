@@ -47,7 +47,11 @@ export default async function handler(req, res) {
       const rows = await sbGet(`projekt_makroer?id=eq.${encodeURIComponent(macroId)}&projekt_id=eq.${encodeURIComponent(id)}&limit=1`);
       const macro = rows[0];
       if (!macro) return res.status(404).json({ error: 'Makro ikke fundet' });
-      await Promise.all((macro.handlinger || []).map(h => upsert(id, h.key, h.value)));
+      for (const h of macro.handlinger || []) {
+        if (h.key === 'wait') { await new Promise(r => setTimeout(r, parseFloat(h.value) * 1000)); continue; }
+        if (h.key === 'lt_trigger' && h.slot) await upsert(id, 'lt_slot', String(h.slot));
+        await upsert(id, h.key, h.value);
+      }
       return res.status(200).json({ ok: true, fired: (macro.handlinger || []).length });
     } catch (err) {
       return res.status(502).json({ error: String(err.message) });

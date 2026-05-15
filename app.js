@@ -1387,10 +1387,15 @@ async function fireMakro(id) {
   const m = makroer.find(x => x.id === id);
   if (!m || !m.handlinger?.length) return;
   try {
-    await Promise.all(m.handlinger.map(h =>
-      sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value })
-    ));
-    m.handlinger.forEach(h => { grafiktState[h.key] = h.value; });
+    for (const h of m.handlinger) {
+      if (h.key === 'wait') { await new Promise(r => setTimeout(r, parseFloat(h.value) * 1000)); continue; }
+      if (h.key === 'lt_trigger' && h.slot) {
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: h.slot });
+        grafiktState['lt_slot'] = h.slot;
+      }
+      await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value });
+      grafiktState[h.key] = h.value;
+    }
     renderGrafik();
     toast(m.label + ' kørt', 'ok');
   } catch { toast('Fejl ved makro', 'err'); }
@@ -1666,8 +1671,16 @@ function renderGrafik() {
     const ltVmixMode   = activeLtTrig === 'vmixcall';
     const subRows = subs.map((s, i) => {
       if (!s.navn && !s.titel) return '';
-      const slot    = i + 1;
-      const slotAct = ltSubMode && String(activeLtSlot) === String(slot);
+      const slot     = i + 1;
+      const slotAct  = ltSubMode && String(activeLtSlot) === String(slot);
+      const subMakro = makroer.find(m =>
+        m.handlinger?.some(h => h.key === 'lt_trigger' && String(h.slot) === String(slot))
+      );
+      const makroBtn = subMakro
+        ? `<button class="grafik-btn-prw makro-sub-fire-btn" data-makro-id="${subMakro.id}"
+             title="${esc(subMakro.label)}" style="color:${subMakro.farve || '#4a9eff'}">▶</button>`
+        : `<button class="grafik-btn-prw makro-sub-add-btn" data-slot="${slot}"
+             title="Opret makro for denne sub">＋</button>`;
       return `<div class="grafik-block" style="--g-color:${g.color}">
         <span class="grafik-block-num">${slot}</span>
         <div class="grafik-block-info">
@@ -1675,6 +1688,7 @@ function renderGrafik() {
           ${s.titel ? `<span class="grafik-block-sub">${s.titel}</span>` : ''}
         </div>
         <div class="grafik-block-actions">
+          ${makroBtn}
           <button class="grafik-btn-prw${grafiktActivePrvKey === 'lt-'+slot ? ' active' : ''}" data-prv-type="lt" data-prv-slot="${slot}" data-prv-id="lt-${slot}">PRW</button>
           <button class="grafik-btn-out" data-trig="${g.triggerKey}" data-val="out"${!slotAct ? ' disabled' : ''}>&lt; OUT</button>
           <button class="grafik-btn-in${slotAct ? ' on' : ''} grafik-lt-paa" data-slot="${slot}">&gt; IN</button>
@@ -2208,6 +2222,13 @@ function renderGrafik() {
       } catch { toast('Fejl ved lower third trigger', 'err'); }
     }));
 
+  container.querySelectorAll('.makro-sub-fire-btn').forEach(btn =>
+    btn.addEventListener('click', () => fireMakro(btn.dataset.makroId)));
+
+  container.querySelectorAll('.makro-sub-add-btn').forEach(btn =>
+    btn.addEventListener('click', () => openMakroModal(null,
+      [{ key: 'lt_trigger', value: 'in', slot: btn.dataset.slot }])));
+
   const companionDetails = container.querySelector('#grafik-companion-details');
   if (companionDetails) {
     companionDetails.addEventListener('toggle', () => { grafiktCompanionOpen = companionDetails.open; });
@@ -2316,6 +2337,7 @@ function _makroKeyOptions(selectedKey) {
     { key: 'stilling_trigger',    label: 'Stilling' },
     { key: 'lineup_trigger',      label: 'Opstilling' },
     { key: 'credits_trigger',     label: 'Credits' },
+    { key: 'wait',                label: '⏱ Pause/vent' },
   ];
   const all = [
     ...builtIn,
@@ -2346,8 +2368,13 @@ function renderMakroer(leftPanel) {
   } else {
     makroer.forEach(m => {
       const summary = (m.handlinger || []).map(h => {
-        const label = _makroKeyLabel(h.key);
-        return `${label}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
+        if (h.key === 'wait') return `⏱ ${h.value}s`;
+        if (h.key === 'lt_trigger' && h.slot) {
+          const s = subs[parseInt(h.slot) - 1];
+          const navn = s?.navn ? ': ' + s.navn : ' ' + h.slot;
+          return `Sub${navn}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
+        }
+        return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
       }).join(' · ');
       html += `
       <div class="grafik-block" style="--g-color:${m.farve || '#4a9eff'}">
@@ -2384,7 +2411,7 @@ function _makroKeyLabel(key) {
   return cg ? cg.label : key;
 }
 
-function openMakroModal(id) {
+function openMakroModal(id, prefillHandlinger) {
   const modal = document.getElementById('makro-modal');
   if (!modal) return;
   const m = id ? makroer.find(x => x.id === id) : null;
@@ -2393,11 +2420,10 @@ function openMakroModal(id) {
   document.getElementById('makro-color-inp').value = m ? (m.farve || '#4a9eff') : '#4a9eff';
   const list = document.getElementById('makro-handlinger-list');
   list.innerHTML = '';
-  if (m && m.handlinger?.length) {
-    m.handlinger.forEach(h => _addMakroHandlingRow(h.key, h.value));
-  } else {
-    _addMakroHandlingRow('ticker_ovl_trigger', 'in');
-  }
+  const src = m?.handlinger?.length ? m.handlinger
+            : prefillHandlinger?.length ? prefillHandlinger
+            : [{ key: 'ticker_ovl_trigger', value: 'in' }];
+  src.forEach(h => _addMakroHandlingRow(h.key, h.value, h.slot || ''));
   modal.style.display = 'flex';
 }
 
@@ -2410,9 +2436,16 @@ function _addMakroHandling() {
   _addMakroHandlingRow('ticker_ovl_trigger', 'in');
 }
 
-function _addMakroHandlingRow(key, value) {
+function _addMakroHandlingRow(key, value, slot) {
   const list = document.getElementById('makro-handlinger-list');
   if (!list) return;
+  const isLt   = key === 'lt_trigger';
+  const isWait = key === 'wait';
+  const slotOpts = subs.map((s, i) => {
+    const n = i + 1;
+    if (!s.navn && !s.titel) return '';
+    return `<option value="${n}"${String(slot) === String(n) ? ' selected' : ''}>Sub ${n}${s.navn ? ': ' + esc(s.navn) : ''}</option>`;
+  }).filter(Boolean).join('');
   const row = document.createElement('div');
   row.className = 'makro-handling-row';
   row.style.cssText = 'display:flex;gap:6px;align-items:center;';
@@ -2420,12 +2453,25 @@ function _addMakroHandlingRow(key, value) {
     <select class="makro-key-sel" style="flex:2;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;">
       ${_makroKeyOptions(key)}
     </select>
-    <select class="makro-val-sel" style="flex:1;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;">
+    <select class="makro-slot-sel" style="flex:1;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isLt ? 'block' : 'none'};">
+      ${slotOpts || '<option value="">Ingen subs</option>'}
+    </select>
+    <select class="makro-val-sel" style="flex:1;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isWait ? 'none' : 'block'};">
       <option value="in"${value === 'in' ? ' selected' : ''}>PÅ</option>
       <option value="out"${value === 'out' ? ' selected' : ''}>AF</option>
     </select>
+    <input class="makro-wait-inp" type="number" min="0.1" step="0.1" placeholder="sek"
+      value="${isWait ? esc(value) : ''}"
+      style="flex:1;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isWait ? 'block' : 'none'};">
     <button onclick="this.closest('.makro-handling-row').remove()"
       style="background:none;border:none;color:#666;cursor:pointer;font-size:16px;padding:2px 6px;">✕</button>`;
+  row.querySelector('.makro-key-sel').addEventListener('change', function() {
+    const lt   = this.value === 'lt_trigger';
+    const wait = this.value === 'wait';
+    row.querySelector('.makro-slot-sel').style.display = lt   ? 'block' : 'none';
+    row.querySelector('.makro-val-sel').style.display  = wait ? 'none'  : 'block';
+    row.querySelector('.makro-wait-inp').style.display = wait ? 'block' : 'none';
+  });
   list.appendChild(row);
 }
 
@@ -2435,10 +2481,17 @@ async function _confirmMakroModal() {
   const farve = document.getElementById('makro-color-inp').value;
   if (!label) { toast('Navn mangler', 'err'); return; }
 
-  const handlinger = Array.from(document.querySelectorAll('#makro-handlinger-list .makro-handling-row')).map(row => ({
-    key:   row.querySelector('.makro-key-sel').value,
-    value: row.querySelector('.makro-val-sel').value
-  }));
+  const handlinger = Array.from(document.querySelectorAll('#makro-handlinger-list .makro-handling-row')).map(row => {
+    const key = row.querySelector('.makro-key-sel').value;
+    if (key === 'wait') {
+      const sek = parseFloat(row.querySelector('.makro-wait-inp').value) || 1;
+      return { key: 'wait', value: String(sek) };
+    }
+    const h = { key, value: row.querySelector('.makro-val-sel').value };
+    const slotSel = row.querySelector('.makro-slot-sel');
+    if (slotSel && slotSel.style.display !== 'none' && slotSel.value) h.slot = slotSel.value;
+    return h;
+  });
 
   const sort_order = id
     ? (makroer.find(x => x.id === id)?.sort_order ?? 0)
