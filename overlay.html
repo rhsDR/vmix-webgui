@@ -72,14 +72,16 @@
       mainOrder.forEach((id, idx) => {
         const baseZ = (total - idx) * 1000;
         if (id === 'ticker') {
-          // Sæt z-index for alle ticker-sub-items relativt til denne position
-          tickerSubOrder.forEach((subId, subIdx) => {
+          // Byg komplet sub-liste: bruger-rækkefølge + DEFAULT-items der ikke er med
+          // (sikrer at ticker-breaking / score-breaking aldrig beholder et gammelt z-index)
+          const allSubs = [...tickerSubOrder];
+          DEFAULT_TICKER_SUB_ORDER.forEach(s => { if (!allSubs.includes(s)) allSubs.push(s); });
+          allSubs.forEach((subId, subIdx) => {
             const frame = document.getElementById(subId + '-frame');
             if (frame) frame.style.zIndex = baseZ - subIdx * 10;
           });
-        } else if (!tickerSubOrder.includes(id)) {
-          // Kun sæt z-index for items der IKKE er ticker-sub-items —
-          // de håndteres af ticker-blokken og må ikke overskrives
+        } else if (!tickerSubOrder.includes(id) && !DEFAULT_TICKER_SUB_ORDER.includes(id)) {
+          // Sæt kun z-index for items der hverken er i den aktive eller den default ticker-sub-liste
           const frame = document.getElementById(id + '-frame');
           if (frame) frame.style.zIndex = baseZ;
         }
