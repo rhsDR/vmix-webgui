@@ -80,7 +80,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
     if (btn.dataset.tab === 'live')   startLivePolling();
     else                              stopLivePolling();
-    if (btn.dataset.tab === 'grafik') { loadKunstomGrafik().then(() => refreshGrafiktState()); fetchLineupDataForGrafik(); }
+    if (btn.dataset.tab === 'grafik') { Promise.all([loadKunstomGrafik(), loadMakroer()]).then(() => refreshGrafiktState()); fetchLineupDataForGrafik(); }
   });
 });
 
@@ -1311,6 +1311,7 @@ let tickerLagOrder    = [...DEFAULT_TICKER_SUB_ORDER];
 let tickerSubExpanded = false;
 let grafiktState        = {}; // { triggerKey: currentValue }
 let customGrafik        = []; // rækker fra projekt_grafik-tabellen
+let makroer             = []; // rækker fra projekt_makroer-tabellen
 let grafiktActiveSubTab = 'lower-third';
 let grafiktActivePrvKey = '';
 let grafiktActivePrvUrl = '';
@@ -1373,6 +1374,26 @@ async function loadKunstomGrafik() {
     if (!overlayLagOrder.includes(shortId) && !tickerLagOrder.includes(shortId))
       overlayLagOrder.push(shortId);
   });
+}
+
+async function loadMakroer() {
+  if (!aktivProjektId) return;
+  try {
+    makroer = await sbGet('projekt_makroer?projekt_id=eq.' + aktivProjektId + '&order=sort_order');
+  } catch { makroer = []; }
+}
+
+async function fireMakro(id) {
+  const m = makroer.find(x => x.id === id);
+  if (!m || !m.handlinger?.length) return;
+  try {
+    await Promise.all(m.handlinger.map(h =>
+      sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value })
+    ));
+    m.handlinger.forEach(h => { grafiktState[h.key] = h.value; });
+    renderGrafik();
+    toast(m.label + ' kørt', 'ok');
+  } catch { toast('Fejl ved makro', 'err'); }
 }
 
 async function refreshGrafiktState() {
@@ -1953,6 +1974,17 @@ function renderGrafik() {
     }).join('');
     companionRows += `<div class="grafik-companion-subhead" style="margin-top:${companionRows ? '10px' : '0'}">EGNE GRAFIK</div>${customCompanionRows}`;
   }
+  if (makroer.length) {
+    const makroCompanionRows = makroer.map(m => {
+      const url = `${origin}/api/trigger/${pid}?macro=${m.id}`;
+      return `<div class="grafik-companion-row">
+        <span class="grafik-companion-lbl" style="color:${m.farve || '#4a9eff'}">${esc(m.label.toUpperCase())}</span>
+        <span class="grafik-companion-url" title="${url}">${url}</span>
+        <button class="copy-btn icon-btn" data-copy="${url}">⎘</button>
+      </div>`;
+    }).join('');
+    companionRows += `<div class="grafik-companion-subhead" style="margin-top:${companionRows ? '10px' : '0'}">MAKROER</div>${makroCompanionRows}`;
+  }
 
   const companionHTML = `
     <details class="grafik-lag-details"${grafiktCompanionOpen ? ' open' : ''} id="grafik-companion-details">
@@ -2196,6 +2228,7 @@ function renderGrafik() {
   // EGNE GRAFIK sektion (custom uploadede grafik-filer)
   const leftPanel = container.querySelector('.grafik-v2-left');
   if (leftPanel) renderEgneGrafik(leftPanel);
+  if (leftPanel) renderMakroer(leftPanel);
 }
 
 function renderEgneGrafik(leftPanel) {
@@ -2271,6 +2304,166 @@ function renderEgneGrafik(leftPanel) {
         }
       } catch { toast('Fejl ved PRW', 'err'); }
     }));
+}
+
+function _makroKeyOptions(selectedKey) {
+  const builtIn = [
+    { key: 'ticker_ovl_trigger',  label: 'Ticker' },
+    { key: 'breaking_trigger',    label: 'Breaking Ticker' },
+    { key: 'score_trigger',       label: 'Stillings Boks' },
+    { key: 'live_boks_trigger',   label: 'Live Boks' },
+    { key: 'lt_trigger',          label: 'Lower Third' },
+    { key: 'stilling_trigger',    label: 'Stilling' },
+    { key: 'lineup_trigger',      label: 'Opstilling' },
+    { key: 'credits_trigger',     label: 'Credits' },
+  ];
+  const all = [
+    ...builtIn,
+    ...customGrafik.map(g => ({ key: g.trigger_key, label: g.label }))
+  ];
+  return all.map(o =>
+    `<option value="${esc(o.key)}"${o.key === selectedKey ? ' selected' : ''}>${esc(o.label)}</option>`
+  ).join('');
+}
+
+function renderMakroer(leftPanel) {
+  let wrap = leftPanel.querySelector('.makroer-wrap');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.className = 'makroer-wrap';
+    leftPanel.appendChild(wrap);
+  }
+
+  let html = `
+    <div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
+      MAKROER
+      <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;"
+        onclick="openMakroModal()">＋ Tilføj</button>
+    </div>`;
+
+  if (!makroer.length) {
+    html += `<div class="grafik-v2-empty">Ingen makroer — klik ＋ Tilføj for at oprette en</div>`;
+  } else {
+    makroer.forEach(m => {
+      const summary = (m.handlinger || []).map(h => {
+        const label = _makroKeyLabel(h.key);
+        return `${label}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
+      }).join(' · ');
+      html += `
+      <div class="grafik-block" style="--g-color:${m.farve || '#4a9eff'}">
+        <div class="grafik-block-info">
+          <span class="grafik-block-name">${esc(m.label.toUpperCase())}</span>
+          ${summary ? `<span class="grafik-block-sub" style="color:#666">${esc(summary)}</span>` : ''}
+        </div>
+        <div class="grafik-block-actions">
+          <button class="grafik-btn-prw" title="Redigér"
+            onclick="openMakroModal('${m.id}')">✎</button>
+          <button class="grafik-btn-in" style="background:${m.farve || '#4a9eff'}22;border-color:${m.farve || '#4a9eff'}66;color:${m.farve || '#4a9eff'}"
+            onclick="fireMakro('${m.id}')">▶ KØR</button>
+        </div>
+      </div>`;
+    });
+  }
+
+  wrap.innerHTML = html;
+}
+
+function _makroKeyLabel(key) {
+  const map = {
+    ticker_ovl_trigger: 'Ticker',
+    breaking_trigger:   'Breaking',
+    score_trigger:      'Stillings',
+    live_boks_trigger:  'Live Boks',
+    lt_trigger:         'Lower Third',
+    stilling_trigger:   'Stilling',
+    lineup_trigger:     'Opstilling',
+    credits_trigger:    'Credits',
+  };
+  if (map[key]) return map[key];
+  const cg = customGrafik.find(g => g.trigger_key === key);
+  return cg ? cg.label : key;
+}
+
+function openMakroModal(id) {
+  const modal = document.getElementById('makro-modal');
+  if (!modal) return;
+  const m = id ? makroer.find(x => x.id === id) : null;
+  document.getElementById('makro-modal-id').value = id || '';
+  document.getElementById('makro-label-inp').value = m ? m.label : '';
+  document.getElementById('makro-color-inp').value = m ? (m.farve || '#4a9eff') : '#4a9eff';
+  const list = document.getElementById('makro-handlinger-list');
+  list.innerHTML = '';
+  if (m && m.handlinger?.length) {
+    m.handlinger.forEach(h => _addMakroHandlingRow(h.key, h.value));
+  } else {
+    _addMakroHandlingRow('ticker_ovl_trigger', 'in');
+  }
+  modal.style.display = 'flex';
+}
+
+function _closeMakroModal() {
+  const modal = document.getElementById('makro-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function _addMakroHandling() {
+  _addMakroHandlingRow('ticker_ovl_trigger', 'in');
+}
+
+function _addMakroHandlingRow(key, value) {
+  const list = document.getElementById('makro-handlinger-list');
+  if (!list) return;
+  const row = document.createElement('div');
+  row.className = 'makro-handling-row';
+  row.style.cssText = 'display:flex;gap:6px;align-items:center;';
+  row.innerHTML = `
+    <select class="makro-key-sel" style="flex:2;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;">
+      ${_makroKeyOptions(key)}
+    </select>
+    <select class="makro-val-sel" style="flex:1;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;">
+      <option value="in"${value === 'in' ? ' selected' : ''}>PÅ</option>
+      <option value="out"${value === 'out' ? ' selected' : ''}>AF</option>
+    </select>
+    <button onclick="this.closest('.makro-handling-row').remove()"
+      style="background:none;border:none;color:#666;cursor:pointer;font-size:16px;padding:2px 6px;">✕</button>`;
+  list.appendChild(row);
+}
+
+async function _confirmMakroModal() {
+  const id    = document.getElementById('makro-modal-id').value;
+  const label = document.getElementById('makro-label-inp').value.trim();
+  const farve = document.getElementById('makro-color-inp').value;
+  if (!label) { toast('Navn mangler', 'err'); return; }
+
+  const handlinger = Array.from(document.querySelectorAll('#makro-handlinger-list .makro-handling-row')).map(row => ({
+    key:   row.querySelector('.makro-key-sel').value,
+    value: row.querySelector('.makro-val-sel').value
+  }));
+
+  const sort_order = id
+    ? (makroer.find(x => x.id === id)?.sort_order ?? 0)
+    : (makroer.length ? Math.max(...makroer.map(x => x.sort_order || 0)) + 1 : 0);
+
+  const body = { projekt_id: aktivProjektId, label, farve, handlinger, sort_order };
+  if (id) body.id = id;
+
+  try {
+    await sbUpsert('projekt_makroer', body);
+    _closeMakroModal();
+    await loadMakroer();
+    renderGrafik();
+    toast('Makro gemt', 'ok');
+  } catch { toast('Fejl ved gem af makro', 'err'); }
+}
+
+async function deleteMakro(id) {
+  if (!confirm('Slet denne makro?')) return;
+  try {
+    await sbDelete('projekt_makroer?id=eq.' + id);
+    await loadMakroer();
+    renderGrafik();
+    toast('Makro slettet', 'ok');
+  } catch { toast('Fejl ved slet', 'err'); }
 }
 
 function openEgneGrafikModal() {

@@ -18,6 +18,14 @@ const HEADERS = {
   'Prefer': 'return=minimal,resolution=merge-duplicates'
 };
 
+const GET_HEADERS = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON };
+
+async function sbGet(path) {
+  const res = await fetch(`${SB_URL}/rest/v1/${path}`, { headers: GET_HEADERS });
+  if (!res.ok) throw new Error('Supabase ' + res.status);
+  return res.json();
+}
+
 async function upsert(pid, key, value) {
   const res = await fetch(`${SB_URL}/rest/v1/settings`, {
     method: 'POST',
@@ -33,6 +41,19 @@ export default async function handler(req, res) {
   const { id } = req.query;
   if (!id) return res.status(400).json({ error: 'projekt id mangler' });
 
+  const macroId = req.query.macro;
+  if (macroId) {
+    try {
+      const rows = await sbGet(`projekt_makroer?id=eq.${encodeURIComponent(macroId)}&projekt_id=eq.${encodeURIComponent(id)}&limit=1`);
+      const macro = rows[0];
+      if (!macro) return res.status(404).json({ error: 'Makro ikke fundet' });
+      await Promise.all((macro.handlinger || []).map(h => upsert(id, h.key, h.value)));
+      return res.status(200).json({ ok: true, fired: (macro.handlinger || []).length });
+    } catch (err) {
+      return res.status(502).json({ error: String(err.message) });
+    }
+  }
+
   const key   = req.query.key   || '';
   const value = req.query.value || '';
   const slot  = req.query.slot  || '';
@@ -41,7 +62,6 @@ export default async function handler(req, res) {
   if (!value) return res.status(400).json({ error: 'value mangler' });
 
   try {
-    // Lower Third med slot: sæt lt_slot + lt_trigger i én request
     if (key === 'lt_trigger' && value === 'in' && slot) {
       await upsert(id, 'lt_slot', String(slot));
     }

@@ -173,6 +173,37 @@
   </div>
 </div>
 
+<!-- MAKRO MODAL -->
+<div id="makro-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9000;display:none;align-items:center;justify-content:center;">
+  <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;width:420px;max-height:82vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.7);display:flex;flex-direction:column;">
+    <div style="padding:14px 16px;border-bottom:1px solid #2a2a2a;font-size:12px;letter-spacing:2px;color:#aaa;">MAKRO</div>
+    <input type="hidden" id="makro-modal-id">
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">NAVN</label>
+        <input id="makro-label-inp" type="text" placeholder="Scene 1…"
+          style="width:100%;box-sizing:border-box;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:12px;">
+      </div>
+      <div>
+        <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">FARVE</label>
+        <input id="makro-color-inp" type="color" value="#4a9eff"
+          style="height:32px;width:60px;background:#111;border:1px solid #333;border-radius:6px;cursor:pointer;padding:2px;">
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <label style="font-size:10px;color:#666;letter-spacing:1px;">HANDLINGER</label>
+          <button onclick="_addMakroHandling()" style="font-size:10px;padding:2px 8px;background:#1a3a1a;border:1px solid #2d5a2d;color:#86efac;border-radius:4px;cursor:pointer;">＋ Tilføj</button>
+        </div>
+        <div id="makro-handlinger-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid #2a2a2a;">
+      <button onclick="_closeMakroModal()" style="flex:1;padding:8px;background:#222;border:1px solid #333;color:#aaa;border-radius:6px;cursor:pointer;font-size:11px;">Annuller</button>
+      <button onclick="_confirmMakroModal()" style="flex:2;padding:8px;background:#1a3a1a;border:1px solid #2d5a2d;color:#86efac;border-radius:6px;cursor:pointer;font-size:11px;letter-spacing:1px;">GEM MAKRO</button>
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>
