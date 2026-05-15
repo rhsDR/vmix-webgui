@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Overlay</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
@@ -162,6 +163,22 @@
         setTimeout(pollCustomTriggers, 1500);
       }
       pollCustomTriggers();
+
+      // Broadcast fast path — reagerer øjeblikkeligt i stedet for at vente på næste poll
+      const _sbBc = window.supabase.createClient(SB_URL, SB_ANON);
+      _sbBc.channel('triggers-' + pid)
+        .on('broadcast', { event: 'trigger' }, function(msg) {
+          const p = msg.payload;
+          if (p.projekt_id !== pid) return;
+          const iframe = customFrameMap[p.key];
+          if (!iframe) return;
+          customState[p.key] = p.value; // sync state så pollCustomTriggers springer det over
+          try {
+            if (p.value === 'in') iframe.contentWindow?.runAnimationIN?.();
+            else if (p.value === 'out') iframe.contentWindow?.runAnimationOUT?.();
+          } catch {}
+        })
+        .subscribe();
     }
 
     // Sæt standard-rækkefølge med det samme og start polling med det samme.

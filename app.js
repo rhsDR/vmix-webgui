@@ -1393,6 +1393,7 @@ async function loadKunstomGrafik() {
   try {
     customGrafik = await sbGet('projekt_grafik?projekt_id=eq.' + aktivProjektId + '&order=sort_order');
   } catch { customGrafik = []; }
+  customGrafik.forEach(g => BROADCAST_TRIGGER_KEYS.add(g.trigger_key));
   const validCustomIds = new Set(customGrafik.map(g => 'custom-' + g.id.slice(0, 8)));
   // Fjern udgaaede custom-IDs fra begge lister
   overlayLagOrder = overlayLagOrder.filter(id => !id.startsWith('custom-') || validCustomIds.has(id));
