@@ -110,17 +110,27 @@ document.addEventListener('DOMContentLoaded',function(){
     .then(function(r){return r.ok?r.json():[];})
     .then(function(rows){if(rows[0]&&rows[0].value==='in')_trigOn=true;_trigReady=true;_maybeAnimIn();})
     .catch(function(){_trigReady=true;_maybeAnimIn();});
+  var _lastBcTime={};
+  function _handleTrigger(key,value){
+    if(key===_trigKey){
+      if(value==='in'&&!_vis)_animIN();
+      if(value==='out'&&_vis)_animOUT();
+    }
+  }
   var _sb=window.supabase.createClient(SB_URL,SB_KEY);
+  _sb.channel('triggers-'+PROJEKT_ID)
+    .on('broadcast',{event:'trigger'},function(msg){
+      var p=msg.payload;if(p.projekt_id!==PROJEKT_ID)return;
+      _lastBcTime[p.key]=Date.now();_handleTrigger(p.key,p.value);
+    }).subscribe();
   _sb.channel('score-breaking-live')
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'kampe'},
         function(p){_processKampRow(p.new);_rebuildMatches();})
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},
         function(p){
           if(p.new.projekt_id!==PROJEKT_ID)return;
-          if(p.new.key===_trigKey){
-            if(p.new.value==='in'&&!_vis)_animIN();
-            if(p.new.value==='out'&&_vis)_animOUT();
-          }
+          if(_lastBcTime[p.new.key]&&Date.now()-_lastBcTime[p.new.key]<3000)return;
+          _handleTrigger(p.new.key,p.new.value);
         })
     .subscribe();
 });

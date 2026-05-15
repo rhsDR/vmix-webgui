@@ -92,14 +92,24 @@ document.addEventListener('DOMContentLoaded',function(){
   fetch(SB_URL+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+PROJEKT_ID+'&select=value',{headers:_h})
     .then(function(r){return r.json();})
     .then(function(rows){if(rows[0]&&rows[0].value==='in')runAnimationIN();});
+  var _lastBcTime={};
+  function _handleTrigger(key,value){
+    if(key===_trigKey){
+      if(value==='in'&&!_spxVisible)runAnimationIN();
+      if(value==='out'&&_spxVisible)runAnimationOUT();
+    }
+  }
   var _sb=window.supabase.createClient(SB_URL,SB_KEY);
+  _sb.channel('triggers-'+PROJEKT_ID)
+    .on('broadcast',{event:'trigger'},function(msg){
+      var p=msg.payload;if(p.projekt_id!==PROJEKT_ID)return;
+      _lastBcTime[p.key]=Date.now();_handleTrigger(p.key,p.value);
+    }).subscribe();
   _sb.channel('breaking-ticker-trigger')
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(p){
       if(p.new.projekt_id!==PROJEKT_ID)return;
-      if(p.new.key===_trigKey){
-        if(p.new.value==='in'&&!_spxVisible)runAnimationIN();
-        if(p.new.value==='out'&&_spxVisible)runAnimationOUT();
-      }
+      if(_lastBcTime[p.new.key]&&Date.now()-_lastBcTime[p.new.key]<3000)return;
+      _handleTrigger(p.new.key,p.new.value);
     })
     .subscribe();
 });

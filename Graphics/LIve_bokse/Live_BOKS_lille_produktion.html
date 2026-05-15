@@ -60,14 +60,24 @@ document.addEventListener('DOMContentLoaded',function(){
   if(!_pid)return;
   fetch(_SB_URL+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+_pid+'&select=value',{headers:_SB_HDR})
     .then(r=>r.json()).then(rows=>{if(rows[0]?.value==='in'&&!_spxVisible)runAnimationIN();});
+  var _lastBcTime={};
+  function _handleTrigger(key,value){
+    if(key===_trigKey){
+      if(value==='in'&&!_spxVisible)runAnimationIN();
+      if(value==='out'&&_spxVisible)runAnimationOUT();
+    }
+  }
   var _sb=window.supabase.createClient(_SB_URL,_SB_ANON);
+  _sb.channel('triggers-'+_pid)
+    .on('broadcast',{event:'trigger'},function(msg){
+      var p=msg.payload;if(p.projekt_id!==_pid)return;
+      _lastBcTime[p.key]=Date.now();_handleTrigger(p.key,p.value);
+    }).subscribe();
   _sb.channel('prod-'+_trigKey+'-'+_pid)
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(p){
       if(p.new.projekt_id!==_pid)return;
-      if(p.new.key===_trigKey){
-        if(p.new.value==='in'&&!_spxVisible)runAnimationIN();
-        if(p.new.value==='out'&&_spxVisible)runAnimationOUT();
-      }
+      if(_lastBcTime[p.new.key]&&Date.now()-_lastBcTime[p.new.key]<3000)return;
+      _handleTrigger(p.new.key,p.new.value);
     }).subscribe();
 });
 // ── END SUPABASE INTEGRATION ──

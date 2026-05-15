@@ -89,6 +89,33 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 const SB_HEADERS = sbHeaders();
 const SB_HEADERS_MINIMAL = { ...SB_HEADERS, 'Prefer': 'return=minimal' };
 
+const BROADCAST_TRIGGER_KEYS = new Set([
+  'ticker_ovl_trigger','breaking_trigger','score_trigger',
+  'live_boks_trigger','lt_trigger','lt_slot',
+  'stilling_trigger','lineup_trigger','credits_trigger',
+]);
+
+let _bcChannel   = null;
+let _bcProjektId = null;
+
+function _ensureBcChannel(pid) {
+  if (_bcChannel && _bcProjektId === pid) return;
+  if (_bcChannel) _bcChannel.unsubscribe();
+  const _sbRt = window.supabase.createClient(SB_URL, SB_ANON);
+  _bcChannel = _sbRt.channel('triggers-' + pid);
+  _bcChannel.subscribe();
+  _bcProjektId = pid;
+}
+
+function sbBroadcast(key, value, extra) {
+  if (!aktivProjektId) return;
+  try {
+    _ensureBcChannel(aktivProjektId);
+    _bcChannel.send({ type: 'broadcast', event: 'trigger',
+      payload: { key, value, projekt_id: aktivProjektId, ...(extra || {}) } });
+  } catch { /* non-critical */ }
+}
+
 async function sbGet(path) {
   const res = await fetch(SB_URL + '/rest/v1/' + path, { headers: SB_HEADERS });
   if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -109,6 +136,8 @@ async function sbUpsert(table, body) {
     body: JSON.stringify(body)
   });
   if (!res.ok) throw new Error('HTTP ' + res.status);
+  if (table === 'settings' && body.key && BROADCAST_TRIGGER_KEYS.has(body.key))
+    sbBroadcast(body.key, body.value, body.slot ? { slot: body.slot } : undefined);
 }
 
 async function sbDelete(path) {
