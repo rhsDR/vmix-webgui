@@ -1931,6 +1931,29 @@ function renderGrafik() {
         <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
       </div>`;
   }
+  if (customGrafik.length) {
+    const customCompanionRows = customGrafik.map(cg => {
+      const paUrl = `${origin}/api/trigger/${pid}?key=${encodeURIComponent(cg.trigger_key)}&value=in`;
+      const afUrl = `${origin}/api/trigger/${pid}?key=${encodeURIComponent(cg.trigger_key)}&value=out`;
+      return `
+      <div class="grafik-companion-row">
+        <span class="grafik-companion-lbl" style="color:${cg.color || '#888'}">${esc(cg.label.toUpperCase())}</span>
+        <span class="grafik-companion-url" style="color:#888;font-size:9px;">PÅ / AF</span>
+      </div>
+      <div class="grafik-companion-row">
+        <span class="grafik-companion-lbl">PÅ</span>
+        <span class="grafik-companion-url" title="${paUrl}">${paUrl}</span>
+        <button class="copy-btn icon-btn" data-copy="${paUrl}">⎘</button>
+      </div>
+      <div class="grafik-companion-row">
+        <span class="grafik-companion-lbl">AF</span>
+        <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
+        <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
+      </div>`;
+    }).join('');
+    companionRows += `<div class="grafik-companion-subhead" style="margin-top:${companionRows ? '10px' : '0'}">EGNE GRAFIK</div>${customCompanionRows}`;
+  }
+
   const companionHTML = `
     <details class="grafik-lag-details"${grafiktCompanionOpen ? ' open' : ''} id="grafik-companion-details">
       <summary class="grafik-lag-summary">▸ COMPANION (HTTP POST)</summary>

@@ -42,11 +42,11 @@ export default async function handler(req, res) {
     const tickerTail = ' &nbsp; &bull; &nbsp; ';
     const tickerBreaking = tickersRaw
       .filter(r => r.on_air && r.breaking && (r.overskrift || r.tekst))
-      .map(r => r.overskrift ? `<b>${r.overskrift.toUpperCase() || ''}</b> &nbsp; ${r.tekst || ''}` : r.tekst || '')
+      .map(r => r.overskrift ? `<b>${r.overskrift.toUpperCase() || ''}</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${r.tekst || ''}` : r.tekst || '')
       .join(tickerSep);
     const tickerNormal = tickersRaw
       .filter(r => r.on_air && !r.breaking && (r.overskrift || r.tekst))
-      .map(r => r.overskrift ? `<b>${r.overskrift.toUpperCase() || ''}</b> &nbsp; ${r.tekst || ''}` : r.tekst || '')
+      .map(r => r.overskrift ? `<b>${r.overskrift.toUpperCase() || ''}</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${r.tekst || ''}` : r.tekst || '')
       .join(tickerSep);
 
     const addTail = s => s ? s + tickerTail : s;

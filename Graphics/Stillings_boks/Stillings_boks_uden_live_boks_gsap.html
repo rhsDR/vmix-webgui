@@ -45,9 +45,9 @@ function _showMatch(m,animate){
   var txt=_fmtMatch(m);
   if(animate&&_vis){
     gsap.timeline()
-      .to(el,{opacity:0,duration:0.18,ease:'power2.in'})
+      .to(el,{opacity:0,duration:0.3,ease:'power2.in'})
       .call(function(){el.textContent=txt;})
-      .to(el,{opacity:1,duration:0.22,ease:'power3.out'});
+      .to(el,{opacity:1,duration:0.22,ease:'power3.out'},'+=0.06');
   }else{el.textContent=txt;}
 }
 function _nextMatch(){
