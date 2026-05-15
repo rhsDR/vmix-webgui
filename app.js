@@ -2480,30 +2480,31 @@ function _addMakroHandlingRow(key, value, slot) {
   }).filter(Boolean).join('');
   const row = document.createElement('div');
   row.className = 'makro-handling-row';
-  row.style.cssText = 'display:flex;gap:6px;align-items:center;background:#1a1a1a;border:1px solid #252525;border-radius:6px;padding:5px 8px;';
+  row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#1a1a1a;border:1px solid #252525;border-radius:6px;padding:5px 8px;';
   row.innerHTML = `
-    <span class="makro-drag-handle" draggable="true" style="color:#444;font-size:14px;user-select:none;padding-right:2px;flex-shrink:0;">⠿</span>
-    <select class="makro-key-sel" style="flex:2;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;">
+    <span class="makro-drag-handle" draggable="true" style="color:#444;font-size:14px;user-select:none;flex-shrink:0;">⠿</span>
+    <select class="makro-key-sel" style="flex:1;min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;">
       ${_makroKeyOptions(key)}
     </select>
-    <select class="makro-slot-sel" style="flex:1;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isLt ? 'block' : 'none'};">
-      ${slotOpts || '<option value="">Ingen subs</option>'}
-    </select>
-    <select class="makro-val-sel" style="flex:1;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isWait ? 'none' : 'block'};">
+    <select class="makro-val-sel" style="width:68px;flex-shrink:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isWait ? 'none' : 'block'};">
       <option value="in"${value === 'in' ? ' selected' : ''}>PÅ</option>
       <option value="out"${value === 'out' ? ' selected' : ''}>AF</option>
     </select>
     <input class="makro-wait-inp" type="number" min="0.1" step="0.1" placeholder="sek"
       value="${isWait ? esc(value) : ''}"
-      style="flex:1;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isWait ? 'block' : 'none'};">
+      style="width:68px;flex-shrink:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isWait ? 'block' : 'none'};">
     <button onclick="this.closest('.makro-handling-row').remove()"
-      style="background:none;border:none;color:#666;cursor:pointer;font-size:16px;padding:2px 6px;">✕</button>`;
+      style="background:none;border:none;color:#666;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;">✕</button>
+    <select class="makro-slot-sel" style="flex:1 0 calc(100% - 22px);min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isLt ? 'block' : 'none'};">
+      ${slotOpts || '<option value="">Ingen subs</option>'}
+    </select>`;
   row.querySelector('.makro-key-sel').addEventListener('change', function() {
     const lt   = this.value === 'lt_trigger';
     const wait = this.value === 'wait';
     row.querySelector('.makro-slot-sel').style.display = lt   ? 'block' : 'none';
     row.querySelector('.makro-val-sel').style.display  = wait ? 'none'  : 'block';
     row.querySelector('.makro-wait-inp').style.display = wait ? 'block' : 'none';
+    row.querySelector('.makro-slot-sel').style.flex    = lt   ? '1 0 calc(100% - 22px)' : '';
   });
   list.appendChild(row);
 }
