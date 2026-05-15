@@ -115,9 +115,14 @@ document.addEventListener('DOMContentLoaded',function(){
   _cols(false);
   _loadInitial();
   var _h={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
-  fetch(SB_URL+'/rest/v1/settings?key=eq.breaking_trigger&projekt_id=eq.'+PROJEKT_ID+'&select=value',{headers:_h})
+  fetch(SB_URL+'/rest/v1/settings?key=in.(breaking_trigger,score_trigger)&projekt_id=eq.'+PROJEKT_ID+'&select=key,value',{headers:_h})
     .then(function(r){return r.json();})
-    .then(function(rows){if(rows[0]&&rows[0].value==='in'){_br=true;_cols(true);}});
+    .then(function(rows){
+      rows.forEach(function(r){
+        if(r.key==='breaking_trigger'&&r.value==='in'){_br=true;_cols(true);}
+        if(r.key==='score_trigger'&&r.value==='in'&&!_vis)_animIN();
+      });
+    });
   var _sb=window.supabase.createClient(SB_URL,SB_KEY);
   _sb.channel('score-live')
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'kampe'},

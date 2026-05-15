@@ -60,7 +60,7 @@ function _step(ts){
   _inner.style.transform='translateX('+Math.round(_pos)+'px)';
   requestAnimationFrame(_step);
 }
-function _poll(){if(!APIURL)return;fetch(APIURL).then(function(r){return r.arrayBuffer();}).then(function(buf){var s;try{s=new TextDecoder('utf-8',{fatal:true}).decode(buf);}catch(e){s=new TextDecoder('windows-1252').decode(buf);}var d;try{d=JSON.parse(s);}catch(e){return;}var o=Array.isArray(d)?d[0]:d;var b=_strip(String(o.ticker_breaking||'')).trim();if(b!==_bt){_pending=_mk(b);}_bt=b;}).catch(function(){});}
+function _poll(){if(!APIURL)return;fetch(APIURL).then(function(r){return r.arrayBuffer();}).then(function(buf){var s;try{s=new TextDecoder('utf-8',{fatal:true}).decode(buf);}catch(e){s=new TextDecoder('windows-1252').decode(buf);}var d;try{d=JSON.parse(s);}catch(e){return;}var o=Array.isArray(d)?d[0]:d;var b=_strip(String(o.ticker_breaking||'')).trim();if(b!==_bt){var mk=_mk(b);if(!_bt&&_inner&&!_inner.textContent.trim()){_inner.textContent=mk;_pos=1920;}else{_pending=mk;}}_bt=b;}).catch(function(){});}
 function _updateContent(data){
   (function(){var t=clean((data&&data.f0!=null)?String(data.f0):document.getElementById('f0').innerText);var items=t.split('|').map(function(s){return s.trim();}).filter(Boolean);if(_wrap&&_wrap._tickerUpdate){_wrap._tickerUpdate(items.join(SEP)+SEP+items.join(SEP));}else{var inn=document.getElementById('el19-inner');if(inn)inn.textContent=items.join(SEP)+SEP+items.join(SEP);}})();
   (function(){var r=document.getElementById('el2');var s=document.getElementById('el5');if(r&&s){r.style.left=(s.offsetLeft+-38)+'px';r.style.width=Math.max(1,s.offsetWidth+337)+'px';}})();
