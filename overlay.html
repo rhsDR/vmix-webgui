@@ -69,14 +69,16 @@
     function applyOrder(mainOrder) {
       const total = mainOrder.length;
       mainOrder.forEach((id, idx) => {
-        const baseZ = (total - idx) * 1000; // første = højest, store gap giver plads til sub-items
+        const baseZ = (total - idx) * 1000;
         if (id === 'ticker') {
-          // Placer de 4 ticker-sub-items inden for dette slots z-zone
+          // Sæt z-index for alle ticker-sub-items relativt til denne position
           tickerSubOrder.forEach((subId, subIdx) => {
             const frame = document.getElementById(subId + '-frame');
             if (frame) frame.style.zIndex = baseZ - subIdx * 10;
           });
-        } else {
+        } else if (!tickerSubOrder.includes(id)) {
+          // Kun sæt z-index for items der IKKE er ticker-sub-items —
+          // de håndteres af ticker-blokken og må ikke overskrives
           const frame = document.getElementById(id + '-frame');
           if (frame) frame.style.zIndex = baseZ;
         }
@@ -162,9 +164,12 @@
       pollCustomTriggers();
     }
 
-    // Sæt standard-rækkefølge med det samme, poll derefter
+    // Sæt standard-rækkefølge med det samme og start polling med det samme.
+    // loadCustomGrafik kører parallelt; næste poll-iteration vil inkludere
+    // de custom-frames der er tilføjet til DEFAULT_ORDER undervejs.
     applyOrder(DEFAULT_ORDER);
-    loadCustomGrafik().then(() => pollLagOrder());
+    pollLagOrder();
+    loadCustomGrafik();
   </script>
 </body>
 </html>
