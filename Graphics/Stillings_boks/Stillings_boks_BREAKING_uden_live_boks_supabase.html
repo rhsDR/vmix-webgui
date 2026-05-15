@@ -98,12 +98,14 @@ function _animOUT(){
 document.addEventListener('DOMContentLoaded',function(){
   _cols();
   var h={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
-  fetch(SB_URL+'/rest/v1/kampe?select=slot,hold1_kort,hold2_kort,hold1_score,hold2_score,on_air',{headers:h})
-    .then(function(r){return r.json();})
-    .then(function(rows){rows.forEach(_processKampRow);_rebuildMatches();});
-  fetch(SB_URL+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+PROJEKT_ID+'&select=value',{headers:h})
-    .then(function(r){return r.json();})
-    .then(function(rows){if(rows[0]&&rows[0].value==='in')_animIN();});
+  Promise.all([
+    fetch(SB_URL+'/rest/v1/kampe?select=slot,hold1_kort,hold2_kort,hold1_score,hold2_score,on_air&projekt_id=eq.'+PROJEKT_ID,{headers:h}).then(function(r){return r.json();}),
+    fetch(SB_URL+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+PROJEKT_ID+'&select=value',{headers:h}).then(function(r){return r.json();})
+  ]).then(function(res){
+    res[0].forEach(_processKampRow);
+    _rebuildMatches();
+    if(res[1][0]&&res[1][0].value==='in')_animIN();
+  });
   var _sb=window.supabase.createClient(SB_URL,SB_KEY);
   _sb.channel('score-breaking-live')
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'kampe'},

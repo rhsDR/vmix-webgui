@@ -105,24 +105,20 @@ function _animOUT(){
   tl.to('#el2',{clipPath:'inset(100% 0% 0% 0%)',duration:0.34,ease:'power2.in'},0.881);
   tl.to('#el17',{opacity:0,duration:0.32,ease:'power2.in'},0.802);
 }
-function _loadInitial(){
-  var h={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
-  fetch(SB_URL+'/rest/v1/kampe?select=slot,hold1_kort,hold2_kort,hold1_score,hold2_score,on_air',{headers:h})
-    .then(function(r){return r.json();})
-    .then(function(rows){rows.forEach(_processKampRow);_rebuildMatches();});
-}
 document.addEventListener('DOMContentLoaded',function(){
   _cols(false);
-  _loadInitial();
   var _h={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
-  fetch(SB_URL+'/rest/v1/settings?key=in.(breaking_trigger,score_trigger)&projekt_id=eq.'+PROJEKT_ID+'&select=key,value',{headers:_h})
-    .then(function(r){return r.json();})
-    .then(function(rows){
-      rows.forEach(function(r){
-        if(r.key==='breaking_trigger'&&r.value==='in'){_br=true;_cols(true);}
-        if(r.key==='score_trigger'&&r.value==='in'&&!_vis)_animIN();
-      });
+  Promise.all([
+    fetch(SB_URL+'/rest/v1/kampe?select=slot,hold1_kort,hold2_kort,hold1_score,hold2_score,on_air&projekt_id=eq.'+PROJEKT_ID,{headers:_h}).then(function(r){return r.json();}),
+    fetch(SB_URL+'/rest/v1/settings?key=in.(breaking_trigger,score_trigger)&projekt_id=eq.'+PROJEKT_ID+'&select=key,value',{headers:_h}).then(function(r){return r.json();})
+  ]).then(function(res){
+    res[0].forEach(_processKampRow);
+    _rebuildMatches();
+    res[1].forEach(function(r){
+      if(r.key==='breaking_trigger'&&r.value==='in'){_br=true;_cols(true);}
+      if(r.key==='score_trigger'&&r.value==='in'&&!_vis)_animIN();
     });
+  });
   var _sb=window.supabase.createClient(SB_URL,SB_KEY);
   _sb.channel('score-live')
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'kampe'},
