@@ -2424,6 +2424,9 @@ function openMakroModal(id, prefillHandlinger) {
             : prefillHandlinger?.length ? prefillHandlinger
             : [{ key: 'ticker_ovl_trigger', value: 'in' }];
   src.forEach(h => _addMakroHandlingRow(h.key, h.value, h.slot || ''));
+  const listEl = document.getElementById('makro-handlinger-list');
+  if (listEl) delete listEl.dataset.dndInit;
+  _initMakroHandlingDragDrop();
   modal.style.display = 'flex';
 }
 
@@ -2448,8 +2451,9 @@ function _addMakroHandlingRow(key, value, slot) {
   }).filter(Boolean).join('');
   const row = document.createElement('div');
   row.className = 'makro-handling-row';
-  row.style.cssText = 'display:flex;gap:6px;align-items:center;';
+  row.style.cssText = 'display:flex;gap:6px;align-items:center;background:#1a1a1a;border:1px solid #252525;border-radius:6px;padding:5px 8px;';
   row.innerHTML = `
+    <span class="makro-drag-handle" draggable="true" style="color:#444;font-size:14px;user-select:none;padding-right:2px;flex-shrink:0;">⠿</span>
     <select class="makro-key-sel" style="flex:2;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;">
       ${_makroKeyOptions(key)}
     </select>
@@ -2473,6 +2477,39 @@ function _addMakroHandlingRow(key, value, slot) {
     row.querySelector('.makro-wait-inp').style.display = wait ? 'block' : 'none';
   });
   list.appendChild(row);
+}
+
+function _initMakroHandlingDragDrop() {
+  const list = document.getElementById('makro-handlinger-list');
+  if (!list || list.dataset.dndInit) return;
+  list.dataset.dndInit = '1';
+  let dragSrc = null;
+
+  list.addEventListener('dragstart', e => {
+    if (!e.target.classList.contains('makro-drag-handle')) return;
+    dragSrc = e.target.closest('.makro-handling-row');
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => dragSrc?.classList.add('dragging'), 0);
+  });
+  list.addEventListener('dragend', () => {
+    dragSrc?.classList.remove('dragging');
+    list.querySelectorAll('.drag-over').forEach(r => r.classList.remove('drag-over'));
+    dragSrc = null;
+  });
+  list.addEventListener('dragover', e => {
+    e.preventDefault();
+    const row = e.target.closest('.makro-handling-row');
+    list.querySelectorAll('.drag-over').forEach(r => r.classList.remove('drag-over'));
+    if (row && row !== dragSrc) row.classList.add('drag-over');
+  });
+  list.addEventListener('drop', e => {
+    e.preventDefault();
+    const target = e.target.closest('.makro-handling-row');
+    if (!target || !dragSrc || target === dragSrc) return;
+    target.classList.remove('drag-over');
+    const rect = target.getBoundingClientRect();
+    list.insertBefore(dragSrc, e.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
+  });
 }
 
 async function _confirmMakroModal() {

@@ -1402,6 +1402,10 @@
     .lag-row:active { cursor: grabbing; }
     .lag-row.dragging  { opacity: 0.35; }
     .lag-row.drag-over { border-top-color: var(--orange); }
+    .makro-handling-row.dragging  { opacity: 0.35; }
+    .makro-handling-row.drag-over { outline: 1px solid #4a9eff; background: #1a2a3a !important; }
+    .makro-drag-handle { cursor: grab; }
+    .makro-drag-handle:active { cursor: grabbing; }
     .lag-handle {
       color: #3a3a3a;
       font-size: 16px;
