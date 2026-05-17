@@ -720,24 +720,6 @@
     }
     .on-air-btn:disabled { opacity: 0.25; cursor: not-allowed; animation: none; }
 
-    .auto-mode-btn {
-      padding: 2px 9px;
-      border-radius: 20px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      border: 1px solid #333;
-      background: transparent;
-      color: #555;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-left: 8px;
-    }
-    .auto-mode-btn.active {
-      border-color: var(--orange);
-      background: var(--orange);
-      color: #fff;
-    }
 
     .fixture-result-item {
       padding: 7px 10px;

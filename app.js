@@ -10,7 +10,7 @@ const makeKamp = () => ({
   hold1Lang: '', hold1Kort: '', hold1Score: 0,
   hold2Score: 0, hold2Kort: '', hold2Lang: '',
   kommentator: '', lokation: '', vmixcall: '', onAir: false,
-  fixtureId: null, autoMode: false,
+  fixtureId: null,
   enetpulseId: null, starttime: '',
   // edit buffer
   editMode: false, collapsed: false,
@@ -191,7 +191,6 @@ async function fetchAll() {
       vmixcall:    r.vmixcall     || '',
       onAir:       r.on_air       || false,
       fixtureId:   r.fixture_id   || null,
-      autoMode:    r.auto_mode    || false,
       enetpulseId: r.enetpulse_id || null
     })),
     subs: {
@@ -472,7 +471,6 @@ function buildBlock(i) {
         <span class="kamp-label">KAMP ${i + 1}</span>
       </div>
       <div class="kamp-header-right">
-        <button class="auto-mode-btn ${k.autoMode ? 'active' : ''}" id="autobtn-${i}">${k.autoMode ? '⚡ AUTO' : 'MANUEL'}</button>
         ${!k.editMode
           ? `<button class="icon-btn" id="editbtn-${i}" title="Rediger">✏️</button>`
           : ''}
@@ -506,10 +504,6 @@ function buildBlock(i) {
   // Events — edit button (normal mode only)
   const eb = block.querySelector('#editbtn-' + i);
   if (eb) eb.addEventListener('click', e => { e.stopPropagation(); enterEdit(i); });
-
-  // Events — auto mode toggle (slot 6 only)
-  const ab = block.querySelector('#autobtn-' + i);
-  if (ab) ab.addEventListener('click', e => { e.stopPropagation(); toggleAutoMode(i); });
 
   return block;
 }
@@ -592,16 +586,7 @@ function buildEditView(i) {
 
   const today = new Date().toISOString().split('T')[0];
 
-  const holdFields = k.autoMode ? `
-      <div class="form-group span2">
-        <label class="form-label">Hent fra Enetpulse</label>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <input class="form-input" type="date" id="enetdate-${i}" value="${today}" style="width:160px;color-scheme:dark;">
-          <button class="btn btn-save" id="enetbtn-${i}" style="white-space:nowrap;">VIS KAMPE</button>
-        </div>
-        <div id="enetresults-${i}"></div>
-        ${buf.enetpulseId ? `<div style="margin-top:4px;font-size:11px;color:#555;">Aktiv: <span style="color:var(--orange)">${esc(k.hold1Lang)} vs ${esc(k.hold2Lang)}</span></div>` : ''}
-      </div>` : `
+  const holdFields = `
       <div class="form-group">
         <label class="form-label">Hold 1</label>
         <select class="form-select" id="eh1-${i}">
@@ -661,28 +646,17 @@ function buildEditView(i) {
   `;
 
   // Live-update buffer on change
-  if (!k.autoMode) {
-    div.querySelector('#eh1-' + i).addEventListener('change', e => { buf.hold1Lang = e.target.value; });
-    div.querySelector('#eh2-' + i).addEventListener('change', e => { buf.hold2Lang = e.target.value; });
+  div.querySelector('#eh1-' + i).addEventListener('change', e => { buf.hold1Lang = e.target.value; });
+  div.querySelector('#eh2-' + i).addEventListener('change', e => { buf.hold2Lang = e.target.value; });
 
-    const enetBtn = div.querySelector('#enetbtn-' + i);
-    enetBtn.addEventListener('click', () => {
-      const date = div.querySelector('#enetdate-' + i).value;
-      if (date) searchEnetpulseByDate(i, div, date);
-    });
-    div.querySelector('#enetdate-' + i).addEventListener('keydown', e => {
-      if (e.key === 'Enter') enetBtn.click();
-    });
-  } else {
-    const enetBtn6 = div.querySelector('#enetbtn-' + i);
-    enetBtn6.addEventListener('click', () => {
-      const date = div.querySelector('#enetdate-' + i).value;
-      if (date) searchEnetpulseByDate(i, div, date);
-    });
-    div.querySelector('#enetdate-' + i).addEventListener('keydown', e => {
-      if (e.key === 'Enter') enetBtn6.click();
-    });
-  }
+  const enetBtn = div.querySelector('#enetbtn-' + i);
+  enetBtn.addEventListener('click', () => {
+    const date = div.querySelector('#enetdate-' + i).value;
+    if (date) searchEnetpulseByDate(i, div, date);
+  });
+  div.querySelector('#enetdate-' + i).addEventListener('keydown', e => {
+    if (e.key === 'Enter') enetBtn.click();
+  });
   div.querySelector('#ek-'  + i).addEventListener('change', e => { buf.kommentator = e.target.value; });
   div.querySelector('#el-'  + i).addEventListener('change', e => {
     if (e.target.value === '__kommentator__') {
@@ -751,19 +725,6 @@ function cancelEdit(i) {
   rerender(i);
 }
 
-async function toggleAutoMode(i) {
-  const k = kampe[i];
-  const newMode = !k.autoMode;
-  try {
-    await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { auto_mode: newMode });
-    k.autoMode = newMode;
-    if (newMode) {
-      k.buf = { hold1Lang: k.hold1Lang, hold2Lang: k.hold2Lang, kommentator: k.kommentator, lokation: k.lokation, vmixcall: k.vmixcall, lokSomKomm: false };
-      k.editMode = true;
-    }
-    rerender(i);
-  } catch { toast('Fejl ved skift af tilstand', 'err'); }
-}
 
 async function searchFixtureByDate(i, div, date) {
   const resultsEl = div.querySelector('#efixresults-' + i);
@@ -865,19 +826,12 @@ async function saveKamp(i, div) {
   const buf = k.buf;
   const prevEnetpulseId = k.enetpulseId;
 
-  // Resolve short names — spring over i AUTO mode (holdnavne sættes via fixture-søgning)
-  if (!k.autoMode) {
-    const h1 = dropdowns.holds.find(h => h.lang === buf.hold1Lang);
-    const h2 = dropdowns.holds.find(h => h.lang === buf.hold2Lang);
-    k.hold1Lang = buf.hold1Lang;
-    k.hold1Kort = h1 ? h1.kort : buf.hold1Lang;
-    k.hold2Lang = buf.hold2Lang;
-    k.hold2Kort = h2 ? h2.kort : buf.hold2Lang;
-  } else if (buf.enetpulseId === null) {
-    // AUTO mode nulstilling: ryd hold-navne
-    k.hold1Lang = ''; k.hold1Kort = '';
-    k.hold2Lang = ''; k.hold2Kort = '';
-  }
+  const h1 = dropdowns.holds.find(h => h.lang === buf.hold1Lang);
+  const h2 = dropdowns.holds.find(h => h.lang === buf.hold2Lang);
+  k.hold1Lang = buf.hold1Lang;
+  k.hold1Kort = h1 ? h1.kort : buf.hold1Lang;
+  k.hold2Lang = buf.hold2Lang;
+  k.hold2Kort = h2 ? h2.kort : buf.hold2Lang;
   k.kommentator  = buf.kommentator;
   k.lokation     = buf.lokSomKomm ? buf.kommentator : buf.lokation;
   k.vmixcall     = buf.vmixcall;
