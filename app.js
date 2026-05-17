@@ -600,7 +600,7 @@ function buildEditView(i) {
           <button class="btn btn-save" id="enetbtn-${i}" style="white-space:nowrap;">VIS KAMPE</button>
         </div>
         <div id="enetresults-${i}"></div>
-        ${k.enetpulseId ? `<div style="margin-top:4px;font-size:11px;color:#555;">Aktiv: <span style="color:var(--orange)">${esc(k.hold1Lang)} vs ${esc(k.hold2Lang)}</span></div>` : ''}
+        ${buf.enetpulseId ? `<div style="margin-top:4px;font-size:11px;color:#555;">Aktiv: <span style="color:var(--orange)">${esc(k.hold1Lang)} vs ${esc(k.hold2Lang)}</span></div>` : ''}
       </div>` : `
       <div class="form-group">
         <label class="form-label">Hold 1</label>
@@ -623,7 +623,7 @@ function buildEditView(i) {
           <button class="btn btn-save" id="enetbtn-${i}" style="white-space:nowrap;">VIS KAMPE</button>
         </div>
         <div id="enetresults-${i}"></div>
-        ${k.enetpulseId ? `<div style="margin-top:4px;font-size:11px;color:#555;">Aktiv: <span style="color:var(--orange)">${esc(k.hold1Lang)} vs ${esc(k.hold2Lang)}</span></div>` : ''}
+        ${buf.enetpulseId ? `<div style="margin-top:4px;font-size:11px;color:#555;">Aktiv: <span style="color:var(--orange)">${esc(k.hold1Lang)} vs ${esc(k.hold2Lang)}</span></div>` : ''}
       </div>`;
 
   div.innerHTML = `
@@ -873,6 +873,10 @@ async function saveKamp(i, div) {
     k.hold1Kort = h1 ? h1.kort : buf.hold1Lang;
     k.hold2Lang = buf.hold2Lang;
     k.hold2Kort = h2 ? h2.kort : buf.hold2Lang;
+  } else if (buf.enetpulseId === null) {
+    // AUTO mode nulstilling: ryd hold-navne
+    k.hold1Lang = ''; k.hold1Kort = '';
+    k.hold2Lang = ''; k.hold2Kort = '';
   }
   k.kommentator  = buf.kommentator;
   k.lokation     = buf.lokSomKomm ? buf.kommentator : buf.lokation;
