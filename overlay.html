@@ -96,8 +96,10 @@
         ]);
         const rawMain = mainRows[0]?.value || '';
         const rawSub  = subRows[0]?.value  || '';
-        const mainOrder = rawMain ? rawMain.split(',').map(s => s.trim()).filter(Boolean) : DEFAULT_ORDER;
+        let mainOrder = rawMain ? rawMain.split(',').map(s => s.trim()).filter(Boolean) : DEFAULT_ORDER;
         tickerSubOrder  = rawSub  ? rawSub.split(',').map(s => s.trim()).filter(Boolean)  : DEFAULT_TICKER_SUB_ORDER;
+        // Sikr at 'ticker' altid er i mainOrder — uden den kører ticker-blokken aldrig
+        if (!mainOrder.includes('ticker')) mainOrder = [...mainOrder, 'ticker'];
         applyOrder(mainOrder);
       } catch {}
       setTimeout(pollLagOrder, 3000);
@@ -131,7 +133,8 @@
         iframe.src = blobUrl;
         iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;';
         document.body.appendChild(iframe);
-        DEFAULT_ORDER.push('custom-' + g.id.slice(0, 8));
+        const shortId = 'custom-' + g.id.slice(0, 8);
+        if (!DEFAULT_ORDER.includes(shortId)) DEFAULT_ORDER.push(shortId);
         customFrameMap[g.trigger_key] = iframe;
       }));
       applyOrder(DEFAULT_ORDER);
