@@ -80,6 +80,22 @@ document.addEventListener('DOMContentLoaded',function(){
         if(p.new.value==='out'&&_spxVisible)runAnimationOUT();
       }
     }).subscribe();
+  // Content: hent on-air tickers og byg scrolltekst
+  function _loadContent(){
+    fetch(_SB_URL+'/rest/v1/tickers?on_air=eq.true&projekt_id=eq.'+_pid+'&order=slot&select=tekst',{headers:_SB_HDR})
+      .then(function(r){return r.json();})
+      .then(function(rows){
+        var items=rows.map(function(r){return r.tekst||'';}).filter(Boolean);
+        _updateContent({f0:items.join('|')});
+      }).catch(function(){});
+  }
+  _loadContent();
+  setInterval(_loadContent,15000);
+  var _sbC=window.supabase.createClient(_SB_URL,_SB_ANON);
+  _sbC.channel('ticker-content-'+_pid)
+    .on('postgres_changes',{event:'*',schema:'public',table:'tickers'},function(){
+      _loadContent();
+    }).subscribe();
 });
 // ── END SUPABASE INTEGRATION ──
 window.SPXGCTemplateDefinition={"description":"Smart Ticker","DataFields":[]};
