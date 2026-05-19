@@ -15,7 +15,7 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
 #el2{position:absolute;left:450px;top:985px;width:1489px;height:81px;transform-origin:left top;background:#00004b;border-radius:0px;clip-path:inset(100% 0% 0% 0%);}
 #el19{position:absolute;left:452px;top:987px;width:1479px;height:79px;transform-origin:center center;opacity:0;}
 #el19{overflow:hidden;display:flex;align-items:center;}
-#el19-inner{white-space:nowrap;display:inline-block;font-size:24px;font-weight:400;font-family:'DM Sans',sans-serif;color:#ffffff;}
+#el19-inner{white-space:nowrap;display:inline-block;font-size:24px;font-weight:400;font-family:'DM Sans',sans-serif;color:#ffffff;}.t-hl{font-weight:700;}.t-tx{font-weight:400;}
 
 </style>
 </head>
@@ -34,7 +34,7 @@ function _updateContent(data){
 function runTemplateUpdate(data){_updateContent(data);function _apply(){_prefetchAndPlay(function(){setTimeout(runAnimationIN,50);});}if(_spxVisible){runAnimationOUT();setTimeout(_apply,1321);}else{_apply();}}
 window.onSpxUpdate=function(data){_updateContent(data);};
 document.addEventListener('DOMContentLoaded',function(){
-(function(){var wrap=document.getElementById('el19');var inner=document.getElementById('el19-inner');if(!inner||!wrap)return;var speed=120;var pos=wrap.offsetWidth;var pending=null;var last=null;var _wiping=false;function _doWipe(nc){_wiping=true;gsap.to('#el19',{opacity:0,duration:0.2,ease:'power2.in',onComplete:function(){inner.textContent=nc;pos=wrap.offsetWidth;gsap.to('#el19',{opacity:1,duration:0.3,ease:'power2.out',onComplete:function(){_wiping=false;}});}});}wrap._tickerUpdate=function(t){if(!inner.textContent){inner.textContent=t;pos=wrap.offsetWidth;}else if(t!==inner.textContent){pending=t;}};function step(ts){if(last===null){last=ts;requestAnimationFrame(step);return;}var dt=(ts-last)/1000;last=ts;if(!_wiping)pos-=speed*dt;var half=inner.scrollWidth/2;if(half>0&&pos<-half&&!_wiping){if(pending!==null){_doWipe(pending);pending=null;}else{pos+=half;}}inner.style.transform='translateX('+Math.round(pos)+'px)';requestAnimationFrame(step);}requestAnimationFrame(step);})();
+(function(){var wrap=document.getElementById('el19');var inner=document.getElementById('el19-inner');if(!inner||!wrap)return;var speed=120;var pos=wrap.offsetWidth;var pending=null;var last=null;var _wiping=false;var _curHTML='';function _doWipe(nc){_wiping=true;gsap.to('#el19',{opacity:0,duration:0.2,ease:'power2.in',onComplete:function(){inner.innerHTML=nc;_curHTML=nc;pos=wrap.offsetWidth;gsap.to('#el19',{opacity:1,duration:0.3,ease:'power2.out',onComplete:function(){_wiping=false;}});}});}wrap._tickerUpdate=function(t){if(!_curHTML){inner.innerHTML=t;_curHTML=t;pos=wrap.offsetWidth;}else if(t!==_curHTML){pending=t;}};function step(ts){if(last===null){last=ts;requestAnimationFrame(step);return;}var dt=(ts-last)/1000;last=ts;if(!_wiping)pos-=speed*dt;var half=inner.scrollWidth/2;if(half>0&&pos<-half&&!_wiping){if(pending!==null){_doWipe(pending);pending=null;}else{pos+=half;}}inner.style.transform='translateX('+Math.round(pos)+'px)';requestAnimationFrame(step);}requestAnimationFrame(step);})();
 });
 function runAnimationIN(){_spxVisible=true;
   var tl=gsap.timeline();
@@ -82,11 +82,20 @@ document.addEventListener('DOMContentLoaded',function(){
     }).subscribe();
   // Content: hent on-air tickers og byg scrolltekst
   function _loadContent(){
-    fetch(_SB_URL+'/rest/v1/tickers?on_air=eq.true&projekt_id=eq.'+_pid+'&order=slot&select=tekst',{headers:_SB_HDR})
+    fetch(_SB_URL+'/rest/v1/tickers?on_air=eq.true&projekt_id=eq.'+_pid+'&order=slot&select=tekst,overskrift',{headers:_SB_HDR})
       .then(function(r){return r.json();})
       .then(function(rows){
-        var items=rows.map(function(r){return r.tekst||'';}).filter(Boolean);
-        _updateContent({f0:items.join('|')});
+        var SEP='     •     ';
+        var items=rows.filter(function(r){return r.tekst||r.overskrift;}).map(function(r){
+          var s='';
+          if(r.overskrift)s+='<span class="t-hl">'+r.overskrift+'</span>';
+          if(r.tekst)s+='<span class="t-tx">'+(r.overskrift?' ':'')+r.tekst+'</span>';
+          return s;
+        });
+        if(!items.length)return;
+        var full=items.join(SEP);
+        var w=document.getElementById('el19');
+        if(w&&w._tickerUpdate)w._tickerUpdate(full+SEP+full);
       }).catch(function(){});
   }
   _loadContent();
