@@ -470,6 +470,7 @@ html.theme-kold{
     <div class="mode-pill">
       <div class="mode-opt active" id="mode-css" onclick="setExportMode('css')">CSS</div>
       <div class="mode-opt" id="mode-gsap" onclick="setExportMode('gsap')">GSAP</div>
+      <div class="mode-opt" id="mode-vmix" onclick="setExportMode('vmix')">vMix</div>
     </div>
   </div>
   <button class="tb-btn" id="btn-breaking-preview" style="display:none" onclick="toggleBreakingPreview()">&#9889; Breaking</button>
@@ -4095,7 +4096,7 @@ function toggleBreakingPreview(){
   document.getElementById('btn-breaking-preview').classList.toggle('active',previewBreaking);
   render();
 }
-function setExportMode(m){exportMode=m;document.getElementById('mode-css').classList.toggle('active',m==='css');document.getElementById('mode-gsap').classList.toggle('active',m==='gsap');toast(m==='gsap'?'GSAP eksport':'CSS eksport');}
+function setExportMode(m){exportMode=m;document.getElementById('mode-css').classList.toggle('active',m==='css');document.getElementById('mode-gsap').classList.toggle('active',m==='gsap');document.getElementById('mode-vmix').classList.toggle('active',m==='vmix');toast(m==='gsap'?'GSAP eksport':m==='vmix'?'vMix WebGUI eksport':'CSS eksport');}
 let _spxFieldCallback=null;
 function _showExportFieldDialog(cb){
   const candidates=elements.filter(e=>e.type==='text'||e.type==='ticker');
@@ -4132,7 +4133,7 @@ function _confirmSpxFieldDialog(){
   document.getElementById('spx-field-modal').classList.remove('open');
   if(_spxFieldCallback){const cb=_spxFieldCallback;_spxFieldCallback=null;cb();}
 }
-function exportSPX(){if(!elements.length){toast('Ingen elementer');return;}_showExportFieldDialog(()=>{if(exportMode==='gsap')exportSPX_GSAP();else exportSPX_CSS();});}
+function exportSPX(){if(!elements.length){toast('Ingen elementer');return;}_showExportFieldDialog(()=>{if(exportMode==='gsap')exportSPX_GSAP();else if(exportMode==='vmix')exportSPX_VMIX();else exportSPX_CSS();});}
 function exportSPX_Supabase(){if(!elements.length){toast('Ingen elementer');return;}document.getElementById('supabase-modal').style.display='flex';}
 function _closeSbModal(){document.getElementById('supabase-modal').style.display='none';}
 function _confirmSbModal(){_closeSbModal();const label=document.getElementById('sb-label-inp').value.trim()||'SPORT';const side=document.getElementById('sb-side-sel').value;exportSPX_GSAP({label,side});}
@@ -4415,9 +4416,9 @@ function exportSPX_CSS(){
   toast('CSS template downloadet!','ok');
 }
 
-function exportSPX_GSAP(sbMode=null,prodConfig=null){
+function exportSPX_GSAP(sbMode=null,prodConfig=null,vmixMode=false){
   const _ttype=document.getElementById('ttype').value;
-  const isLT=_ttype==='lower_third';
+  const isLT=!vmixMode&&_ttype==='lower_third';
   const spxEls=elements.filter(e=>(e.type==='text'||e.type==='ticker')&&e.spxField);
   const fieldDefsArr=spxEls.map((e,i)=>`    {"field":"f${i}","ftype":"${e.type==='ticker'?'textarea':'textfield'}","title":"${e.fieldLabel}","value":"${e.text.replace(/"/g,'\\"')}"}`);
   if(isLT)fieldDefsArr.push('    {"field":"f'+spxEls.length+'","ftype":"dropdown","title":"Placering","value":"venstre","items":[{"text":"Venstre side","value":"venstre"},{"text":"H\\u00f8jre side","value":"h\\u00f8jre"}]}');
@@ -4563,10 +4564,17 @@ function exportSPX_GSAP(sbMode=null,prodConfig=null){
   }else if(prodConfig){
     _downloadHTML(_buildHTML_Produktion(fontUrl,css+gTickerCSS,htmlLines,tname,_gUpdateFn,_animIn,_animOut,hiddenDivLines.join('\n'),gsapTag+extraHeadG,prodConfig.triggerKey,prodConfig.apiUrl,prodConfig.apiInterval),_projFilename('_produktion.html'));
     toast('Produktion template downloadet!','ok');
+  }else if(vmixMode){
+    _downloadHTML(_buildHTML(fontUrl,css+gTickerCSS,htmlLines,fieldDefs,tname,_gUpdateFn,_animIn,_animOut,hiddenDivLines.join('\n'),gsapTag+extraHeadG,_scScriptG),_projFilename('_vmix.html'));
+    toast('vMix WebGUI template downloadet!','ok');
   }else{
     _downloadHTML(_buildHTML(fontUrl,css+gTickerCSS,htmlLines,fieldDefs,tname,_gUpdateFn,_animIn,_animOut,hiddenDivLines.join('\n'),gsapTag+extraHeadG,_scScriptG),_projFilename('_gsap.html'));
     toast('GSAP template downloadet!','ok');
   }
+}
+function exportSPX_VMIX(){
+  if(!elements.length){toast('Ingen elementer');return;}
+  _showExportFieldDialog(()=>exportSPX_GSAP(null,null,true));
 }
 
 function _cssAnimOutTo(ao,el){
