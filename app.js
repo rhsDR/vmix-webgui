@@ -1,4 +1,4 @@
-// ── CONFIG — defineret i js/auth.js ───────────────────────────
+﻿// ── CONFIG — defineret i js/auth.js ───────────────────────────
 
 // ── STATE ─────────────────────────────────────────────────────
 let aktivProjektId = new URLSearchParams(window.location.search).get('p') || '';
@@ -80,7 +80,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
     if (btn.dataset.tab === 'live')   startLivePolling();
     else                              stopLivePolling();
-    if (btn.dataset.tab === 'grafik') { Promise.all([loadKunstomGrafik(), loadMakroer()]).then(() => refreshGrafiktState()); fetchLineupDataForGrafik(); }
+    if (btn.dataset.tab === 'grafik') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadStdGrafikOverrides(), loadStdTickerFmt()]).then(() => refreshGrafiktState()); fetchLineupDataForGrafik(); }
   });
 });
 
@@ -1300,6 +1300,8 @@ let grafiktState        = {}; // { triggerKey: currentValue }
 let customGrafik        = []; // rækker fra projekt_grafik-tabellen
 let makroer             = []; // rækker fra projekt_makroer-tabellen
 let grafiktActiveSubTab = 'lower-third';
+let stdGrafikOverrides = {};
+let stdTickerFmt = { separator: '•', separator_space: 5, hl_bold: true, hl_uppercase: false };
 let grafiktActivePrvKey = '';
 let grafiktActivePrvUrl = '';
 let grafiktCompanionOpen = false;
@@ -1608,8 +1610,10 @@ function renderGrafik() {
   const pid    = aktivProjektId;
 
   // Find aktivt grafik-objekt
-  let g = OVERLAY_GRAPHICS.find(x => x.id === grafiktActiveSubTab);
-  if (!g) { grafiktActiveSubTab = OVERLAY_GRAPHICS[0].id; g = OVERLAY_GRAPHICS[0]; }
+  const ADMIN_TABS = ['lag', 'import', 'makroer'];
+  const isAdminTab = ADMIN_TABS.includes(grafiktActiveSubTab);
+  let g = isAdminTab ? null : OVERLAY_GRAPHICS.find(x => x.id === grafiktActiveSubTab);
+  if (!isAdminTab && !g) { grafiktActiveSubTab = OVERLAY_GRAPHICS[0].id; g = OVERLAY_GRAPHICS[0]; }
 
   // ── SUB-TABS ────────────────────────────────────────────────────
   const subTabsHTML = OVERLAY_GRAPHICS.filter(og => !og.subOf).map(og => {
@@ -1635,6 +1639,62 @@ function renderGrafik() {
     const dot = isOnAir ? `<span class="grafik-v2-onair"></span>` : '';
     return `<button class="grafik-v2-tab${isActive ? ' active' : ''}" data-gtab="${og.id}" style="--tab-color:${og.color}">${og.label.toUpperCase()}${dot}</button>`;
   }).join('');
+
+  const adminTabsHTML = [
+    { id: 'lag', label: 'LAG' },
+    { id: 'import', label: 'IMPORT' },
+    { id: 'makroer', label: 'MAKROER' },
+  ].map(({id, label}) =>
+    `<button class="grafik-v2-tab admin-tab${grafiktActiveSubTab === id ? ' active' : ''}" data-gtab="${id}" style="--tab-color:#555">${label}</button>`
+  ).join('');
+
+  if (isAdminTab) {
+    const _TSM = { 'live-boks': { label: 'Live Boks', color: '#ff2244' }, 'breaking': { label: 'Breaking Ticker', color: '#ff4444' }, 'ticker': { label: 'Ticker', color: '#aa66ff' }, 'score': { label: 'Stillings Boks', color: '#44cc88' } };
+    const _tsc = tickerLagOrder.length;
+    const _tsr = tickerSubExpanded ? tickerLagOrder.map(sid => {
+      const cg2 = sid.startsWith('custom-') ? customGrafik.find(x => 'custom-' + x.id.slice(0,8) === sid) : null;
+      const mm = cg2 ? { label: cg2.label.toUpperCase(), color: cg2.color || '#888888' } : (_TSM[sid] || { label: sid, color: '#888' });
+      return `<div class="lag-subrow" draggable="true" data-sublagid="${sid}"><span class="lag-handle">⠿</span><span class="lag-label" style="color:${mm.color}">${mm.label}</span>${cg2 ? `<button class="lag-ticker-out-btn" data-customid="${sid}" style="margin-left:auto;font-size:9px;padding:1px 6px;background:none;border:1px solid #555;color:#aaa;border-radius:3px;cursor:pointer;">◂ Ud</button>` : ''}</div>`;
+    }).join('') : '';
+    const _lr = overlayLagOrder.map(lid => {
+      const og2 = OVERLAY_GRAPHICS.find(x => x.id === lid);
+      if (og2) {
+        if (!og2.file) return '';
+        if (lid === 'ticker') return `<div class="lag-row" draggable="true" data-lagid="${lid}"><span class="lag-handle">⠿</span><span class="lag-label">${og2.label}</span><button class="lag-sub-toggle${tickerSubExpanded ? ' open' : ''}" id="tickerSubToggle">${tickerSubExpanded ? '▾' : '▸'} ${_tsc} lag</button></div>${tickerSubExpanded ? `<div class="lag-sublist" id="tickerSubLagList">${_tsr}</div>` : ''}`;
+        return `<div class="lag-row" draggable="true" data-lagid="${lid}"><span class="lag-handle">⠿</span><span class="lag-label">${og2.label}</span></div>`;
+      }
+      const cg3 = lid.startsWith('custom-') ? customGrafik.find(x => 'custom-' + x.id.slice(0,8) === lid) : null;
+      if (!cg3) return '';
+      return `<div class="lag-row" draggable="true" data-lagid="${lid}"><span class="lag-handle">⠿</span><span class="lag-label" style="color:${cg3.color || '#888888'}">${esc(cg3.label.toUpperCase())}</span><button class="lag-ticker-in-btn" data-customid="${lid}" style="margin-left:auto;font-size:9px;padding:1px 6px;background:none;border:1px solid #555;color:#aaa;border-radius:3px;cursor:pointer;">Ticker ▸</button></div>`;
+    }).filter(Boolean).join('');
+    const adminContent = _buildAdminTabHTML(grafiktActiveSubTab, _lr);
+    const allSubTabsHTML = subTabsHTML + adminTabsHTML + `<button class="grafik-alle-af-btn" id="grafik-alle-af">■ ALLE AF</button>`;
+    const onAirUrl = `${origin}/overlay.html?p=${pid}`;
+    const existingWrapA = container.querySelector('.grafik-v2-wrap');
+    if (!existingWrapA) {
+      container.innerHTML = `<div class="grafik-v2-wrap"><div class="grafik-v2-left"><div class="grafik-v2-subtabs">${allSubTabsHTML}</div><div class="grafik-v2-content">${adminContent}</div></div><div class="grafik-v2-right"><div><div class="grafik-companion-head" style="margin-bottom:6px;">ON AIR</div><div class="grafik-preview-box"><iframe class="grafik-onair-iframe" src="${onAirUrl}"></iframe></div></div></div></div>`;
+    } else {
+      existingWrapA.querySelector('.grafik-v2-subtabs').innerHTML = allSubTabsHTML;
+      existingWrapA.querySelector('.grafik-v2-content').innerHTML = adminContent;
+      const lagListEl = existingWrapA.querySelector('#overlayLagList');
+      if (lagListEl) { lagListEl.innerHTML = _lr; delete lagListEl.dataset.dndInit; }
+    }
+    container.querySelectorAll('.grafik-v2-tab').forEach(btn => btn.addEventListener('click', () => { grafiktActiveSubTab = btn.dataset.gtab; renderGrafik(); }));
+    const alleAfBtnA = container.querySelector('#grafik-alle-af');
+    if (alleAfBtnA) alleAfBtnA.addEventListener('click', async () => {
+      const allKeys = OVERLAY_GRAPHICS.map(og => og.triggerKey);
+      const customKeys = customGrafik.map(g => g.trigger_key);
+      OVERLAY_GRAPHICS.forEach(og => { grafiktState[og.triggerKey] = 'out'; });
+      customKeys.forEach(k => { grafiktState[k] = 'out'; });
+      grafiktState['lt_slot'] = '';
+      renderGrafik();
+      try { await Promise.all([...allKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })), ...customKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })), sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: '' })]); } catch { toast('Fejl ved ALLE AF', 'err'); }
+    });
+    container.querySelectorAll('[data-copy]').forEach(btn => btn.addEventListener('click', () => copyText(btn.dataset.copy)));
+    if (grafiktActiveSubTab === 'lag') { initLagDragDrop(); initTickerSubLagDragDrop(); }
+    if (grafiktActiveSubTab === 'makroer') { initMakroAdminDragDrop(container); }
+    return;
+  }
 
   // ── AKTIVT TAB INDHOLD ──────────────────────────────────────────
   const val    = grafiktState[g.triggerKey] || 'out';
@@ -2057,7 +2117,7 @@ function renderGrafik() {
     container.innerHTML = `
       <div class="grafik-v2-wrap">
         <div class="grafik-v2-left">
-          <div class="grafik-v2-subtabs">${subTabsHTML}<button class="grafik-alle-af-btn" id="grafik-alle-af">■ ALLE AF</button></div>
+          <div class="grafik-v2-subtabs">${subTabsHTML}${adminTabsHTML}<button class="grafik-alle-af-btn" id="grafik-alle-af">■ ALLE AF</button></div>
           <div class="grafik-v2-content">${contentHTML}</div>
         </div>
         <div class="grafik-v2-right">
@@ -2069,7 +2129,7 @@ function renderGrafik() {
   } else {
     // Efterfølgende render: opdater kun venstre panel og companion — bevar iframes
     existingWrap.querySelector('.grafik-v2-subtabs').innerHTML =
-      subTabsHTML + `<button class="grafik-alle-af-btn" id="grafik-alle-af">■ ALLE AF</button>`;
+      subTabsHTML + adminTabsHTML + `<button class="grafik-alle-af-btn" id="grafik-alle-af">■ ALLE AF</button>`;
     existingWrap.querySelector('.grafik-v2-content').innerHTML = contentHTML;
     const companionEl = existingWrap.querySelector('#grafik-companion-details');
     if (companionEl) {
@@ -2373,6 +2433,7 @@ function renderMakroer(leftPanel) {
         <div class="grafik-block-actions">
           <button class="grafik-btn-prw" title="Redigér"
             onclick="openMakroModal('${m.id}')">✎</button>
+          <button class="grafik-btn-out" title="Slet" onclick="deleteMakro('${m.id}')">&#x1F5D1;</button>
           <button class="grafik-btn-in" style="background:${m.farve || '#4a9eff'}22;border-color:${m.farve || '#4a9eff'}66;color:${m.farve || '#4a9eff'}"
             onclick="fireMakro('${m.id}')">▶ KØR</button>
         </div>
@@ -4078,3 +4139,170 @@ sbClient.channel('db-changes')
         }
       })
   .subscribe();
+
+// ── ADMIN TAB HELPERS ─────────────────────────────────────────────────────
+
+const STD_GRAFIK_ITEMS = [
+  { id: 'ticker',          label: 'Ticker' },
+  { id: 'ticker-breaking', label: 'Ticker Breaking' },
+  { id: 'score-breaking',  label: 'Score Breaking' },
+  { id: 'score',           label: 'Score Boks' },
+  { id: 'live-boks',       label: 'Live Boks' },
+];
+
+async function loadStdGrafikOverrides() {
+  if (!aktivProjektId) return;
+  try {
+    const rows = await sbGet(`settings?key=like.std_grafik_*&projekt_id=eq.${aktivProjektId}&select=key,value`);
+    stdGrafikOverrides = {};
+    if (Array.isArray(rows)) {
+      rows.forEach(r => {
+        const id = r.key.replace('std_grafik_', '');
+        stdGrafikOverrides[id] = r.value || null;
+      });
+    }
+  } catch {}
+}
+
+async function loadStdTickerFmt() {
+  if (!aktivProjektId) return;
+  try {
+    const rows = await sbGet(`settings?key=eq.ticker_format&projekt_id=eq.${aktivProjektId}&select=value`);
+    if (rows[0]?.value) {
+      try { Object.assign(stdTickerFmt, JSON.parse(rows[0].value)); } catch {}
+    }
+  } catch {}
+}
+
+async function uploadStdGrafik(grafId, inputEl) {
+  const file = inputEl.files[0];
+  if (!file) return;
+  const btn = inputEl.closest('label');
+  if (btn) { btn.style.opacity = '0.5'; btn.style.pointerEvents = 'none'; }
+  try {
+    const filePath = aktivProjektId + '/std/' + grafId + '.html';
+    const { error: upErr } = await sbClient.storage.from('grafik').upload(filePath, file, { contentType: 'text/html', upsert: true });
+    if (upErr) { toast('Upload fejlede: ' + upErr.message, 'err'); return; }
+    const { data: urlData } = sbClient.storage.from('grafik').getPublicUrl(filePath);
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'std_grafik_' + grafId, value: urlData.publicUrl });
+    stdGrafikOverrides[grafId] = urlData.publicUrl;
+    toast('Grafik uploadet ✓', 'ok');
+    renderGrafik();
+  } catch (e) { toast('Fejl: ' + e.message, 'err'); }
+  if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+}
+
+async function deleteStdGrafik(grafId) {
+  if (!confirm('Slet grafik-override? Overlay bruger lokal fil igen.')) return;
+  try {
+    const filePath = aktivProjektId + '/std/' + grafId + '.html';
+    await sbClient.storage.from('grafik').remove([filePath]).catch(() => {});
+    await sbDelete('settings?key=eq.std_grafik_' + grafId + '&projekt_id=eq.' + aktivProjektId);
+    await sbDelete('settings?key=eq.grafik_content_' + grafId + '&projekt_id=eq.' + aktivProjektId).catch(() => {});
+    delete stdGrafikOverrides[grafId];
+    toast('Grafik slettet — overlay bruger lokal fil igen', 'ok');
+    renderGrafik();
+  } catch (e) { toast('Fejl: ' + e.message, 'err'); }
+}
+
+async function saveTickerFormat() {
+  const sep = document.getElementById('fmt-sep')?.value ?? '•';
+  const sp = parseInt(document.getElementById('fmt-sp')?.value ?? '5', 10);
+  const bold = document.getElementById('fmt-bold')?.checked ?? true;
+  const upper = document.getElementById('fmt-upper')?.checked ?? false;
+  const fmt = { separator: sep, separator_space: sp, hl_bold: bold, hl_uppercase: upper };
+  try {
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'ticker_format', value: JSON.stringify(fmt) });
+    Object.assign(stdTickerFmt, fmt);
+    toast('Ticker-format gemt ✓', 'ok');
+  } catch { toast('Fejl ved gem', 'err'); }
+}
+
+function _buildAdminTabHTML(tabId, lagRows) {
+  if (tabId === 'lag') {
+    return `<div class="grafik-section-head">LAG-RÆKKEFØLGE</div>
+      <div style="font-size:11px;color:#666;margin:0 0 10px;">Øverst = forrest i vMix overlay. Træk for at omsortere.</div>
+      <div id="overlayLagList" class="lag-list">${lagRows}</div>`;
+  }
+  if (tabId === 'import') {
+    const rows = STD_GRAFIK_ITEMS.map(sg => {
+      const override = stdGrafikOverrides[sg.id];
+      const status = override
+        ? `<span style="color:#4a9eff;font-size:10px;">↑ Override aktiv</span>`
+        : `<span style="color:#555;font-size:10px;">Lokal fil</span>`;
+      return `<div class="grafik-block" style="--g-color:#444">
+        <div class="grafik-block-info"><span class="grafik-block-name">${sg.label}</span>${status}</div>
+        <div class="grafik-block-actions">
+          <label class="grafik-btn-prw" style="cursor:pointer;padding:2px 8px;" title="Upload ny fil">
+            <input type="file" accept=".html" style="display:none" onchange="uploadStdGrafik('${sg.id}',this)">↑ Upload
+          </label>
+          <button class="grafik-btn-out" ${!override ? 'disabled' : ''} onclick="deleteStdGrafik('${sg.id}')" title="Slet override">&#x1F5D1;</button>
+        </div>
+      </div>`;
+    }).join('');
+    const fmt = stdTickerFmt;
+    return `<div class="grafik-section-head">STANDARD GRAFIK</div>${rows}
+      <div class="grafik-section-head" style="margin-top:16px;">TICKER FORMATERING</div>
+      <div style="display:flex;gap:12px;align-items:center;padding:8px 0;flex-wrap:wrap;font-size:11px;color:#aaa;">
+        <label>Separator<input id="fmt-sep" type="text" value="${esc(fmt.separator)}" style="width:36px;margin-left:4px;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:3px;padding:2px 4px;font-size:12px;"></label>
+        <label>Mellemrum<input id="fmt-sp" type="number" value="${fmt.separator_space}" min="0" max="20" style="width:36px;margin-left:4px;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:3px;padding:2px 4px;font-size:12px;"></label>
+        <label style="display:flex;align-items:center;gap:4px;"><input id="fmt-bold" type="checkbox" ${fmt.hl_bold ? 'checked' : ''}> Overskrift fed</label>
+        <label style="display:flex;align-items:center;gap:4px;"><input id="fmt-upper" type="checkbox" ${fmt.hl_uppercase ? 'checked' : ''}> STORE bogstaver</label>
+        <button class="grafik-btn-in" onclick="saveTickerFormat()" style="margin-left:auto;padding:3px 12px;">GEM</button>
+      </div>`;
+  }
+  if (tabId === 'makroer') {
+    let html = `<div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;">MAKROER<button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;" onclick="openMakroModal()">＋ Tilføj</button></div>`;
+    if (!makroer.length) {
+      html += `<div class="grafik-v2-empty">Ingen makroer — klik ＋ Tilføj for at oprette en</div>`;
+    } else {
+      makroer.forEach(m => {
+        const summary = (m.handlinger || []).map(h => {
+          if (h.key === 'wait') return `⏱ ${h.value}s`;
+          if (h.key === 'lt_trigger' && h.slot) { const s = subs[parseInt(h.slot)-1]; const navn = s?.navn ? ': '+s.navn : ' '+h.slot; return `Sub${navn}: ${h.value==='in'?'PÅ':'AF'}`; }
+          return `${_makroKeyLabel(h.key)}: ${h.value==='in'?'PÅ':'AF'}`;
+        }).join(' · ');
+        html += `<div class="grafik-block makro-admin-blok" draggable="true" data-makroadminid="${m.id}" style="--g-color:${m.farve||'#4a9eff'}">
+          <span class="lag-handle" style="margin-right:4px;">⠿</span>
+          <div class="grafik-block-info"><span class="grafik-block-name">${esc(m.label.toUpperCase())}</span>${summary?`<span class="grafik-block-sub" style="color:#666">${esc(summary)}</span>`:''}</div>
+          <div class="grafik-block-actions">
+            <button class="grafik-btn-prw" title="Redigér" onclick="openMakroModal('${m.id}')">✎</button>
+            <button class="grafik-btn-out" title="Slet" onclick="deleteMakro('${m.id}')">&#x1F5D1;</button>
+            <button class="grafik-btn-in" style="background:${m.farve||'#4a9eff'}22;border-color:${m.farve||'#4a9eff'}66;color:${m.farve||'#4a9eff'}" onclick="fireMakro('${m.id}')">▶ KØR</button>
+          </div>
+        </div>`;
+      });
+    }
+    return html;
+  }
+  return '';
+}
+
+function initMakroAdminDragDrop(container) {
+  const list = container.querySelector('.grafik-v2-content');
+  if (!list || list.dataset.makroDndInit) return;
+  list.dataset.makroDndInit = '1';
+  let dragSrc = null;
+  list.querySelectorAll('.makro-admin-blok').forEach(row => {
+    row.addEventListener('dragstart', e => { dragSrc = row; row.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+    row.addEventListener('dragend', () => { dragSrc = null; row.classList.remove('dragging'); list.querySelectorAll('.makro-admin-blok').forEach(r => r.classList.remove('drag-over')); });
+    row.addEventListener('dragover', e => { e.preventDefault(); if (row !== dragSrc) row.classList.add('drag-over'); });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', async e => {
+      e.preventDefault(); row.classList.remove('drag-over');
+      if (!dragSrc || dragSrc === row) return;
+      const bloks = [...list.querySelectorAll('.makro-admin-blok')];
+      const fromIdx = bloks.indexOf(dragSrc), toIdx = bloks.indexOf(row);
+      if (fromIdx < 0 || toIdx < 0) return;
+      const reordered = [...makroer];
+      const [moved] = reordered.splice(fromIdx, 1);
+      reordered.splice(toIdx, 0, moved);
+      reordered.forEach((m, i) => { m.sort_order = i; });
+      makroer = reordered;
+      renderGrafik();
+      try {
+        await Promise.all(reordered.map((m, i) => sbUpsert('projekt_makroer', { id: m.id, sort_order: i, projekt_id: aktivProjektId })));
+      } catch { toast('Fejl ved rækkefølge-gem', 'err'); }
+    });
+  });
+}

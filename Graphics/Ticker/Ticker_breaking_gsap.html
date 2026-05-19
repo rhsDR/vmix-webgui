@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -16,6 +16,7 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
 #el19{position:absolute;left:452px;top:987px;width:1479px;height:79px;transform-origin:center center;opacity:0;}
 #el19{overflow:hidden;display:flex;align-items:center;}
 #el19-inner{white-space:nowrap;display:inline-block;font-size:24px;font-weight:400;font-family:'DM Sans',sans-serif;color:#ffffff;}
+.t-hl{font-weight:700;}.t-tx{font-weight:400;}
 
 </style>
 </head>
@@ -53,32 +54,32 @@ var _SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var _SB_HDR={'apikey':_SB_ANON,'Authorization':'Bearer '+_SB_ANON};
 var _pid=window.__PROJEKT_ID||new URLSearchParams(window.location.search).get('p')||'';
 var _prv=window.__IS_PREVIEW||new URLSearchParams(window.location.search).has('preview');
-var _trigKey='breaking_trigger'+(_prv?'_prv':'');
-var _lastBcTime={};
 document.addEventListener('DOMContentLoaded',function(){
   if(!_pid)return;
-  fetch(_SB_URL+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+_pid+'&select=value',{headers:_SB_HDR})
-    .then(r=>r.json()).then(rows=>{if(rows[0]?.value==='in'&&!_spxVisible)runAnimationIN();});
-  var _sb=window.supabase.createClient(_SB_URL,_SB_ANON);
-  _sb.channel('triggers-'+_pid)
-    .on('broadcast',{event:'trigger'},function(msg){
-      var p=msg.payload;
-      if(p.projekt_id!==_pid||p.key!==_trigKey)return;
-      _lastBcTime[p.key]=Date.now();
-      if(p.value==='in'&&!_spxVisible)runAnimationIN();
-      if(p.value==='out'&&_spxVisible)runAnimationOUT();
-    }).subscribe();
-  _sb.channel('prod-'+_trigKey+'-'+_pid)
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(p){
-      if(p.new.projekt_id!==_pid)return;
-      if(_lastBcTime[p.new.key]&&Date.now()-_lastBcTime[p.new.key]<3000)return;
-      if(p.new.key===_trigKey){
-        if(p.new.value==='in'&&!_spxVisible)runAnimationIN();
-        if(p.new.value==='out'&&_spxVisible)runAnimationOUT();
-      }
-    }).subscribe();
+  function _loadContent(){
+    fetch(_SB_URL+'/rest/v1/tickers?on_air=eq.true&breaking=eq.true&projekt_id=eq.'+_pid+'&order=slot&select=tekst,overskrift',{headers:_SB_HDR})
+      .then(function(r){return r.json();})
+      .then(function(rows){
+        var SEP='     •     ';
+        var items=rows.filter(function(r){return r.tekst||r.overskrift;}).map(function(r){
+          var s='';
+          if(r.overskrift)s+='<span class="t-hl">'+r.overskrift+'</span>';
+          if(r.tekst)s+='<span class="t-tx">'+(r.overskrift?' ':'')+r.tekst+'</span>';
+          return s;
+        });
+        if(!items.length)return;
+        var full=items.join(SEP);
+        var w=document.getElementById('el19');
+        if(w&&w._tickerUpdate)w._tickerUpdate(full+SEP+full);
+      }).catch(function(){});
+  }
+  _loadContent();
+  setInterval(_loadContent,15000);
+  window.supabase.createClient(_SB_URL,_SB_ANON)
+    .channel('ticker-breaking-content-'+_pid)
+    .on('postgres_changes',{event:'*',schema:'public',table:'tickers'},_loadContent)
+    .subscribe();
 });
-// ── END SUPABASE INTEGRATION ──
 window.SPXGCTemplateDefinition={"description":"Smart Ticker","DataFields":[]};
 </script>
 </body>
