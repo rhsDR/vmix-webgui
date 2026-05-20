@@ -19,16 +19,16 @@
   </style>
 </head>
 <body>
-  <iframe id="lower-third-frame" allowtransparency="true" src="about:blank"></iframe>
-  <iframe id="live-boks-frame"   allowtransparency="true" src="about:blank"></iframe>
-  <iframe id="breaking-frame"    allowtransparency="true" src="about:blank"></iframe>
-  <iframe id="ticker-frame"         allowtransparency="true" src="about:blank"></iframe>
-  <iframe id="ticker-breaking-frame" allowtransparency="true" src="about:blank"></iframe>
-  <iframe id="score-frame"          allowtransparency="true" src="about:blank"></iframe>
-  <iframe id="score-breaking-frame"  allowtransparency="true" src="about:blank"></iframe>
-  <iframe id="stilling-frame"    allowtransparency="true" src="about:blank"></iframe>
-  <iframe id="opstilling-frame"  allowtransparency="true" src="about:blank"></iframe>
-  <iframe id="credits-frame"     allowtransparency="true" src="about:blank"></iframe>
+  <iframe id="lower-third-frame" allowtransparency="true" src=""></iframe>
+  <iframe id="live-boks-frame"   allowtransparency="true" src=""></iframe>
+  <iframe id="breaking-frame"    allowtransparency="true" src=""></iframe>
+  <iframe id="ticker-frame"         allowtransparency="true" src=""></iframe>
+  <iframe id="ticker-breaking-frame" allowtransparency="true" src=""></iframe>
+  <iframe id="score-frame"          allowtransparency="true" src=""></iframe>
+  <iframe id="score-breaking-frame"  allowtransparency="true" src=""></iframe>
+  <iframe id="stilling-frame"    allowtransparency="true" src=""></iframe>
+  <iframe id="opstilling-frame"  allowtransparency="true" src=""></iframe>
+  <iframe id="credits-frame"     allowtransparency="true" src=""></iframe>
 
   <script>
     const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
@@ -52,55 +52,20 @@
     const DEFAULT_TICKER_SUB_ORDER = ['live-boks', 'breaking', 'ticker-breaking', 'score-breaking', 'ticker', 'score'];
     let tickerSubOrder = [...DEFAULT_TICKER_SUB_ORDER];
 
-    // Trigger-map: forbinder grafik-id med Supabase settings-nøgle
-    // hasPreview: true → brug preview-variant af nøglen (key + '_prv') i preview-mode
-    const TRIGGER_MAP = [
-      { id: 'ticker',          triggerKey: 'ticker_ovl_trigger',  hasPreview: false },
-      { id: 'ticker-breaking', triggerKey: 'breaking_trigger',    hasPreview: true  },
-      { id: 'score-breaking',  triggerKey: 'breaking_trigger',    hasPreview: true  },
-      { id: 'live-boks',       triggerKey: 'live_boks_trigger',   hasPreview: true  },
-      { id: 'score',           triggerKey: 'score_trigger',       hasPreview: true  },
-      { id: 'breaking',        triggerKey: 'breaking_trigger',    hasPreview: false },
-      { id: 'stilling',        triggerKey: 'stilling_trigger',    hasPreview: false },
-      { id: 'opstilling',      triggerKey: 'lineup_trigger',      hasPreview: true  },
-      { id: 'credits',         triggerKey: 'credits_trigger',     hasPreview: false },
-    ];
-
-    // Pre-loaded indhold — populeres ved load, aldrig async i trigger-stien
-    const _contentCache = {};
-
     const params  = new URLSearchParams(window.location.search);
     const pid     = params.get('p') || '';
     const pf      = pid ? '&projekt_id=eq.' + encodeURIComponent(pid) : '';
     const preview = params.get('preview') || '';
 
-    // Sæt iframe-sources — køres ÉN gang synkront ved side-load
-    // Overrides (std_grafik_*) anvendes bagefter via applyOverrideSrcs()
-    function setupIframeSrcs() {
-      GRAPHICS.forEach(g => {
-        const frame = document.getElementById(g.id + '-frame');
-        if (!frame) return;
-        let src = g.file + '?p=' + pid;
-        if (preview === 'credits'             && g.id === 'credits')    src = g.file + '?preview=1&p=' + pid;
-        if ((preview === 'home' || preview === 'away') && g.id === 'opstilling') src = g.file + '?preview=' + preview + '&p=' + pid;
-        // Resend trigger-state når iframe loader/genloader (fx. ved filskift)
-        frame.addEventListener('load', () => {
-          const st = _lastTriggerState[g.id];
-          if (st) _sendToFrame(frame, g.id, st);
-        });
-        frame.src = src;
-      });
-    }
-
-    // Opdater src til override-fil for frames der har et override (køres async)
-    function applyOverrideSrcs() {
-      GRAPHICS.forEach(g => {
-        const frame = document.getElementById(g.id + '-frame');
-        if (!frame?.dataset.overrideSrc) return;
-        const newSrc = frame.dataset.overrideSrc;
-        if (frame.src !== newSrc) frame.src = newSrc;
-      });
-    }
+    // Sæt iframe-sources (preview overstyre normale sources)
+    GRAPHICS.forEach(g => {
+      const frame = document.getElementById(g.id + '-frame');
+      if (!frame) return;
+      let src = g.file + '?p=' + pid;
+      if (preview === 'credits'             && g.id === 'credits')    src = g.file + '?preview=1&p=' + pid;
+      if ((preview === 'home' || preview === 'away') && g.id === 'opstilling') src = g.file + '?preview=' + preview + '&p=' + pid;
+      frame.src = src;
+    });
 
     function applyOrder(mainOrder) {
       const total = mainOrder.length;
@@ -138,115 +103,6 @@
         applyOrder(mainOrder);
       } catch {}
       setTimeout(pollLagOrder, 3000);
-    }
-
-    // Hent std_grafik_* overrides og sæt dataset.overrideSrc på frames
-    async function applyGrafikOverrides() {
-      if (!pid) return;
-      try {
-        const rows = await fetch(
-          `${SB_URL}/rest/v1/settings?key=like.std_grafik_*&projekt_id=eq.${encodeURIComponent(pid)}&select=key,value`,
-          { headers: SB_HDR }
-        ).then(r => r.json());
-        if (!Array.isArray(rows)) return;
-        for (const row of rows) {
-          if (!row.value) continue;
-          const grafId = row.key.replace('std_grafik_', '');
-          const frame = document.getElementById(grafId + '-frame');
-          if (frame) frame.dataset.overrideSrc = row.value + '?p=' + encodeURIComponent(pid);
-        }
-      } catch {}
-    }
-
-    // Pre-load grafik_content_* i _contentCache — ingen async i trigger-stien
-    async function preloadContentData() {
-      if (!pid) return;
-      try {
-        const rows = await fetch(
-          `${SB_URL}/rest/v1/settings?key=like.grafik_content_*&projekt_id=eq.${encodeURIComponent(pid)}&select=key,value`,
-          { headers: SB_HDR }
-        ).then(r => r.json());
-        if (!Array.isArray(rows)) return;
-        for (const row of rows) {
-          const grafId = row.key.replace('grafik_content_', '');
-          try { _contentCache[grafId] = JSON.parse(row.value); } catch {}
-        }
-      } catch {}
-    }
-
-    // Husk seneste trigger-state pr. grafik-id — bruges til at resende ved iframe-load
-    const _lastTriggerState = {};
-
-    function _sendToFrame(frame, id, value) {
-      if (!frame) return;
-      const data = _contentCache[id] || {};
-      // postMessage virker altid (også cross-origin file://)
-      try {
-        frame.contentWindow.postMessage({ type: 'ovl-trigger', action: value, data }, '*');
-      } catch {}
-      // Direkte kald som backup (virker ved same-origin)
-      try {
-        if (value === 'in') { frame.contentWindow.runAnimationIN?.(); frame.contentWindow.play?.(data); }
-        else if (value === 'out') { frame.contentWindow.runAnimationOUT?.(); frame.contentWindow.stop?.(); }
-      } catch {}
-    }
-
-    // Synkron — ingen await; data er allerede i _contentCache
-    function _fireFrames(key, value, watched) {
-      for (const w of watched) {
-        if (w.effectiveKey !== key) continue;
-        const frame = document.getElementById(w.id + '-frame');
-        if (!frame) continue;
-        _lastTriggerState[w.id] = value;
-        _sendToFrame(frame, w.id, value);
-      }
-    }
-
-    async function setupStandardTriggers() {
-      if (!pid) return;
-      const prvSuffix = preview ? '_prv' : '';
-      const watched = TRIGGER_MAP.map(g => ({
-        ...g, effectiveKey: g.triggerKey + (g.hasPreview ? prvSuffix : ''),
-      }));
-      const allKeys = [...new Set(watched.map(w => w.effectiveKey))];
-
-      // Indlæs initial tilstand
-      try {
-        const rows = await fetch(
-          `${SB_URL}/rest/v1/settings?key=in.(${allKeys.join(',')})&projekt_id=eq.${encodeURIComponent(pid)}&select=key,value`,
-          { headers: SB_HDR }
-        ).then(r => r.json());
-        if (Array.isArray(rows)) {
-          for (const row of rows) _fireFrames(row.key, row.value, watched);
-        }
-      } catch {}
-
-      const _sbStd = window.supabase.createClient(SB_URL, SB_ANON);
-      const _lastBc = {};
-
-      // Broadcast fast path — bruger samme kanal som app.js: 'triggers-{pid}'
-      _sbStd.channel('triggers-' + pid)
-        .on('broadcast', { event: 'trigger' }, msg => {
-          const p = msg.payload;
-          if (p.projekt_id !== pid) return;
-          _lastBc[p.key] = Date.now();
-          _fireFrames(p.key, p.value, watched);
-        }).subscribe();
-
-      // Postgres fallback — '*' fanger både INSERT og UPDATE (første gang en nøgle oprettes)
-      _sbStd.channel('std-pg-' + pid)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, ev => {
-          const row = ev.new;
-          if (!row || !row.key) return;
-          if (row.projekt_id !== pid) return;
-          if (_lastBc[row.key] && Date.now() - _lastBc[row.key] < 3000) return;
-          if (row.key.startsWith('grafik_content_')) {
-            const grafId = row.key.replace('grafik_content_', '');
-            try { _contentCache[grafId] = JSON.parse(row.value); } catch {}
-            return;
-          }
-          _fireFrames(row.key, row.value, watched);
-        }).subscribe();
     }
 
     async function loadCustomGrafik() {
@@ -330,20 +186,12 @@
         .subscribe();
     }
 
-    // Sæt iframes straks — ingen blank-side periode mens vi venter på async fetches
-    setupIframeSrcs();
+    // Sæt standard-rækkefølge med det samme og start polling med det samme.
+    // loadCustomGrafik kører parallelt; næste poll-iteration vil inkludere
+    // de custom-frames der er tilføjet til DEFAULT_ORDER undervejs.
     applyOrder(DEFAULT_ORDER);
-
-    // Async init: hent overrides + content, sæt triggers, custom grafik
-    async function init() {
-      await Promise.all([applyGrafikOverrides(), preloadContentData()]);
-      applyOverrideSrcs(); // Skift til override-src hvis sat (genindlæser iframe)
-      pollLagOrder();
-      setupStandardTriggers();
-      loadCustomGrafik();
-    }
-
-    init();
+    pollLagOrder();
+    loadCustomGrafik();
   </script>
 </body>
 </html>
