@@ -19,16 +19,16 @@
   </style>
 </head>
 <body>
-  <iframe id="lower-third-frame" allowtransparency="true" src=""></iframe>
-  <iframe id="live-boks-frame"   allowtransparency="true" src=""></iframe>
-  <iframe id="breaking-frame"    allowtransparency="true" src=""></iframe>
-  <iframe id="ticker-frame"         allowtransparency="true" src=""></iframe>
-  <iframe id="ticker-breaking-frame" allowtransparency="true" src=""></iframe>
-  <iframe id="score-frame"          allowtransparency="true" src=""></iframe>
-  <iframe id="score-breaking-frame"  allowtransparency="true" src=""></iframe>
-  <iframe id="stilling-frame"    allowtransparency="true" src=""></iframe>
-  <iframe id="opstilling-frame"  allowtransparency="true" src=""></iframe>
-  <iframe id="credits-frame"     allowtransparency="true" src=""></iframe>
+  <iframe id="lower-third-frame" allowtransparency="true" src="about:blank"></iframe>
+  <iframe id="live-boks-frame"   allowtransparency="true" src="about:blank"></iframe>
+  <iframe id="breaking-frame"    allowtransparency="true" src="about:blank"></iframe>
+  <iframe id="ticker-frame"         allowtransparency="true" src="about:blank"></iframe>
+  <iframe id="ticker-breaking-frame" allowtransparency="true" src="about:blank"></iframe>
+  <iframe id="score-frame"          allowtransparency="true" src="about:blank"></iframe>
+  <iframe id="score-breaking-frame"  allowtransparency="true" src="about:blank"></iframe>
+  <iframe id="stilling-frame"    allowtransparency="true" src="about:blank"></iframe>
+  <iframe id="opstilling-frame"  allowtransparency="true" src="about:blank"></iframe>
+  <iframe id="credits-frame"     allowtransparency="true" src="about:blank"></iframe>
 
   <script>
     const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
@@ -74,13 +74,13 @@
     const pf      = pid ? '&projekt_id=eq.' + encodeURIComponent(pid) : '';
     const preview = params.get('preview') || '';
 
-    // Override-sources sættes af applyGrafikOverrides() FØR dette kører
-    // Sæt iframe-sources (preview overstyre normale sources)
+    // Sæt iframe-sources — køres ÉN gang synkront ved side-load
+    // Overrides (std_grafik_*) anvendes bagefter via applyOverrideSrcs()
     function setupIframeSrcs() {
       GRAPHICS.forEach(g => {
         const frame = document.getElementById(g.id + '-frame');
         if (!frame) return;
-        let src = frame.dataset.overrideSrc || (g.file + '?p=' + pid);
+        let src = g.file + '?p=' + pid;
         if (preview === 'credits'             && g.id === 'credits')    src = g.file + '?preview=1&p=' + pid;
         if ((preview === 'home' || preview === 'away') && g.id === 'opstilling') src = g.file + '?preview=' + preview + '&p=' + pid;
         // Resend trigger-state når iframe loader/genloader (fx. ved filskift)
@@ -89,6 +89,16 @@
           if (st) _sendToFrame(frame, g.id, st);
         });
         frame.src = src;
+      });
+    }
+
+    // Opdater src til override-fil for frames der har et override (køres async)
+    function applyOverrideSrcs() {
+      GRAPHICS.forEach(g => {
+        const frame = document.getElementById(g.id + '-frame');
+        if (!frame?.dataset.overrideSrc) return;
+        const newSrc = frame.dataset.overrideSrc;
+        if (frame.src !== newSrc) frame.src = newSrc;
       });
     }
 
@@ -320,11 +330,14 @@
         .subscribe();
     }
 
-    // Startup: overrides og content pre-loades, derefter sættes iframe-srcs
+    // Sæt iframes straks — ingen blank-side periode mens vi venter på async fetches
+    setupIframeSrcs();
+    applyOrder(DEFAULT_ORDER);
+
+    // Async init: hent overrides + content, sæt triggers, custom grafik
     async function init() {
       await Promise.all([applyGrafikOverrides(), preloadContentData()]);
-      setupIframeSrcs();
-      applyOrder(DEFAULT_ORDER);
+      applyOverrideSrcs(); // Skift til override-src hvis sat (genindlæser iframe)
       pollLagOrder();
       setupStandardTriggers();
       loadCustomGrafik();
