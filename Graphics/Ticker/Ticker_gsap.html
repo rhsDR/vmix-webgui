@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded',function(){
         var items=rows.filter(function(r){return r.tekst||r.overskrift;}).map(function(r){
           var s='';
           if(r.overskrift)s+='<span class="t-hl">'+r.overskrift+'</span>';
-          if(r.tekst)s+='<span class="t-tx">'+(r.overskrift?' ':'')+r.tekst+'</span>';
+          if(r.tekst)s+='<span class="t-tx"'+(r.overskrift?' style="margin-left:20px"':'')+'>'+r.tekst+'</span>';
           return s;
         });
         if(!items.length)return;
