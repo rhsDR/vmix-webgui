@@ -198,8 +198,8 @@
       const _sbStd = window.supabase.createClient(SB_URL, SB_ANON);
       const _lastBc = {};
 
-      // Broadcast fast path — reagerer øjeblikkeligt (~20-100ms)
-      _sbStd.channel('std-triggers-' + pid)
+      // Broadcast fast path — bruger samme kanal som app.js: 'triggers-{pid}'
+      _sbStd.channel('triggers-' + pid)
         .on('broadcast', { event: 'trigger' }, msg => {
           const p = msg.payload;
           if (p.projekt_id !== pid) return;
@@ -207,17 +207,19 @@
           _fireFrames(p.key, p.value, watched);
         }).subscribe();
 
-      // Postgres fallback — sikrer konsistens ved F5 og ved fejl i broadcast
+      // Postgres fallback — '*' fanger både INSERT og UPDATE (første gang en nøgle oprettes)
       _sbStd.channel('std-pg-' + pid)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings' }, ev => {
-          if (ev.new.projekt_id !== pid) return;
-          if (_lastBc[ev.new.key] && Date.now() - _lastBc[ev.new.key] < 3000) return;
-          if (ev.new.key.startsWith('grafik_content_')) {
-            const grafId = ev.new.key.replace('grafik_content_', '');
-            try { _contentCache[grafId] = JSON.parse(ev.new.value); } catch {}
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, ev => {
+          const row = ev.new;
+          if (!row || !row.key) return;
+          if (row.projekt_id !== pid) return;
+          if (_lastBc[row.key] && Date.now() - _lastBc[row.key] < 3000) return;
+          if (row.key.startsWith('grafik_content_')) {
+            const grafId = row.key.replace('grafik_content_', '');
+            try { _contentCache[grafId] = JSON.parse(row.value); } catch {}
             return;
           }
-          _fireFrames(ev.new.key, ev.new.value, watched);
+          _fireFrames(row.key, row.value, watched);
         }).subscribe();
     }
 
