@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded',function(){
     fetch(_SB_URL+'/rest/v1/tickers?on_air=eq.true&projekt_id=eq.'+_pid+'&order=slot&select=tekst,overskrift',{headers:_SB_HDR})
       .then(function(r){return r.json();})
       .then(function(rows){
-        var SEP='          •          ';
+        var SEP='<span style="margin:0 40px">•</span>';
         var items=rows.filter(function(r){return r.tekst||r.overskrift;}).map(function(r){
           var s='';
           if(r.overskrift)s+='<span class="t-hl">'+r.overskrift+'</span>';
