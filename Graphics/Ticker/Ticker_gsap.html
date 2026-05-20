@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -28,7 +28,7 @@ function clean(v){return(!v||v==='$NA')?'':String(v).trim();}
 function _prefetchAndPlay(cb){cb();}
 var _spxVisible=false;
 function _updateContent(data){
-  (function(){var t=clean((data&&data.f0!=null)?String(data.f0):document.getElementById('f0').innerText);var items=t.split('|').map(function(s){return s.trim();}).filter(Boolean);var txt=items.join('     •     ');var full=txt+'     •     '+txt;var w=document.getElementById('el19');if(w&&w._tickerUpdate){w._tickerUpdate(full);}else{var inn=document.getElementById('el19-inner');if(inn)inn.textContent=full;}})();
+  (function(){var t=clean((data&&data.f0!=null)?String(data.f0):document.getElementById('f0').innerText);var items=t.split('|').map(function(s){return s.trim();}).filter(Boolean);var txt=items.join('          •          ');var full=txt+'          •          '+txt;var w=document.getElementById('el19');if(w&&w._tickerUpdate){w._tickerUpdate(full);}else{var inn=document.getElementById('el19-inner');if(inn)inn.textContent=full;}})();
   (function(){var r=document.getElementById('el2');var s=document.getElementById('el5');if(r&&s){r.style.left=(s.offsetLeft+-38)+'px';r.style.width=Math.max(1,s.offsetWidth+337)+'px';}})();
 }
 function runTemplateUpdate(data){_updateContent(data);function _apply(){_prefetchAndPlay(function(){setTimeout(runAnimationIN,50);});}if(_spxVisible){runAnimationOUT();setTimeout(_apply,1321);}else{_apply();}}
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded',function(){
     fetch(_SB_URL+'/rest/v1/tickers?on_air=eq.true&projekt_id=eq.'+_pid+'&order=slot&select=tekst,overskrift',{headers:_SB_HDR})
       .then(function(r){return r.json();})
       .then(function(rows){
-        var SEP='     •     ';
+        var SEP='          •          ';
         var items=rows.filter(function(r){return r.tekst||r.overskrift;}).map(function(r){
           var s='';
           if(r.overskrift)s+='<span class="t-hl">'+r.overskrift+'</span>';
