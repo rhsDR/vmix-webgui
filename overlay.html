@@ -83,6 +83,11 @@
         let src = frame.dataset.overrideSrc || (g.file + '?p=' + pid);
         if (preview === 'credits'             && g.id === 'credits')    src = g.file + '?preview=1&p=' + pid;
         if ((preview === 'home' || preview === 'away') && g.id === 'opstilling') src = g.file + '?preview=' + preview + '&p=' + pid;
+        // Resend trigger-state når iframe loader/genloader (fx. ved filskift)
+        frame.addEventListener('load', () => {
+          const st = _lastTriggerState[g.id];
+          if (st) _sendToFrame(frame, g.id, st);
+        });
         frame.src = src;
       });
     }
@@ -159,20 +164,31 @@
       } catch {}
     }
 
+    // Husk seneste trigger-state pr. grafik-id — bruges til at resende ved iframe-load
+    const _lastTriggerState = {};
+
+    function _sendToFrame(frame, id, value) {
+      if (!frame) return;
+      const data = _contentCache[id] || {};
+      // postMessage virker altid (også cross-origin file://)
+      try {
+        frame.contentWindow.postMessage({ type: 'ovl-trigger', action: value, data }, '*');
+      } catch {}
+      // Direkte kald som backup (virker ved same-origin)
+      try {
+        if (value === 'in') { frame.contentWindow.runAnimationIN?.(); frame.contentWindow.play?.(data); }
+        else if (value === 'out') { frame.contentWindow.runAnimationOUT?.(); frame.contentWindow.stop?.(); }
+      } catch {}
+    }
+
     // Synkron — ingen await; data er allerede i _contentCache
     function _fireFrames(key, value, watched) {
       for (const w of watched) {
         if (w.effectiveKey !== key) continue;
         const frame = document.getElementById(w.id + '-frame');
-        if (!frame?.contentWindow) continue;
-        const data = _contentCache[w.id] || {};
-        if (value === 'in') {
-          frame.contentWindow.runAnimationIN?.();
-          frame.contentWindow.play?.(data);
-        } else if (value === 'out') {
-          frame.contentWindow.runAnimationOUT?.();
-          frame.contentWindow.stop?.();
-        }
+        if (!frame) continue;
+        _lastTriggerState[w.id] = value;
+        _sendToFrame(frame, w.id, value);
       }
     }
 

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -112,6 +112,11 @@ document.addEventListener('DOMContentLoaded',function(){
 });
 function runAnimationIN(){_animIN();}
 function runAnimationOUT(){_animOUT();}
+window.addEventListener('message', function(e) {
+  if (!e.data || e.data.type !== 'ovl-trigger') return;
+  if (e.data.action === 'in') _animIN();
+  else if (e.data.action === 'out') _animOUT();
+});
 </script>
 
 </body>

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -81,6 +81,11 @@ document.addEventListener('DOMContentLoaded',function(){
     .subscribe();
 });
 window.SPXGCTemplateDefinition={"description":"Smart Ticker","DataFields":[]};
+window.addEventListener('message', function(e) {
+  if (!e.data || e.data.type !== 'ovl-trigger') return;
+  if (e.data.action === 'in') { if (typeof runAnimationIN === 'function') runAnimationIN(); }
+  else if (e.data.action === 'out') { if (typeof runAnimationOUT === 'function') runAnimationOUT(); }
+});
 </script>
 </body>
 </html>
