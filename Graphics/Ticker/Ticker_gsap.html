@@ -50,6 +50,20 @@ var _SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var _SB_HDR={'apikey':_SB_ANON,'Authorization':'Bearer '+_SB_ANON};
 var _pid=window.__PROJEKT_ID||new URLSearchParams(window.location.search).get('p')||'';
 var _tickerFmt={separator:'•',separator_space:5,hl_bold:true,hl_uppercase:false};
+var _trigKey='ticker_ovl_trigger';
+var _lastBcTime={};
+(function(){
+  if(!_pid)return;
+  var _sbBc=window.supabase.createClient(_SB_URL,_SB_ANON);
+  _sbBc.channel('triggers-'+_pid)
+    .on('broadcast',{event:'trigger'},function(msg){
+      var p=msg.payload;
+      if(p.projekt_id!==_pid||p.key!==_trigKey)return;
+      _lastBcTime[p.key]=Date.now();
+      if(p.value==='in'&&!_spxVisible)runAnimationIN();
+      if(p.value==='out'&&_spxVisible)runAnimationOUT();
+    }).subscribe();
+})();
 document.addEventListener('DOMContentLoaded',function(){
   if(!_pid)return;
   function _loadFormat(){
@@ -85,6 +99,17 @@ document.addEventListener('DOMContentLoaded',function(){
   _loadFormat();
   _loadContent();
   setInterval(_loadContent,15000);
+  // Postgres fallback for trigger
+  var _sbT=window.supabase.createClient(_SB_URL,_SB_ANON);
+  _sbT.channel('prod-'+_trigKey+'-'+_pid)
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(p){
+      if(p.new.projekt_id!==_pid)return;
+      if(_lastBcTime[p.new.key]&&Date.now()-_lastBcTime[p.new.key]<3000)return;
+      if(p.new.key===_trigKey){
+        if(p.new.value==='in'&&!_spxVisible)runAnimationIN();
+        if(p.new.value==='out'&&_spxVisible)runAnimationOUT();
+      }
+    }).subscribe();
   var _sbC=window.supabase.createClient(_SB_URL,_SB_ANON);
   _sbC.channel('ticker-content-'+_pid)
     .on('postgres_changes',{event:'*',schema:'public',table:'tickers'},function(){
