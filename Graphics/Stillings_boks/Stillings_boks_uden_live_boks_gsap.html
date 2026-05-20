@@ -110,36 +110,20 @@ function _animOUT(){
 document.addEventListener('DOMContentLoaded',function(){
   _cols(false);
   var _h={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
-  var _kampeReady=false,_settingsReady=false,_scoreOn=false;
-  function _maybeAnimIn(){
-    if(_kampeReady&&_settingsReady&&_scoreOn&&!_vis)_animIN();
-  }
+  fetch(SB_URL+'/rest/v1/settings?key=in.(breaking_trigger,score_trigger)&projekt_id=eq.'+PROJEKT_ID+'&select=key,value',{headers:_h})
+    .then(function(r){return r.ok?r.json():[];})
+    .then(function(rows){
+      rows.forEach(function(r){
+        if(r.key==='breaking_trigger'&&r.value==='in'){_br=true;_cols(true);}
+        if(r.key==='score_trigger'&&r.value==='in'&&!_vis)_animIN();
+      });
+    })
+    .catch(function(){});
   fetch(SB_URL+'/rest/v1/kampe?select=slot,hold1_kort,hold2_kort,hold1_score,hold2_score,on_air&projekt_id=eq.'+PROJEKT_ID,{headers:_h})
     .then(function(r){return r.ok?r.json():[];})
-    .then(function(rows){rows.forEach(_processKampRow);_rebuildMatches();_kampeReady=true;_maybeAnimIn();})
-    .catch(function(){_kampeReady=true;_maybeAnimIn();});
-  function _pollSettings(){
-    fetch(SB_URL+'/rest/v1/settings?key=in.(breaking_trigger,score_trigger)&projekt_id=eq.'+PROJEKT_ID+'&select=key,value',{headers:_h})
-      .then(function(r){return r.ok?r.json():[];})
-      .then(function(rows){
-        var newScoreOn=false,newBr=false;
-        rows.forEach(function(r){
-          if(r.key==='score_trigger'&&r.value==='in')newScoreOn=true;
-          if(r.key==='breaking_trigger'&&r.value==='in')newBr=true;
-        });
-        if(newBr!==_br){_br=newBr;_cols(_br);}
-        if(!_settingsReady){
-          _scoreOn=newScoreOn;_settingsReady=true;_maybeAnimIn();
-        }else{
-          if(newScoreOn&&!_vis&&_kampeReady)_animIN();
-          else if(!newScoreOn&&_vis)_animOUT();
-        }
-      })
-      .catch(function(){if(!_settingsReady){_settingsReady=true;_maybeAnimIn();}});
-    setTimeout(_pollSettings,8000);
-  }
-  _pollSettings();
-  var _lastBcTime={};
+    .then(function(rows){rows.forEach(_processKampRow);_rebuildMatches();})
+    .catch(function(){});
+    var _lastBcTime={};
   var _sb=window.supabase.createClient(SB_URL,SB_KEY);
   _sb.channel('triggers-'+PROJEKT_ID)
     .on('broadcast',{event:'trigger'},function(msg){
