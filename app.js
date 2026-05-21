@@ -1624,7 +1624,8 @@ function renderGrafik() {
 
   // Find aktivt grafik-objekt
   let g = OVERLAY_GRAPHICS.find(x => x.id === grafiktActiveSubTab);
-  if (!g) { grafiktActiveSubTab = OVERLAY_GRAPHICS[0].id; g = OVERLAY_GRAPHICS[0]; }
+  if (!g && grafiktActiveSubTab !== 'afvikling') { grafiktActiveSubTab = OVERLAY_GRAPHICS[0].id; g = OVERLAY_GRAPHICS[0]; }
+  const isAfvikling = grafiktActiveSubTab === 'afvikling';
 
   // ── SUB-TABS ────────────────────────────────────────────────────
   const subTabsHTML = OVERLAY_GRAPHICS.filter(og => !og.subOf).map(og => {
@@ -1649,10 +1650,10 @@ function renderGrafik() {
     }
     const dot = isOnAir ? `<span class="grafik-v2-onair"></span>` : '';
     return `<button class="grafik-v2-tab${isActive ? ' active' : ''}" data-gtab="${og.id}" style="--tab-color:${og.color}">${og.label.toUpperCase()}${dot}</button>`;
-  }).join('');
+  }).join('') + `<button class="grafik-v2-tab${isAfvikling ? ' active' : ''}" data-gtab="afvikling" style="--tab-color:#ff8c00">AFVIKLING</button>`;
 
   // ── AKTIVT TAB INDHOLD ──────────────────────────────────────────
-  const val    = grafiktState[g.triggerKey] || 'out';
+  const val    = g ? grafiktState[g.triggerKey] || 'out' : 'out';
   const isLive = val !== 'out';
 
   const liveBadge = isLive
@@ -1661,9 +1662,9 @@ function renderGrafik() {
       }</span>`
     : '';
 
-  const overlayUrl       = `${origin}/${g.file}?p=${pid}`;
+  const overlayUrl       = g ? `${origin}/${g.file}?p=${pid}` : '';
   const combinedUrl      = `${origin}/overlay.html?p=${pid}`;
-  const previewIframeUrl = `${origin}/${g.file}?p=${pid}&preview=1`;
+  const previewIframeUrl = g ? `${origin}/${g.file}?p=${pid}&preview=1` : '';
 
   let contentHTML = '';
 
@@ -1850,8 +1851,41 @@ function renderGrafik() {
 
   }
 
+  if (isAfvikling) {
+    const makroRows = makroer.length
+      ? makroer.map(m => {
+          const summary = (m.handlinger || []).map(h => {
+            if (h.key === 'wait') return `⏱ ${h.value}s`;
+            if (h.key === 'alle_af') return '■ ALLE AF';
+            if (h.key === 'lt_trigger' && h.slot) {
+              const s = subs[parseInt(h.slot) - 1];
+              return `Sub${s?.navn ? ': ' + s.navn : ' ' + h.slot}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
+            }
+            return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
+          }).join(' · ');
+          return `<div class="grafik-block afv-makro-row" draggable="true" data-makro-id="${m.id}" style="--g-color:${m.farve || '#4a9eff'}">
+            <span class="afv-drag-handle" style="color:#555;font-size:18px;user-select:none;flex-shrink:0;cursor:grab;padding:0 6px 0 2px;">⠿</span>
+            <div class="grafik-block-info">
+              <span class="grafik-block-name">${esc(m.label.toUpperCase())}</span>
+              ${summary ? `<span class="grafik-block-sub" style="color:#555">${esc(summary)}</span>` : ''}
+            </div>
+            <div class="grafik-block-actions">
+              <button class="grafik-btn-prw afv-edit-btn" data-id="${m.id}" title="Redigér">✎</button>
+              <button class="grafik-btn-in afv-fire-btn" style="background:${m.farve || '#4a9eff'}22;border-color:${m.farve || '#4a9eff'}66;color:${m.farve || '#4a9eff'}" data-id="${m.id}">▶ KØR</button>
+            </div>
+          </div>`;
+        }).join('')
+      : `<div class="grafik-v2-empty">Ingen makroer — opret dem via ＋ Tilføj</div>`;
+    contentHTML = `
+      <div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        MAKROER
+        <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;" onclick="openMakroModal()">＋ Tilføj</button>
+      </div>
+      <div id="afv-makro-list">${makroRows}</div>`;
+  }
+
   // ── HØJRE PANEL: PREVIEW ─────────────────────────────────────────
-  const prvSrc = grafiktActivePrvKey
+  const prvSrc = (!isAfvikling && grafiktActivePrvKey)
     ? (g.type === 'vmixcalls' ? combinedUrl : previewIframeUrl)
     : 'about:blank';
   const previewHTML = `
@@ -1875,7 +1909,7 @@ function renderGrafik() {
 
   // ── HØJRE PANEL: COMPANION URLS ──────────────────────────────────
   let companionRows = '';
-  if (g.type === 'lt') {
+  if (!isAfvikling && g.type === 'lt') {
     const slotRows = subs.map((s, i) => {
       const slot = i + 1;
       const url  = `${origin}/api/trigger/${pid}?key=lt_trigger&value=in&slot=${slot}`;
@@ -1903,7 +1937,7 @@ function renderGrafik() {
     const vmixHead = vmixRows ? `<div class="grafik-companion-subhead">VMIX CALLS</div>` : '';
     companionRows = (slotRows ? `<div class="grafik-companion-subhead">SUBS</div>${slotRows}` : '') +
                    vmixHead + vmixRows + afRow;
-  } else if (g.type === 'credits') {
+  } else if (!isAfvikling && g.type === 'credits') {
     const paUrl = `${origin}/api/trigger/${pid}?key=credits_trigger&value=in`;
     const afUrl = `${origin}/api/trigger/${pid}?key=credits_trigger&value=out`;
     companionRows = `
@@ -1917,7 +1951,7 @@ function renderGrafik() {
         <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
         <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
       </div>`;
-  } else if (g.type === 'lineup') {
+  } else if (!isAfvikling && g.type === 'lineup') {
     const hjemUrl = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=home`;
     const udeUrl  = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=away`;
     const afUrl   = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=out`;
@@ -1937,7 +1971,7 @@ function renderGrafik() {
         <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
         <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
       </div>`;
-  } else if (g.type === 'ticker') {
+  } else if (!isAfvikling && g.type === 'ticker') {
     const tPaUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=in`;
     const tAfUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=out`;
     const bPaUrl = `${origin}/api/trigger/${pid}?key=breaking_trigger&value=in`;
@@ -1955,7 +1989,7 @@ function renderGrafik() {
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#44cc88">S AF</span><span class="grafik-companion-url" title="${sAfUrl}">${sAfUrl}</span><button class="copy-btn icon-btn" data-copy="${sAfUrl}">⎘</button></div>
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff2244">L PÅ</span><span class="grafik-companion-url" title="${lPaUrl}">${lPaUrl}</span><button class="copy-btn icon-btn" data-copy="${lPaUrl}">⎘</button></div>
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff2244">L AF</span><span class="grafik-companion-url" title="${lAfUrl}">${lAfUrl}</span><button class="copy-btn icon-btn" data-copy="${lAfUrl}">⎘</button></div>`;
-  } else {
+  } else if (!isAfvikling && g) {
     const paUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=in`;
     const afUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=out`;
     companionRows = `
@@ -2253,10 +2287,61 @@ function renderGrafik() {
     });
   }
 
-  // EGNE GRAFIK sektion (custom uploadede grafik-filer)
+  // EGNE GRAFIK + MAKROER sektioner (kun på ikke-afvikling faner)
   const leftPanel = container.querySelector('.grafik-v2-left');
-  if (leftPanel) renderEgneGrafik(leftPanel);
-  if (leftPanel) renderMakroer(leftPanel);
+  if (leftPanel && !isAfvikling) renderEgneGrafik(leftPanel);
+  if (leftPanel && !isAfvikling) renderMakroer(leftPanel);
+
+  // ── AFVIKLING DnD ────────────────────────────────────────────────
+  if (isAfvikling) {
+    container.querySelectorAll('.afv-fire-btn').forEach(btn =>
+      btn.addEventListener('click', () => fireMakro(btn.dataset.id)));
+    container.querySelectorAll('.afv-edit-btn').forEach(btn =>
+      btn.addEventListener('click', () => openMakroModal(btn.dataset.id)));
+
+    const afvList = container.querySelector('#afv-makro-list');
+    if (afvList && !afvList.dataset.dndInit) {
+      afvList.dataset.dndInit = '1';
+      let dragSrc = null;
+      let dropped = false;
+      afvList.addEventListener('dragstart', e => {
+        if (!e.target.closest('.afv-drag-handle')) { e.preventDefault(); return; }
+        dragSrc = e.target.closest('.afv-makro-row');
+        dropped = false;
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => dragSrc?.classList.add('dragging'), 0);
+      });
+      afvList.addEventListener('dragover', e => {
+        e.preventDefault();
+        const row = e.target.closest('.afv-makro-row');
+        afvList.querySelectorAll('.drag-over').forEach(r => r.classList.remove('drag-over'));
+        if (row && row !== dragSrc) row.classList.add('drag-over');
+      });
+      afvList.addEventListener('drop', e => {
+        e.preventDefault();
+        const target = e.target.closest('.afv-makro-row');
+        if (!target || !dragSrc || target === dragSrc) return;
+        target.classList.remove('drag-over');
+        const rect = target.getBoundingClientRect();
+        afvList.insertBefore(dragSrc, e.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
+        dropped = true;
+      });
+      afvList.addEventListener('dragend', async () => {
+        dragSrc?.classList.remove('dragging');
+        afvList.querySelectorAll('.drag-over').forEach(r => r.classList.remove('drag-over'));
+        dragSrc = null;
+        if (!dropped) return;
+        dropped = false;
+        const rows = [...afvList.querySelectorAll('.afv-makro-row')];
+        try {
+          await Promise.all(rows.map((row, idx) =>
+            sbUpsert('projekt_makroer', { id: row.dataset.makroId, projekt_id: aktivProjektId, sort_order: idx })
+          ));
+          await loadMakroer();
+        } catch { toast('Fejl ved gem af rækkefølge', 'err'); }
+      });
+    }
+  }
 }
 
 function renderEgneGrafik(leftPanel) {
