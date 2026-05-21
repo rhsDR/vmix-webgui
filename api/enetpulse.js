@@ -8,6 +8,7 @@ const DANSKE_LIGAER = {
   '923101': 'Superligaen',   // nedrykningsspillet
   '916899': 'A-Liga',        // kvinder
   '901298': 'DBU Pokalen',
+  '931466': '3F Superliga ECL Playoff',
 };
 const SB_HEADERS = {
   'apikey': SB_ANON,
