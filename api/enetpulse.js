@@ -352,7 +352,7 @@ export default async function handler(req, res) {
   const token    = process.env.ENETPULSE_TOKEN;
   if (!username || !token) return res.status(503).json({ error: 'enetpulse credentials ikke konfigureret' });
 
-  const { date, ids, debug, h2h } = req.query;
+  const { date, ids, debug, h2h, nocache } = req.query;
   const auth = `username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
 
   // ── H2H ───────────────────────────────────────────────────────
@@ -403,7 +403,7 @@ export default async function handler(req, res) {
   // ── DAGLIG KAMPLISTE (med Supabase-cache) ─────────────────────
   if (date) {
     try {
-      const cached = await getCachedFixtures(date);
+      const cached = nocache ? null : await getCachedFixtures(date);
       if (cached) {
         const fresh = cached.map(f => ({ ...f, starttime: copenhagenTime(f.startdate) }));
         return res.status(200).json({ fixtures: fresh, fromCache: true });

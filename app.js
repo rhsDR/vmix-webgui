@@ -770,7 +770,7 @@ async function searchEnetpulseByDate(i, div, date) {
   const resultsEl = div.querySelector('#enetresults-' + i);
   resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Henter kampe…</span>';
   try {
-    const res  = await fetch('/api/enetpulse?date=' + encodeURIComponent(date));
+    const res  = await fetch('/api/enetpulse?date=' + encodeURIComponent(date) + '&nocache=1');
     const data = await res.json();
     if (data.error) { resultsEl.innerHTML = `<span style="color:var(--red);font-size:12px;">${esc(data.error)}</span>`; return; }
     const fixtures = data.fixtures || [];
