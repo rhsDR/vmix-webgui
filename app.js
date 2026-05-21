@@ -1377,6 +1377,20 @@ async function fireMakro(id) {
   try {
     for (const h of m.handlinger) {
       if (h.key === 'wait') { await new Promise(r => setTimeout(r, parseFloat(h.value) * 1000)); continue; }
+      if (h.key === 'alle_af') {
+        const allKeys = [...OVERLAY_GRAPHICS.map(og => og.triggerKey), 'score_breaking_trigger'];
+        const customKeys = customGrafik.map(g => g.trigger_key);
+        OVERLAY_GRAPHICS.forEach(og => { grafiktState[og.triggerKey] = 'out'; });
+        grafiktState['score_breaking_trigger'] = 'out';
+        customKeys.forEach(k => { grafiktState[k] = 'out'; });
+        grafiktState['lt_slot'] = '';
+        await Promise.all([
+          ...allKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })),
+          ...customKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })),
+          sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: '' }),
+        ]);
+        continue;
+      }
       if (h.key === 'lt_trigger' && h.slot) {
         await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: h.slot });
         grafiktState['lt_slot'] = h.slot;
@@ -2332,6 +2346,7 @@ function _makroKeyOptions(selectedKey) {
     { key: 'lineup_trigger',      label: 'Opstilling' },
     { key: 'credits_trigger',     label: 'Credits' },
     { key: 'wait',                label: '⏱ Pause/vent' },
+    { key: 'alle_af',             label: '■ ALLE AF' },
   ];
   const all = [
     ...builtIn,
@@ -2363,6 +2378,7 @@ function renderMakroer(leftPanel) {
     makroer.forEach(m => {
       const summary = (m.handlinger || []).map(h => {
         if (h.key === 'wait') return `⏱ ${h.value}s`;
+        if (h.key === 'alle_af') return '■ ALLE AF';
         if (h.key === 'lt_trigger' && h.slot) {
           const s = subs[parseInt(h.slot) - 1];
           const navn = s?.navn ? ': ' + s.navn : ' ' + h.slot;
@@ -2436,8 +2452,9 @@ function _addMakroHandling() {
 function _addMakroHandlingRow(key, value, slot) {
   const list = document.getElementById('makro-handlinger-list');
   if (!list) return;
-  const isLt   = key === 'lt_trigger';
-  const isWait = key === 'wait';
+  const isLt     = key === 'lt_trigger';
+  const isWait   = key === 'wait';
+  const isAlleAf = key === 'alle_af';
   const slotOpts = subs.map((s, i) => {
     const n = i + 1;
     if (!s.navn && !s.titel) return '';
@@ -2451,7 +2468,7 @@ function _addMakroHandlingRow(key, value, slot) {
     <select class="makro-key-sel" style="flex:1;min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;">
       ${_makroKeyOptions(key)}
     </select>
-    <select class="makro-val-sel" style="width:68px;flex-shrink:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isWait ? 'none' : 'block'};">
+    <select class="makro-val-sel" style="width:68px;flex-shrink:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${(isWait || isAlleAf) ? 'none' : 'block'};">
       <option value="in"${value === 'in' ? ' selected' : ''}>PÅ</option>
       <option value="out"${value === 'out' ? ' selected' : ''}>AF</option>
     </select>
@@ -2464,12 +2481,13 @@ function _addMakroHandlingRow(key, value, slot) {
       ${slotOpts || '<option value="">Ingen subs</option>'}
     </select>`;
   row.querySelector('.makro-key-sel').addEventListener('change', function() {
-    const lt   = this.value === 'lt_trigger';
-    const wait = this.value === 'wait';
-    row.querySelector('.makro-slot-sel').style.display = lt   ? 'block' : 'none';
-    row.querySelector('.makro-val-sel').style.display  = wait ? 'none'  : 'block';
-    row.querySelector('.makro-wait-inp').style.display = wait ? 'block' : 'none';
-    row.querySelector('.makro-slot-sel').style.flex    = lt   ? '1 0 calc(100% - 22px)' : '';
+    const lt     = this.value === 'lt_trigger';
+    const wait   = this.value === 'wait';
+    const alleAf = this.value === 'alle_af';
+    row.querySelector('.makro-slot-sel').style.display = lt            ? 'block' : 'none';
+    row.querySelector('.makro-val-sel').style.display  = (wait||alleAf)? 'none'  : 'block';
+    row.querySelector('.makro-wait-inp').style.display = wait          ? 'block' : 'none';
+    row.querySelector('.makro-slot-sel').style.flex    = lt            ? '1 0 calc(100% - 22px)' : '';
   });
   list.appendChild(row);
 }
