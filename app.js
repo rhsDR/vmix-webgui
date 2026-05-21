@@ -2576,20 +2576,26 @@ function _addMakroHandling() {
   _addMakroHandlingRow('ticker_ovl_trigger', 'in');
 }
 
+function _buildLtSlotOpts(ltValue, selectedSlot) {
+  const isVmix = ltValue === 'vmixcall';
+  return [
+    `<option value="">→ Vælg ved afvikling</option>`,
+    ...(isVmix ? vmixCalls : subs).map((item, i) => {
+      const n = i + 1;
+      if (!item.navn && !item.titel) return '';
+      const lbl = isVmix ? `VMIX ${n}` : `Sub ${n}`;
+      return `<option value="${n}"${String(selectedSlot) === String(n) ? ' selected' : ''}>${lbl}${item.navn ? ': ' + esc(item.navn) : ''}</option>`;
+    }).filter(Boolean)
+  ].join('');
+}
+
 function _addMakroHandlingRow(key, value, slot) {
   const list = document.getElementById('makro-handlinger-list');
   if (!list) return;
   const isLt     = key === 'lt_trigger';
   const isWait   = key === 'wait';
   const isAlleAf = key === 'alle_af';
-  const slotOpts = [
-    `<option value="">→ Vælg ved afvikling</option>`,
-    ...subs.map((s, i) => {
-      const n = i + 1;
-      if (!s.navn && !s.titel) return '';
-      return `<option value="${n}"${String(slot) === String(n) ? ' selected' : ''}>Sub ${n}${s.navn ? ': ' + esc(s.navn) : ''}</option>`;
-    }).filter(Boolean)
-  ].join('');
+  const slotOpts = _buildLtSlotOpts(value, slot);
   const row = document.createElement('div');
   row.className = 'makro-handling-row';
   row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#1a1a1a;border:1px solid #252525;border-radius:6px;padding:5px 8px;';
@@ -2598,9 +2604,10 @@ function _addMakroHandlingRow(key, value, slot) {
     <select class="makro-key-sel" style="flex:1;min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;">
       ${_makroKeyOptions(key)}
     </select>
-    <select class="makro-val-sel" style="width:68px;flex-shrink:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${(isWait || isAlleAf) ? 'none' : 'block'};">
+    <select class="makro-val-sel" style="width:80px;flex-shrink:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${(isWait || isAlleAf) ? 'none' : 'block'};">
       <option value="in"${value === 'in' ? ' selected' : ''}>PÅ</option>
       <option value="out"${value === 'out' ? ' selected' : ''}>AF</option>
+      <option value="vmixcall"${value === 'vmixcall' ? ' selected' : ''}>VMIX CALL</option>
     </select>
     <input class="makro-wait-inp" type="number" min="0.1" step="0.1" placeholder="sek"
       value="${isWait ? esc(value) : ''}"
@@ -2618,6 +2625,12 @@ function _addMakroHandlingRow(key, value, slot) {
     row.querySelector('.makro-val-sel').style.display  = (wait||alleAf)? 'none'  : 'block';
     row.querySelector('.makro-wait-inp').style.display = wait          ? 'block' : 'none';
     row.querySelector('.makro-slot-sel').style.flex    = lt            ? '1 0 calc(100% - 22px)' : '';
+    if (lt) row.querySelector('.makro-slot-sel').innerHTML = _buildLtSlotOpts(row.querySelector('.makro-val-sel').value, '');
+  });
+  row.querySelector('.makro-val-sel').addEventListener('change', function() {
+    if (row.querySelector('.makro-key-sel').value === 'lt_trigger') {
+      row.querySelector('.makro-slot-sel').innerHTML = _buildLtSlotOpts(this.value, '');
+    }
   });
   list.appendChild(row);
 }
