@@ -1881,8 +1881,9 @@ function renderGrafik() {
             const def = ltVmixStep.slot || '';
             const opts = vmixCalls.map((v, i) => {
               const n = i + 1;
-              if (!v.navn && !v.titel) return '';
-              return `<option value="${n}"${String(def) === String(n) ? ' selected' : ''}>VMIX ${n}${v.navn ? ': ' + esc(v.navn) : ''}</option>`;
+              if (!v.navn && !v.titel && !v.link) return '';
+              const name = v.navn || (v.link ? v.link.replace(/^https?:\/\//, '').split('/')[0] : '');
+              return `<option value="${n}"${String(def) === String(n) ? ' selected' : ''}>VMIX ${n}${name ? ': ' + esc(name) : ''}</option>`;
             }).filter(Boolean).join('');
             if (opts) slotPickerHTML = `<select class="afv-slot-sel" style="background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;">${opts}</select>`;
           }
@@ -2582,9 +2583,10 @@ function _buildLtSlotOpts(ltValue, selectedSlot) {
     `<option value="">→ Vælg ved afvikling</option>`,
     ...(isVmix ? vmixCalls : subs).map((item, i) => {
       const n = i + 1;
-      if (!item.navn && !item.titel) return '';
+      if (isVmix ? (!item.navn && !item.titel && !item.link) : (!item.navn && !item.titel)) return '';
       const lbl = isVmix ? `VMIX ${n}` : `Sub ${n}`;
-      return `<option value="${n}"${String(selectedSlot) === String(n) ? ' selected' : ''}>${lbl}${item.navn ? ': ' + esc(item.navn) : ''}</option>`;
+      const name = item.navn || (isVmix && item.link ? item.link.replace(/^https?:\/\//, '').split('/')[0] : '');
+      return `<option value="${n}"${String(selectedSlot) === String(n) ? ' selected' : ''}>${lbl}${name ? ': ' + esc(name) : ''}</option>`;
     }).filter(Boolean)
   ].join('');
 }
