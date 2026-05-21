@@ -1397,6 +1397,7 @@ async function refreshGrafiktState() {
     rows.forEach(r => {
       if (r.key === 'ticker_lag_order') {
         tickerLagOrder = r.value ? r.value.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_TICKER_SUB_ORDER];
+        DEFAULT_TICKER_SUB_ORDER.forEach(id => { if (!tickerLagOrder.includes(id)) tickerLagOrder.push(id); });
       } else {
         grafiktState[r.key] = r.value;
       }
@@ -4070,6 +4071,7 @@ sbClient.channel('db-changes')
         } else if (p.new.key === 'ticker_lag_order') {
           const raw = p.new.value || '';
           tickerLagOrder = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_TICKER_SUB_ORDER];
+          DEFAULT_TICKER_SUB_ORDER.forEach(id => { if (!tickerLagOrder.includes(id)) tickerLagOrder.push(id); });
           if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
         } else {
           refreshCredits();
