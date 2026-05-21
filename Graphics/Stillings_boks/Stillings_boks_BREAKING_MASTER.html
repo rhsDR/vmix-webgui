@@ -44,13 +44,13 @@ function runAnimationIN(){_spxVisible=true;
   if(_matches.length>1)_startCycle();
   var tl=gsap.timeline();
   tl.fromTo('#el2',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
-  tl.fromTo('#el17',{opacity:0,immediateRender:true},{opacity:1,duration:0.28,ease:'power3.out'},0.361);
+  tl.fromTo('#el17',{opacity:0,immediateRender:true},{opacity:1,duration:0.28,ease:'power3.out'},0.48);
 }
 function runAnimationOUT(){_spxVisible=false;
   if(_cycleTimer){clearInterval(_cycleTimer);_cycleTimer=null;}
   var tl=gsap.timeline();
-  tl.to('#el2',{clipPath:'inset(50% 0% 50% 0%)',duration:0.34,ease:'power2.in'},0.805);
-  tl.to('#el17',{opacity:0,duration:0.32,ease:'power2.in'},0.764);
+  tl.to('#el2',{clipPath:'inset(50% 0% 50% 0%)',duration:0.34,ease:'power2.in'},0.881);
+  tl.to('#el17',{opacity:0,duration:0.32,ease:'power2.in'},0.802);
 }
 
 // ── SUPABASE INTEGRATION ──
