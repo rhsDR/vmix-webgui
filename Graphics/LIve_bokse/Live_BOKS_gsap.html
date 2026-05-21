@@ -46,10 +46,13 @@ function runAnimationIN(){_spxVisible=true;
   tl.fromTo('#el15',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.401);
   tl.fromTo('#el16',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.401);
 }
-function runAnimationOUT(){_spxVisible=false;
+function runAnimationOUT(){
+  if(!_spxVisible)return;
+  _spxVisible=false;
+  gsap.killTweensOf('#el15,#el16');
   var tl=gsap.timeline();
-  tl.to('#el15',{clipPath:'inset(50% 0% 50% 0%)',duration:0.20,ease:'power2.in'},0.683);
-  tl.to('#el16',{clipPath:'inset(50% 0% 50% 0%)',duration:0.20,ease:'power2.in'},0.683);
+  tl.to('#el15',{clipPath:'inset(50% 0% 50% 0%)',duration:0.20,ease:'power2.in'},0);
+  tl.to('#el16',{clipPath:'inset(50% 0% 50% 0%)',duration:0.20,ease:'power2.in'},0);
 }
 window.SPXGCTemplateDefinition = {
   "description": "Lower Third",
