@@ -2322,8 +2322,9 @@ function renderEgneGrafik(leftPanel) {
 function _makroKeyOptions(selectedKey) {
   const builtIn = [
     { key: 'ticker_ovl_trigger',  label: 'Ticker' },
-    { key: 'breaking_trigger',    label: 'Breaking Ticker' },
-    { key: 'score_trigger',       label: 'Stillings Boks' },
+    { key: 'breaking_trigger',       label: 'Breaking Ticker' },
+    { key: 'score_breaking_trigger', label: 'Breaking Stillings Boks' },
+    { key: 'score_trigger',          label: 'Stillings Boks' },
     { key: 'live_boks_trigger',   label: 'Live Boks' },
     { key: 'lt_trigger',          label: 'Lower Third' },
     { key: 'stilling_trigger',    label: 'Stilling' },
