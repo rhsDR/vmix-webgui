@@ -2098,9 +2098,10 @@ function renderGrafik() {
 
   const alleAfBtn = container.querySelector('#grafik-alle-af');
   if (alleAfBtn) alleAfBtn.addEventListener('click', async () => {
-    const allKeys = OVERLAY_GRAPHICS.map(og => og.triggerKey);
+    const allKeys = [...OVERLAY_GRAPHICS.map(og => og.triggerKey), 'score_breaking_trigger'];
     const customKeys = customGrafik.map(g => g.trigger_key);
     OVERLAY_GRAPHICS.forEach(og => { grafiktState[og.triggerKey] = 'out'; });
+    grafiktState['score_breaking_trigger'] = 'out';
     customKeys.forEach(k => { grafiktState[k] = 'out'; });
     grafiktState['lt_slot'] = '';
     renderGrafik();
