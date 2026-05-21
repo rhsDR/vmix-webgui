@@ -2305,11 +2305,11 @@ function renderGrafik() {
       let dragSrc = null;
       let dropped = false;
       afvList.addEventListener('dragstart', e => {
-        if (!e.target.closest('.afv-drag-handle')) { e.preventDefault(); return; }
         dragSrc = e.target.closest('.afv-makro-row');
+        if (!dragSrc) return;
         dropped = false;
         e.dataTransfer.effectAllowed = 'move';
-        setTimeout(() => dragSrc?.classList.add('dragging'), 0);
+        setTimeout(() => dragSrc.classList.add('dragging'), 0);
       });
       afvList.addEventListener('dragover', e => {
         e.preventDefault();
