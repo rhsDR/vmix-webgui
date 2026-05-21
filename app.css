@@ -207,7 +207,7 @@
       border-radius: 3px;
       flex-shrink: 0;
     }
-    .live-event-icon.goal  { background: transparent; font-size: 15px; display: flex; align-items: center; justify-content: center; }
+    .live-event-icon.goal  { background: transparent; font-size: 15px; display: flex; align-items: center; justify-content: center; filter: grayscale(1); }
     .live-event-icon.goal::before { content: '⚽'; }
     .live-event-icon.og    { background: var(--red);   border-radius: 50%; }
     .live-event-icon.pen   { background: var(--blue);  border-radius: 50%; }
