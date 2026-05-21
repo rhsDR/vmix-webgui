@@ -1371,7 +1371,7 @@ async function loadMakroer() {
   } catch { makroer = []; }
 }
 
-async function fireMakro(id) {
+async function fireMakro(id, slotOverride = '') {
   const m = makroer.find(x => x.id === id);
   if (!m || !m.handlinger?.length) return;
   try {
@@ -1391,9 +1391,12 @@ async function fireMakro(id) {
         ]);
         continue;
       }
-      if (h.key === 'lt_trigger' && h.slot) {
-        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: h.slot });
-        grafiktState['lt_slot'] = h.slot;
+      if (h.key === 'lt_trigger') {
+        const effectiveSlot = slotOverride || h.slot || '';
+        if (effectiveSlot) {
+          await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: effectiveSlot });
+          grafiktState['lt_slot'] = effectiveSlot;
+        }
       }
       await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value });
       grafiktState[h.key] = h.value;
@@ -1863,6 +1866,26 @@ function renderGrafik() {
             }
             return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
           }).join(' · ');
+          const ltInStep   = (m.handlinger || []).find(h => h.key === 'lt_trigger' && h.value === 'in');
+          const ltVmixStep = !ltInStep && (m.handlinger || []).find(h => h.key === 'lt_trigger' && h.value === 'vmixcall');
+          let slotPickerHTML = '';
+          if (ltInStep) {
+            const def = ltInStep.slot || '';
+            const opts = subs.map((s, i) => {
+              const n = i + 1;
+              if (!s.navn && !s.titel) return '';
+              return `<option value="${n}"${String(def) === String(n) ? ' selected' : ''}>Sub ${n}${s.navn ? ': ' + esc(s.navn) : ''}</option>`;
+            }).filter(Boolean).join('');
+            if (opts) slotPickerHTML = `<select class="afv-slot-sel" style="background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;">${opts}</select>`;
+          } else if (ltVmixStep) {
+            const def = ltVmixStep.slot || '';
+            const opts = vmixCalls.map((v, i) => {
+              const n = i + 1;
+              if (!v.navn && !v.titel) return '';
+              return `<option value="${n}"${String(def) === String(n) ? ' selected' : ''}>VMIX ${n}${v.navn ? ': ' + esc(v.navn) : ''}</option>`;
+            }).filter(Boolean).join('');
+            if (opts) slotPickerHTML = `<select class="afv-slot-sel" style="background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;">${opts}</select>`;
+          }
           return `<div class="grafik-block afv-makro-row" draggable="true" data-makro-id="${m.id}" style="--g-color:${m.farve || '#4a9eff'}">
             <span class="afv-drag-handle" style="color:#555;font-size:18px;user-select:none;flex-shrink:0;cursor:grab;padding:0 6px 0 2px;">⠿</span>
             <div class="grafik-block-info">
@@ -1871,6 +1894,7 @@ function renderGrafik() {
             </div>
             <div class="grafik-block-actions">
               <button class="grafik-btn-prw afv-edit-btn" data-id="${m.id}" title="Redigér">✎</button>
+              ${slotPickerHTML}
               <button class="grafik-btn-in afv-fire-btn" style="background:${m.farve || '#4a9eff'}22;border-color:${m.farve || '#4a9eff'}66;color:${m.farve || '#4a9eff'}" data-id="${m.id}">▶ KØR</button>
             </div>
           </div>`;
@@ -2298,7 +2322,11 @@ function renderGrafik() {
   // ── AFVIKLING DnD ────────────────────────────────────────────────
   if (isAfvikling) {
     container.querySelectorAll('.afv-fire-btn').forEach(btn =>
-      btn.addEventListener('click', () => fireMakro(btn.dataset.id)));
+      btn.addEventListener('click', () => {
+        const row = btn.closest('.afv-makro-row');
+        const slotSel = row?.querySelector('.afv-slot-sel');
+        fireMakro(btn.dataset.id, slotSel?.value || '');
+      }));
     container.querySelectorAll('.afv-edit-btn').forEach(btn =>
       btn.addEventListener('click', () => openMakroModal(btn.dataset.id)));
 
@@ -2554,11 +2582,14 @@ function _addMakroHandlingRow(key, value, slot) {
   const isLt     = key === 'lt_trigger';
   const isWait   = key === 'wait';
   const isAlleAf = key === 'alle_af';
-  const slotOpts = subs.map((s, i) => {
-    const n = i + 1;
-    if (!s.navn && !s.titel) return '';
-    return `<option value="${n}"${String(slot) === String(n) ? ' selected' : ''}>Sub ${n}${s.navn ? ': ' + esc(s.navn) : ''}</option>`;
-  }).filter(Boolean).join('');
+  const slotOpts = [
+    `<option value="">→ Vælg ved afvikling</option>`,
+    ...subs.map((s, i) => {
+      const n = i + 1;
+      if (!s.navn && !s.titel) return '';
+      return `<option value="${n}"${String(slot) === String(n) ? ' selected' : ''}>Sub ${n}${s.navn ? ': ' + esc(s.navn) : ''}</option>`;
+    }).filter(Boolean)
+  ].join('');
   const row = document.createElement('div');
   row.className = 'makro-handling-row';
   row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#1a1a1a;border:1px solid #252525;border-radius:6px;padding:5px 8px;';
@@ -2577,7 +2608,7 @@ function _addMakroHandlingRow(key, value, slot) {
     <button onclick="this.closest('.makro-handling-row').remove()"
       style="background:none;border:none;color:#666;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;">✕</button>
     <select class="makro-slot-sel" style="flex:1 0 calc(100% - 22px);min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isLt ? 'block' : 'none'};">
-      ${slotOpts || '<option value="">Ingen subs</option>'}
+      ${slotOpts}
     </select>`;
   row.querySelector('.makro-key-sel').addEventListener('change', function() {
     const lt     = this.value === 'lt_trigger';
