@@ -62,10 +62,10 @@ var _prv=window.__IS_PREVIEW||new URLSearchParams(window.location.search).has('p
 var _trigKey='score_breaking_trigger'+(_prv?'_prv':'');
 var _matches=[],_matchIdx=0,_cycleTimer=null,_kampeBySlot={};
 function _fmtMatch(m){return m.h1+'  '+m.s1+' - '+m.s2+'  '+m.h2;}
-function _showMatch(m){var el=document.getElementById('el17');if(el)el.textContent=_fmtMatch(m);}
-function _startCycle(){if(_cycleTimer)clearInterval(_cycleTimer);_cycleTimer=null;if(_matches.length>1)_cycleTimer=setInterval(function(){_matchIdx=(_matchIdx+1)%_matches.length;_showMatch(_matches[_matchIdx]);},6000);}
+function _showMatch(m,animate){var el=document.getElementById('el17');if(!el)return;var txt=_fmtMatch(m);if(animate&&_spxVisible){gsap.timeline().to(el,{opacity:0,duration:0.3,ease:'power2.in'}).call(function(){el.textContent=txt;}).to(el,{opacity:1,duration:0.22,ease:'power3.out'},'+=0.06');}else{el.textContent=txt;}}
+function _nextMatch(){if(!_matches.length)return;_matchIdx=(_matchIdx+1)%_matches.length;_showMatch(_matches[_matchIdx],true);}function _startCycle(){if(_cycleTimer)clearInterval(_cycleTimer);_cycleTimer=null;if(_matches.length>1)_cycleTimer=setInterval(_nextMatch,6000);}
 function _processKampRow(row){if(row.on_air&&(row.hold1_kort||row.hold2_kort)){_kampeBySlot[row.slot]={h1:row.hold1_kort||'',h2:row.hold2_kort||'',s1:String(row.hold1_score||0),s2:String(row.hold2_score||0)};}else{delete _kampeBySlot[row.slot];}}
-function _rebuildMatches(){var newMatches=Object.values(_kampeBySlot);_matches.forEach(function(cur,i){var nxt=newMatches[i];if(nxt&&(cur.s1!==nxt.s1||cur.s2!==nxt.s2)&&_spxVisible)_showMatch(nxt);});_matches=newMatches;_matchIdx=Math.min(_matchIdx,Math.max(0,_matches.length-1));if(_spxVisible&&_matches.length)_showMatch(_matches[_matchIdx]);if(_spxVisible&&!_cycleTimer&&_matches.length>1)_startCycle();}
+function _rebuildMatches(){var newMatches=Object.values(_kampeBySlot);_matches.forEach(function(cur,i){var nxt=newMatches[i];if(nxt&&(cur.s1!==nxt.s1||cur.s2!==nxt.s2)&&_spxVisible)_showMatch(nxt,true);});_matches=newMatches;_matchIdx=Math.min(_matchIdx,Math.max(0,_matches.length-1));if(_spxVisible&&_matches.length)_showMatch(_matches[_matchIdx]);if(_spxVisible&&!_cycleTimer&&_matches.length>1)_startCycle();}
 document.addEventListener('DOMContentLoaded',function(){
   if(!_pid)return;
   var _lastBcTime={};
