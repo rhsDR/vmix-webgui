@@ -1668,7 +1668,7 @@ function renderGrafik() {
 
   let contentHTML = '';
 
-  if (g.type === 'lt') {
+  if (g && g.type === 'lt') {
     const activeLtSlot = grafiktState['lt_slot'] || '';
     const activeLtTrig = grafiktState['lt_trigger'] || 'out';
     const ltSubMode    = activeLtTrig === 'in' || activeLtTrig === 'update';
@@ -1723,7 +1723,7 @@ function renderGrafik() {
 
     contentHTML = (subRows || `<div class="grafik-v2-empty">Ingen subs — udfyld i SUBS-fanen</div>`) + vmixSection;
 
-  } else if (g.type === 'ticker') {
+  } else if (g && g.type === 'ticker') {
     const breakingVal       = grafiktState['breaking_trigger'] || 'out';
     const breakingLive      = breakingVal !== 'out';
     const breakingScoreLive = (grafiktState['score_breaking_trigger'] || 'out') !== 'out';
@@ -1792,7 +1792,7 @@ function renderGrafik() {
         </div>
       </div>`;
 
-  } else if (g.type === 'simple') {
+  } else if (g && g.type === 'simple') {
     contentHTML = `
       <div class="grafik-block" style="--g-color:${g.color}">
         <div class="grafik-block-info">
@@ -1806,7 +1806,7 @@ function renderGrafik() {
         </div>
       </div>`;
 
-  } else if (g.type === 'credits') {
+  } else if (g && g.type === 'credits') {
     contentHTML = `
       <div class="grafik-block" style="--g-color:${g.color}">
         <div class="grafik-block-info">
@@ -1820,7 +1820,7 @@ function renderGrafik() {
         </div>
       </div>`;
 
-  } else if (g.type === 'lineup') {
+  } else if (g && g.type === 'lineup') {
     const isOnAir   = isLive || lineupOnAirMatchId !== null;
     const dashKampe = kampe.filter(k => k.enetpulseId);
     let matchRows;
@@ -2193,9 +2193,9 @@ function renderGrafik() {
         const cId = grafiktActivePrvKey.slice(7);
         const cg  = customGrafik.find(x => x.id === cId);
         if (cg) await sbUpsert('settings', { projekt_id: aktivProjektId, key: cg.trigger_key + '_prv', value: 'out' });
-      } else if (g.type === 'lt') {
+      } else if (g && g.type === 'lt') {
         await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger_prv', value: 'out' });
-      } else if (g.type !== 'vmixcalls') {
+      } else if (g && g.type !== 'vmixcalls') {
         await sbUpsert('settings', { projekt_id: aktivProjektId, key: g.triggerKey + '_prv', value: 'out' });
       }
     } catch { toast('Fejl ved PRW UD', 'err'); }
