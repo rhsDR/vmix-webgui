@@ -2311,31 +2311,42 @@ function renderGrafik() {
         e.dataTransfer.effectAllowed = 'move';
         setTimeout(() => dragSrc.classList.add('dragging'), 0);
       });
+      function _afvClearIndicators() {
+        afvList.querySelectorAll('.drag-over-top,.drag-over-bottom').forEach(r => {
+          r.classList.remove('drag-over-top', 'drag-over-bottom');
+        });
+      }
       afvList.addEventListener('dragover', e => {
         e.preventDefault();
         const row = e.target.closest('.afv-makro-row');
-        afvList.querySelectorAll('.drag-over').forEach(r => r.classList.remove('drag-over'));
-        if (row && row !== dragSrc) row.classList.add('drag-over');
+        _afvClearIndicators();
+        if (row && row !== dragSrc) {
+          const rect = row.getBoundingClientRect();
+          row.classList.add(e.clientY < rect.top + rect.height / 2 ? 'drag-over-top' : 'drag-over-bottom');
+        }
+      });
+      afvList.addEventListener('dragleave', e => {
+        if (!afvList.contains(e.relatedTarget)) _afvClearIndicators();
       });
       afvList.addEventListener('drop', e => {
         e.preventDefault();
         const target = e.target.closest('.afv-makro-row');
+        _afvClearIndicators();
         if (!target || !dragSrc || target === dragSrc) return;
-        target.classList.remove('drag-over');
         const rect = target.getBoundingClientRect();
         afvList.insertBefore(dragSrc, e.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
         dropped = true;
       });
       afvList.addEventListener('dragend', async () => {
         dragSrc?.classList.remove('dragging');
-        afvList.querySelectorAll('.drag-over').forEach(r => r.classList.remove('drag-over'));
+        _afvClearIndicators();
         dragSrc = null;
         if (!dropped) return;
         dropped = false;
         const rows = [...afvList.querySelectorAll('.afv-makro-row')];
         try {
           await Promise.all(rows.map((row, idx) =>
-            sbUpsert('projekt_makroer', { id: row.dataset.makroId, projekt_id: aktivProjektId, sort_order: idx })
+            sbPatch('projekt_makroer?id=eq.' + row.dataset.makroId, { sort_order: idx })
           ));
           await loadMakroer();
         } catch { toast('Fejl ved gem af rækkefølge', 'err'); }

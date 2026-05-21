@@ -1388,6 +1388,10 @@
     .makro-handling-row.drag-over { outline: 1px solid #4a9eff; background: #1a2a3a !important; }
     .makro-drag-handle { cursor: grab; }
     .makro-drag-handle:active { cursor: grabbing; }
+    .afv-makro-row { cursor: grab; }
+    .afv-makro-row.dragging { opacity: 0.35; cursor: grabbing; }
+    .afv-makro-row.drag-over-top    { border-top: 2px solid var(--orange) !important; }
+    .afv-makro-row.drag-over-bottom { border-bottom: 2px solid var(--orange) !important; }
     .lag-handle {
       color: #3a3a3a;
       font-size: 16px;
