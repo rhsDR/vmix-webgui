@@ -33,7 +33,7 @@ var PROJEKT_ID="c2b06b16-6ede-4fa7-9f43-a9029f935157";
 var NBG="#00004b",NCOL="#ffffff";
 var BBG="#eab308",BCOL="#111111";
 var _vis=false,_br=false,_matches=[],_matchIdx=0,_cycleTimer=null;
-var _kampeBySlot={},_breakingSlots={};
+var _kampeBySlot={};
 function _fmtMatch(m){return m.h1+'  '+m.s1+' - '+m.s2+'  '+m.h2;}
 function _cols(br){
   var bg=document.getElementById('el2');var tx=document.getElementById('el17');
@@ -79,18 +79,11 @@ function _rebuildMatches(){
   if(_vis&&wasEmpty&&_matches.length)_showMatch(_matches[_matchIdx],false);
   if(_vis&&!_cycleTimer&&_matches.length>1)_startCycle();
 }
-function _processTicker(row){
-  if(row.breaking&&row.on_air){_breakingSlots[row.slot]=true;}
-  else{delete _breakingSlots[row.slot];}
-  var nb=Object.keys(_breakingSlots).length>0;
-  if(nb!==_br){_br=nb;_cols(_br);}
-}
 function _processSettings(row){
   if(row.projekt_id!==PROJEKT_ID)return;
   if(row.key==='ticker_ovl_trigger'&&row.value==='in'&&!_vis)_animIN();
   if(row.key==='score_trigger'&&row.value==='out'&&_vis)_animOUT();
   if(row.key==='score_trigger'&&row.value==='in'&&!_vis)_animIN();
-  if(row.key==='breaking_trigger'){var nb=row.value==='in';if(nb!==_br){_br=nb;_cols(_br);}}
 }
 function _animIN(){
   _vis=true;_cols(_br);
@@ -110,11 +103,10 @@ function _animOUT(){
 document.addEventListener('DOMContentLoaded',function(){
   _cols(false);
   var _h={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
-  fetch(SB_URL+'/rest/v1/settings?key=in.(breaking_trigger,score_trigger)&projekt_id=eq.'+PROJEKT_ID+'&select=key,value',{headers:_h})
+  fetch(SB_URL+'/rest/v1/settings?key=eq.score_trigger&projekt_id=eq.'+PROJEKT_ID+'&select=key,value',{headers:_h})
     .then(function(r){return r.ok?r.json():[];})
     .then(function(rows){
       rows.forEach(function(r){
-        if(r.key==='breaking_trigger'&&r.value==='in'){_br=true;_cols(true);}
         if(r.key==='score_trigger'&&r.value==='in'&&!_vis)_animIN();
       });
     })
