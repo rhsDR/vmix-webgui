@@ -1292,7 +1292,7 @@ const OVERLAY_GRAPHICS = [
   { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits', color: '#ffcc44' },
 ];
 const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.filter(g => g.file !== null && !g.subOf).map(g => g.id);
-const DEFAULT_TICKER_SUB_ORDER = ['live-boks', 'breaking', 'ticker', 'score'];
+const DEFAULT_TICKER_SUB_ORDER = ['live-boks', 'breaking', 'ticker-breaking', 'score-breaking', 'ticker', 'score'];
 let overlayLagOrder   = [...DEFAULT_LAG_ORDER];
 let tickerLagOrder    = [...DEFAULT_TICKER_SUB_ORDER];
 let tickerSubExpanded = false;
@@ -1999,10 +1999,12 @@ function renderGrafik() {
 
   // ── HØJRE PANEL: LAG-RÆKKEFØLGE ─────────────────────────────────
   const TICKER_SUB_META = {
-    'live-boks': { label: 'Live Boks',       color: '#ff2244' },
-    'breaking':  { label: 'Breaking Ticker', color: '#ff4444' },
-    'ticker':    { label: 'Ticker',          color: '#aa66ff' },
-    'score':     { label: 'Stillings Boks',  color: '#44cc88' },
+    'live-boks':       { label: 'Live Boks',              color: '#ff2244' },
+    'breaking':        { label: 'Breaking Ticker',        color: '#ff4444' },
+    'ticker-breaking': { label: 'Breaking Ticker Tekst',  color: '#ff4444' },
+    'score-breaking':  { label: 'Breaking Stillings Boks',color: '#ff4444' },
+    'ticker':          { label: 'Ticker',                 color: '#aa66ff' },
+    'score':           { label: 'Stillings Boks',         color: '#44cc88' },
   };
   const tickerSubCount = tickerLagOrder.length;
   const tickerSubRows = tickerSubExpanded ? tickerLagOrder.map(subId => {
