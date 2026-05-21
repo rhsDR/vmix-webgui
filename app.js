@@ -2028,7 +2028,10 @@ function renderGrafik() {
   }
   if (makroer.length) {
     const makroCompanionRows = makroer.map(m => {
-      const url = `${origin}/api/trigger/${pid}?macro=${m.id}`;
+      const hasLt = (m.handlinger || []).some(h => h.key === 'lt_trigger');
+      const url = hasLt
+        ? `${origin}/api/trigger/${pid}?macro=${m.id}&slot=`
+        : `${origin}/api/trigger/${pid}?macro=${m.id}`;
       return `<div class="grafik-companion-row">
         <span class="grafik-companion-lbl" style="color:${m.farve || '#4a9eff'}">${esc(m.label.toUpperCase())}</span>
         <span class="grafik-companion-url" title="${url}">${url}</span>
