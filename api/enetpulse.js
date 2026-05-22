@@ -280,6 +280,8 @@ function normalizeEventDetails(raw, statsRaw, id) {
         detail: typeFK === '33' ? 'Disallowed Goal' : 'Normal Goal'
       });
     } else if (code === 'card') {
+      if (!['14','15','16','17'].includes(typeFK))
+        console.log(`[card-ukendt] event=${id} typeFK=${typeFK} player=${inc.participant?.name || ''} min=${inc.elapsed}`);
       const detail = typeFK === '15' ? 'Red Card'
                    : (typeFK === '16' || typeFK === '17') ? 'Yellow Red Card'
                    : 'Yellow Card';
