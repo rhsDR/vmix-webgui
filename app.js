@@ -1380,14 +1380,17 @@ async function fireMakro(id, slotOverride = '') {
       if (h.key === 'alle_af') {
         const allKeys = [...OVERLAY_GRAPHICS.map(og => og.triggerKey), 'score_breaking_trigger'];
         const customKeys = customGrafik.map(g => g.trigger_key);
+        const activeAllKeys = allKeys.filter(k => grafiktState[k] && grafiktState[k] !== 'out');
+        const activeCustomKeys = customKeys.filter(k => grafiktState[k] && grafiktState[k] !== 'out');
+        const ltSlotActive = !!grafiktState['lt_slot'];
         OVERLAY_GRAPHICS.forEach(og => { grafiktState[og.triggerKey] = 'out'; });
         grafiktState['score_breaking_trigger'] = 'out';
         customKeys.forEach(k => { grafiktState[k] = 'out'; });
         grafiktState['lt_slot'] = '';
         await Promise.all([
-          ...allKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })),
-          ...customKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })),
-          sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: '' }),
+          ...activeAllKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })),
+          ...activeCustomKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })),
+          ...(ltSlotActive ? [sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: '' })] : []),
         ]);
         continue;
       }
@@ -2170,6 +2173,9 @@ function renderGrafik() {
   if (alleAfBtn) alleAfBtn.addEventListener('click', async () => {
     const allKeys = [...OVERLAY_GRAPHICS.map(og => og.triggerKey), 'score_breaking_trigger'];
     const customKeys = customGrafik.map(g => g.trigger_key);
+    const activeAllKeys = allKeys.filter(k => grafiktState[k] && grafiktState[k] !== 'out');
+    const activeCustomKeys = customKeys.filter(k => grafiktState[k] && grafiktState[k] !== 'out');
+    const ltSlotActive = !!grafiktState['lt_slot'];
     OVERLAY_GRAPHICS.forEach(og => { grafiktState[og.triggerKey] = 'out'; });
     grafiktState['score_breaking_trigger'] = 'out';
     customKeys.forEach(k => { grafiktState[k] = 'out'; });
@@ -2177,9 +2183,9 @@ function renderGrafik() {
     renderGrafik();
     try {
       await Promise.all([
-        ...allKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })),
-        ...customKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })),
-        sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: '' }),
+        ...activeAllKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })),
+        ...activeCustomKeys.map(key => sbUpsert('settings', { projekt_id: aktivProjektId, key, value: 'out' })),
+        ...(ltSlotActive ? [sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: '' })] : []),
       ]);
     } catch { toast('Fejl ved ALLE AF', 'err'); }
   });
