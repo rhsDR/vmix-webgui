@@ -1430,10 +1430,10 @@ async function refreshGrafiktState() {
 }
 
 async function setGrafiktTrigger(triggerKey, value) {
+  grafiktState[triggerKey] = value;
+  renderGrafik();
   try {
     await sbUpsert('settings', { projekt_id: aktivProjektId, key: triggerKey, value });
-    grafiktState[triggerKey] = value;
-    renderGrafik();
   } catch { toast('Fejl ved trigger', 'err'); }
 }
 
@@ -4244,7 +4244,7 @@ sbClient.channel('db-changes')
           refreshCredits();
         }
         // Opdater grafik-tab hvis det er åbent og en trigger-key, lt_slot eller score_breaking_trigger ændrer sig
-        if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot' || p.new.key === 'score_breaking_trigger') {
+        if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot' || p.new.key === 'score_breaking_trigger' || customGrafik.some(g => g.trigger_key === p.new.key)) {
           grafiktState[p.new.key] = p.new.value;
           if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
         }
