@@ -433,6 +433,49 @@ export default async function handler(req, res) {
           fetch(`${EAPI_BASE}/event/details/?id=${id}&includeIncidents=yes&includeLineups=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`).then(r => r.json()),
           fetch(`${EAPI_BASE}/standing/event_stats/?object=event&objectFK=${id}&includeStandingData=yes&includeStandingParticipants=yes&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`).then(r => r.json()).catch(() => null)
         ]);
+        if (debug === 'incidents') {
+          const evObj = detailsRaw?.event || detailsRaw?.events || {};
+          const ev = Object.values(evObj)[0] || {};
+          const parts = ev.event_participants ? Object.values(ev.event_participants) : [];
+          const allInc = [];
+          for (const part of parts) {
+            const incSrc = part.incident || part.incidents || {};
+            for (const inc of Object.values(incSrc)) {
+              allInc.push({
+                enetID:           inc.enetID,
+                incident_code:    inc.incident_code,
+                incident_typeFK:  inc.incident_typeFK,
+                elapsed:          inc.elapsed,
+                elapsed_plus:     inc.elapsed_plus,
+                deleted:          inc.deleted,
+                cancelled:        inc.cancelled,
+                var:              inc.var,
+                player:           inc.participant?.name || '',
+                team_number:      part.number,
+                extra_keys: Object.keys(inc).filter(k => !['enetID','incident_code','incident_typeFK','elapsed','elapsed_plus','deleted','cancelled','var','participant','participantFK'].includes(k))
+              });
+            }
+          }
+          allInc.sort((a, b) => (parseInt(a.elapsed) || 0) - (parseInt(b.elapsed) || 0));
+          return { id, incidents: allInc };
+        }
+        if (debug === 'result') {
+          const evObj = detailsRaw?.event || detailsRaw?.events || {};
+          const ev = Object.values(evObj)[0] || {};
+          const parts = ev.event_participants ? Object.values(ev.event_participants) : [];
+          return {
+            id,
+            status_descFK: ev.status_descFK,
+            status_type: ev.status_type,
+            elapsed_raw: ev.elapsed,
+            period_type: ev.period_type || ev.active_minute_period || null,
+            participants: parts.map(p => ({
+              number: p.number,
+              name: p.participant?.name || p.name || '',
+              result: p.result ? Object.values(p.result).map(r => ({ result_code: r.result_code, value: r.value })) : []
+            }))
+          };
+        }
         if (debug === '1') {
           const evObj = detailsRaw?.event || detailsRaw?.events || {};
           const ev = Object.values(evObj)[0] || {};
