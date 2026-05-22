@@ -1392,11 +1392,17 @@ async function fireMakro(id, slotOverride = '') {
         continue;
       }
       if (h.key === 'lt_trigger') {
-        const effectiveSlot = slotOverride || h.slot || '';
-        if (effectiveSlot) {
-          await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: effectiveSlot });
-          grafiktState['lt_slot'] = effectiveSlot;
+        const raw = slotOverride || (h.value === 'vmixcall' ? 'v' + (h.slot || '') : (h.slot || ''));
+        const isVmix = raw.startsWith('v');
+        const slotNum = isVmix ? raw.slice(1) : raw;
+        const triggerVal = isVmix ? 'vmixcall' : (raw ? 'in' : h.value);
+        if (slotNum) {
+          await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: slotNum });
+          grafiktState['lt_slot'] = slotNum;
         }
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: triggerVal });
+        grafiktState['lt_trigger'] = triggerVal;
+        continue;
       }
       await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value });
       grafiktState[h.key] = h.value;
@@ -1866,25 +1872,14 @@ function renderGrafik() {
             }
             return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
           }).join(' · ');
-          const ltInStep   = (m.handlinger || []).find(h => h.key === 'lt_trigger' && h.value === 'in');
-          const ltVmixStep = !ltInStep && (m.handlinger || []).find(h => h.key === 'lt_trigger' && h.value === 'vmixcall');
+          const ltOnStep = (m.handlinger || []).find(h => h.key === 'lt_trigger' && h.value !== 'out');
           let slotPickerHTML = '';
-          if (ltInStep) {
-            const def = ltInStep.slot || '';
-            const opts = subs.map((s, i) => {
-              const n = i + 1;
-              if (!s.navn && !s.titel) return '';
-              return `<option value="${n}"${String(def) === String(n) ? ' selected' : ''}>Sub ${n}${s.navn ? ': ' + esc(s.navn) : ''}</option>`;
-            }).filter(Boolean).join('');
-            if (opts) slotPickerHTML = `<select class="afv-slot-sel" style="background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;">${opts}</select>`;
-          } else if (ltVmixStep) {
-            const def = ltVmixStep.slot || '';
-            const opts = vmixCalls.map((v, i) => {
-              const n = i + 1;
-              if (!v.navn && !v.titel) return '';
-              return `<option value="${n}"${String(def) === String(n) ? ' selected' : ''}>VMIX ${n}${v.navn ? ': ' + esc(v.navn) : ''}</option>`;
-            }).filter(Boolean).join('');
-            if (opts) slotPickerHTML = `<select class="afv-slot-sel" style="background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;">${opts}</select>`;
+          if (ltOnStep) {
+            const encodedSlot = ltOnStep.value === 'vmixcall' ? 'v' + (ltOnStep.slot || '') : (ltOnStep.slot || '');
+            const opts = _buildLtSlotOpts(encodedSlot);
+            if ((opts.match(/<option/g) || []).length > 1) {
+              slotPickerHTML = `<select class="afv-slot-sel" style="background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;">${opts}</select>`;
+            }
           }
           return `<div class="grafik-block afv-makro-row" draggable="true" data-makro-id="${m.id}" style="--g-color:${m.farve || '#4a9eff'}">
             <span class="afv-drag-handle" style="color:#555;font-size:18px;user-select:none;flex-shrink:0;cursor:grab;padding:0 6px 0 2px;">⠿</span>
@@ -2576,16 +2571,22 @@ function _addMakroHandling() {
   _addMakroHandlingRow('ticker_ovl_trigger', 'in');
 }
 
-function _buildLtSlotOpts(ltValue, selectedSlot) {
-  const isVmix = ltValue === 'vmixcall';
+function _buildLtSlotOpts(encodedSlot) {
+  // encodedSlot: '1'-'15' for subs, 'v1'-'v8' for vmixcalls, '' for none
+  const subOpts = subs.map((s, i) => {
+    const n = i + 1;
+    if (!s.navn && !s.titel) return '';
+    return `<option value="${n}"${encodedSlot === String(n) ? ' selected' : ''}>Sub ${n}${s.navn ? ': ' + esc(s.navn) : ''}</option>`;
+  }).filter(Boolean);
+  const vmixOpts = vmixCalls.map((v, i) => {
+    const n = i + 1;
+    if (!v.navn && !v.titel) return '';
+    return `<option value="v${n}"${encodedSlot === `v${n}` ? ' selected' : ''}>VMIX ${n}${v.navn ? ': ' + esc(v.navn) : ''}</option>`;
+  }).filter(Boolean);
   return [
     `<option value="">→ Vælg ved afvikling</option>`,
-    ...(isVmix ? vmixCalls : subs).map((item, i) => {
-      const n = i + 1;
-      if (!item.navn && !item.titel) return '';
-      const lbl = isVmix ? `VMIX ${n}` : `Sub ${n}`;
-      return `<option value="${n}"${String(selectedSlot) === String(n) ? ' selected' : ''}>${lbl}${item.navn ? ': ' + esc(item.navn) : ''}</option>`;
-    }).filter(Boolean)
+    ...subOpts,
+    ...(vmixOpts.length ? [`<option disabled style="color:#444;font-size:10px;"> ── VMIX CALLS ──</option>`, ...vmixOpts] : [])
   ].join('');
 }
 
@@ -2595,7 +2596,8 @@ function _addMakroHandlingRow(key, value, slot) {
   const isLt     = key === 'lt_trigger';
   const isWait   = key === 'wait';
   const isAlleAf = key === 'alle_af';
-  const slotOpts = _buildLtSlotOpts(value, slot);
+  const encodedSlot = (key === 'lt_trigger' && value === 'vmixcall') ? 'v' + slot : slot;
+  const slotOpts = _buildLtSlotOpts(encodedSlot);
   const row = document.createElement('div');
   row.className = 'makro-handling-row';
   row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#1a1a1a;border:1px solid #252525;border-radius:6px;padding:5px 8px;';
@@ -2604,10 +2606,9 @@ function _addMakroHandlingRow(key, value, slot) {
     <select class="makro-key-sel" style="flex:1;min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;">
       ${_makroKeyOptions(key)}
     </select>
-    <select class="makro-val-sel" style="width:80px;flex-shrink:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${(isWait || isAlleAf) ? 'none' : 'block'};">
-      <option value="in"${value === 'in' ? ' selected' : ''}>PÅ</option>
+    <select class="makro-val-sel" style="width:68px;flex-shrink:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${(isWait || isAlleAf) ? 'none' : 'block'};">
+      <option value="in"${(value === 'in' || value === 'vmixcall') ? ' selected' : ''}>PÅ</option>
       <option value="out"${value === 'out' ? ' selected' : ''}>AF</option>
-      <option value="vmixcall"${value === 'vmixcall' ? ' selected' : ''}>VMIX CALL</option>
     </select>
     <input class="makro-wait-inp" type="number" min="0.1" step="0.1" placeholder="sek"
       value="${isWait ? esc(value) : ''}"
@@ -2625,12 +2626,7 @@ function _addMakroHandlingRow(key, value, slot) {
     row.querySelector('.makro-val-sel').style.display  = (wait||alleAf)? 'none'  : 'block';
     row.querySelector('.makro-wait-inp').style.display = wait          ? 'block' : 'none';
     row.querySelector('.makro-slot-sel').style.flex    = lt            ? '1 0 calc(100% - 22px)' : '';
-    if (lt) row.querySelector('.makro-slot-sel').innerHTML = _buildLtSlotOpts(row.querySelector('.makro-val-sel').value, '');
-  });
-  row.querySelector('.makro-val-sel').addEventListener('change', function() {
-    if (row.querySelector('.makro-key-sel').value === 'lt_trigger') {
-      row.querySelector('.makro-slot-sel').innerHTML = _buildLtSlotOpts(this.value, '');
-    }
+    if (lt) row.querySelector('.makro-slot-sel').innerHTML = _buildLtSlotOpts('');
   });
   list.appendChild(row);
 }
@@ -2680,9 +2676,16 @@ async function _confirmMakroModal() {
       const sek = parseFloat(row.querySelector('.makro-wait-inp').value) || 1;
       return { key: 'wait', value: String(sek) };
     }
-    const h = { key, value: row.querySelector('.makro-val-sel').value };
+    const valSel = row.querySelector('.makro-val-sel').value;
     const slotSel = row.querySelector('.makro-slot-sel');
-    if (slotSel && slotSel.style.display !== 'none' && slotSel.value) h.slot = slotSel.value;
+    const rawSlot = (slotSel && slotSel.style.display !== 'none') ? slotSel.value : '';
+    if (key === 'lt_trigger') {
+      if (valSel === 'out') return { key: 'lt_trigger', value: 'out' };
+      if (rawSlot.startsWith('v')) return { key: 'lt_trigger', value: 'vmixcall', slot: rawSlot.slice(1) };
+      return { key: 'lt_trigger', value: 'in', slot: rawSlot };
+    }
+    const h = { key, value: valSel };
+    if (rawSlot) h.slot = rawSlot;
     return h;
   });
 

@@ -51,8 +51,13 @@ export default async function handler(req, res) {
       for (const h of macro.handlinger || []) {
         if (h.key === 'wait') { await new Promise(r => setTimeout(r, parseFloat(h.value) * 1000)); continue; }
         if (h.key === 'lt_trigger') {
-          const effectiveSlot = slotOverride || h.slot || '';
-          if (effectiveSlot) await upsert(id, 'lt_slot', String(effectiveSlot));
+          const raw = slotOverride || (h.value === 'vmixcall' ? 'v' + (h.slot || '') : (h.slot || ''));
+          const isVmix = raw.startsWith('v');
+          const slotNum = isVmix ? raw.slice(1) : raw;
+          const triggerVal = isVmix ? 'vmixcall' : (raw ? 'in' : h.value);
+          if (slotNum) await upsert(id, 'lt_slot', slotNum);
+          await upsert(id, 'lt_trigger', triggerVal);
+          continue;
         }
         await upsert(id, h.key, h.value);
       }
