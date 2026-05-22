@@ -122,9 +122,10 @@
         if (document.getElementById(frameId)) return;
         let html;
         try { html = await fetch(g.file_url, { cache: 'no-store' }).then(r => r.text()); } catch { return; }
-        // Bloker Supabase realtime i iframen — overlay.html poller og kalder contentWindow.runAnimationIN/OUT direkte
-        const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(pid)};window.__IS_PREVIEW=false;Object.defineProperty(window,'supabase',{value:{createClient:()=>({channel:()=>({on:()=>({on:()=>({subscribe:()=>{}}),subscribe:()=>{}}),subscribe:()=>{}})})},writable:false,configurable:false});<\/script>`;
-        html = html.replace(/(<html[^>]*>)/i, '$1' + inject);
+        // Bloker Supabase realtime og fetch i iframen — overlay.html styrer al trigger-logik direkte
+        const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(pid)};window.__IS_PREVIEW=false;(function(){var _f=window.fetch;window.fetch=function(u,o){if(typeof u==='string'&&u.indexOf('supabase.co')!==-1)return Promise.resolve({ok:true,json:function(){return Promise.resolve([])}});return _f.apply(this,arguments);};})();Object.defineProperty(window,'supabase',{value:{createClient:()=>({channel:()=>({on:()=>({on:()=>({subscribe:()=>{}}),subscribe:()=>{}}),subscribe:()=>{}})})},writable:false,configurable:false});<\/script>`;
+        const injectedHtml = html.replace(/(<html[^>]*>)/i, '$1' + inject);
+        html = injectedHtml.includes('__PROJEKT_ID') ? injectedHtml : inject + html;
         const blob = new Blob([html], { type: 'text/html' });
         const blobUrl = URL.createObjectURL(blob);
         const iframe = document.createElement('iframe');
