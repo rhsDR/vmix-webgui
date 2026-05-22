@@ -68,6 +68,9 @@ window.SPXGCTemplateDefinition = {
   var PROJEKT_ID=new URLSearchParams(window.location.search).get('p')||'c2b06b16-6ede-4fa7-9f43-a9029f935157';
   var h={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
   function _init(){
+    // Når filen er indlæst som custom grafik via overlay.html injiceres window.__PROJEKT_ID.
+    // I den kontekst styrer overlay.html direkte via runAnimationIN/OUT — skip intern fetch/subscription.
+    if(typeof window.__PROJEKT_ID!=='undefined')return;
     fetch(SB_URL+'/rest/v1/settings?key=eq.live_boks_trigger&projekt_id=eq.'+PROJEKT_ID+'&select=value',{headers:h})
       .then(function(r){return r.json();})
       .then(function(rows){
