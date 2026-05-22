@@ -1380,8 +1380,8 @@ async function fireMakro(id, slotOverride = '') {
       if (h.key === 'alle_af') {
         const allKeys = [...OVERLAY_GRAPHICS.map(og => og.triggerKey), 'score_breaking_trigger'];
         const customKeys = customGrafik.map(g => g.trigger_key);
-        const activeAllKeys = allKeys.filter(k => grafiktState[k] && grafiktState[k] !== 'out');
-        const activeCustomKeys = customKeys.filter(k => grafiktState[k] && grafiktState[k] !== 'out');
+        const activeAllKeys = allKeys.filter(k => grafiktState[k] != null && grafiktState[k] !== 'out');
+        const activeCustomKeys = customKeys.filter(k => grafiktState[k] != null && grafiktState[k] !== 'out');
         const ltSlotActive = !!grafiktState['lt_slot'];
         OVERLAY_GRAPHICS.forEach(og => { grafiktState[og.triggerKey] = 'out'; });
         grafiktState['score_breaking_trigger'] = 'out';
@@ -2173,8 +2173,8 @@ function renderGrafik() {
   if (alleAfBtn) alleAfBtn.addEventListener('click', async () => {
     const allKeys = [...OVERLAY_GRAPHICS.map(og => og.triggerKey), 'score_breaking_trigger'];
     const customKeys = customGrafik.map(g => g.trigger_key);
-    const activeAllKeys = allKeys.filter(k => grafiktState[k] && grafiktState[k] !== 'out');
-    const activeCustomKeys = customKeys.filter(k => grafiktState[k] && grafiktState[k] !== 'out');
+    const activeAllKeys = allKeys.filter(k => grafiktState[k] != null && grafiktState[k] !== 'out');
+    const activeCustomKeys = customKeys.filter(k => grafiktState[k] != null && grafiktState[k] !== 'out');
     const ltSlotActive = !!grafiktState['lt_slot'];
     OVERLAY_GRAPHICS.forEach(og => { grafiktState[og.triggerKey] = 'out'; });
     grafiktState['score_breaking_trigger'] = 'out';
