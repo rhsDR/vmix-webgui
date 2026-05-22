@@ -3434,6 +3434,7 @@ function liveStatusLabel(status) {
 
 function liveEventIcon(type, detail) {
   if (type === 'Goal') {
+    if (detail === 'Disallowed Goal') return 'vog';
     if (detail === 'Own Goal')   return 'og';
     if (detail === 'Penalty')    return 'pen';
     return 'goal';
@@ -3461,7 +3462,8 @@ function renderLiveCard(m) {
         const subInfo = e.type === 'subst'
           ? `<span class="live-event-name"><span style="color:var(--green)">▲</span> ${e.player}${e.assist ? ` <span style="color:var(--red)">▼</span> ${e.assist}` : ''}</span>`
           : `<span class="live-event-name">${e.player}${assist}</span>`;
-        return `<div class="live-event${isAway ? ' away' : ''}">
+        const cancelledCls = e.detail === 'Disallowed Goal' ? ' cancelled' : '';
+        return `<div class="live-event${isAway ? ' away' : ''}${cancelledCls}">
           <span class="live-event-min">${e.minute}'</span>
           <span class="live-event-icon ${iconCls}"></span>
           ${subInfo}

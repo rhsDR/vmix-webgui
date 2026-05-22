@@ -209,6 +209,11 @@
     }
     .live-event-icon.goal  { background: transparent; font-size: 15px; display: flex; align-items: center; justify-content: center; filter: grayscale(1); }
     .live-event-icon.goal::before { content: '⚽'; }
+    .live-event-icon.vog   { background: transparent; font-size: 14px; display: flex; align-items: center; justify-content: center; position: relative; }
+    .live-event-icon.vog::before { content: '⚽'; filter: grayscale(1); opacity: 0.45; }
+    .live-event-icon.vog::after  { content: '✕'; position: absolute; font-size: 13px; font-weight: 900; color: var(--red); line-height: 1; }
+    .live-event.cancelled { opacity: 0.55; }
+    .live-event.cancelled .live-event-name { text-decoration: line-through; color: #666; }
     .live-event-icon.og    { background: var(--red);   border-radius: 50%; }
     .live-event-icon.pen   { background: var(--blue);  border-radius: 50%; }
     .live-event-icon.yc    { background: var(--yellow); }

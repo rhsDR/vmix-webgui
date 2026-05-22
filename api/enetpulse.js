@@ -277,7 +277,7 @@ function normalizeEventDetails(raw, statsRaw, id) {
         player: inc.participant?.name || '',
         assist: assistInc?.participant?.name || null,
         type:   'Goal',
-        detail: 'Normal Goal'
+        detail: typeFK === '33' ? 'Disallowed Goal' : 'Normal Goal'
       });
     } else if (code === 'card') {
       const detail = typeFK === '15' ? 'Red Card' : typeFK === '17' ? 'Yellow Red Card' : 'Yellow Card';
