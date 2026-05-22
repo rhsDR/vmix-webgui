@@ -223,8 +223,12 @@ function normalizeEventDetails(raw, statsRaw, id) {
   function scoreFromResult(participant) {
     if (!participant.result) return 0;
     const entries = Object.values(participant.result);
-    const ot = entries.find(r => r.result_code === 'ordinarytime');
-    if (ot) return parseInt(ot.value) || 0;
+    // finalresult/overTime er samlet slutresultat ved forlænget/straffespark
+    const priority = ['finalresult', 'overtime', 'overTime', 'ordinarytime'];
+    for (const code of priority) {
+      const match = entries.find(r => (r.result_code || '').toLowerCase() === code.toLowerCase());
+      if (match) return parseInt(match.value) || 0;
+    }
     return parseInt(entries[0]?.value) || 0;
   }
 
