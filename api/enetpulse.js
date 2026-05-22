@@ -280,7 +280,9 @@ function normalizeEventDetails(raw, statsRaw, id) {
         detail: typeFK === '33' ? 'Disallowed Goal' : 'Normal Goal'
       });
     } else if (code === 'card') {
-      const detail = typeFK === '15' ? 'Red Card' : typeFK === '17' ? 'Yellow Red Card' : 'Yellow Card';
+      const detail = typeFK === '15' ? 'Red Card'
+                   : (typeFK === '16' || typeFK === '17') ? 'Yellow Red Card'
+                   : 'Yellow Card';
       mappedEvents.push({ minute, team: inc._team, player: inc.participant?.name || '', assist: null, type: 'Card', detail });
     } else if (code === 'subst') {
       const onInc = group.find(i => (i.incident_code || '').toLowerCase() === 'subst_in');
