@@ -2311,6 +2311,7 @@ function renderGrafik() {
 
   // EGNE GRAFIK + MAKROER sektioner (kun på ikke-afvikling faner)
   const leftPanel = container.querySelector('.grafik-v2-left');
+  console.log('[DBG] renderGrafik: leftPanel=', !!leftPanel, 'isAfvikling=', isAfvikling, 'customGrafik.length=', customGrafik.length, 'grafiktState=', JSON.stringify(grafiktState));
   if (leftPanel && !isAfvikling) renderEgneGrafik(leftPanel);
   if (leftPanel && !isAfvikling) renderMakroer(leftPanel);
 
@@ -2388,6 +2389,8 @@ function renderEgneGrafik(leftPanel) {
     wrap.className = 'egne-grafik-wrap';
     leftPanel.appendChild(wrap);
   }
+
+  console.log('[DBG] renderEgneGrafik: customGrafik=', customGrafik.map(g => ({ id: g.id, trigger_key: g.trigger_key, state: grafiktState[g.trigger_key] })));
 
   let html = `
     <div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;">
