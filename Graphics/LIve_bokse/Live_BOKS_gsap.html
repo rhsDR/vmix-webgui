@@ -42,6 +42,7 @@ function _updateContent(data){
 function runTemplateUpdate(data){_updateContent(data);function _apply(){_prefetchAndPlay(function(){setTimeout(runAnimationIN,50);});}if(_spxVisible){runAnimationOUT();setTimeout(_apply,983);}else{_apply();}}
 window.onSpxUpdate=function(data){_updateContent(data);};
 function runAnimationIN(){_spxVisible=true;
+  gsap.killTweensOf('#el15,#el16');
   var tl=gsap.timeline();
   tl.fromTo('#el15',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.401);
   tl.fromTo('#el16',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.401);

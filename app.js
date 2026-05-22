@@ -1414,7 +1414,7 @@ async function fireMakro(id, slotOverride = '') {
 
 async function refreshGrafiktState() {
   const customKeys = customGrafik.map(g => g.trigger_key);
-  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey), ...customKeys, 'lt_slot', 'ticker_lag_order'].join(',');
+  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey), ...customKeys, 'lt_slot', 'score_breaking_trigger', 'ticker_lag_order'].join(',');
   try {
     const rows = await sbGet('settings?select=key,value&key=in.(' + keys + ')&projekt_id=eq.' + aktivProjektId);
     rows.forEach(r => {
@@ -4220,8 +4220,9 @@ sbClient.channel('db-changes')
       p => applyTickerRow(p.new))
   .on('postgres_changes', { event: '*', schema: 'public', table: 'credits' },
       () => refreshCredits())
-  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings' },
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' },
       p => {
+        if (!p.new) return; // DELETE – ignorer
         if (p.new.key === 'credits_trigger') {
           creditsTriggerActive = p.new.value === 'in';
           updateCreditsSendBtn();
@@ -4242,8 +4243,8 @@ sbClient.channel('db-changes')
         } else {
           refreshCredits();
         }
-        // Opdater grafik-tab hvis det er åbent og en trigger-key, lt_slot eller vmixcall_slot ændrer sig
-        if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot') {
+        // Opdater grafik-tab hvis det er åbent og en trigger-key, lt_slot eller score_breaking_trigger ændrer sig
+        if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot' || p.new.key === 'score_breaking_trigger') {
           grafiktState[p.new.key] = p.new.value;
           if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
         }
