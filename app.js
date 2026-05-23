@@ -3151,14 +3151,20 @@ async function fetchLiveMatches() {
     (enetData.matches || []).forEach(m => { if (m.id) enetMap[String(m.id)] = m; });
 
     // Berig enetpulse-kampe med lokale holdnavne fra kamp-state
+    // Hvis et navn matcher et enet_navn i dropdowns, bruges alias i stedet
+    const resolveAlias = name => {
+      if (!name) return name;
+      const d = dropdowns.holds.find(h => h.enetNavn === name);
+      return d ? d.lang : name;
+    };
     for (const k of kampe) {
       if (!k.enetpulseId) continue;
       const m = enetMap[String(k.enetpulseId)];
       if (!m || m.error) continue;
+      m.home = resolveAlias(k.hold1Lang || m.home_api) || m.home;
+      m.away = resolveAlias(k.hold2Lang || m.away_api) || m.away;
       if (k.hold1Kort) m.home_kort = k.hold1Kort;
       if (k.hold2Kort) m.away_kort = k.hold2Kort;
-      if (k.hold1Lang) m.home = k.hold1Lang;
-      if (k.hold2Lang) m.away = k.hold2Lang;
     }
 
     // Gem part_fk på kampe-state og rerender blokke hvor det ændrer sig
