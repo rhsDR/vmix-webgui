@@ -169,6 +169,17 @@
     .live-status.ht      { color: var(--yellow); }
     .live-status.ft      { color: var(--muted); }
     .live-status.ns      { color: #555; }
+    .live-periods {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .live-period-item {
+      font-size: 11px;
+      color: #555;
+      letter-spacing: 0.5px;
+    }
     .live-league {
       text-align: center;
       font-size: 13px;

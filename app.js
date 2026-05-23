@@ -3493,6 +3493,17 @@ function renderLiveCard(m) {
           </span>
         </div>
         <div class="live-status ${statusCls}">${statusLabel}</div>
+        ${(() => {
+          if (!m.periods || !m.periods.length) return '';
+          const short = m.status?.short;
+          const show = m.periods.filter(p =>
+            p.label === '1H' ||
+            (p.label === '2H' && ['2H','ET','FT','AET','PEN'].includes(short)) ||
+            p.label === 'OT'
+          );
+          if (!show.length) return '';
+          return `<div class="live-periods">${show.map(p => `<span class="live-period-item">${p.label}: ${p.home}–${p.away}</span>`).join('')}</div>`;
+        })()}
         <div class="live-league">${m.league}</div>
       </div>
       <div class="live-events">${eventsHtml}</div>

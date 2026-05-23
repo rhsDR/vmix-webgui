@@ -221,6 +221,29 @@ function normalizeEventDetails(raw, statsRaw, id) {
   const homePartFK     = home.participantFK || home.id || '';
   const awayPartFK     = away.participantFK || away.id || '';
 
+  function getPeriodScores(h, a) {
+    const hE = h.result ? Object.values(h.result) : [];
+    const aE = a.result ? Object.values(a.result) : [];
+    const get = (entries, code) => {
+      const e = entries.find(r => (r.result_code || '').toLowerCase() === code.toLowerCase());
+      return e != null ? parseInt(e.value) : null;
+    };
+    const periods = [];
+    const hHT = get(hE, 'halftime'), aHT = get(aE, 'halftime');
+    if (hHT !== null && aHT !== null) periods.push({ label: '1H', home: hHT, away: aHT });
+    const hFT = get(hE, 'ordinarytime'), aFT = get(aE, 'ordinarytime');
+    if (hHT !== null && hFT !== null && aHT !== null && aFT !== null)
+      periods.push({ label: '2H', home: hFT - hHT, away: aFT - aHT });
+    for (const code of ['overtime', 'overTime', 'finalresult']) {
+      const hOT = get(hE, code), aOT = get(aE, code);
+      if (hOT !== null && hFT !== null && (hOT !== hFT || aOT !== aFT)) {
+        periods.push({ label: 'OT', home: hOT - hFT, away: aOT - aFT });
+        break;
+      }
+    }
+    return periods;
+  }
+
   function scoreFromResult(participant) {
     if (!participant.result) return 0;
     const entries = Object.values(participant.result);
@@ -344,6 +367,7 @@ function normalizeEventDetails(raw, statsRaw, id) {
     tournament_fk: String(ev.tournament_stageFK || ev.tournament_templateFK || ev.tournamentFK || ''),
     homeGoals,
     awayGoals,
+    periods:   getPeriodScores(home, away),
     starttime: copenhagenTime(ev.startdate || ''),
     status:    mapStatus(ev),
     league:    ev.tournament_stage_name || ev.tournament_name || '',
