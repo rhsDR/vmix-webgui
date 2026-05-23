@@ -496,12 +496,14 @@ export default async function handler(req, res) {
           const evObj = detailsRaw?.event || detailsRaw?.events || {};
           const ev = Object.values(evObj)[0] || {};
           const parts = ev.event_participants ? Object.values(ev.event_participants) : [];
+          const props = ev.property ? Object.values(ev.property).reduce((acc, p) => { acc[p.name] = p.value; return acc; }, {}) : null;
           return {
             id,
             status_descFK: ev.status_descFK,
             status_type: ev.status_type,
             elapsed_raw: ev.elapsed,
             period_type: ev.period_type || ev.active_minute_period || null,
+            property: props,
             participants: parts.map(p => ({
               number: p.number,
               name: p.participant?.name || p.name || '',

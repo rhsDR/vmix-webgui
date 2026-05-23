@@ -1282,7 +1282,7 @@ let creditsData = { items: [], speed: 30 };
 let creditNewCounter = 0;
 let creditsTriggerActive = false;
 const OVERLAY_GRAPHICS = [
-  { id: 'lower-third', label: 'Lower Third',     file: 'lower-third.html',    triggerKey: 'lt_trigger',         type: 'lt',      color: '#4a9eff' },
+  { id: 'lower-third', label: 'SUB',              file: 'lower-third.html',    triggerKey: 'lt_trigger',         type: 'lt',      color: '#4a9eff' },
   { id: 'ticker',      label: 'Ticker',           file: 'Graphics/Ticker/Ticker_gsap.html', triggerKey: 'ticker_ovl_trigger', type: 'ticker',  color: '#aa66ff' },
   { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html',       triggerKey: 'breaking_trigger',   type: 'simple',  color: '#ff4444', subOf: 'ticker' },
   { id: 'score',       label: 'Stillings',        file: null,                  triggerKey: 'score_trigger',      type: 'simple',  color: '#44cc88', subOf: 'ticker' },
@@ -2463,7 +2463,7 @@ function _makroKeyOptions(selectedKey) {
     { key: 'score_breaking_trigger', label: 'Breaking Stillings Boks' },
     { key: 'score_trigger',          label: 'Stillings Boks' },
     { key: 'live_boks_trigger',   label: 'Live Boks' },
-    { key: 'lt_trigger',          label: 'Lower Third' },
+    { key: 'lt_trigger',          label: 'SUB' },
     { key: 'stilling_trigger',    label: 'Stilling' },
     { key: 'lineup_trigger',      label: 'Opstilling' },
     { key: 'credits_trigger',     label: 'Credits' },
@@ -2533,7 +2533,7 @@ function _makroKeyLabel(key) {
     breaking_trigger:   'Breaking',
     score_trigger:      'Stillings',
     live_boks_trigger:  'Live Boks',
-    lt_trigger:         'Lower Third',
+    lt_trigger:         'SUB',
     stilling_trigger:   'Stilling',
     lineup_trigger:     'Opstilling',
     credits_trigger:    'Credits',
