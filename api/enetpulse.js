@@ -60,7 +60,7 @@ function getElapsedMinute(ev) {
   return null;
 }
 
-// status_descFK: 1=not started, 2=1H, 3=2H, 4=penalty, 5=postponed, 6=finished, 8=ET-1H, 9=ET-2H
+// status_descFK: 1=not started, 2=1H, 3=2H, 4=penalty, 5=postponed, 6=finished, 8=ET-1H, 9=ET-2H, 10=HT
 function mapStatus(ev) {
   const desc    = parseInt(ev.status_descFK || 0);
   const st      = (ev.status_type || '').toLowerCase();
@@ -70,6 +70,7 @@ function mapStatus(ev) {
   if (desc === 5 || st === 'postponed')                           return { short: 'PST', elapsed: null };
   if (desc === 6 || st === 'finished' || st === 'finished_aet' || st === 'finished_ap' || st === 'finalresult')
                                                                   return { short: 'FT',  elapsed: null };
+  if (desc === 10)                                                return { short: 'HT',  elapsed: null };
   if (desc === 2)                                                 return { short: '1H',  elapsed };
   if (desc === 3)                                                 return { short: '2H',  elapsed };
   if (desc === 4 || st === 'penalties')                           return { short: 'P',   elapsed };
