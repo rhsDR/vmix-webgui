@@ -415,14 +415,18 @@ export default async function handler(req, res) {
       const evList = Object.values(raw?.events || {});
       const sample = evList[0] || null;
       const tournamentMap = {};
-      evList.forEach(ev => {
-        const fk   = String(ev.tournament_stageFK || ev.tournament_templateFK || ev.tournamentFK || '');
-        const name = ev.tournament_stage_name || ev.tournament_name || '?';
-        if (fk) tournamentMap[fk] = name;
+      const allMatches = evList.map(ev => {
+        const fk    = String(ev.tournament_stageFK || ev.tournament_templateFK || ev.tournamentFK || '');
+        const parts = ev.event_participants ? Object.values(ev.event_participants) : [];
+        const home  = parts.find(p => String(p.number) === '1') || parts[0] || {};
+        const away  = parts.find(p => String(p.number) === '2') || parts[1] || {};
+        if (fk) tournamentMap[fk] = ev.tournament_stage_name || ev.tournament_name || '?';
+        return { id: ev.id, home: participantName(home), away: participantName(away), tournament_fk: fk };
       });
       return res.status(200).json({
         total_events: evList.length,
         tournament_fks: tournamentMap,
+        all_matches: allMatches,
         sample_event_keys: sample ? Object.keys(sample) : [],
         sample_participants: sample?.event_participants
           ? Object.values(sample.event_participants).slice(0, 2)
