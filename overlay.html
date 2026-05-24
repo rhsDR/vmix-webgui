@@ -123,7 +123,7 @@
         let html;
         try { html = await fetch(g.file_url, { cache: 'no-store' }).then(r => r.text()); } catch { return; }
         // Bloker Supabase realtime og fetch i iframen — overlay.html styrer al trigger-logik direkte
-        const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(pid)};window.__IS_PREVIEW=false;(function(){var _f=window.fetch;window.fetch=function(u,o){if(typeof u==='string'&&u.indexOf('supabase.co')!==-1)return Promise.resolve({ok:true,json:function(){return Promise.resolve([])}});return _f.apply(this,arguments);};})();window.__forceOut=function(){if(typeof window._spxVisible!=='undefined')window._spxVisible=false;if(window.gsap)window.gsap.killTweensOf('*');if(document.body)document.body.style.opacity='0';};document.addEventListener('DOMContentLoaded',function(){var _o=window.runAnimationIN;if(typeof _o==='function')window.runAnimationIN=function(){if(document.body)document.body.style.opacity='';_o.apply(this,arguments);};});Object.defineProperty(window,'supabase',{value:{createClient:()=>({channel:()=>({on:()=>({on:()=>({subscribe:()=>{}}),subscribe:()=>{}}),subscribe:()=>{}})})},writable:false,configurable:false});<\/script>`;
+        const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(pid)};window.__IS_PREVIEW=false;(function(){var _f=window.fetch;window.fetch=function(u,o){if(typeof u==='string'&&u.indexOf('supabase.co')!==-1)return Promise.resolve({ok:true,json:function(){return Promise.resolve([])}});return _f.apply(this,arguments);};})();window.__forceOut=function(){if(typeof window._spxVisible!=='undefined')window._spxVisible=false;if(window.gsap)window.gsap.killTweensOf('*');if(document.body)document.body.style.opacity='0';};document.addEventListener('DOMContentLoaded',function(){if(document.body)document.body.style.opacity='0';var _o=window.runAnimationIN;if(typeof _o==='function')window.runAnimationIN=function(){if(document.body)document.body.style.opacity='';_o.apply(this,arguments);};});Object.defineProperty(window,'supabase',{value:{createClient:()=>({channel:()=>({on:()=>({on:()=>({subscribe:()=>{}}),subscribe:()=>{}}),subscribe:()=>{}})})},writable:false,configurable:false});<\/script>`;
         const injectedHtml = html.replace(/(<html[^>]*>)/i, '$1' + inject);
         html = injectedHtml.includes('__PROJEKT_ID') ? injectedHtml : inject + html;
         const blob = new Blob([html], { type: 'text/html' });
@@ -156,12 +156,16 @@
           if (Array.isArray(data)) {
             for (const row of data) {
               if (customState[row.key] === row.value) continue;
+              const prev = customState[row.key];
               customState[row.key] = row.value;
               const iframe = customFrameMap[row.key];
               if (!iframe) continue;
               try {
                 if (row.value === 'in') iframe.contentWindow?.runAnimationIN?.();
-                else if (row.value === 'out') { if (iframe.contentWindow?.__forceOut) iframe.contentWindow.__forceOut(); else iframe.contentWindow?.runAnimationOUT?.(); }
+                else if (row.value === 'out') {
+                  if (prev === 'in') iframe.contentWindow?.runAnimationOUT?.();
+                  else if (iframe.contentWindow?.__forceOut) iframe.contentWindow.__forceOut();
+                }
               } catch {}
             }
           }
@@ -178,10 +182,14 @@
           if (p.projekt_id !== pid) return;
           const iframe = customFrameMap[p.key];
           if (!iframe) return;
+          const prevBc = customState[p.key];
           customState[p.key] = p.value; // sync state så pollCustomTriggers springer det over
           try {
             if (p.value === 'in') iframe.contentWindow?.runAnimationIN?.();
-            else if (p.value === 'out') { if (iframe.contentWindow?.__forceOut) iframe.contentWindow.__forceOut(); else iframe.contentWindow?.runAnimationOUT?.(); }
+            else if (p.value === 'out') {
+              if (prevBc === 'in') iframe.contentWindow?.runAnimationOUT?.();
+              else if (iframe.contentWindow?.__forceOut) iframe.contentWindow.__forceOut();
+            }
           } catch {}
         })
         .subscribe();
