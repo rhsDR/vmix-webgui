@@ -91,7 +91,7 @@ const SB_HEADERS_MINIMAL = { ...SB_HEADERS, 'Prefer': 'return=minimal' };
 
 const BROADCAST_TRIGGER_KEYS = new Set([
   'ticker_ovl_trigger','breaking_trigger','score_breaking_trigger','score_trigger',
-  'live_boks_trigger','lt_trigger','lt_slot',
+  'live_boks_trigger','lt_trigger','lt_slot','LIVE_bund',
   'stilling_trigger','lineup_trigger','credits_trigger',
   'Komm_score_K-1','Komm_score_K-2','Komm_score_K-3',
   'Komm_score_K-4','Komm_score_K-5','Komm_score_K-6',
@@ -1390,7 +1390,7 @@ async function fireMakro(id, slotOverride = '') {
     for (const h of m.handlinger) {
       if (h.key === 'wait') { await new Promise(r => setTimeout(r, parseFloat(h.value) * 1000)); continue; }
       if (h.key === 'alle_af') {
-        const allKeys = [...OVERLAY_GRAPHICS.map(og => og.triggerKey).filter(Boolean), 'score_breaking_trigger'];
+        const allKeys = [...OVERLAY_GRAPHICS.map(og => og.triggerKey).filter(Boolean), 'score_breaking_trigger', 'LIVE_bund'];
         const customKeys = customGrafik.map(g => g.trigger_key);
         OVERLAY_GRAPHICS.forEach(og => { grafiktState[og.triggerKey] = 'out'; });
         grafiktState['score_breaking_trigger'] = 'out';

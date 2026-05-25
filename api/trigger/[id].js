@@ -55,7 +55,7 @@ export default async function handler(req, res) {
           const offKeys = [
             'lt_trigger','ticker_ovl_trigger','breaking_trigger',
             'score_trigger','score_breaking_trigger','live_boks_trigger',
-            'stilling_trigger','lineup_trigger','credits_trigger',
+            'stilling_trigger','lineup_trigger','credits_trigger','LIVE_bund',
           ];
           await Promise.all([
             ...offKeys.map(k => upsert(id, k, 'out')),
