@@ -205,7 +205,7 @@
     // fremfor at vente op til 2s på næste poll-iteration.
     if (pid) {
       const _sbKick = window.supabase.createClient(SB_URL, SB_ANON);
-      _sbKick.channel('overlay-bc-kick-' + pid)
+      _sbKick.channel('triggers-' + pid)
         .on('broadcast', { event: 'trigger' }, function(msg) {
           const p = msg.payload;
           if (!p || p.projekt_id !== pid) return;
