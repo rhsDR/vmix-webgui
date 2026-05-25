@@ -20,6 +20,11 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
 #lt-wrap.pos-hoejre{transform:scaleX(-1);transform-origin:center;}
 .lt-text{display:inline-block;}
 #lt-wrap.pos-hoejre .lt-text{transform:scaleX(-1);}
+#el-cards{position:absolute;left:1519px;top:138px;width:346px;height:11px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;clip-path:inset(50% 0);}
+.cards-side{display:flex;align-items:center;gap:3px;}
+.k-card{display:inline-block;width:5px;height:8px;border-radius:1px;flex-shrink:0;}
+.k-yc{background:#ffd200;}
+.k-rc{background:#e01f1f;}
 
 </style>
 </head>
@@ -29,6 +34,7 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
   <div id="el4" class="lt-text">Jens Ole Sørensen</div>
   <div id="el2"></div>
   <div id="el5" class="lt-text">RFC 00 - 00  VB</div>
+  <div id="el-cards"><div class="cards-side cards-home"></div><div class="cards-side cards-away"></div></div>
 </div>
 <div id="hiddenSpxData">  <div id="f0"></div>
   <div id="f1"></div>
@@ -37,7 +43,9 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
 var _slot=1;
 var _komm='',_lok='',_cycleState='komm',_cycleTimer=null;
 var _spxVisible=false;
+var _prevCards={g1:0,r1:0,g2:0,r2:0};
 function _applyKampRow(row){
+  _renderCards(row.hold1_gul||0,row.hold1_rod||0,row.hold2_gul||0,row.hold2_rod||0);
   _komm=row.kommentator||'';_lok=row.lokation||'';
   document.getElementById('el5').innerHTML=
     (row.hold1_kort||'')+'&ensp;<span style="color:#ffd200">'+(row.hold1_score||0)+'</span>'+
@@ -62,6 +70,27 @@ function _cycleTick(){
     },100);
   }});
 }
+function _renderCards(g1,r1,g2,r2){
+  function sideHtml(gul,rod){
+    var h='';
+    for(var i=0;i<gul;i++) h+='<span class="k-card k-yc"></span>';
+    if(gul>0&&rod>0) h+='<span style="width:3px;display:inline-block"></span>';
+    for(var i=0;i<rod;i++) h+='<span class="k-card k-rc"></span>';
+    return h;
+  }
+  var newYh=_spxVisible&&g1>_prevCards.g1,newRh=_spxVisible&&r1>_prevCards.r1;
+  var newYa=_spxVisible&&g2>_prevCards.g2,newRa=_spxVisible&&r2>_prevCards.r2;
+  document.querySelector('#el-cards .cards-home').innerHTML=sideHtml(g1,r1);
+  document.querySelector('#el-cards .cards-away').innerHTML=sideHtml(g2,r2);
+  var targets=[];
+  function lastOf(sel){var nl=document.querySelectorAll(sel);return nl.length?nl[nl.length-1]:null;}
+  if(newYh){var e=lastOf('#el-cards .cards-home .k-yc');if(e)targets.push(e);}
+  if(newRh){var e=lastOf('#el-cards .cards-home .k-rc');if(e)targets.push(e);}
+  if(newYa){var e=lastOf('#el-cards .cards-away .k-yc');if(e)targets.push(e);}
+  if(newRa){var e=lastOf('#el-cards .cards-away .k-rc');if(e)targets.push(e);}
+  if(targets.length) gsap.from(targets,{y:-5,opacity:0,scale:0.4,duration:0.4,ease:'back.out(1.5)',stagger:0.05});
+  _prevCards={g1:g1,r1:r1,g2:g2,r2:r2};
+}
 function _autoOut(){
   if(!_spxVisible)return;
   runAnimationOUT();
@@ -77,6 +106,7 @@ function runAnimationIN(){_spxVisible=true;
   tl.fromTo('#el4',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.2);
   tl.fromTo('#el2',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
   tl.fromTo('#el5',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
+  tl.fromTo('#el-cards',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
   tl.call(_startCycle);
 }
 function runAnimationOUT(){_spxVisible=false;
@@ -86,6 +116,7 @@ function runAnimationOUT(){_spxVisible=false;
   tl.to('#el4',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
   tl.to('#el2',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
   tl.to('#el5',{opacity:0,duration:0.30,ease:'power2.in'},0.482);
+  tl.to('#el-cards',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
 }
 
 // ── SUPABASE INTEGRATION ──
@@ -98,7 +129,7 @@ var _trigKey='Komm_score_K-1'+(_prv?'_prv':'');
 document.addEventListener('DOMContentLoaded',function(){
   if(!_pid)return;
   fetch(_SB_URL+'/rest/v1/kampe?slot=eq.'+_slot+'&projekt_id=eq.'+_pid+
-        '&select=hold1_kort,hold2_kort,hold1_score,hold2_score,kommentator,lokation,on_air',
+        '&select=hold1_kort,hold2_kort,hold1_score,hold2_score,kommentator,lokation,on_air,hold1_gul,hold1_rod,hold2_gul,hold2_rod',
         {headers:_SB_HDR})
     .then(function(r){return r.json();})
     .then(function(rows){if(rows[0])_applyKampRow(rows[0]);});

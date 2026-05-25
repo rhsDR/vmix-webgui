@@ -12,6 +12,7 @@ const makeKamp = () => ({
   kommentator: '', lokation: '', vmixcall: '', onAir: false,
   fixtureId: null,
   enetpulseId: null, starttime: '',
+  hold1Gul: 0, hold1Rod: 0, hold2Gul: 0, hold2Rod: 0,
   // edit buffer
   editMode: false, collapsed: false,
   buf: { hold1Lang: '', hold2Lang: '', kommentator: '', lokation: '', vmixcall: '', lokSomKomm: false }
@@ -191,7 +192,9 @@ async function fetchAll() {
       vmixcall:    r.vmixcall     || '',
       onAir:       r.on_air       || false,
       fixtureId:   r.fixture_id   || null,
-      enetpulseId: r.enetpulse_id || null
+      enetpulseId: r.enetpulse_id || null,
+      hold1Gul: r.hold1_gul ?? 0, hold1Rod: r.hold1_rod ?? 0,
+      hold2Gul: r.hold2_gul ?? 0, hold2Rod: r.hold2_rod ?? 0
     })),
     subs: {
       subs:      subsRaw.map(r => ({ navn: r.navn || '', titel: r.titel || '' })),
@@ -3442,15 +3445,28 @@ async function fetchLiveMatches() {
 
     upd.textContent = 'Sidst opdateret ' + new Date().toLocaleTimeString('da-DK');
 
-    // Status til Supabase — enetpulse-kampe
+    // Status + korttal til Supabase — enetpulse-kampe
     for (let i = 0; i < kampe.length; i++) {
       const k = kampe[i];
       if (!k.enetpulseId) continue;
       const m = enetMap[String(k.enetpulseId)];
       if (!m || m.error) continue;
+      const isHomeEv = e => e.team === m.home_api || e.team === m.home;
+      const isCard   = e => e.type === 'Card';
+      const isYel    = e => e.detail === 'Yellow Card';
+      const isRed    = e => e.detail === 'Red Card' || e.detail === 'Yellow Red Card';
+      const evts = Array.isArray(m.events) ? m.events : [];
+      const g1 = evts.filter(e => isCard(e) && isYel(e) &&  isHomeEv(e)).length;
+      const r1 = evts.filter(e => isCard(e) && isRed(e) &&  isHomeEv(e)).length;
+      const g2 = evts.filter(e => isCard(e) && isYel(e) && !isHomeEv(e)).length;
+      const r2 = evts.filter(e => isCard(e) && isRed(e) && !isHomeEv(e)).length;
+      kampe[i].hold1Gul = g1; kampe[i].hold1Rod = r1;
+      kampe[i].hold2Gul = g2; kampe[i].hold2Rod = r2;
       await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), {
         status_short:   m.status.short   || null,
-        status_elapsed: m.status.elapsed ?? null
+        status_elapsed: m.status.elapsed ?? null,
+        hold1_gul: g1, hold1_rod: r1,
+        hold2_gul: g2, hold2_rod: r2
       }).catch(() => {});
     }
 
@@ -4220,7 +4236,9 @@ function applyKampRow(row) {
     hold2Kort:   row.hold2_kort   || '', hold2Lang: row.hold2_lang || '',
     kommentator: row.kommentator  || '', lokation: row.lokation || '',
     vmixcall:    row.vmixcall     || '', onAir: row.on_air === true,
-    enetpulseId: row.enetpulse_id || null
+    enetpulseId: row.enetpulse_id || null,
+    hold1Gul: row.hold1_gul ?? 0, hold1Rod: row.hold1_rod ?? 0,
+    hold2Gul: row.hold2_gul ?? 0, hold2Rod: row.hold2_rod ?? 0
   };
   const merged = { ...prev, ...data, editMode: false, collapsed: prev.collapsed, buf: prev.buf };
   if (prev.onAirPending) merged.onAir = prev.onAir;
