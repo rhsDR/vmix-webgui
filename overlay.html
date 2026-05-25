@@ -33,6 +33,8 @@
     const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
     const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
     const SB_HDR  = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON };
+    const customFrameMap = {};
+    const customState    = {};
 
     // Grafik-definitioner: id matcher iframe-id og Supabase-nøglen i overlay_lag_order
     const GRAPHICS = [
@@ -103,76 +105,9 @@
       setTimeout(pollLagOrder, 3000);
     }
 
-    async function loadCustomGrafik() {
-      if (!pid) return;
-      const customFrameMap = {};
-
-      // Indlæs custom grafik-filer (fejl stopper ikke broadcast-kanalen nedenfor)
-      try {
-        const rows = await fetch(
-          `${SB_URL}/rest/v1/projekt_grafik?projekt_id=eq.${encodeURIComponent(pid)}&order=sort_order`,
-          { headers: SB_HDR }
-        ).then(r => r.json());
-        if (Array.isArray(rows) && rows.length) {
-          await Promise.all(rows.map(async g => {
-            const frameId = 'custom-' + g.id.slice(0, 8) + '-frame';
-            if (document.getElementById(frameId)) return;
-            let html;
-            try { html = await fetch(g.file_url, { cache: 'no-store' }).then(r => r.text()); } catch { return; }
-            // Bloker Supabase realtime og fetch i iframen — overlay.html styrer al trigger-logik direkte
-            const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(pid)};window.__IS_PREVIEW=false;(function(){var _f=window.fetch;window.fetch=function(u,o){if(typeof u==='string'&&u.indexOf('supabase.co')!==-1)return Promise.resolve({ok:true,json:function(){return Promise.resolve([])}});return _f.apply(this,arguments);};})();window.__forceOut=function(){if(typeof window._spxVisible!=='undefined')window._spxVisible=false;if(window.gsap)window.gsap.killTweensOf('*');if(document.body)document.body.style.opacity='0';};document.addEventListener('DOMContentLoaded',function(){if(document.body)document.body.style.opacity='0';var _o=window.runAnimationIN;if(typeof _o==='function')window.runAnimationIN=function(){if(document.body)document.body.style.opacity='';_o.apply(this,arguments);};});Object.defineProperty(window,'supabase',{value:{createClient:()=>({channel:()=>({on:()=>({on:()=>({subscribe:()=>{}}),subscribe:()=>{}}),subscribe:()=>{}})})},writable:false,configurable:false});<\/script>`;
-            const injectedHtml = html.replace(/(<html[^>]*>)/i, '$1' + inject);
-            html = injectedHtml.includes('__PROJEKT_ID') ? injectedHtml : inject + html;
-            const blob = new Blob([html], { type: 'text/html' });
-            const blobUrl = URL.createObjectURL(blob);
-            const iframe = document.createElement('iframe');
-            iframe.id = frameId;
-            iframe.allowTransparency = true;
-            iframe.src = blobUrl;
-            iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;';
-            document.body.appendChild(iframe);
-            const shortId = 'custom-' + g.id.slice(0, 8);
-            if (!DEFAULT_ORDER.includes(shortId)) DEFAULT_ORDER.push(shortId);
-            customFrameMap[g.trigger_key] = iframe;
-          }));
-          applyOrder(DEFAULT_ORDER);
-        }
-      } catch {}
-
-      // Polling for custom grafik
-      const trigKeys = Object.keys(customFrameMap);
-      const customState = Object.fromEntries(trigKeys.map(k => [k, 'out']));
-      if (trigKeys.length) {
-        async function pollCustomTriggers() {
-          try {
-            const data = await fetch(
-              `${SB_URL}/rest/v1/settings?key=in.(${trigKeys.join(',')})&projekt_id=eq.${encodeURIComponent(pid)}&select=key,value`,
-              { headers: SB_HDR }
-            ).then(r => r.json());
-            if (Array.isArray(data)) {
-              for (const row of data) {
-                if (customState[row.key] === row.value) continue;
-                const prev = customState[row.key];
-                customState[row.key] = row.value;
-                const iframe = customFrameMap[row.key];
-                if (!iframe) continue;
-                try {
-                  if (row.value === 'in') iframe.contentWindow?.runAnimationIN?.();
-                  else if (row.value === 'out') {
-                    if (prev === 'in') iframe.contentWindow?.runAnimationOUT?.();
-                    else if (iframe.contentWindow?.__forceOut) iframe.contentWindow.__forceOut();
-                  }
-                } catch {}
-              }
-            }
-          } catch {}
-          setTimeout(pollCustomTriggers, 1500);
-        }
-        pollCustomTriggers();
-      }
-
-      // Én broadcast-kanal til alt: custom grafik + lt_trigger + lineup_trigger
-      // Oprettes altid (uanset om der er custom grafik) — bruger kun ét Supabase-klient-objekt
+    // Opret broadcast-kanal med det samme — IKKE inde i loadCustomGrafik,
+    // så den er subscribed før custom grafik-frames er loadet.
+    if (pid) {
       const _sbBc = window.supabase.createClient(SB_URL, SB_ANON);
       _sbBc.channel('triggers-' + pid)
         .on('broadcast', { event: 'trigger' }, function(msg) {
@@ -208,6 +143,74 @@
           } catch {}
         })
         .subscribe();
+    }
+
+    async function loadCustomGrafik() {
+      if (!pid) return;
+
+      // Indlæs custom grafik-filer (fejl stopper ikke broadcast-kanalen nedenfor)
+      try {
+        const rows = await fetch(
+          `${SB_URL}/rest/v1/projekt_grafik?projekt_id=eq.${encodeURIComponent(pid)}&order=sort_order`,
+          { headers: SB_HDR }
+        ).then(r => r.json());
+        if (Array.isArray(rows) && rows.length) {
+          await Promise.all(rows.map(async g => {
+            const frameId = 'custom-' + g.id.slice(0, 8) + '-frame';
+            if (document.getElementById(frameId)) return;
+            let html;
+            try { html = await fetch(g.file_url, { cache: 'no-store' }).then(r => r.text()); } catch { return; }
+            // Bloker Supabase realtime og fetch i iframen — overlay.html styrer al trigger-logik direkte
+            const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(pid)};window.__IS_PREVIEW=false;(function(){var _f=window.fetch;window.fetch=function(u,o){if(typeof u==='string'&&u.indexOf('supabase.co')!==-1)return Promise.resolve({ok:true,json:function(){return Promise.resolve([])}});return _f.apply(this,arguments);};})();window.__forceOut=function(){if(typeof window._spxVisible!=='undefined')window._spxVisible=false;if(window.gsap)window.gsap.killTweensOf('*');if(document.body)document.body.style.opacity='0';};document.addEventListener('DOMContentLoaded',function(){if(document.body)document.body.style.opacity='0';var _o=window.runAnimationIN;if(typeof _o==='function')window.runAnimationIN=function(){if(document.body)document.body.style.opacity='';_o.apply(this,arguments);};});Object.defineProperty(window,'supabase',{value:{createClient:()=>({channel:()=>({on:()=>({on:()=>({subscribe:()=>{}}),subscribe:()=>{}}),subscribe:()=>{}})})},writable:false,configurable:false});<\/script>`;
+            const injectedHtml = html.replace(/(<html[^>]*>)/i, '$1' + inject);
+            html = injectedHtml.includes('__PROJEKT_ID') ? injectedHtml : inject + html;
+            const blob = new Blob([html], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
+            const iframe = document.createElement('iframe');
+            iframe.id = frameId;
+            iframe.allowTransparency = true;
+            iframe.src = blobUrl;
+            iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;';
+            document.body.appendChild(iframe);
+            const shortId = 'custom-' + g.id.slice(0, 8);
+            if (!DEFAULT_ORDER.includes(shortId)) DEFAULT_ORDER.push(shortId);
+            customFrameMap[g.trigger_key] = iframe;
+            customState[g.trigger_key] = 'out';
+          }));
+          applyOrder(DEFAULT_ORDER);
+        }
+      } catch {}
+
+      // Polling for custom grafik — kører altid som fallback hvis broadcast misses
+      async function pollCustomTriggers() {
+        const trigKeys = Object.keys(customFrameMap);
+        if (trigKeys.length) {
+          try {
+            const data = await fetch(
+              `${SB_URL}/rest/v1/settings?key=in.(${trigKeys.join(',')})&projekt_id=eq.${encodeURIComponent(pid)}&select=key,value`,
+              { headers: SB_HDR }
+            ).then(r => r.json());
+            if (Array.isArray(data)) {
+              for (const row of data) {
+                if (customState[row.key] === row.value) continue;
+                const prev = customState[row.key];
+                customState[row.key] = row.value;
+                const iframe = customFrameMap[row.key];
+                if (!iframe) continue;
+                try {
+                  if (row.value === 'in') iframe.contentWindow?.runAnimationIN?.();
+                  else if (row.value === 'out') {
+                    if (prev === 'in') iframe.contentWindow?.runAnimationOUT?.();
+                    else if (iframe.contentWindow?.__forceOut) iframe.contentWindow.__forceOut();
+                  }
+                } catch {}
+              }
+            }
+          } catch {}
+        }
+        setTimeout(pollCustomTriggers, 500);
+      }
+      pollCustomTriggers();
     }
 
     // Sæt standard-rækkefølge med det samme og start polling med det samme.
