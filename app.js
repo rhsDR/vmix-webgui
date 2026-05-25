@@ -92,7 +92,7 @@ const SB_HEADERS_MINIMAL = { ...SB_HEADERS, 'Prefer': 'return=minimal' };
 const BROADCAST_TRIGGER_KEYS = new Set([
   'ticker_ovl_trigger','breaking_trigger','score_breaking_trigger','score_trigger',
   'live_boks_trigger','lt_trigger','lt_slot','LIVE_bund',
-  'stilling_trigger','lineup_trigger','credits_trigger',
+  'lineup_trigger','credits_trigger',
   'Komm_score_K-1','Komm_score_K-2','Komm_score_K-3',
   'Komm_score_K-4','Komm_score_K-5','Komm_score_K-6',
 ]);
@@ -1290,7 +1290,6 @@ const OVERLAY_GRAPHICS = [
   { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html',       triggerKey: 'breaking_trigger',   type: 'simple',  color: '#ff4444', subOf: 'ticker' },
   { id: 'score',       label: 'Stillings',        file: null,                  triggerKey: 'score_trigger',      type: 'simple',  color: '#44cc88', subOf: 'ticker' },
   { id: 'live-boks',  label: 'Live Boks',        file: 'Graphics/LIve_bokse/Live_BOKS_gsap.html', triggerKey: 'live_boks_trigger', type: 'simple', color: '#ff2244', subOf: 'ticker' },
-  { id: 'stilling',    label: 'Stilling',         file: 'stilling.html',       triggerKey: 'stilling_trigger',   type: 'simple',  color: '#44cc88' },
   { id: 'opstilling',  label: 'Opstilling',       file: 'opstilling.html',     triggerKey: 'lineup_trigger',     type: 'lineup',  color: '#ff8833' },
   { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits', color: '#ffcc44' },
   { id: 'komm',        label: 'Komm Boks',        file: null,                  triggerKey: null,                 type: 'komm',    color: '#4a9eff' },
@@ -2548,7 +2547,6 @@ function _makroKeyOptions(selectedKey) {
     { key: 'score_trigger',          label: 'Stillings Boks' },
     { key: 'live_boks_trigger',   label: 'Live Boks' },
     { key: 'lt_trigger',          label: 'SUB' },
-    { key: 'stilling_trigger',    label: 'Stilling' },
     { key: 'lineup_trigger',      label: 'Opstilling' },
     { key: 'credits_trigger',     label: 'Credits' },
     { key: 'komm_alle',           label: 'Komm Boks ALLE' },
@@ -2619,7 +2617,6 @@ function _makroKeyLabel(key) {
     score_trigger:      'Stillings',
     live_boks_trigger:  'Live Boks',
     lt_trigger:         'SUB',
-    stilling_trigger:   'Stilling',
     lineup_trigger:     'Opstilling',
     credits_trigger:    'Credits',
     komm_alle:          'Komm Boks',
