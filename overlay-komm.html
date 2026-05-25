@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <title>Komm Overlay</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
+    iframe {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: transparent;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <iframe id="komm-k1-frame" allowtransparency="true" src=""></iframe>
+  <!-- K-2 … K-6 tilføjes her -->
+  <script>
+    const _pid = new URLSearchParams(window.location.search).get('p') || '';
+    document.getElementById('komm-k1-frame').src =
+      'Graphics/Komm_score_boks/Komm_BOKS_K-1.html?p=' + _pid;
+  </script>
+</body>
+</html>

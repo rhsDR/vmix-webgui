@@ -1874,7 +1874,7 @@ function renderGrafik() {
       const matchTxt = (kamp && kamp.hold1Kort && kamp.hold2Kort)
         ? esc(kamp.hold1Kort) + ' vs ' + esc(kamp.hold2Kort)
         : '—';
-      const kommUrl = `${origin}/${k.file}?p=${pid}`;
+      const kommUrl = `${origin}/overlay-komm.html?p=${pid}`;
       return `<div class="grafik-block${isOn ? ' active' : ''}" style="--g-color:${g.color};opacity:${isActive ? 1 : 0.4}">
         <div class="grafik-block-info">
           <span class="grafik-block-name">K-${k.slot} &nbsp; ${matchTxt}</span>

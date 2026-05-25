@@ -40,8 +40,8 @@ var _spxVisible=false;
 function _applyKampRow(row){
   _komm=row.kommentator||'';_lok=row.lokation||'';
   document.getElementById('el5').innerHTML=
-    (row.hold1_kort||'')+' <span style="color:#ffd200">'+(row.hold1_score||0)+'</span>'+
-    ' - <span style="color:#ffd200">'+(row.hold2_score||0)+'</span> '+(row.hold2_kort||'');
+    (row.hold1_kort||'')+'&ensp;<span style="color:#ffd200">'+(row.hold1_score||0)+'</span>'+
+    '&ensp;&ndash;&ensp;<span style="color:#ffd200">'+(row.hold2_score||0)+'</span>&ensp;'+(row.hold2_kort||'');
 }
 function _startCycle(){
   _stopCycle();_cycleState='komm';
@@ -77,7 +77,7 @@ function runAnimationIN(){_spxVisible=true;
   tl.fromTo('#el4',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.2);
   tl.fromTo('#el2',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
   tl.fromTo('#el5',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
-  _startCycle();
+  tl.call(_startCycle);
 }
 function runAnimationOUT(){_spxVisible=false;
   _stopCycle();
