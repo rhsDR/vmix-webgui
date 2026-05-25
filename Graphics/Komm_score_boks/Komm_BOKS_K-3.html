@@ -25,7 +25,7 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
 .k-card{display:inline-block;width:5px;height:8px;border-radius:1px;flex-shrink:0;}
 .k-yc{background:#ffd200;}
 .k-rc{background:#e01f1f;}
-
+#el-overtime{position:absolute;left:1401px;top:385px;width:110px;height:92px;background:#00004b;color:#ffffff;font-size:26px;font-weight:700;font-family:'DRPublik-SemiBold',sans-serif;display:flex;align-items:center;justify-content:center;opacity:0;border-radius:0px;}
 </style>
 </head>
 <body>
@@ -35,6 +35,7 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
   <div id="el2"></div>
   <div id="el5" class="lt-text">RFC 00 - 00  VB</div>
   <div id="el-cards"><div class="cards-side cards-home"></div><div class="cards-side cards-away"></div></div>
+<div id="el-overtime"></div>
 </div>
 <div id="hiddenSpxData">  <div id="f0"></div>
   <div id="f1"></div>
@@ -44,11 +45,32 @@ var _slot=3;
 var _komm='',_lok='',_cycleState='komm',_cycleTimer=null;
 var _spxVisible=false;
 var _prevCards={g1:0,r1:0,g2:0,r2:0};
+var _overtimeVisible=false;
 function _applyKampRow(row){
+  _renderOvertime(row.status_short||'',row.status_elapsed||0);
   _komm=row.kommentator||'';_lok=row.lokation||'';
   document.getElementById('el5').innerHTML=
     (row.hold1_kort||'')+'&ensp;<span style="color:#ffd200">'+(row.hold1_score||0)+'</span>'+
     '&ensp;&ndash;&ensp;<span style="color:#ffd200">'+(row.hold2_score||0)+'</span>&ensp;'+(row.hold2_kort||'');
+}
+function _renderOvertime(statusShort,statusElapsed){
+  var base=null;
+  if(statusShort==='1H'&&statusElapsed>45) base=45;
+  else if(statusShort==='2H'&&statusElapsed>90) base=90;
+  var el=document.getElementById('el-overtime');
+  if(!el)return;
+  var shouldShow=base!==null&&_spxVisible;
+  var txt=base!==null?(base+'+'+(statusElapsed-base)):'';
+  if(shouldShow&&!_overtimeVisible){
+    el.textContent=txt;
+    gsap.fromTo(el,{x:-20,opacity:0},{x:0,opacity:1,duration:0.4,ease:'power2.out'});
+    _overtimeVisible=true;
+  }else if(shouldShow&&_overtimeVisible){
+    if(el.textContent!==txt)el.textContent=txt;
+  }else if(!shouldShow&&_overtimeVisible){
+    gsap.to(el,{x:-20,opacity:0,duration:0.3,ease:'power2.in',onComplete:function(){el.textContent='';}});
+    _overtimeVisible=false;
+  }
 }
 function _startCycle(){
   _stopCycle();_cycleState='komm';
@@ -101,6 +123,8 @@ function _autoOut(){
 }
 function runAnimationIN(){_spxVisible=true;
   gsap.set(['#el2','#el3','#el4','#el5','#el-cards'],{opacity:1});
+  gsap.set('#el-overtime',{x:0,opacity:0});
+  _overtimeVisible=false;
   var tl=gsap.timeline();
   tl.fromTo('#el3',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.2);
   tl.fromTo('#el4',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.2);
@@ -111,6 +135,7 @@ function runAnimationIN(){_spxVisible=true;
 }
 function runAnimationOUT(){_spxVisible=false;
   _stopCycle();
+  if(_overtimeVisible){gsap.to('#el-overtime',{x:-20,opacity:0,duration:0.30,ease:'power2.in'});_overtimeVisible=false;}
   var tl=gsap.timeline();
   tl.to('#el3',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
   tl.to('#el4',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
@@ -125,14 +150,16 @@ var _SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var _SB_HDR={'apikey':_SB_ANON,'Authorization':'Bearer '+_SB_ANON};
 var _pid=window.__PROJEKT_ID||new URLSearchParams(window.location.search).get('p')||'';
 var _prv=window.__IS_PREVIEW||new URLSearchParams(window.location.search).has('preview');
+var _testOt=new URLSearchParams(window.location.search).get('test_ot')||'';
 var _trigKey='Komm_score_K-3'+(_prv?'_prv':'');
 document.addEventListener('DOMContentLoaded',function(){
   if(!_pid)return;
   fetch(_SB_URL+'/rest/v1/kampe?slot=eq.'+_slot+'&projekt_id=eq.'+_pid+
-        '&select=hold1_kort,hold2_kort,hold1_score,hold2_score,kommentator,lokation,on_air',
+        '&select=hold1_kort,hold2_kort,hold1_score,hold2_score,kommentator,lokation,on_air,status_short,status_elapsed',
         {headers:_SB_HDR})
     .then(function(r){return r.json();})
     .then(function(rows){if(rows[0])_applyKampRow(rows[0]);});
+  if(_testOt){var _tp=_testOt.split('-');_spxVisible=true;_renderOvertime(_tp[0]||'',parseInt(_tp[1]||'0',10));}
   fetch(_SB_URL+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+_pid+'&select=value',{headers:_SB_HDR})
     .then(function(r){return r.json();})
     .then(function(rows){if(rows[0]?.value==='in'&&!_spxVisible)runAnimationIN();});
