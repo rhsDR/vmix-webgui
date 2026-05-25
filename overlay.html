@@ -211,10 +211,15 @@
         .on('broadcast', { event: 'trigger' }, function(msg) {
           const p = msg.payload;
           if (!p || p.projekt_id !== pid) return;
-          if (p.key === 'lt_trigger' || p.key === 'lt_slot') {
-            try { document.getElementById('lower-third-frame')?.contentWindow?.pollTrigger?.(); } catch {}
+          if (p.key === 'lt_trigger') {
+            // Lille delay så DB-write er færdigt inden pollTrigger læser fra DB
+            setTimeout(function() {
+              try { document.getElementById('lower-third-frame')?.contentWindow?.pollTrigger?.(); } catch {}
+            }, 120);
           } else if (p.key === 'lineup_trigger') {
-            try { document.getElementById('opstilling-frame')?.contentWindow?.pollTrigger?.(); } catch {}
+            setTimeout(function() {
+              try { document.getElementById('opstilling-frame')?.contentWindow?.pollTrigger?.(); } catch {}
+            }, 120);
           }
         }).subscribe();
     }
