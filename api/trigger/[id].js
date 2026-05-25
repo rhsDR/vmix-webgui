@@ -63,6 +63,18 @@ export default async function handler(req, res) {
           ]);
           continue;
         }
+        if (h.key === 'komm_alle') {
+          const kommKeys = ['Komm_score_K-1','Komm_score_K-2','Komm_score_K-3',
+                            'Komm_score_K-4','Komm_score_K-5','Komm_score_K-6'];
+          if (h.value === 'out') {
+            await Promise.all(kommKeys.map(k => upsert(id, k, 'out')));
+          } else {
+            const kampeRows = await sbGet(`kampe?projekt_id=eq.${encodeURIComponent(id)}&on_air=eq.true&select=slot`);
+            const activeSlots = kampeRows.map(r => r.slot).filter(s => s >= 1 && s <= 6);
+            if (activeSlots.length) await Promise.all(activeSlots.map(s => upsert(id, `Komm_score_K-${s}`, 'in')));
+          }
+          continue;
+        }
         if (h.key === 'lt_trigger') {
           const raw = slotOverride || (h.value === 'vmixcall' ? 'v' + (h.slot || '') : (h.slot || ''));
           const isVmix = raw.startsWith('v');

@@ -1416,6 +1416,23 @@ async function fireMakro(id, slotOverride = '') {
         grafiktState['lt_trigger'] = triggerVal;
         continue;
       }
+      if (h.key === 'komm_alle') {
+        const kommKeys = KOMM_BOKSE.map(k => k.triggerKey);
+        if (h.value === 'out') {
+          kommKeys.forEach(k => { grafiktState[k] = 'out'; });
+          await Promise.all(kommKeys.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k, value: 'out' })));
+        } else {
+          let activeSlots = [];
+          try {
+            const rows = await sbGet('kampe?projekt_id=eq.' + aktivProjektId + '&on_air=eq.true&select=slot');
+            activeSlots = rows.map(r => r.slot).filter(s => s >= 1 && s <= 6);
+          } catch {}
+          const onKeys = activeSlots.map(s => `Komm_score_K-${s}`);
+          onKeys.forEach(k => { grafiktState[k] = 'in'; });
+          if (onKeys.length) await Promise.all(onKeys.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k, value: 'in' })));
+        }
+        continue;
+      }
       await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value });
       grafiktState[h.key] = h.value;
     }
@@ -2534,6 +2551,7 @@ function _makroKeyOptions(selectedKey) {
     { key: 'stilling_trigger',    label: 'Stilling' },
     { key: 'lineup_trigger',      label: 'Opstilling' },
     { key: 'credits_trigger',     label: 'Credits' },
+    { key: 'komm_alle',           label: 'Komm Boks ALLE' },
     { key: 'wait',                label: '⏱ Pause/vent' },
     { key: 'alle_af',             label: '■ ALLE AF' },
   ];
@@ -2604,6 +2622,7 @@ function _makroKeyLabel(key) {
     stilling_trigger:   'Stilling',
     lineup_trigger:     'Opstilling',
     credits_trigger:    'Credits',
+    komm_alle:          'Komm Boks',
   };
   if (map[key]) return map[key];
   const cg = customGrafik.find(g => g.trigger_key === key);
