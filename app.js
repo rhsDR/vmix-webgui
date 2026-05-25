@@ -1874,11 +1874,15 @@ function renderGrafik() {
       const matchTxt = (kamp && kamp.hold1Kort && kamp.hold2Kort)
         ? esc(kamp.hold1Kort) + ' vs ' + esc(kamp.hold2Kort)
         : '—';
+      const kommUrl = `${origin}/${k.file}?p=${pid}`;
       return `<div class="grafik-block${isOn ? ' active' : ''}" style="--g-color:${g.color};opacity:${isActive ? 1 : 0.4}">
         <div class="grafik-block-info">
           <span class="grafik-block-name">K-${k.slot} &nbsp; ${matchTxt}</span>
           ${isOn     ? `<span class="grafik-block-sub" style="color:var(--g-color)">● LIVE</span>`
            : isActive ? `<span class="grafik-block-sub" style="color:#555">ON AIR</span>` : ''}
+        </div>
+        <div class="grafik-block-actions">
+          <button class="copy-btn icon-btn" data-copy="${kommUrl}" title="Kopiér overlay URL">⎘</button>
         </div>
       </div>`;
     }).join('');
