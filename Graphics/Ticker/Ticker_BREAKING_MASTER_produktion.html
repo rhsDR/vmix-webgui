@@ -59,9 +59,19 @@ document.addEventListener('DOMContentLoaded',function(){
   fetch(_SB_URL+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+_pid+'&select=value',{headers:_SB_HDR})
     .then(r=>r.json()).then(rows=>{if(rows[0]?.value==='in'&&!_spxVisible)runAnimationIN();});
   var _sb=window.supabase.createClient(_SB_URL,_SB_ANON);
+  var _lastBcTime=0;
+  _sb.channel('triggers-'+_pid)
+    .on('broadcast',{event:'trigger'},function(msg){
+      var p=msg.payload;
+      if(!p||p.key!==_trigKey)return;
+      _lastBcTime=Date.now();
+      if(p.value==='in'&&!_spxVisible)runAnimationIN();
+      if(p.value==='out'&&_spxVisible)runAnimationOUT();
+    }).subscribe();
   _sb.channel('prod-'+_trigKey+'-'+_pid)
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(p){
       if(p.new.projekt_id!==_pid)return;
+      if(Date.now()-_lastBcTime<3000)return;
       if(p.new.key===_trigKey){
         if(p.new.value==='in'&&!_spxVisible)runAnimationIN();
         if(p.new.value==='out'&&_spxVisible)runAnimationOUT();
