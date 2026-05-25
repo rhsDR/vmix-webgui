@@ -1411,7 +1411,7 @@ async function fireMakro(id, slotOverride = '') {
           await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: slotNum });
           grafiktState['lt_slot'] = slotNum;
         }
-        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: triggerVal });
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: triggerVal, slot: slotNum || undefined });
         grafiktState['lt_trigger'] = triggerVal;
         continue;
       }
@@ -2313,7 +2313,7 @@ function renderGrafik() {
       renderGrafik();
       try {
         await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot',    value: String(slot) });
-        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: 'vmixcall' });
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: 'vmixcall', slot: String(slot) });
       } catch { toast('Fejl ved vmixcall trigger', 'err'); }
       if (c?.link) fetch(c.link, { mode: 'no-cors' }).catch(() => {});
     }));
@@ -2364,7 +2364,7 @@ function renderGrafik() {
       renderGrafik();
       try {
         await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot',    value: slot });
-        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: triggerVal });
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: triggerVal, slot });
       } catch { toast('Fejl ved lower third trigger', 'err'); }
     }));
 

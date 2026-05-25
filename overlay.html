@@ -210,10 +210,14 @@
           const p = msg.payload;
           if (!p || p.projekt_id !== pid) return;
           if (p.key === 'lt_trigger') {
-            // Lille delay så DB-write er færdigt inden pollTrigger læser fra DB
-            setTimeout(function() {
-              try { document.getElementById('lower-third-frame')?.contentWindow?.pollTrigger?.(); } catch {}
-            }, 120);
+            try {
+              var ltFrame = document.getElementById('lower-third-frame');
+              if (ltFrame && ltFrame.contentWindow) {
+                ltFrame.contentWindow.postMessage(
+                  { type: 'sbTrigger', key: 'lt_trigger', value: p.value, slot: p.slot || '' }, '*'
+                );
+              }
+            } catch {}
           } else if (p.key === 'lineup_trigger') {
             setTimeout(function() {
               try { document.getElementById('opstilling-frame')?.contentWindow?.pollTrigger?.(); } catch {}

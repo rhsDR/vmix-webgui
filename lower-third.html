@@ -149,6 +149,51 @@ async function pollTrigger() {
   setTimeout(pollTrigger, 2000);
 }
 pollTrigger();
+window.addEventListener('message', function(evt) {
+  if (!evt.data || evt.data.type !== 'sbTrigger' || evt.data.key !== 'lt_trigger') return;
+  var v = evt.data.value; var s = String(evt.data.slot || '');
+  if (_animating) return;
+  if (v === 'out') {
+    if (!_spxVisible) return;
+    _animating = true;
+    runAnimationOUT(false);
+    setTimeout(function() { _currentSlot = null; _currentTrigger = null; _animating = false; setTimeout(pollTrigger, 2000); }, 2600);
+  } else if ((v === 'in' || v === 'update') && s) {
+    if (v === 'in' && _spxVisible && s === _currentSlot && _currentTrigger === 'in') return;
+    _animating = true;
+    fetch(SB_URL + '/rest/v1/subs?slot=eq.' + s + '&select=navn,titel' + _pf, { headers: SB_HDR })
+      .then(function(r) { return r.json(); })
+      .then(function(subs) {
+        var sub = subs[0];
+        if (!sub) { _animating = false; return; }
+        var doShow = function(skipLabel) {
+          _currentSlot = s; _currentTrigger = 'in';
+          _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
+          setTimeout(function() { runAnimationIN(skipLabel); }, 50);
+          setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 2700);
+        };
+        if (_spxVisible) { runAnimationOUT(false); setTimeout(function() { doShow(true); }, 2200); }
+        else { doShow(false); }
+      }).catch(function() { _animating = false; });
+  } else if (v === 'vmixcall' && s) {
+    if (_spxVisible && s === _currentSlot && _currentTrigger === 'vmixcall') return;
+    _animating = true;
+    fetch(SB_URL + '/rest/v1/vmix_calls?slot=eq.' + s + '&select=navn,titel' + _pf, { headers: SB_HDR })
+      .then(function(r) { return r.json(); })
+      .then(function(calls) {
+        var call = calls[0];
+        if (!call) { _animating = false; return; }
+        var doShow = function(skipLabel) {
+          _currentSlot = s; _currentTrigger = 'vmixcall';
+          _updateContent({ f0: call.titel || '', f1: call.navn || '', f2: 'SPORT', f3: 'venstre' });
+          setTimeout(function() { runAnimationIN(skipLabel); }, 50);
+          setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 2700);
+        };
+        if (_spxVisible) { runAnimationOUT(false); setTimeout(function() { doShow(true); }, 2200); }
+        else { doShow(false); }
+      }).catch(function() { _animating = false; });
+  }
+});
 /* ── SUPABASE INTEGRATION BLOCK ── END ── */
 function _updateContent(data){
   (function(){var t=clean((data&&data.f0!=null)?String(data.f0):document.getElementById('f0').innerText);var _e=document.getElementById('el6');if(!_e)return;if(_e._csT){_e._csT.forEach(clearTimeout);_e._csT=[];}gsap.set('#el6',{opacity:0,immediateRender:true});_e.innerHTML=[...t].map(function(c){var esc=c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':c===' '?'&nbsp;':c;return'<span style="opacity:0">'+esc+'</span>';}).join('');})();
