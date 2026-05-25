@@ -19,11 +19,17 @@
 </head>
 <body>
   <iframe id="komm-k1-frame" allowtransparency="true" src=""></iframe>
-  <!-- K-2 … K-6 tilføjes her -->
+  <iframe id="komm-k2-frame" allowtransparency="true" src=""></iframe>
+  <iframe id="komm-k3-frame" allowtransparency="true" src=""></iframe>
+  <iframe id="komm-k4-frame" allowtransparency="true" src=""></iframe>
+  <iframe id="komm-k5-frame" allowtransparency="true" src=""></iframe>
+  <iframe id="komm-k6-frame" allowtransparency="true" src=""></iframe>
   <script>
     const _pid = new URLSearchParams(window.location.search).get('p') || '';
-    document.getElementById('komm-k1-frame').src =
-      'Graphics/Komm_score_boks/Komm_BOKS_K-1.html?p=' + _pid;
+    [1,2,3,4,5,6].forEach(function(n){
+      document.getElementById('komm-k'+n+'-frame').src =
+        'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid;
+    });
   </script>
 </body>
 </html>

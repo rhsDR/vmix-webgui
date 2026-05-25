@@ -1294,7 +1294,11 @@ const OVERLAY_GRAPHICS = [
 ];
 const KOMM_BOKSE = [
   { slot: 1, id: 'komm-k1', triggerKey: 'Komm_score_K-1', file: 'Graphics/Komm_score_boks/Komm_BOKS_K-1.html' },
-  // K-2 … K-6 tilføjes løbende
+  { slot: 2, id: 'komm-k2', triggerKey: 'Komm_score_K-2', file: 'Graphics/Komm_score_boks/Komm_BOKS_K-2.html' },
+  { slot: 3, id: 'komm-k3', triggerKey: 'Komm_score_K-3', file: 'Graphics/Komm_score_boks/Komm_BOKS_K-3.html' },
+  { slot: 4, id: 'komm-k4', triggerKey: 'Komm_score_K-4', file: 'Graphics/Komm_score_boks/Komm_BOKS_K-4.html' },
+  { slot: 5, id: 'komm-k5', triggerKey: 'Komm_score_K-5', file: 'Graphics/Komm_score_boks/Komm_BOKS_K-5.html' },
+  { slot: 6, id: 'komm-k6', triggerKey: 'Komm_score_K-6', file: 'Graphics/Komm_score_boks/Komm_BOKS_K-6.html' },
 ];
 const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.filter(g => g.file !== null && !g.subOf).map(g => g.id);
 const DEFAULT_TICKER_SUB_ORDER = ['live-boks', 'breaking', 'ticker-breaking', 'score-breaking', 'ticker', 'score'];
@@ -2041,6 +2045,20 @@ function renderGrafik() {
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#44cc88">S AF</span><span class="grafik-companion-url" title="${sAfUrl}">${sAfUrl}</span><button class="copy-btn icon-btn" data-copy="${sAfUrl}">⎘</button></div>
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff2244">L PÅ</span><span class="grafik-companion-url" title="${lPaUrl}">${lPaUrl}</span><button class="copy-btn icon-btn" data-copy="${lPaUrl}">⎘</button></div>
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff2244">L AF</span><span class="grafik-companion-url" title="${lAfUrl}">${lAfUrl}</span><button class="copy-btn icon-btn" data-copy="${lAfUrl}">⎘</button></div>`;
+  } else if (!isAfvikling && g && g.type === 'komm') {
+    const paUrl = `${origin}/api/trigger/${pid}?key=komm_alle&value=in`;
+    const afUrl = `${origin}/api/trigger/${pid}?key=komm_alle&value=out`;
+    companionRows = `
+      <div class="grafik-companion-row">
+        <span class="grafik-companion-lbl">ALLE PÅ</span>
+        <span class="grafik-companion-url" title="${paUrl}">${paUrl}</span>
+        <button class="copy-btn icon-btn" data-copy="${paUrl}">⎘</button>
+      </div>
+      <div class="grafik-companion-row">
+        <span class="grafik-companion-lbl">ALLE AF</span>
+        <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
+        <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
+      </div>`;
   } else if (!isAfvikling && g) {
     const paUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=in`;
     const afUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=out`;
@@ -4249,6 +4267,11 @@ function applyKampRow(row) {
     const newBoks = KOMM_BOKSE.find(k => k.slot === row.slot);
     if (isAnyKommOn && newBoks && (grafiktState[newBoks.triggerKey] || 'out') === 'out') {
       setGrafiktTrigger(newBoks.triggerKey, 'in');
+    }
+  } else if (!data.onAir && prev.onAir) {
+    const boks = KOMM_BOKSE.find(k => k.slot === row.slot);
+    if (boks && (grafiktState[boks.triggerKey] || 'out') !== 'out') {
+      setGrafiktTrigger(boks.triggerKey, 'out');
     }
   }
   rerender(i);

@@ -9,6 +9,7 @@ const ALLOWED_KEYS = [
   'lt_trigger',
   'lt_slot',
   'live_boks_trigger',
+  'komm_alle',
 ];
 
 const HEADERS = {
@@ -75,6 +76,23 @@ export default async function handler(req, res) {
   if (!value) return res.status(400).json({ error: 'value mangler' });
 
   try {
+    if (key === 'komm_alle') {
+      const allKeys = ['Komm_score_K-1','Komm_score_K-2','Komm_score_K-3',
+                       'Komm_score_K-4','Komm_score_K-5','Komm_score_K-6'];
+      if (value === 'out') {
+        await Promise.all(allKeys.map(k => upsert(id, k, 'out')));
+        return res.status(200).json({ ok: true, key, value, count: allKeys.length });
+      }
+      // value=in: kun kampe med on_air=true
+      const kampeRows = await sbGet(
+        `kampe?projekt_id=eq.${encodeURIComponent(id)}&on_air=eq.true&select=slot`
+      );
+      const activeSlots = kampeRows.map(r => r.slot).filter(s => s >= 1 && s <= 6);
+      if (activeSlots.length) {
+        await Promise.all(activeSlots.map(s => upsert(id, `Komm_score_K-${s}`, 'in')));
+      }
+      return res.status(200).json({ ok: true, key, value, count: activeSlots.length });
+    }
     if (key === 'lt_trigger' && value === 'in' && slot) {
       await upsert(id, 'lt_slot', String(slot));
     }
