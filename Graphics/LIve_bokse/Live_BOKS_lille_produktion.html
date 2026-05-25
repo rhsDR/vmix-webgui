@@ -2,8 +2,6 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -50,37 +48,41 @@ function runAnimationOUT(){if(_activeTl)_activeTl.kill();_spxVisible=false;
   _activeTl.to('#el16',{clipPath:'inset(50% 0% 50% 0%)',duration:0.20,ease:'power2.in'},0.683);
 }
 
-// ── SUPABASE INTEGRATION ──
-var _SB_URL='https://rxzxdcweqpbnvfkpnnrn.supabase.co';
-var _SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
-var _SB_HDR={'apikey':_SB_ANON,'Authorization':'Bearer '+_SB_ANON};
-var _pid=window.__PROJEKT_ID||new URLSearchParams(window.location.search).get('p')||'';
-var _prv=window.__IS_PREVIEW||new URLSearchParams(window.location.search).has('preview');
-var _trigKey='LIVE_bund'+(_prv?'_prv':'');
-document.addEventListener('DOMContentLoaded',function(){
-  if(!_pid)return;
-  fetch(_SB_URL+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+_pid+'&select=value',{headers:_SB_HDR})
-    .then(r=>r.json()).then(rows=>{if(rows[0]?.value==='in'&&!_spxVisible)runAnimationIN();});
-  var _lastBcTime={};
-  function _handleTrigger(key,value){
-    if(key===_trigKey){
-      if(value==='in'&&!_spxVisible)runAnimationIN();
-      if(value==='out'&&_spxVisible)runAnimationOUT();
+// ── SUPABASE INTEGRATION (kun standalone — ikke som custom grafik via overlay.html) ──
+if(typeof window.__PROJEKT_ID==='undefined'){
+  var _SB_URL='https://rxzxdcweqpbnvfkpnnrn.supabase.co';
+  var _SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
+  var _SB_HDR={'apikey':_SB_ANON,'Authorization':'Bearer '+_SB_ANON};
+  var _pid=new URLSearchParams(window.location.search).get('p')||'';
+  var _trigKey='LIVE_bund';
+  var _sbScript=document.createElement('script');
+  _sbScript.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+  _sbScript.onload=function(){
+    if(!_pid)return;
+    fetch(_SB_URL+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+_pid+'&select=value',{headers:_SB_HDR})
+      .then(r=>r.json()).then(rows=>{if(rows[0]?.value==='in'&&!_spxVisible)runAnimationIN();});
+    var _lastBcTime={};
+    function _handleTrigger(key,value){
+      if(key===_trigKey){
+        if(value==='in'&&!_spxVisible)runAnimationIN();
+        if(value==='out'&&_spxVisible)runAnimationOUT();
+      }
     }
-  }
-  var _sb=window.supabase.createClient(_SB_URL,_SB_ANON);
-  _sb.channel('triggers-'+_pid)
-    .on('broadcast',{event:'trigger'},function(msg){
-      var p=msg.payload;if(p.projekt_id!==_pid)return;
-      _lastBcTime[p.key]=Date.now();_handleTrigger(p.key,p.value);
-    }).subscribe();
-  _sb.channel('prod-'+_trigKey+'-'+_pid)
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(p){
-      if(p.new.projekt_id!==_pid)return;
-      if(_lastBcTime[p.new.key]&&Date.now()-_lastBcTime[p.new.key]<3000)return;
-      _handleTrigger(p.new.key,p.new.value);
-    }).subscribe();
-});
+    var _sb=window.supabase.createClient(_SB_URL,_SB_ANON);
+    _sb.channel('triggers-'+_pid)
+      .on('broadcast',{event:'trigger'},function(msg){
+        var p=msg.payload;if(p.projekt_id!==_pid)return;
+        _lastBcTime[p.key]=Date.now();_handleTrigger(p.key,p.value);
+      }).subscribe();
+    _sb.channel('prod-'+_trigKey+'-'+_pid)
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(p){
+        if(p.new.projekt_id!==_pid)return;
+        if(_lastBcTime[p.new.key]&&Date.now()-_lastBcTime[p.new.key]<3000)return;
+        _handleTrigger(p.new.key,p.new.value);
+      }).subscribe();
+  };
+  document.head.appendChild(_sbScript);
+}
 // ── END SUPABASE INTEGRATION ──
 window.SPXGCTemplateDefinition={"description":"Lower Third","DataFields":[]};
 </script>
