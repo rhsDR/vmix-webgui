@@ -100,6 +100,7 @@ function _autoOut(){
   }).catch(function(){});
 }
 function runAnimationIN(){_spxVisible=true;
+  gsap.set(['#el2','#el3','#el4','#el5','#el-cards'],{opacity:1});
   var tl=gsap.timeline();
   tl.fromTo('#el3',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.2);
   tl.fromTo('#el4',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.2);
