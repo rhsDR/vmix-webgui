@@ -25,7 +25,7 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
 .k-card{display:inline-block;width:5px;height:8px;border-radius:1px;flex-shrink:0;}
 .k-yc{background:#ffd200;}
 .k-rc{background:#e01f1f;}
-#el-overtime{position:absolute;left:1401px;top:222px;width:110px;height:92px;background:#00004b;color:#ffffff;font-size:26px;font-weight:700;font-family:'DRPublik-SemiBold',sans-serif;display:flex;align-items:center;justify-content:center;opacity:0;border-radius:0px;}
+#el-overtime{position:absolute;left:1419px;top:222px;width:100px;height:40px;background:#00004b;color:#ffffff;font-size:22px;font-weight:700;font-family:'DRPublik-SemiBold',sans-serif;display:flex;align-items:center;justify-content:center;clip-path:inset(0% 0% 0% 100%);border-radius:0px;}
 </style>
 </head>
 <body>
@@ -63,12 +63,12 @@ function _renderOvertime(statusShort,statusElapsed){
   var txt=base!==null?(base+'+'+(statusElapsed-base)):'';
   if(shouldShow&&!_overtimeVisible){
     el.textContent=txt;
-    gsap.fromTo(el,{x:-20,opacity:0},{x:0,opacity:1,duration:0.4,ease:'power2.out'});
+    gsap.fromTo(el,{clipPath:'inset(0% 0% 0% 100%)'},{clipPath:'inset(0% 0% 0% 0%)',duration:0.4,ease:'power2.out'});
     _overtimeVisible=true;
   }else if(shouldShow&&_overtimeVisible){
     if(el.textContent!==txt)el.textContent=txt;
   }else if(!shouldShow&&_overtimeVisible){
-    gsap.to(el,{x:-20,opacity:0,duration:0.3,ease:'power2.in',onComplete:function(){el.textContent='';}});
+    gsap.to(el,{clipPath:'inset(0% 0% 0% 100%)',duration:0.3,ease:'power2.in',onComplete:function(){el.textContent='';}});
     _overtimeVisible=false;
   }
 }
@@ -123,7 +123,7 @@ function _autoOut(){
 }
 function runAnimationIN(){_spxVisible=true;
   gsap.set(['#el2','#el3','#el4','#el5','#el-cards'],{opacity:1});
-  gsap.set('#el-overtime',{x:0,opacity:0});
+  gsap.set('#el-overtime',{clipPath:'inset(0% 0% 0% 100%)'});
   _overtimeVisible=false;
   var tl=gsap.timeline();
   tl.fromTo('#el3',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.2);
@@ -135,7 +135,7 @@ function runAnimationIN(){_spxVisible=true;
 }
 function runAnimationOUT(){_spxVisible=false;
   _stopCycle();
-  if(_overtimeVisible){gsap.to('#el-overtime',{x:-20,opacity:0,duration:0.30,ease:'power2.in'});_overtimeVisible=false;}
+  if(_overtimeVisible){gsap.to('#el-overtime',{clipPath:'inset(0% 0% 0% 100%)',duration:0.30,ease:'power2.in'});_overtimeVisible=false;}
   var tl=gsap.timeline();
   tl.to('#el3',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
   tl.to('#el4',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
