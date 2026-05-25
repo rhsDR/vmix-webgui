@@ -63,12 +63,12 @@ function _renderOvertime(statusShort,statusElapsed){
   var txt=base!==null?(base+'+'+(statusElapsed-base)):'';
   if(shouldShow&&!_overtimeVisible){
     el.textContent=txt;
-    gsap.fromTo(el,{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.4,ease:'power2.out'});
+    gsap.fromTo(el,{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.8,ease:'power2.out'});
     _overtimeVisible=true;
   }else if(shouldShow&&_overtimeVisible){
     if(el.textContent!==txt)el.textContent=txt;
   }else if(!shouldShow&&_overtimeVisible){
-    gsap.to(el,{clipPath:'inset(50% 0% 50% 0%)',duration:0.3,ease:'power2.in',onComplete:function(){el.textContent='';}});
+    gsap.to(el,{clipPath:'inset(50% 0% 50% 0%)',duration:0.6,ease:'power2.in',onComplete:function(){el.textContent='';}});
     _overtimeVisible=false;
   }
 }
@@ -135,7 +135,7 @@ function runAnimationIN(){_spxVisible=true;
 }
 function runAnimationOUT(){_spxVisible=false;
   _stopCycle();
-  if(_overtimeVisible){gsap.to('#el-overtime',{clipPath:'inset(50% 0% 50% 0%)',duration:0.30,ease:'power2.in'});_overtimeVisible=false;}
+  if(_overtimeVisible){gsap.to('#el-overtime',{clipPath:'inset(50% 0% 50% 0%)',duration:0.60,ease:'power2.in'});_overtimeVisible=false;}
   var tl=gsap.timeline();
   tl.to('#el3',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
   tl.to('#el4',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
