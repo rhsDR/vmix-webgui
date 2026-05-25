@@ -1,9 +1,10 @@
-import { SB_URL, SB_ANON } from '../_supabase.js';
+import { SB_URL, SB_ANON, SB_SERVICE_ROLE } from '../_supabase.js';
 
 function sbBroadcastRest(pid, key, value, extra) {
+  const token = SB_SERVICE_ROLE || SB_ANON;
   fetch(`${SB_URL}/realtime/v1/api/broadcast`, {
     method: 'POST',
-    headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Content-Type': 'application/json' },
+    headers: { 'apikey': token, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: JSON.stringify({ messages: [{ topic: 'realtime:triggers-' + pid, event: 'trigger',
       payload: Object.assign({ key, value, projekt_id: pid }, extra || {}) }] })
   }).catch(() => {});
