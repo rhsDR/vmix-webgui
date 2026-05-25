@@ -45,7 +45,6 @@ var _komm='',_lok='',_cycleState='komm',_cycleTimer=null;
 var _spxVisible=false;
 var _prevCards={g1:0,r1:0,g2:0,r2:0};
 function _applyKampRow(row){
-  _renderCards(row.hold1_gul||0,row.hold1_rod||0,row.hold2_gul||0,row.hold2_rod||0);
   _komm=row.kommentator||'';_lok=row.lokation||'';
   document.getElementById('el5').innerHTML=
     (row.hold1_kort||'')+'&ensp;<span style="color:#ffd200">'+(row.hold1_score||0)+'</span>'+
@@ -129,7 +128,7 @@ var _trigKey='Komm_score_K-1'+(_prv?'_prv':'');
 document.addEventListener('DOMContentLoaded',function(){
   if(!_pid)return;
   fetch(_SB_URL+'/rest/v1/kampe?slot=eq.'+_slot+'&projekt_id=eq.'+_pid+
-        '&select=hold1_kort,hold2_kort,hold1_score,hold2_score,kommentator,lokation,on_air,hold1_gul,hold1_rod,hold2_gul,hold2_rod',
+        '&select=hold1_kort,hold2_kort,hold1_score,hold2_score,kommentator,lokation,on_air',
         {headers:_SB_HDR})
     .then(function(r){return r.json();})
     .then(function(rows){if(rows[0])_applyKampRow(rows[0]);});
@@ -149,6 +148,11 @@ document.addEventListener('DOMContentLoaded',function(){
       if(p.new.projekt_id!==_pid)return;
       _applyKampRow(p.new);
       if(!p.new.on_air)_autoOut();
+    }).subscribe();
+  _sb.channel('triggers-'+_pid)
+    .on('broadcast',{event:'cards'},function(msg){
+      var p=msg.payload;
+      if(p&&p.slot===_slot) _renderCards(p.g1||0,p.r1||0,p.g2||0,p.r2||0);
     }).subscribe();
 });
 </script>
