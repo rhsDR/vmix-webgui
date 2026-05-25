@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded',function(){
     }).subscribe();
   // Content: hent on-air tickers og byg scrolltekst
   function _loadContent(){
-    fetch(_SB_URL+'/rest/v1/tickers?on_air=eq.true&projekt_id=eq.'+_pid+'&order=slot&select=tekst,overskrift',{headers:_SB_HDR})
+    fetch(_SB_URL+'/rest/v1/tickers?on_air=eq.true&breaking=eq.false&projekt_id=eq.'+_pid+'&order=slot&select=tekst,overskrift',{headers:_SB_HDR})
       .then(function(r){return r.json();})
       .then(function(rows){
         var SEP='<span style="margin:0 40px">•</span>';
