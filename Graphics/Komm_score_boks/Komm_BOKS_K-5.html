@@ -164,9 +164,11 @@ document.addEventListener('DOMContentLoaded',function(){
     .then(function(r){return r.json();})
     .then(function(rows){if(rows[0]?.value==='in'&&!_spxVisible)runAnimationIN();});
   var _sb=window.supabase.createClient(_SB_URL,_SB_ANON);
+  var _lastBcTime=0;
   _sb.channel('prod-'+_trigKey+'-'+_pid)
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(p){
       if(p.new.projekt_id!==_pid||p.new.key!==_trigKey)return;
+      if(Date.now()-_lastBcTime<3000)return;
       if(p.new.value==='in'&&!_spxVisible)runAnimationIN();
       if(p.new.value==='out'&&_spxVisible)runAnimationOUT();
     }).subscribe();
@@ -178,6 +180,13 @@ document.addEventListener('DOMContentLoaded',function(){
       if(!p.new.on_air)_autoOut();
     }).subscribe();
   _sb.channel('triggers-'+_pid)
+    .on('broadcast',{event:'trigger'},function(msg){
+      var p=msg.payload;
+      if(!p||p.key!==_trigKey)return;
+      _lastBcTime=Date.now();
+      if(p.value==='in'&&!_spxVisible)runAnimationIN();
+      if(p.value==='out'&&_spxVisible)runAnimationOUT();
+    })
     .on('broadcast',{event:'cards'},function(msg){
       var p=msg.payload;
       if(p&&p.slot===_slot) _renderCards(p.g1||0,p.r1||0,p.g2||0,p.r2||0);

@@ -201,6 +201,23 @@
     applyOrder(DEFAULT_ORDER);
     pollLagOrder();
     loadCustomGrafik();
+
+    // Broadcast fast-path for grafik-filer der kun bruger polling (ingen supabase-lib)
+    // Når trigger-broadcast ankommer, kickes pollTrigger() i iframe med det samme
+    // fremfor at vente op til 2s på næste poll-iteration.
+    if (pid) {
+      const _sbKick = window.supabase.createClient(SB_URL, SB_ANON);
+      _sbKick.channel('overlay-bc-kick-' + pid)
+        .on('broadcast', { event: 'trigger' }, function(msg) {
+          const p = msg.payload;
+          if (!p || p.projekt_id !== pid) return;
+          if (p.key === 'lt_trigger' || p.key === 'lt_slot') {
+            try { document.getElementById('lower-third-frame')?.contentWindow?.pollTrigger?.(); } catch {}
+          } else if (p.key === 'lineup_trigger') {
+            try { document.getElementById('opstilling-frame')?.contentWindow?.pollTrigger?.(); } catch {}
+          }
+        }).subscribe();
+    }
   </script>
 </body>
 </html>

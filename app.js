@@ -93,6 +93,8 @@ const BROADCAST_TRIGGER_KEYS = new Set([
   'ticker_ovl_trigger','breaking_trigger','score_breaking_trigger','score_trigger',
   'live_boks_trigger','lt_trigger','lt_slot',
   'stilling_trigger','lineup_trigger','credits_trigger',
+  'Komm_score_K-1','Komm_score_K-2','Komm_score_K-3',
+  'Komm_score_K-4','Komm_score_K-5','Komm_score_K-6',
 ]);
 
 let _bcChannel   = null;
