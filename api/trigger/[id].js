@@ -51,6 +51,18 @@ export default async function handler(req, res) {
       if (!macro) return res.status(404).json({ error: 'Makro ikke fundet' });
       for (const h of macro.handlinger || []) {
         if (h.key === 'wait') { await new Promise(r => setTimeout(r, parseFloat(h.value) * 1000)); continue; }
+        if (h.key === 'alle_af') {
+          const offKeys = [
+            'lt_trigger','ticker_ovl_trigger','breaking_trigger',
+            'score_trigger','score_breaking_trigger','live_boks_trigger',
+            'stilling_trigger','lineup_trigger','credits_trigger',
+          ];
+          await Promise.all([
+            ...offKeys.map(k => upsert(id, k, 'out')),
+            upsert(id, 'lt_slot', ''),
+          ]);
+          continue;
+        }
         if (h.key === 'lt_trigger') {
           const raw = slotOverride || (h.value === 'vmixcall' ? 'v' + (h.slot || '') : (h.slot || ''));
           const isVmix = raw.startsWith('v');
