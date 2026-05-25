@@ -1390,7 +1390,7 @@ async function fireMakro(id, slotOverride = '') {
     for (const h of m.handlinger) {
       if (h.key === 'wait') { await new Promise(r => setTimeout(r, parseFloat(h.value) * 1000)); continue; }
       if (h.key === 'alle_af') {
-        const allKeys = [...OVERLAY_GRAPHICS.map(og => og.triggerKey).filter(Boolean), 'score_breaking_trigger', 'LIVE_bund'];
+        const allKeys = [...OVERLAY_GRAPHICS.map(og => og.triggerKey).filter(Boolean), 'score_breaking_trigger'];
         const customKeys = customGrafik.map(g => g.trigger_key);
         OVERLAY_GRAPHICS.forEach(og => { grafiktState[og.triggerKey] = 'out'; });
         grafiktState['score_breaking_trigger'] = 'out';

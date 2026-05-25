@@ -38,15 +38,16 @@ function _updateContent(data){
 }
 function runTemplateUpdate(data){_updateContent(data);function _apply(){_prefetchAndPlay(function(){setTimeout(runAnimationIN,50);});}if(_spxVisible){runAnimationOUT();setTimeout(_apply,983);}else{_apply();}}
 window.onSpxUpdate=function(data){_updateContent(data);};
-function runAnimationIN(){_spxVisible=true;
-  var tl=gsap.timeline();
-  tl.fromTo('#el15',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.401);
-  tl.fromTo('#el16',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.401);
+var _activeTl=null;
+function runAnimationIN(){if(_activeTl)_activeTl.kill();_spxVisible=true;
+  _activeTl=gsap.timeline();
+  _activeTl.fromTo('#el15',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.401);
+  _activeTl.fromTo('#el16',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.401);
 }
-function runAnimationOUT(){_spxVisible=false;
-  var tl=gsap.timeline();
-  tl.to('#el15',{clipPath:'inset(50% 0% 50% 0%)',duration:0.20,ease:'power2.in'},0.683);
-  tl.to('#el16',{clipPath:'inset(50% 0% 50% 0%)',duration:0.20,ease:'power2.in'},0.683);
+function runAnimationOUT(){if(_activeTl)_activeTl.kill();_spxVisible=false;
+  _activeTl=gsap.timeline();
+  _activeTl.to('#el15',{clipPath:'inset(50% 0% 50% 0%)',duration:0.20,ease:'power2.in'},0.683);
+  _activeTl.to('#el16',{clipPath:'inset(50% 0% 50% 0%)',duration:0.20,ease:'power2.in'},0.683);
 }
 
 // ── SUPABASE INTEGRATION ──
