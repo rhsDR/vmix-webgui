@@ -1500,6 +1500,11 @@ function renderCredits() {
     const frame = document.getElementById('previewFrame');
     frame.src = 'credits.html?preview=1&p=' + aktivProjektId + '&t=' + Date.now();
     modal.style.display = 'flex';
+    requestAnimationFrame(() => {
+      const inner = modal.querySelector('.preview-modal-inner');
+      const scale = inner.offsetWidth / 1920;
+      frame.style.cssText = `width:1920px;height:1080px;border:none;transform:scale(${scale});transform-origin:top left;`;
+    });
   });
 
   // Two columns
