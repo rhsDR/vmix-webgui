@@ -135,10 +135,11 @@ async function sbPatch(path, body) {
 async function sbUpsert(table, body) {
   if (table === 'settings' && body.key && BROADCAST_TRIGGER_KEYS.has(body.key))
     sbBroadcast(body.key, body.value, body.slot ? { slot: body.slot } : undefined);
+  const { slot: _bcSlot, ...sbBody } = body;
   const res = await fetch(SB_URL + '/rest/v1/' + table, {
     method: 'POST',
     headers: { ...SB_HEADERS_MINIMAL, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify(body)
+    body: JSON.stringify(sbBody)
   });
   if (!res.ok) throw new Error('HTTP ' + res.status);
 }
