@@ -117,6 +117,7 @@ function sbBroadcast(key, value, extra) {
       payload: { key, value, projekt_id: aktivProjektId, ...(extra || {}) } });
   } catch { /* non-critical */ }
 }
+if (aktivProjektId) _ensureBcChannel(aktivProjektId);
 
 async function sbGet(path) {
   const res = await fetch(SB_URL + '/rest/v1/' + path, { headers: SB_HEADERS });
@@ -132,14 +133,14 @@ async function sbPatch(path, body) {
 }
 
 async function sbUpsert(table, body) {
+  if (table === 'settings' && body.key && BROADCAST_TRIGGER_KEYS.has(body.key))
+    sbBroadcast(body.key, body.value, body.slot ? { slot: body.slot } : undefined);
   const res = await fetch(SB_URL + '/rest/v1/' + table, {
     method: 'POST',
     headers: { ...SB_HEADERS_MINIMAL, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify(body)
   });
   if (!res.ok) throw new Error('HTTP ' + res.status);
-  if (table === 'settings' && body.key && BROADCAST_TRIGGER_KEYS.has(body.key))
-    sbBroadcast(body.key, body.value, body.slot ? { slot: body.slot } : undefined);
 }
 
 async function sbDelete(path) {
