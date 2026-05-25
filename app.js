@@ -1290,6 +1290,11 @@ const OVERLAY_GRAPHICS = [
   { id: 'stilling',    label: 'Stilling',         file: 'stilling.html',       triggerKey: 'stilling_trigger',   type: 'simple',  color: '#44cc88' },
   { id: 'opstilling',  label: 'Opstilling',       file: 'opstilling.html',     triggerKey: 'lineup_trigger',     type: 'lineup',  color: '#ff8833' },
   { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits', color: '#ffcc44' },
+  { id: 'komm',        label: 'Komm Boks',        file: null,                  triggerKey: null,                 type: 'komm',    color: '#4a9eff' },
+];
+const KOMM_BOKSE = [
+  { slot: 1, id: 'komm-k1', triggerKey: 'Komm_score_K-1', file: 'Graphics/Komm_score_boks/Komm_BOKS_K-1.html' },
+  // K-2 … K-6 tilføjes løbende
 ];
 const DEFAULT_LAG_ORDER = OVERLAY_GRAPHICS.filter(g => g.file !== null && !g.subOf).map(g => g.id);
 const DEFAULT_TICKER_SUB_ORDER = ['live-boks', 'breaking', 'ticker-breaking', 'score-breaking', 'ticker', 'score'];
@@ -1414,7 +1419,8 @@ async function fireMakro(id, slotOverride = '') {
 
 async function refreshGrafiktState() {
   const customKeys = customGrafik.map(g => g.trigger_key);
-  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey), ...customKeys, 'lt_slot', 'score_breaking_trigger', 'ticker_lag_order'].join(',');
+  const kommKeys = KOMM_BOKSE.map(k => k.triggerKey);
+  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey).filter(Boolean), ...customKeys, ...kommKeys, 'lt_slot', 'score_breaking_trigger', 'ticker_lag_order'].join(',');
   try {
     const rows = await sbGet('settings?select=key,value&key=in.(' + keys + ')&projekt_id=eq.' + aktivProjektId);
     rows.forEach(r => {
@@ -1858,6 +1864,29 @@ function renderGrafik() {
     }
     contentHTML = matchRows;
 
+  } else if (g && g.type === 'komm') {
+    const anyOn     = KOMM_BOKSE.some(k => (grafiktState[k.triggerKey] || 'out') !== 'out');
+    const anyActive = KOMM_BOKSE.some(k => kampe[k.slot - 1]?.onAir === true);
+    const rows = KOMM_BOKSE.map(k => {
+      const kamp     = kampe[k.slot - 1];
+      const isOn     = (grafiktState[k.triggerKey] || 'out') !== 'out';
+      const isActive = kamp?.onAir === true;
+      const matchTxt = (kamp && kamp.hold1Kort && kamp.hold2Kort)
+        ? esc(kamp.hold1Kort) + ' vs ' + esc(kamp.hold2Kort)
+        : '—';
+      return `<div class="grafik-block${isOn ? ' active' : ''}" style="--g-color:${g.color};opacity:${isActive ? 1 : 0.4}">
+        <div class="grafik-block-info">
+          <span class="grafik-block-name">K-${k.slot} &nbsp; ${matchTxt}</span>
+          ${isOn     ? `<span class="grafik-block-sub" style="color:var(--g-color)">● LIVE</span>`
+           : isActive ? `<span class="grafik-block-sub" style="color:#555">ON AIR</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    contentHTML = `${rows}
+      <div class="grafik-block-actions" style="margin-top:8px;justify-content:flex-end;gap:8px;">
+        <button class="grafik-btn-out komm-alle-af-btn"${!anyOn ? ' disabled' : ''}>&lt; ALLE AF</button>
+        <button class="grafik-btn-in komm-alle-paa-btn"${!anyActive ? ' disabled' : ''}>▶ ALLE PÅ</button>
+      </div>`;
   }
 
   if (isAfvikling) {
@@ -2261,6 +2290,14 @@ function renderGrafik() {
       if (btn.disabled) return;
       setGrafiktTrigger(btn.dataset.trig, btn.dataset.val);
     }));
+
+  container.querySelector('.komm-alle-paa-btn')?.addEventListener('click', async () => {
+    const targets = KOMM_BOKSE.filter(k => kampe[k.slot - 1]?.onAir === true);
+    for (const k of targets) await setGrafiktTrigger(k.triggerKey, 'in');
+  });
+  container.querySelector('.komm-alle-af-btn')?.addEventListener('click', async () => {
+    for (const k of KOMM_BOKSE) await setGrafiktTrigger(k.triggerKey, 'out');
+  });
 
   container.querySelectorAll('.grafik-lu-btn').forEach(btn =>
     btn.addEventListener('click', () => sendLineupSide(btn.dataset.matchid, btn.dataset.side)));
@@ -4190,6 +4227,14 @@ function applyKampRow(row) {
   }
   const enetChanged = prev.enetpulseId !== data.enetpulseId;
   kampe[i] = merged;
+  // Auto-trigger komm-boks IN hvis en kamp netop gik on_air og mindst én anden boks er ON
+  if (data.onAir && !prev.onAir) {
+    const isAnyKommOn = KOMM_BOKSE.some(k => (grafiktState[k.triggerKey] || 'out') !== 'out');
+    const newBoks = KOMM_BOKSE.find(k => k.slot === row.slot);
+    if (isAnyKommOn && newBoks && (grafiktState[newBoks.triggerKey] || 'out') === 'out') {
+      setGrafiktTrigger(newBoks.triggerKey, 'in');
+    }
+  }
   rerender(i);
   if (enetChanged) fetchLiveMatches();
 }
@@ -4263,7 +4308,7 @@ sbClient.channel('db-changes')
           refreshCredits();
         }
         // Opdater grafik-tab hvis det er åbent og en trigger-key, lt_slot eller score_breaking_trigger ændrer sig
-        if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot' || p.new.key === 'score_breaking_trigger' || customGrafik.some(g => g.trigger_key === p.new.key)) {
+        if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot' || p.new.key === 'score_breaking_trigger' || customGrafik.some(g => g.trigger_key === p.new.key) || KOMM_BOKSE.some(k => k.triggerKey === p.new.key)) {
           grafiktState[p.new.key] = p.new.value;
           if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
         }
