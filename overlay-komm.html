@@ -25,10 +25,13 @@
   <iframe id="komm-k5-frame" allowtransparency="true" src=""></iframe>
   <iframe id="komm-k6-frame" allowtransparency="true" src=""></iframe>
   <script>
-    const _pid = new URLSearchParams(window.location.search).get('p') || '';
+    const _params = new URLSearchParams(window.location.search);
+    const _pid    = _params.get('p') || '';
+    const _testOt = _params.get('test_ot') || '';
     [1,2,3,4,5,6].forEach(function(n){
-      document.getElementById('komm-k'+n+'-frame').src =
-        'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid;
+      let src = 'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid;
+      if (_testOt) src += '&test_ot=' + encodeURIComponent(_testOt);
+      document.getElementById('komm-k'+n+'-frame').src = src;
     });
   </script>
 </body>

@@ -153,13 +153,13 @@ var _prv=window.__IS_PREVIEW||new URLSearchParams(window.location.search).has('p
 var _testOt=new URLSearchParams(window.location.search).get('test_ot')||'';
 var _trigKey='Komm_score_K-2'+(_prv?'_prv':'');
 document.addEventListener('DOMContentLoaded',function(){
+  if(_testOt){var _tp=_testOt.split('-');runAnimationIN();_renderOvertime(_tp[0]||'',parseInt(_tp[1]||'0',10));return;}
   if(!_pid)return;
   fetch(_SB_URL+'/rest/v1/kampe?slot=eq.'+_slot+'&projekt_id=eq.'+_pid+
         '&select=hold1_kort,hold2_kort,hold1_score,hold2_score,kommentator,lokation,on_air,status_short,status_elapsed',
         {headers:_SB_HDR})
     .then(function(r){return r.json();})
     .then(function(rows){if(rows[0])_applyKampRow(rows[0]);});
-  if(_testOt){var _tp=_testOt.split('-');_spxVisible=true;_renderOvertime(_tp[0]||'',parseInt(_tp[1]||'0',10));}
   fetch(_SB_URL+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+_pid+'&select=value',{headers:_SB_HDR})
     .then(function(r){return r.json();})
     .then(function(rows){if(rows[0]?.value==='in'&&!_spxVisible)runAnimationIN();});
