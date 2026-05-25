@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded',function(){
         if(!items.length)return;
         var full=items.join(SEP);
         var w=document.getElementById('el19');
-        if(w&&w._tickerUpdate)w._tickerUpdate(full+SEP+full);
+        if(w&&w._tickerUpdate)w._tickerUpdate(full+SEP+full+SEP);
       }).catch(function(){});
   }
   _loadContent();
