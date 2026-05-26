@@ -150,6 +150,10 @@ async function pollTrigger() {
   setTimeout(pollTrigger, 2000);
 }
 pollTrigger();
+if (_pid) {
+  fetch(SB_URL + '/rest/v1/subs?select=slot&limit=1' + _pf, { headers: SB_HDR }).catch(() => {});
+  fetch(SB_URL + '/rest/v1/vmix_calls?select=slot&limit=1' + _pf, { headers: SB_HDR }).catch(() => {});
+}
 window.addEventListener('message', function(evt) {
   if (!evt.data || evt.data.type !== 'sbTrigger' || evt.data.key !== 'lt_trigger') return;
   var v = evt.data.value; var s = String(evt.data.slot || '');
