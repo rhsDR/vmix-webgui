@@ -147,7 +147,7 @@ async function pollTrigger() {
       return;
     }
   } catch(e) { console.error('LT poll fejl:', e); }
-  setTimeout(pollTrigger, 2000);
+  setTimeout(pollTrigger, 500);
 }
 pollTrigger();
 if (_pid) {
@@ -165,8 +165,24 @@ window.addEventListener('message', function(evt) {
     _animating = true;
     runAnimationOUT(false);
     setTimeout(function() { _currentSlot = null; _currentTrigger = null; _animating = false; setTimeout(pollTrigger, 2000); }, 2600);
-  } else if ((v === 'in' || v === 'update') && s) {
-    if (v === 'in' && _spxVisible && s === _currentSlot && _currentTrigger === 'in') { console.log('[LT postMsg] DEDUP in'); return; }
+  } else if (v === 'update' && s) {
+    if (!_spxVisible || _currentTrigger === 'vmixcall') { _animating = false; return; }
+    _animating = true;
+    console.log('[LT postMsg] fetch subs (update) slot=' + s);
+    fetch(SB_URL + '/rest/v1/subs?slot=eq.' + s + '&select=navn,titel' + _pf, { headers: SB_HDR })
+      .then(function(r) { return r.json(); })
+      .then(function(subs) {
+        console.log('[LT postMsg] subs fetched +' + Math.round(performance.now()-_t0) + 'ms sub=' + (subs[0]?.navn||'?'));
+        var sub = subs[0];
+        if (!sub) { _animating = false; return; }
+        _currentSlot = s; _currentTrigger = 'in';
+        _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
+        _csPlay('el5', 0.24, 0,    'irregular',  3, 1);
+        _csPlay('el6', 0.24, 0.08, 'wipe-step',  3, 1);
+        setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 900);
+      }).catch(function() { _animating = false; });
+  } else if (v === 'in' && s) {
+    if (_spxVisible && s === _currentSlot && _currentTrigger === 'in') { console.log('[LT postMsg] DEDUP in'); return; }
     _animating = true;
     console.log('[LT postMsg] fetch subs slot=' + s);
     fetch(SB_URL + '/rest/v1/subs?slot=eq.' + s + '&select=navn,titel' + _pf, { headers: SB_HDR })
