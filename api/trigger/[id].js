@@ -105,12 +105,11 @@ export default async function handler(req, res) {
           const isVmix = raw.startsWith('v');
           const slotNum = isVmix ? raw.slice(1) : raw;
           const triggerVal = isVmix ? 'vmixcall' : (raw ? 'in' : h.value);
-          const writes = [
+          if (slotNum) await upsert(id, 'lt_slot', slotNum);
+          await Promise.all([
             sbBroadcastRest(id, 'lt_trigger', triggerVal, slotNum ? { slot: slotNum } : undefined),
             upsert(id, 'lt_trigger', triggerVal),
-          ];
-          if (slotNum) writes.push(upsert(id, 'lt_slot', slotNum));
-          await Promise.all(writes);
+          ]);
           continue;
         }
         await Promise.all([sbBroadcastRest(id, h.key, h.value), upsert(id, h.key, h.value)]);
@@ -152,10 +151,8 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, key, value, count: activeSlots.length });
     }
     if (key === 'lt_trigger') {
-      const bcPromise = sbBroadcastRest(id, 'lt_trigger', value, slot ? { slot } : undefined);
-      const writes = [bcPromise, upsert(id, key, value)];
-      if ((value === 'in' || value === 'vmixcall') && slot) writes.push(upsert(id, 'lt_slot', String(slot)));
-      const [bc] = await Promise.all(writes);
+      if ((value === 'in' || value === 'vmixcall') && slot) await upsert(id, 'lt_slot', String(slot));
+      const [bc] = await Promise.all([sbBroadcastRest(id, 'lt_trigger', value, slot ? { slot } : undefined), upsert(id, key, value)]);
       return res.status(200).json({ ok: true, key, value, slot: slot || undefined, _bc: bc });
     }
     const [bc] = await Promise.all([sbBroadcastRest(id, key, value), upsert(id, key, value)]);
