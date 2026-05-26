@@ -77,7 +77,7 @@ async function pollTrigger() {
     ).then(r => r.json());
     const trigger = rows.find(r => r.key === 'lt_trigger' + _sfx)?.value;
     const slot    = rows.find(r => r.key === 'lt_slot'    + _sfx)?.value;
-    if (trigger && trigger !== 'out') console.log('[LT poll] trigger=' + trigger + ' slot=' + slot + ' visible=' + _spxVisible);
+
 
     if (trigger === 'update' && _spxVisible && slot && slot !== _currentSlot && _currentTrigger !== 'vmixcall') {
       // Kun tekst-skift (sub→sub) — ingen OUT/IN animation
@@ -172,20 +172,20 @@ if (_pid) {
           if (_ws && _ws.readyState === 1)
             _ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(++_ref) }));
         }, 25000);
-        console.log('[LT ws] forbundet');
+
       };
       _ws.onmessage = function(e) {
         try {
           var msg = JSON.parse(e.data);
           if (!msg) return;
-          console.log('[LT ws raw]', JSON.stringify(msg).slice(0, 300));
+
           if (msg.event === 'postgres_changes' && msg.payload && msg.payload.data) {
             var rec = msg.payload.data.record;
             if (!rec || rec.projekt_id !== _pid) return;
             if (rec.key === 'lt_slot') { _pgSlot = String(rec.value || ''); return; }
             if (rec.key === 'lt_trigger') {
               var pgS = _pgSlot || '';
-              console.log('[LT pg] lt_trigger value=' + rec.value + ' slot=' + pgS);
+
               window.dispatchEvent(new MessageEvent('message', {
                 data: { type: 'sbTrigger', key: 'lt_trigger', value: rec.value, slot: pgS }
               }));
@@ -199,7 +199,7 @@ if (_pid) {
             p = msg.payload;
           }
           if (!p || p.projekt_id !== _pid || p.key !== 'lt_trigger') return;
-          console.log('[LT ws] lt_trigger value=' + p.value + ' slot=' + (p.slot || ''));
+
           window.dispatchEvent(new MessageEvent('message', {
             data: { type: 'sbTrigger', key: 'lt_trigger', value: p.value, slot: p.slot || '' }
           }));
@@ -215,9 +215,7 @@ if (_pid) {
 window.addEventListener('message', function(evt) {
   if (!evt.data || evt.data.type !== 'sbTrigger' || evt.data.key !== 'lt_trigger') return;
   var v = evt.data.value; var s = String(evt.data.slot || '');
-  var _t0 = performance.now();
-  console.log('[LT postMsg] ' + v + ' slot=' + s + ' animating=' + _animating + ' visible=' + _spxVisible);
-  if (_animating) { console.log('[LT postMsg] DROPPED – animating'); return; }
+  if (_animating) return;
   if (v === 'out') {
     if (!_spxVisible) return;
     _animating = true;
@@ -226,11 +224,9 @@ window.addEventListener('message', function(evt) {
   } else if (v === 'update' && s) {
     if (!_spxVisible || _currentTrigger === 'vmixcall') { _animating = false; return; }
     _animating = true;
-    console.log('[LT postMsg] fetch subs (update) slot=' + s);
     fetch(SB_URL + '/rest/v1/subs?slot=eq.' + s + '&select=navn,titel' + _pf, { headers: SB_HDR })
       .then(function(r) { return r.json(); })
       .then(function(subs) {
-        console.log('[LT postMsg] subs fetched +' + Math.round(performance.now()-_t0) + 'ms sub=' + (subs[0]?.navn||'?'));
         var sub = subs[0];
         if (!sub) { _animating = false; return; }
         _currentSlot = s; _currentTrigger = 'in';
@@ -240,38 +236,34 @@ window.addEventListener('message', function(evt) {
         setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 900);
       }).catch(function() { _animating = false; });
   } else if (v === 'in' && s) {
-    if (_spxVisible && s === _currentSlot && _currentTrigger === 'in') { console.log('[LT postMsg] DEDUP in'); return; }
+    if (_spxVisible && s === _currentSlot && _currentTrigger === 'in') return;
     _animating = true;
-    console.log('[LT postMsg] fetch subs slot=' + s);
     fetch(SB_URL + '/rest/v1/subs?slot=eq.' + s + '&select=navn,titel' + _pf, { headers: SB_HDR })
       .then(function(r) { return r.json(); })
       .then(function(subs) {
-        console.log('[LT postMsg] subs fetched +' + Math.round(performance.now()-_t0) + 'ms sub=' + (subs[0]?.navn||'?'));
         var sub = subs[0];
         if (!sub) { _animating = false; return; }
         var doShow = function(skipLabel) {
           _currentSlot = s; _currentTrigger = 'in';
           _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
-          setTimeout(function() { console.log('[LT postMsg] runAnimationIN(sub) +' + Math.round(performance.now()-_t0) + 'ms'); runAnimationIN(skipLabel); }, 50);
+          setTimeout(function() { runAnimationIN(skipLabel); }, 50);
           setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 2700);
         };
         if (_spxVisible) { runAnimationOUT(false); setTimeout(function() { doShow(true); }, 2200); }
         else { doShow(false); }
       }).catch(function() { _animating = false; });
   } else if (v === 'vmixcall' && s) {
-    if (_spxVisible && s === _currentSlot && _currentTrigger === 'vmixcall') { console.log('[LT postMsg] DEDUP vmixcall'); return; }
+    if (_spxVisible && s === _currentSlot && _currentTrigger === 'vmixcall') return;
     _animating = true;
-    console.log('[LT postMsg] fetch vmix_calls slot=' + s);
     fetch(SB_URL + '/rest/v1/vmix_calls?slot=eq.' + s + '&select=navn,titel' + _pf, { headers: SB_HDR })
       .then(function(r) { return r.json(); })
       .then(function(calls) {
-        console.log('[LT postMsg] vmix_calls fetched +' + Math.round(performance.now()-_t0) + 'ms call=' + (calls[0]?.navn||'?'));
         var call = calls[0];
         if (!call) { _animating = false; return; }
         var doShow = function(skipLabel) {
           _currentSlot = s; _currentTrigger = 'vmixcall';
           _updateContent({ f0: call.titel || '', f1: call.navn || '', f2: 'SPORT', f3: 'venstre' });
-          setTimeout(function() { console.log('[LT postMsg] runAnimationIN(vmixcall) +' + Math.round(performance.now()-_t0) + 'ms'); runAnimationIN(skipLabel); }, 50);
+          setTimeout(function() { runAnimationIN(skipLabel); }, 50);
           setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 2700);
         };
         if (_spxVisible) { runAnimationOUT(false); setTimeout(function() { doShow(true); }, 2200); }

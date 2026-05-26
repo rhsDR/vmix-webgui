@@ -114,7 +114,6 @@
           const p = msg.payload;
           if (!p || p.projekt_id !== pid) return;
           if (p.key === 'lt_trigger') {
-            console.log('[OVL bc] lt_trigger value=' + p.value + ' slot=' + (p.slot||'') + ' t=' + Date.now());
             try {
               var ltFrame = document.getElementById('lower-third-frame');
               if (ltFrame && ltFrame.contentWindow) {
