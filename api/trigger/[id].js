@@ -1,15 +1,16 @@
 import { SB_URL, SB_ANON, SB_SERVICE_ROLE } from '../_supabase.js';
 
-function sbBroadcastRest(pid, key, value, extra) {
+async function sbBroadcastRest(pid, key, value, extra) {
   const token = SB_SERVICE_ROLE || SB_ANON;
-  console.log('[bc] token=', token === SB_ANON ? 'ANON' : 'SERVICE_ROLE', 'key=', key, 'value=', value);
-  fetch(`${SB_URL}/realtime/v1/api/broadcast`, {
-    method: 'POST',
-    headers: { 'apikey': token, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages: [{ topic: 'realtime:triggers-' + pid, event: 'trigger',
-      payload: Object.assign({ key, value, projekt_id: pid }, extra || {}) }] })
-  }).then(r => { if (!r.ok) console.error('[bc] HTTP', r.status, key); })
-    .catch(e => console.error('[bc] fejl', e));
+  try {
+    const r = await fetch(`${SB_URL}/realtime/v1/api/broadcast`, {
+      method: 'POST',
+      headers: { 'apikey': token, 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ topic: 'realtime:triggers-' + pid, event: 'trigger',
+        payload: Object.assign({ key, value, projekt_id: pid }, extra || {}) }] })
+    });
+    if (!r.ok) console.error('[bc] HTTP', r.status, key);
+  } catch (e) { console.error('[bc] fejl', e); }
 }
 
 const ALLOWED_KEYS = [
@@ -69,8 +70,8 @@ export default async function handler(req, res) {
             'score_trigger','score_breaking_trigger','live_boks_trigger',
             'lineup_trigger','credits_trigger','LIVE_bund',
           ];
-          offKeys.forEach(k => sbBroadcastRest(id, k, 'out'));
           await Promise.all([
+            ...offKeys.map(k => sbBroadcastRest(id, k, 'out')),
             ...offKeys.map(k => upsert(id, k, 'out')),
             upsert(id, 'lt_slot', ''),
           ]);
@@ -80,14 +81,18 @@ export default async function handler(req, res) {
           const kommKeys = ['Komm_score_K-1','Komm_score_K-2','Komm_score_K-3',
                             'Komm_score_K-4','Komm_score_K-5','Komm_score_K-6'];
           if (h.value === 'out') {
-            kommKeys.forEach(k => sbBroadcastRest(id, k, 'out'));
-            await Promise.all(kommKeys.map(k => upsert(id, k, 'out')));
+            await Promise.all([
+              ...kommKeys.map(k => sbBroadcastRest(id, k, 'out')),
+              ...kommKeys.map(k => upsert(id, k, 'out')),
+            ]);
           } else {
             const kampeRows = await sbGet(`kampe?projekt_id=eq.${encodeURIComponent(id)}&on_air=eq.true&select=slot`);
             const activeSlots = kampeRows.map(r => r.slot).filter(s => s >= 1 && s <= 6);
             if (activeSlots.length) {
-              activeSlots.forEach(s => sbBroadcastRest(id, `Komm_score_K-${s}`, 'in'));
-              await Promise.all(activeSlots.map(s => upsert(id, `Komm_score_K-${s}`, 'in')));
+              await Promise.all([
+                ...activeSlots.map(s => sbBroadcastRest(id, `Komm_score_K-${s}`, 'in')),
+                ...activeSlots.map(s => upsert(id, `Komm_score_K-${s}`, 'in')),
+              ]);
             }
           }
           continue;
@@ -97,13 +102,15 @@ export default async function handler(req, res) {
           const isVmix = raw.startsWith('v');
           const slotNum = isVmix ? raw.slice(1) : raw;
           const triggerVal = isVmix ? 'vmixcall' : (raw ? 'in' : h.value);
-          sbBroadcastRest(id, 'lt_trigger', triggerVal, slotNum ? { slot: slotNum } : undefined);
-          if (slotNum) await upsert(id, 'lt_slot', slotNum);
-          await upsert(id, 'lt_trigger', triggerVal);
+          const writes = [
+            sbBroadcastRest(id, 'lt_trigger', triggerVal, slotNum ? { slot: slotNum } : undefined),
+            upsert(id, 'lt_trigger', triggerVal),
+          ];
+          if (slotNum) writes.push(upsert(id, 'lt_slot', slotNum));
+          await Promise.all(writes);
           continue;
         }
-        sbBroadcastRest(id, h.key, h.value);
-        await upsert(id, h.key, h.value);
+        await Promise.all([sbBroadcastRest(id, h.key, h.value), upsert(id, h.key, h.value)]);
       }
       return res.status(200).json({ ok: true, fired: (macro.handlinger || []).length });
     } catch (err) {
@@ -123,29 +130,34 @@ export default async function handler(req, res) {
       const allKeys = ['Komm_score_K-1','Komm_score_K-2','Komm_score_K-3',
                        'Komm_score_K-4','Komm_score_K-5','Komm_score_K-6'];
       if (value === 'out') {
-        allKeys.forEach(k => sbBroadcastRest(id, k, 'out'));
-        await Promise.all(allKeys.map(k => upsert(id, k, 'out')));
+        await Promise.all([
+          ...allKeys.map(k => sbBroadcastRest(id, k, 'out')),
+          ...allKeys.map(k => upsert(id, k, 'out')),
+        ]);
         return res.status(200).json({ ok: true, key, value, count: allKeys.length });
       }
-      // value=in: kun kampe med on_air=true
       const kampeRows = await sbGet(
         `kampe?projekt_id=eq.${encodeURIComponent(id)}&on_air=eq.true&select=slot`
       );
       const activeSlots = kampeRows.map(r => r.slot).filter(s => s >= 1 && s <= 6);
       if (activeSlots.length) {
-        activeSlots.forEach(s => sbBroadcastRest(id, `Komm_score_K-${s}`, 'in'));
-        await Promise.all(activeSlots.map(s => upsert(id, `Komm_score_K-${s}`, 'in')));
+        await Promise.all([
+          ...activeSlots.map(s => sbBroadcastRest(id, `Komm_score_K-${s}`, 'in')),
+          ...activeSlots.map(s => upsert(id, `Komm_score_K-${s}`, 'in')),
+        ]);
       }
       return res.status(200).json({ ok: true, key, value, count: activeSlots.length });
     }
     if (key === 'lt_trigger') {
-      sbBroadcastRest(id, 'lt_trigger', value, slot ? { slot } : undefined);
-      if (value === 'in' && slot) await upsert(id, 'lt_slot', String(slot));
-      await upsert(id, key, value);
+      const writes = [
+        sbBroadcastRest(id, 'lt_trigger', value, slot ? { slot } : undefined),
+        upsert(id, key, value),
+      ];
+      if ((value === 'in' || value === 'vmixcall') && slot) writes.push(upsert(id, 'lt_slot', String(slot)));
+      await Promise.all(writes);
       return res.status(200).json({ ok: true, key, value, slot: slot || undefined });
     }
-    sbBroadcastRest(id, key, value);
-    await upsert(id, key, value);
+    await Promise.all([sbBroadcastRest(id, key, value), upsert(id, key, value)]);
     res.status(200).json({ ok: true, key, value, slot: slot || undefined });
   } catch (err) {
     res.status(502).json({ error: String(err.message) });
