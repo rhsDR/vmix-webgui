@@ -2,6 +2,7 @@ import { SB_URL, SB_ANON, SB_SERVICE_ROLE } from '../_supabase.js';
 
 async function sbBroadcastRest(pid, key, value, extra) {
   const token = SB_SERVICE_ROLE || SB_ANON;
+  const usingSR = !!SB_SERVICE_ROLE;
   try {
     const r = await fetch(`${SB_URL}/realtime/v1/api/broadcast`, {
       method: 'POST',
@@ -9,8 +10,10 @@ async function sbBroadcastRest(pid, key, value, extra) {
       body: JSON.stringify({ messages: [{ topic: 'realtime:triggers-' + pid, event: 'broadcast',
         payload: { type: 'broadcast', event: 'trigger', payload: Object.assign({ key, value, projekt_id: pid }, extra || {}) } }] })
     });
-    if (!r.ok) console.error('[bc] HTTP', r.status, key);
-  } catch (e) { console.error('[bc] fejl', e); }
+    const body = await r.text();
+    if (!r.ok) console.error('[bc] HTTP', r.status, key, body);
+    return { ok: r.ok, status: r.status, sr: usingSR, body: body.slice(0, 120) };
+  } catch (e) { console.error('[bc] fejl', e); return { ok: false, status: 0, sr: usingSR, body: String(e) }; }
 }
 
 const ALLOWED_KEYS = [
@@ -149,16 +152,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, key, value, count: activeSlots.length });
     }
     if (key === 'lt_trigger') {
-      const writes = [
-        sbBroadcastRest(id, 'lt_trigger', value, slot ? { slot } : undefined),
-        upsert(id, key, value),
-      ];
+      const bcPromise = sbBroadcastRest(id, 'lt_trigger', value, slot ? { slot } : undefined);
+      const writes = [bcPromise, upsert(id, key, value)];
       if ((value === 'in' || value === 'vmixcall') && slot) writes.push(upsert(id, 'lt_slot', String(slot)));
-      await Promise.all(writes);
-      return res.status(200).json({ ok: true, key, value, slot: slot || undefined });
+      const [bc] = await Promise.all(writes);
+      return res.status(200).json({ ok: true, key, value, slot: slot || undefined, _bc: bc });
     }
-    await Promise.all([sbBroadcastRest(id, key, value), upsert(id, key, value)]);
-    res.status(200).json({ ok: true, key, value, slot: slot || undefined });
+    const [bc] = await Promise.all([sbBroadcastRest(id, key, value), upsert(id, key, value)]);
+    res.status(200).json({ ok: true, key, value, slot: slot || undefined, _bc: bc });
   } catch (err) {
     res.status(502).json({ error: String(err.message) });
   }
