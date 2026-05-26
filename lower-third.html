@@ -154,6 +154,46 @@ if (_pid) {
   fetch(SB_URL + '/rest/v1/subs?select=slot&limit=1' + _pf, { headers: SB_HDR }).catch(() => {});
   fetch(SB_URL + '/rest/v1/vmix_calls?select=slot&limit=1' + _pf, { headers: SB_HDR }).catch(() => {});
 }
+// Direct Supabase Realtime WebSocket — virker uden overlay.html som mellemled
+(function() {
+  if (!_pid) return;
+  var _ws = null, _ref = 0, _hb = null;
+  function _wsConnect() {
+    try {
+      _ws = new WebSocket('wss://rxzxdcweqpbnvfkpnnrn.supabase.co/realtime/v1/websocket?apikey=' + SB_ANON + '&vsn=1.0.0');
+      _ws.onopen = function() {
+        _ws.send(JSON.stringify({ topic: 'realtime:triggers-' + _pid, event: 'phx_join',
+          payload: { config: { broadcast: { self: false } } }, ref: String(++_ref) }));
+        _hb = setInterval(function() {
+          if (_ws && _ws.readyState === 1)
+            _ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(++_ref) }));
+        }, 25000);
+        console.log('[LT ws] forbundet');
+      };
+      _ws.onmessage = function(e) {
+        try {
+          var msg = JSON.parse(e.data);
+          if (!msg) return;
+          var p = null;
+          if (msg.event === 'broadcast' && msg.payload) {
+            if (msg.payload.event === 'trigger' && msg.payload.payload) p = msg.payload.payload;
+          } else if (msg.event === 'trigger' && msg.payload) {
+            p = msg.payload;
+          }
+          if (!p || p.projekt_id !== _pid || p.key !== 'lt_trigger') return;
+          console.log('[LT ws] lt_trigger value=' + p.value + ' slot=' + (p.slot || ''));
+          window.dispatchEvent(new MessageEvent('message', {
+            data: { type: 'sbTrigger', key: 'lt_trigger', value: p.value, slot: p.slot || '' }
+          }));
+        } catch {}
+      };
+      _ws.onclose = function() { clearInterval(_hb); _hb = null; setTimeout(_wsConnect, 3000); };
+      _ws.onerror = function() { try { _ws.close(); } catch {} };
+    } catch {}
+  }
+  _wsConnect();
+})();
+
 window.addEventListener('message', function(evt) {
   if (!evt.data || evt.data.type !== 'sbTrigger' || evt.data.key !== 'lt_trigger') return;
   var v = evt.data.value; var s = String(evt.data.slot || '');
