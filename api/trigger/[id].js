@@ -52,6 +52,55 @@ async function upsert(pid, key, value) {
   if (!res.ok) throw new Error('Supabase fejl ' + res.status);
 }
 
+async function runStep(pid, h, slotOverride) {
+  if (h.key === 'alle_af') {
+    const offKeys = [
+      'lt_trigger','ticker_ovl_trigger','breaking_trigger',
+      'score_trigger','score_breaking_trigger','live_boks_trigger',
+      'lineup_trigger','credits_trigger','LIVE_bund',
+    ];
+    await Promise.all([
+      ...offKeys.map(k => sbBroadcastRest(pid, k, 'out')),
+      ...offKeys.map(k => upsert(pid, k, 'out')),
+      upsert(pid, 'lt_slot', ''),
+    ]);
+    return;
+  }
+  if (h.key === 'komm_alle') {
+    const kommKeys = ['Komm_score_K-1','Komm_score_K-2','Komm_score_K-3',
+                      'Komm_score_K-4','Komm_score_K-5','Komm_score_K-6'];
+    if (h.value === 'out') {
+      await Promise.all([
+        ...kommKeys.map(k => sbBroadcastRest(pid, k, 'out')),
+        ...kommKeys.map(k => upsert(pid, k, 'out')),
+      ]);
+    } else {
+      const kampeRows = await sbGet(`kampe?projekt_id=eq.${encodeURIComponent(pid)}&on_air=eq.true&select=slot`);
+      const activeSlots = kampeRows.map(r => r.slot).filter(s => s >= 1 && s <= 6);
+      if (activeSlots.length) {
+        await Promise.all([
+          ...activeSlots.map(s => sbBroadcastRest(pid, `Komm_score_K-${s}`, 'in')),
+          ...activeSlots.map(s => upsert(pid, `Komm_score_K-${s}`, 'in')),
+        ]);
+      }
+    }
+    return;
+  }
+  if (h.key === 'lt_trigger') {
+    const raw = slotOverride || (h.value === 'vmixcall' ? 'v' + (h.slot || '') : (h.slot || ''));
+    const isVmix = raw.startsWith('v');
+    const slotNum = isVmix ? raw.slice(1) : raw;
+    const triggerVal = isVmix ? 'vmixcall' : (raw ? 'in' : h.value);
+    if (slotNum) await upsert(pid, 'lt_slot', slotNum);
+    await Promise.all([
+      sbBroadcastRest(pid, 'lt_trigger', triggerVal, slotNum ? { slot: slotNum } : undefined),
+      upsert(pid, 'lt_trigger', triggerVal),
+    ]);
+    return;
+  }
+  await Promise.all([sbBroadcastRest(pid, h.key, h.value), upsert(pid, h.key, h.value)]);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -65,54 +114,21 @@ export default async function handler(req, res) {
       const rows = await sbGet(`projekt_makroer?id=eq.${encodeURIComponent(macroId)}&projekt_id=eq.${encodeURIComponent(id)}&limit=1`);
       const macro = rows[0];
       if (!macro) return res.status(404).json({ error: 'Makro ikke fundet' });
+      // Group consecutive non-wait steps into batches; each batch runs in parallel
+      const segments = [];
+      let batch = [];
       for (const h of macro.handlinger || []) {
-        if (h.key === 'wait') { await new Promise(r => setTimeout(r, parseFloat(h.value) * 1000)); continue; }
-        if (h.key === 'alle_af') {
-          const offKeys = [
-            'lt_trigger','ticker_ovl_trigger','breaking_trigger',
-            'score_trigger','score_breaking_trigger','live_boks_trigger',
-            'lineup_trigger','credits_trigger','LIVE_bund',
-          ];
-          await Promise.all([
-            ...offKeys.map(k => sbBroadcastRest(id, k, 'out')),
-            ...offKeys.map(k => upsert(id, k, 'out')),
-            upsert(id, 'lt_slot', ''),
-          ]);
-          continue;
+        if (h.key === 'wait') {
+          if (batch.length) { segments.push({ type: 'batch', steps: batch }); batch = []; }
+          segments.push({ type: 'wait', ms: Math.round(parseFloat(h.value || '0') * 1000) });
+        } else {
+          batch.push(h);
         }
-        if (h.key === 'komm_alle') {
-          const kommKeys = ['Komm_score_K-1','Komm_score_K-2','Komm_score_K-3',
-                            'Komm_score_K-4','Komm_score_K-5','Komm_score_K-6'];
-          if (h.value === 'out') {
-            await Promise.all([
-              ...kommKeys.map(k => sbBroadcastRest(id, k, 'out')),
-              ...kommKeys.map(k => upsert(id, k, 'out')),
-            ]);
-          } else {
-            const kampeRows = await sbGet(`kampe?projekt_id=eq.${encodeURIComponent(id)}&on_air=eq.true&select=slot`);
-            const activeSlots = kampeRows.map(r => r.slot).filter(s => s >= 1 && s <= 6);
-            if (activeSlots.length) {
-              await Promise.all([
-                ...activeSlots.map(s => sbBroadcastRest(id, `Komm_score_K-${s}`, 'in')),
-                ...activeSlots.map(s => upsert(id, `Komm_score_K-${s}`, 'in')),
-              ]);
-            }
-          }
-          continue;
-        }
-        if (h.key === 'lt_trigger') {
-          const raw = slotOverride || (h.value === 'vmixcall' ? 'v' + (h.slot || '') : (h.slot || ''));
-          const isVmix = raw.startsWith('v');
-          const slotNum = isVmix ? raw.slice(1) : raw;
-          const triggerVal = isVmix ? 'vmixcall' : (raw ? 'in' : h.value);
-          if (slotNum) await upsert(id, 'lt_slot', slotNum);
-          await Promise.all([
-            sbBroadcastRest(id, 'lt_trigger', triggerVal, slotNum ? { slot: slotNum } : undefined),
-            upsert(id, 'lt_trigger', triggerVal),
-          ]);
-          continue;
-        }
-        await Promise.all([sbBroadcastRest(id, h.key, h.value), upsert(id, h.key, h.value)]);
+      }
+      if (batch.length) segments.push({ type: 'batch', steps: batch });
+      for (const seg of segments) {
+        if (seg.type === 'wait') { await new Promise(r => setTimeout(r, seg.ms)); continue; }
+        await Promise.all(seg.steps.map(h => runStep(id, h, slotOverride)));
       }
       return res.status(200).json({ ok: true, fired: (macro.handlinger || []).length });
     } catch (err) {
