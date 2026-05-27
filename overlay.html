@@ -148,19 +148,10 @@
         .subscribe();
     }
 
-    // Raw WebSocket — postgres_changes giver instant Companion-triggers for alle built-in grafik
+    // Raw WebSocket — postgres_changes for instant custom grafik + lineup_trigger + komm-triggers
     if (pid) {
       (function() {
-        var _ws = null, _ref = 0, _hb = null, _pgState = {};
-        var _TRIG = {
-          'breaking_trigger':       'breaking-frame',
-          'ticker_ovl_trigger':     'ticker-frame',
-          'stilling_trigger':       'score-frame',
-          'score_trigger':          'score-frame',
-          'score_breaking_trigger': 'score-breaking-frame',
-          'live_boks_trigger':      'live-boks-frame',
-          'credits_trigger':        'credits-frame',
-        };
+        var _ws = null, _ref = 0, _hb = null;
         function _dispatch(key, value) {
           if (key === 'lineup_trigger') {
             setTimeout(function() {
@@ -168,33 +159,17 @@
             }, 120);
             return;
           }
-          var frameId = _TRIG[key];
-          if (!frameId) {
-            var cIframe = customFrameMap[key];
-            if (!cIframe) return;
-            var cPrev = customState[key];
-            if (cPrev === value) return;
-            customState[key] = value;
-            customStateTime[key] = Date.now();
-            try {
-              if (value === 'in') cIframe.contentWindow?.runAnimationIN?.();
-              else if (value === 'out') {
-                if (cPrev === 'in') cIframe.contentWindow?.runAnimationOUT?.();
-                else if (cIframe.contentWindow?.__forceOut) cIframe.contentWindow.__forceOut();
-              }
-            } catch {}
-            return;
-          }
-          var iframe = document.getElementById(frameId);
-          if (!iframe) return;
-          var prev = _pgState[key];
-          if (prev === value) return;
-          _pgState[key] = value;
+          var cIframe = customFrameMap[key];
+          if (!cIframe) return;
+          var cPrev = customState[key];
+          if (cPrev === value) return;
+          customState[key] = value;
+          customStateTime[key] = Date.now();
           try {
-            if (value === 'in') iframe.contentWindow?.runAnimationIN?.();
+            if (value === 'in') cIframe.contentWindow?.runAnimationIN?.();
             else if (value === 'out') {
-              if (prev === 'in') iframe.contentWindow?.runAnimationOUT?.();
-              else if (iframe.contentWindow?.__forceOut) iframe.contentWindow.__forceOut();
+              if (cPrev === 'in') cIframe.contentWindow?.runAnimationOUT?.();
+              else if (cIframe.contentWindow?.__forceOut) cIframe.contentWindow.__forceOut();
             }
           } catch {}
         }
