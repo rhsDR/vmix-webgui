@@ -35,6 +35,7 @@
     const SB_HDR  = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON };
     const customFrameMap = {};
     const customState    = {};
+    const customStateTime = {};
 
     // Grafik-definitioner: id matcher iframe-id og Supabase-nøglen i overlay_lag_order
     const GRAPHICS = [
@@ -133,7 +134,9 @@
           const iframe = customFrameMap[p.key];
           if (!iframe) return;
           const prevBc = customState[p.key];
+          if (prevBc === p.value) return;
           customState[p.key] = p.value;
+          customStateTime[p.key] = Date.now();
           try {
             if (p.value === 'in') iframe.contentWindow?.runAnimationIN?.();
             else if (p.value === 'out') {
@@ -166,10 +169,26 @@
             return;
           }
           var frameId = _TRIG[key];
-          if (!frameId) return;
+          if (!frameId) {
+            var cIframe = customFrameMap[key];
+            if (!cIframe) return;
+            var cPrev = customState[key];
+            if (cPrev === value) return;
+            customState[key] = value;
+            customStateTime[key] = Date.now();
+            try {
+              if (value === 'in') cIframe.contentWindow?.runAnimationIN?.();
+              else if (value === 'out') {
+                if (cPrev === 'in') cIframe.contentWindow?.runAnimationOUT?.();
+                else if (cIframe.contentWindow?.__forceOut) cIframe.contentWindow.__forceOut();
+              }
+            } catch {}
+            return;
+          }
           var iframe = document.getElementById(frameId);
           if (!iframe) return;
           var prev = _pgState[key];
+          if (prev === value) return;
           _pgState[key] = value;
           try {
             if (value === 'in') iframe.contentWindow?.runAnimationIN?.();
@@ -255,7 +274,7 @@
     // customFrameMap er tom indtil loadCustomGrafik udfylder den, men pollingen kører
     // allerede så den fanger triggers der ankommer mens iframen loades.
     async function pollCustomTriggers() {
-      if (!pid) { setTimeout(pollCustomTriggers, 500); return; }
+      if (!pid) { setTimeout(pollCustomTriggers, 5000); return; }
       const trigKeys = Object.keys(customFrameMap);
       if (trigKeys.length) {
         try {
@@ -265,6 +284,7 @@
           ).then(r => r.json());
           if (Array.isArray(data)) {
             for (const row of data) {
+              if (Date.now() - (customStateTime[row.key] || 0) < 3000) continue;
               if (customState[row.key] === row.value) continue;
               const prev = customState[row.key];
               customState[row.key] = row.value;
@@ -281,7 +301,7 @@
           }
         } catch {}
       }
-      setTimeout(pollCustomTriggers, 500);
+      setTimeout(pollCustomTriggers, 5000);
     }
 
     // Sæt standard-rækkefølge med det samme og start polling med det samme.
