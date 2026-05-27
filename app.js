@@ -2717,7 +2717,7 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
     <button class="makro-delete-btn"
       style="background:none;border:none;color:#666;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;">✕</button>
     <button class="makro-combine-btn" title="Tilføj til gruppe (kører samtidigt)"
-      style="background:none;border:none;color:#4a9eff88;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;display:${(isWait||isAlleAf)?'none':'inline'};">⊕</button>
+      style="background:none;border:none;color:#4a9eff88;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;display:none;">⊕</button>
     <select class="makro-slot-sel" style="flex:1 0 calc(100% - 22px);min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isLt ? 'block' : 'none'};">
       ${slotOpts}
     </select>`;
@@ -2730,7 +2730,6 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
     row.querySelector('.makro-wait-inp').style.display = wait          ? 'block' : 'none';
     row.querySelector('.makro-slot-sel').style.flex    = lt            ? '1 0 calc(100% - 22px)' : '';
     if (lt) row.querySelector('.makro-slot-sel').innerHTML = _buildLtSlotOpts('');
-    row.querySelector('.makro-combine-btn').style.display = (wait||alleAf) ? 'none' : 'inline';
     _updateMakroGrouping();
   });
   row.querySelector('.makro-delete-btn').addEventListener('click', function() {
@@ -2798,12 +2797,15 @@ function _updateMakroGrouping() {
     const isSep = key0 === 'wait' || key0 === 'alle_af';
     const isMulti = !isSep && grp.length > 1;
     grp.forEach(row => {
+      const cb = row.querySelector('.makro-combine-btn');
       if (isSep) {
         row.style.borderLeft = '2px solid #333';
         row.style.opacity = '0.7';
+        if (cb) cb.style.display = 'none';
       } else {
         row.style.borderLeft = isMulti ? '2px solid #4a9eff66' : '2px solid #252525';
         row.style.opacity = '1';
+        if (cb) cb.style.display = isMulti ? 'inline' : 'none';
       }
     });
   });
