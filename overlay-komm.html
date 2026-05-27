@@ -33,6 +33,69 @@
       if (_testOt) src += '&test_ot=' + encodeURIComponent(_testOt);
       document.getElementById('komm-k'+n+'-frame').src = src;
     });
+
+    const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
+    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
+
+    // Raw WebSocket — postgres_changes for instant Companion-triggers på alle 6 komm-bokse
+    if (_pid) {
+      (function() {
+        var _ws = null, _ref = 0, _hb = null, _pgState = {};
+        var _TRIG = {
+          'Komm_score_K-1': 'komm-k1-frame',
+          'Komm_score_K-2': 'komm-k2-frame',
+          'Komm_score_K-3': 'komm-k3-frame',
+          'Komm_score_K-4': 'komm-k4-frame',
+          'Komm_score_K-5': 'komm-k5-frame',
+          'Komm_score_K-6': 'komm-k6-frame',
+        };
+        function _dispatch(key, value) {
+          var frameId = _TRIG[key];
+          if (!frameId) return;
+          var iframe = document.getElementById(frameId);
+          if (!iframe) return;
+          var prev = _pgState[key];
+          _pgState[key] = value;
+          try {
+            if (value === 'in') iframe.contentWindow?.runAnimationIN?.();
+            else if (value === 'out') {
+              if (prev === 'in') iframe.contentWindow?.runAnimationOUT?.();
+              else if (iframe.contentWindow?.__forceOut) iframe.contentWindow.__forceOut();
+            }
+          } catch {}
+        }
+        function _wsConnect() {
+          try {
+            _ws = new WebSocket('wss://rxzxdcweqpbnvfkpnnrn.supabase.co/realtime/v1/websocket?apikey=' + SB_ANON + '&vsn=1.0.0');
+            _ws.onopen = function() {
+              _ws.send(JSON.stringify({ topic: 'realtime:triggers-' + _pid, event: 'phx_join',
+                payload: { config: { broadcast: { self: false, ack: false }, presence: { key: '' },
+                  postgres_changes: [
+                    { event: 'UPDATE', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + _pid },
+                    { event: 'INSERT', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + _pid }
+                  ] }, access_token: SB_ANON }, ref: String(++_ref) }));
+              _hb = setInterval(function() {
+                if (_ws && _ws.readyState === 1)
+                  _ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(++_ref) }));
+              }, 25000);
+            };
+            _ws.onmessage = function(e) {
+              try {
+                var msg = JSON.parse(e.data);
+                if (!msg || msg.event !== 'postgres_changes') return;
+                if (!msg.payload || !msg.payload.data) return;
+                var rec = msg.payload.data.record;
+                if (!rec || rec.projekt_id !== _pid) return;
+                _dispatch(rec.key, rec.value);
+              } catch {}
+            };
+            _ws.onclose = function() { clearInterval(_hb); _hb = null; setTimeout(_wsConnect, 3000); };
+            _ws.onerror = function() { try { _ws.close(); } catch {} };
+          } catch {}
+        }
+        _wsConnect();
+      })();
+    }
   </script>
 </body>
 </html>
