@@ -2582,15 +2582,30 @@ function renderMakroer(leftPanel) {
     html += `<div class="grafik-v2-empty">Ingen makroer — klik ＋ Tilføj for at oprette en</div>`;
   } else {
     makroer.forEach(m => {
-      const summary = (m.handlinger || []).map(h => {
-        if (h.key === 'wait') return `⏱ ${h.value}s`;
-        if (h.key === 'alle_af') return '■ ALLE AF';
-        if (h.key === 'lt_trigger' && h.slot) {
-          const s = subs[parseInt(h.slot) - 1];
-          const navn = s?.navn ? ': ' + s.navn : ' ' + h.slot;
-          return `Sub${navn}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
+      const _grps = [], _cur = [];
+      for (const h of m.handlinger || []) {
+        if (h.key === 'wait' || h.key === 'alle_af') {
+          if (_cur.length) { _grps.push({ type: 'batch', steps: [..._cur] }); _cur.length = 0; }
+          _grps.push({ type: 'single', step: h });
+        } else { _cur.push(h); }
+      }
+      if (_cur.length) _grps.push({ type: 'batch', steps: _cur });
+      const summary = _grps.map(g => {
+        if (g.type === 'single') {
+          const h = g.step;
+          if (h.key === 'wait') return `⏱ ${h.value}s`;
+          if (h.key === 'alle_af') return '■ ALLE AF';
+          return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
         }
-        return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
+        const labels = g.steps.map(h => {
+          if (h.key === 'lt_trigger' && h.slot) {
+            const s = subs[parseInt(h.slot) - 1];
+            const navn = s?.navn ? ': ' + s.navn : ' ' + h.slot;
+            return `Sub${navn}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
+          }
+          return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
+        });
+        return g.steps.length > 1 ? `[${labels.join(' + ')}]` : labels[0];
       }).join(' · ');
       html += `
       <div class="grafik-block" style="--g-color:${m.farve || '#4a9eff'}">
@@ -2640,6 +2655,7 @@ function openMakroModal(id, prefillHandlinger) {
             : prefillHandlinger?.length ? prefillHandlinger
             : [{ key: 'ticker_ovl_trigger', value: 'in' }];
   src.forEach(h => _addMakroHandlingRow(h.key, h.value, h.slot || ''));
+  _updateMakroGrouping();
   const listEl = document.getElementById('makro-handlinger-list');
   if (listEl) delete listEl.dataset.dndInit;
   _initMakroHandlingDragDrop();
@@ -2653,6 +2669,7 @@ function _closeMakroModal() {
 
 function _addMakroHandling() {
   _addMakroHandlingRow('ticker_ovl_trigger', 'in');
+  _updateMakroGrouping();
 }
 
 function _buildLtSlotOpts(encodedSlot) {
@@ -2674,7 +2691,7 @@ function _buildLtSlotOpts(encodedSlot) {
   ].join('');
 }
 
-function _addMakroHandlingRow(key, value, slot) {
+function _addMakroHandlingRow(key, value, slot, afterRow) {
   const list = document.getElementById('makro-handlinger-list');
   if (!list) return;
   const isLt     = key === 'lt_trigger';
@@ -2697,8 +2714,10 @@ function _addMakroHandlingRow(key, value, slot) {
     <input class="makro-wait-inp" type="number" min="0.1" step="0.1" placeholder="sek"
       value="${isWait ? esc(value) : ''}"
       style="width:68px;flex-shrink:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isWait ? 'block' : 'none'};">
-    <button onclick="this.closest('.makro-handling-row').remove()"
+    <button class="makro-delete-btn"
       style="background:none;border:none;color:#666;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;">✕</button>
+    <button class="makro-combine-btn" title="Tilføj til gruppe (kører samtidigt)"
+      style="background:none;border:none;color:#4a9eff88;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;display:${(isWait||isAlleAf)?'none':'inline'};">⊕</button>
     <select class="makro-slot-sel" style="flex:1 0 calc(100% - 22px);min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isLt ? 'block' : 'none'};">
       ${slotOpts}
     </select>`;
@@ -2711,8 +2730,19 @@ function _addMakroHandlingRow(key, value, slot) {
     row.querySelector('.makro-wait-inp').style.display = wait          ? 'block' : 'none';
     row.querySelector('.makro-slot-sel').style.flex    = lt            ? '1 0 calc(100% - 22px)' : '';
     if (lt) row.querySelector('.makro-slot-sel').innerHTML = _buildLtSlotOpts('');
+    row.querySelector('.makro-combine-btn').style.display = (wait||alleAf) ? 'none' : 'inline';
+    _updateMakroGrouping();
   });
-  list.appendChild(row);
+  row.querySelector('.makro-delete-btn').addEventListener('click', function() {
+    row.remove();
+    _updateMakroGrouping();
+  });
+  row.querySelector('.makro-combine-btn').addEventListener('click', function() {
+    _addMakroHandlingRow('ticker_ovl_trigger', 'in', '', row);
+    _updateMakroGrouping();
+  });
+  if (afterRow) afterRow.after(row);
+  else list.appendChild(row);
 }
 
 function _initMakroHandlingDragDrop() {
@@ -2745,6 +2775,37 @@ function _initMakroHandlingDragDrop() {
     target.classList.remove('drag-over');
     const rect = target.getBoundingClientRect();
     list.insertBefore(dragSrc, e.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
+    _updateMakroGrouping();
+  });
+}
+
+function _updateMakroGrouping() {
+  const list = document.getElementById('makro-handlinger-list');
+  if (!list) return;
+  const rows = Array.from(list.querySelectorAll('.makro-handling-row'));
+  const groups = [];
+  let cur = [];
+  rows.forEach(row => {
+    const key = row.querySelector('.makro-key-sel')?.value;
+    if (key === 'wait' || key === 'alle_af') {
+      if (cur.length) { groups.push(cur); cur = []; }
+      groups.push([row]);
+    } else { cur.push(row); }
+  });
+  if (cur.length) groups.push(cur);
+  groups.forEach(grp => {
+    const key0 = grp[0]?.querySelector('.makro-key-sel')?.value;
+    const isSep = key0 === 'wait' || key0 === 'alle_af';
+    const isMulti = !isSep && grp.length > 1;
+    grp.forEach(row => {
+      if (isSep) {
+        row.style.borderLeft = '2px solid #333';
+        row.style.opacity = '0.7';
+      } else {
+        row.style.borderLeft = isMulti ? '2px solid #4a9eff66' : '2px solid #252525';
+        row.style.opacity = '1';
+      }
+    });
   });
 }
 
