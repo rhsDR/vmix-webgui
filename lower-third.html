@@ -80,14 +80,9 @@ async function pollTrigger() {
 
 
     if (trigger === 'update' && _spxVisible && slot && slot !== _currentSlot && _currentTrigger !== 'vmixcall') {
-      // Kun tekst-skift (sub→sub) — ingen OUT/IN animation
-      _animating = true;
-      const subs = await fetch(
-        SB_URL + '/rest/v1/subs?slot=eq.' + slot + '&select=navn,titel' + _pf,
-        { headers: SB_HDR }
-      ).then(r => r.json());
-      const sub = subs[0];
+      const sub = _subsCache[slot];
       if (sub) {
+        _animating = true;
         _currentSlot    = slot;
         _currentTrigger = 'in';
         _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
@@ -96,17 +91,11 @@ async function pollTrigger() {
         setTimeout(() => { _animating = false; setTimeout(pollTrigger, 2000); }, 900);
         return;
       }
-      _animating = false;
     } else if (trigger === 'vmixcall' && (!_spxVisible || slot !== _currentSlot || _currentTrigger !== 'vmixcall')) {
-      // vmixcall på lower third
       if (!slot) { setTimeout(pollTrigger, 2000); return; }
-      _animating = true;
-      const calls = await fetch(
-        SB_URL + '/rest/v1/vmix_calls?slot=eq.' + slot + '&select=navn,titel' + _pf,
-        { headers: SB_HDR }
-      ).then(r => r.json());
-      const call = calls[0];
+      const call = _vmixCache[slot];
       if (call) {
+        _animating = true;
         const doShow = (skipLabel) => {
           _currentSlot    = slot;
           _currentTrigger = 'vmixcall';
@@ -118,16 +107,11 @@ async function pollTrigger() {
         else              { doShow(false); }
         return;
       }
-      _animating = false;
     } else if (trigger === 'in' && (!_spxVisible || slot !== _currentSlot || _currentTrigger === 'vmixcall')) {
       if (!slot) { setTimeout(pollTrigger, 2000); return; }
-      _animating = true;
-      const subs = await fetch(
-        SB_URL + '/rest/v1/subs?slot=eq.' + slot + '&select=navn,titel' + _pf,
-        { headers: SB_HDR }
-      ).then(r => r.json());
-      const sub = subs[0];
+      const sub = _subsCache[slot];
       if (sub) {
+        _animating = true;
         const doShow = (skipLabel) => {
           _currentSlot    = slot;
           _currentTrigger = 'in';
@@ -139,7 +123,6 @@ async function pollTrigger() {
         else              { doShow(false); }
         return;
       }
-      _animating = false;
     } else if (trigger === 'out' && _spxVisible) {
       _animating = true;
       runAnimationOUT(false);
@@ -150,9 +133,13 @@ async function pollTrigger() {
   setTimeout(pollTrigger, 500);
 }
 pollTrigger();
+var _subsCache = {};
+var _vmixCache = {};
 if (_pid) {
-  fetch(SB_URL + '/rest/v1/subs?select=slot&limit=1' + _pf, { headers: SB_HDR }).catch(() => {});
-  fetch(SB_URL + '/rest/v1/vmix_calls?select=slot&limit=1' + _pf, { headers: SB_HDR }).catch(() => {});
+  fetch(SB_URL + '/rest/v1/subs?select=slot,navn,titel' + _pf, { headers: SB_HDR })
+    .then(r => r.json()).then(rows => rows.forEach(r => { _subsCache[String(r.slot)] = r; })).catch(() => {});
+  fetch(SB_URL + '/rest/v1/vmix_calls?select=slot,navn,titel' + _pf, { headers: SB_HDR })
+    .then(r => r.json()).then(rows => rows.forEach(r => { _vmixCache[String(r.slot)] = r; })).catch(() => {});
 }
 // Direct Supabase Realtime WebSocket — broadcast (web UI) + postgres_changes (Companion)
 (function() {
@@ -165,8 +152,12 @@ if (_pid) {
         _ws.send(JSON.stringify({ topic: 'realtime:triggers-' + _pid, event: 'phx_join',
           payload: { config: { broadcast: { self: false, ack: false }, presence: { key: '' },
             postgres_changes: [
-              { event: 'UPDATE', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + _pid },
-              { event: 'INSERT', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + _pid }
+              { event: 'UPDATE', schema: 'public', table: 'settings',   filter: 'projekt_id=eq.' + _pid },
+              { event: 'INSERT', schema: 'public', table: 'settings',   filter: 'projekt_id=eq.' + _pid },
+              { event: 'UPDATE', schema: 'public', table: 'subs',       filter: 'projekt_id=eq.' + _pid },
+              { event: 'INSERT', schema: 'public', table: 'subs',       filter: 'projekt_id=eq.' + _pid },
+              { event: 'UPDATE', schema: 'public', table: 'vmix_calls', filter: 'projekt_id=eq.' + _pid },
+              { event: 'INSERT', schema: 'public', table: 'vmix_calls', filter: 'projekt_id=eq.' + _pid }
             ] }, access_token: SB_ANON }, ref: String(++_ref) }));
         _hb = setInterval(function() {
           if (_ws && _ws.readyState === 1)
@@ -180,12 +171,27 @@ if (_pid) {
           if (!msg) return;
 
           if (msg.event === 'postgres_changes' && msg.payload && msg.payload.data) {
+            var tbl = msg.payload.data.table;
             var rec = msg.payload.data.record;
+            if (tbl === 'subs') {
+              if (rec && rec.slot) {
+                _subsCache[String(rec.slot)] = rec;
+                if (_spxVisible && !_animating && String(rec.slot) === _currentSlot && _currentTrigger === 'in') {
+                  _updateContent({ f0: rec.titel || '', f1: rec.navn || '', f2: 'SPORT', f3: 'venstre' });
+                  _csPlay('el5', 0.24, 0,    'irregular', 3, 1);
+                  _csPlay('el6', 0.24, 0.08, 'wipe-step', 3, 1);
+                }
+              }
+              return;
+            }
+            if (tbl === 'vmix_calls') {
+              if (rec && rec.slot) _vmixCache[String(rec.slot)] = rec;
+              return;
+            }
             if (!rec || rec.projekt_id !== _pid) return;
             if (rec.key === 'lt_slot') { _pgSlot = String(rec.value || ''); return; }
             if (rec.key === 'lt_trigger') {
               var pgS = _pgSlot || '';
-
               window.dispatchEvent(new MessageEvent('message', {
                 data: { type: 'sbTrigger', key: 'lt_trigger', value: rec.value, slot: pgS }
               }));
@@ -223,52 +229,40 @@ window.addEventListener('message', function(evt) {
     setTimeout(function() { _currentSlot = null; _currentTrigger = null; _animating = false; setTimeout(pollTrigger, 2000); }, 2600);
   } else if (v === 'update' && s) {
     if (!_spxVisible || _currentTrigger === 'vmixcall') { _animating = false; return; }
+    var sub = _subsCache[s];
+    if (!sub) { _animating = false; return; }
     _animating = true;
-    fetch(SB_URL + '/rest/v1/subs?slot=eq.' + s + '&select=navn,titel' + _pf, { headers: SB_HDR })
-      .then(function(r) { return r.json(); })
-      .then(function(subs) {
-        var sub = subs[0];
-        if (!sub) { _animating = false; return; }
-        _currentSlot = s; _currentTrigger = 'in';
-        _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
-        _csPlay('el5', 0.24, 0,    'irregular',  3, 1);
-        _csPlay('el6', 0.24, 0.08, 'wipe-step',  3, 1);
-        setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 900);
-      }).catch(function() { _animating = false; });
+    _currentSlot = s; _currentTrigger = 'in';
+    _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
+    _csPlay('el5', 0.24, 0,    'irregular',  3, 1);
+    _csPlay('el6', 0.24, 0.08, 'wipe-step',  3, 1);
+    setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 900);
   } else if (v === 'in' && s) {
     if (_spxVisible && s === _currentSlot && _currentTrigger === 'in') return;
+    var sub = _subsCache[s];
+    if (!sub) { _animating = false; return; }
     _animating = true;
-    fetch(SB_URL + '/rest/v1/subs?slot=eq.' + s + '&select=navn,titel' + _pf, { headers: SB_HDR })
-      .then(function(r) { return r.json(); })
-      .then(function(subs) {
-        var sub = subs[0];
-        if (!sub) { _animating = false; return; }
-        var doShow = function(skipLabel) {
-          _currentSlot = s; _currentTrigger = 'in';
-          _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
-          setTimeout(function() { runAnimationIN(skipLabel); }, 50);
-          setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 2700);
-        };
-        if (_spxVisible) { runAnimationOUT(false); setTimeout(function() { doShow(true); }, 2200); }
-        else { doShow(false); }
-      }).catch(function() { _animating = false; });
+    var doShow = function(skipLabel) {
+      _currentSlot = s; _currentTrigger = 'in';
+      _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
+      setTimeout(function() { runAnimationIN(skipLabel); }, 50);
+      setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 2700);
+    };
+    if (_spxVisible) { runAnimationOUT(false); setTimeout(function() { doShow(true); }, 2200); }
+    else { doShow(false); }
   } else if (v === 'vmixcall' && s) {
     if (_spxVisible && s === _currentSlot && _currentTrigger === 'vmixcall') return;
+    var call = _vmixCache[s];
+    if (!call) { _animating = false; return; }
     _animating = true;
-    fetch(SB_URL + '/rest/v1/vmix_calls?slot=eq.' + s + '&select=navn,titel' + _pf, { headers: SB_HDR })
-      .then(function(r) { return r.json(); })
-      .then(function(calls) {
-        var call = calls[0];
-        if (!call) { _animating = false; return; }
-        var doShow = function(skipLabel) {
-          _currentSlot = s; _currentTrigger = 'vmixcall';
-          _updateContent({ f0: call.titel || '', f1: call.navn || '', f2: 'SPORT', f3: 'venstre' });
-          setTimeout(function() { runAnimationIN(skipLabel); }, 50);
-          setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 2700);
-        };
-        if (_spxVisible) { runAnimationOUT(false); setTimeout(function() { doShow(true); }, 2200); }
-        else { doShow(false); }
-      }).catch(function() { _animating = false; });
+    var doShow = function(skipLabel) {
+      _currentSlot = s; _currentTrigger = 'vmixcall';
+      _updateContent({ f0: call.titel || '', f1: call.navn || '', f2: 'SPORT', f3: 'venstre' });
+      setTimeout(function() { runAnimationIN(skipLabel); }, 50);
+      setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 2700);
+    };
+    if (_spxVisible) { runAnimationOUT(false); setTimeout(function() { doShow(true); }, 2200); }
+    else { doShow(false); }
   }
 });
 /* ── SUPABASE INTEGRATION BLOCK ── END ── */
