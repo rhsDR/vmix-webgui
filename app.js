@@ -2858,7 +2858,7 @@ async function deleteMakro(id) {
   if (!confirm('Slet denne makro?')) return;
   try {
     await sbDelete('projekt_makroer?id=eq.' + id);
-    await loadMakroer();
+    makroer = makroer.filter(m => m.id !== id);
     renderGrafik();
     toast('Makro slettet', 'ok');
   } catch { toast('Fejl ved slet', 'err'); }
