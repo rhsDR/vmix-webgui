@@ -98,6 +98,14 @@ async function runStep(pid, h, slotOverride) {
     ]);
     return;
   }
+  if (h.key === 'lineup_trigger' && h.slot && h.value !== 'out') {
+    try {
+      const slotsRows = await sbGet(`settings?projekt_id=eq.${encodeURIComponent(pid)}&key=eq.lineup_slots&limit=1&select=value`);
+      const slotsData = slotsRows[0]?.value ? JSON.parse(slotsRows[0].value) : {};
+      const slotPayload = slotsData[h.slot]?.[h.value];
+      if (slotPayload) await upsert(pid, 'lineup_data', JSON.stringify(slotPayload));
+    } catch {}
+  }
   await Promise.all([sbBroadcastRest(pid, h.key, h.value), upsert(pid, h.key, h.value)]);
 }
 
@@ -170,6 +178,14 @@ export default async function handler(req, res) {
       if ((value === 'in' || value === 'vmixcall') && slot) await upsert(id, 'lt_slot', String(slot));
       const [bc] = await Promise.all([sbBroadcastRest(id, 'lt_trigger', value, slot ? { slot } : undefined), upsert(id, key, value)]);
       return res.status(200).json({ ok: true, key, value, slot: slot || undefined, _bc: bc });
+    }
+    if (key === 'lineup_trigger' && slot && value !== 'out') {
+      try {
+        const slotsRows = await sbGet(`settings?projekt_id=eq.${encodeURIComponent(id)}&key=eq.lineup_slots&limit=1&select=value`);
+        const slotsData = slotsRows[0]?.value ? JSON.parse(slotsRows[0].value) : {};
+        const slotPayload = slotsData[slot]?.[value];
+        if (slotPayload) await upsert(id, 'lineup_data', JSON.stringify(slotPayload));
+      } catch {}
     }
     const [bc] = await Promise.all([sbBroadcastRest(id, key, value), upsert(id, key, value)]);
     res.status(200).json({ ok: true, key, value, slot: slot || undefined, _bc: bc });

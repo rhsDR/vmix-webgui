@@ -1446,13 +1446,15 @@ async function fireMakro(id, slotOverride = '') {
 async function refreshGrafiktState() {
   const customKeys = customGrafik.map(g => g.trigger_key);
   const kommKeys = KOMM_BOKSE.map(k => k.triggerKey);
-  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey).filter(Boolean), ...customKeys, ...kommKeys, 'lt_slot', 'score_breaking_trigger', 'ticker_lag_order'].join(',');
+  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey).filter(Boolean), ...customKeys, ...kommKeys, 'lt_slot', 'score_breaking_trigger', 'ticker_lag_order', 'lineup_slots'].join(',');
   try {
     const rows = await sbGet('settings?select=key,value&key=in.(' + keys + ')&projekt_id=eq.' + aktivProjektId);
     rows.forEach(r => {
       if (r.key === 'ticker_lag_order') {
         tickerLagOrder = r.value ? r.value.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_TICKER_SUB_ORDER];
         DEFAULT_TICKER_SUB_ORDER.forEach(id => { if (!tickerLagOrder.includes(id)) tickerLagOrder.push(id); });
+      } else if (r.key === 'lineup_slots') {
+        try { lineupSlots = JSON.parse(r.value); } catch { lineupSlots = {}; }
       } else {
         grafiktState[r.key] = r.value;
       }
@@ -2035,25 +2037,37 @@ function renderGrafik() {
         <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
       </div>`;
   } else if (!isAfvikling && g.type === 'lineup') {
-    const hjemUrl = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=home`;
-    const udeUrl  = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=away`;
-    const afUrl   = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=out`;
-    companionRows = `
-      <div class="grafik-companion-row">
-        <span class="grafik-companion-lbl">HJEM</span>
-        <span class="grafik-companion-url" title="${hjemUrl}">${hjemUrl}</span>
-        <button class="copy-btn icon-btn" data-copy="${hjemUrl}">⎘</button>
-      </div>
-      <div class="grafik-companion-row">
-        <span class="grafik-companion-lbl">UDE</span>
-        <span class="grafik-companion-url" title="${udeUrl}">${udeUrl}</span>
-        <button class="copy-btn icon-btn" data-copy="${udeUrl}">⎘</button>
-      </div>
+    const afUrl = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=out`;
+    const lineupKampe = kampe.filter(k => k.enetpulseId);
+    if (!lineupKampe.length) {
+      companionRows = `<div style="color:#666;font-size:11px;padding:4px 0">Ingen kampe med Enetpulse ID</div>`;
+    } else {
+      const kampRows = lineupKampe.map(k => {
+        const slot    = kampe.indexOf(k) + 1;
+        const hjemUrl = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=home&slot=${slot}`;
+        const udeUrl  = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=away&slot=${slot}`;
+        const label   = k.hold1Kort && k.hold2Kort ? `${esc(k.hold1Kort)} vs ${esc(k.hold2Kort)}` : `Kamp ${slot}`;
+        return `
+        <div style="font-size:10px;color:#666;margin-top:6px;padding-top:6px;border-top:1px solid #222">${label}</div>
+        <div class="grafik-companion-row">
+          <span class="grafik-companion-lbl">HJEM</span>
+          <span class="grafik-companion-url" title="${hjemUrl}">${hjemUrl}</span>
+          <button class="copy-btn icon-btn" data-copy="${hjemUrl}">⎘</button>
+        </div>
+        <div class="grafik-companion-row">
+          <span class="grafik-companion-lbl">UDE</span>
+          <span class="grafik-companion-url" title="${udeUrl}">${udeUrl}</span>
+          <button class="copy-btn icon-btn" data-copy="${udeUrl}">⎘</button>
+        </div>`;
+      }).join('');
+      companionRows = kampRows + `
+      <div style="font-size:10px;color:#666;margin-top:6px;padding-top:6px;border-top:1px solid #222">Sluk opstilling</div>
       <div class="grafik-companion-row">
         <span class="grafik-companion-lbl">AF</span>
         <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
         <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
       </div>`;
+    }
   } else if (!isAfvikling && g.type === 'ticker') {
     const tPaUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=in`;
     const tAfUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=out`;
@@ -2601,6 +2615,10 @@ function renderMakroer(leftPanel) {
           const h = g.step;
           if (h.key === 'wait') return `⏱ ${h.value}s`;
           if (h.key === 'alle_af') return '■ ALLE AF';
+          if (h.key === 'lineup_trigger') {
+            const side = h.value === 'home' ? 'Hjemme' : h.value === 'away' ? 'Ude' : 'AF';
+            return h.value === 'out' ? 'Opstilling: AF' : `Opstilling K${h.slot || '?'}: ${side}`;
+          }
           return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
         }
         const labels = g.steps.map(h => {
@@ -2608,6 +2626,10 @@ function renderMakroer(leftPanel) {
             const s = subs[parseInt(h.slot) - 1];
             const navn = s?.navn ? ': ' + s.navn : ' ' + h.slot;
             return `Sub${navn}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
+          }
+          if (h.key === 'lineup_trigger') {
+            const side = h.value === 'home' ? 'Hjemme' : h.value === 'away' ? 'Ude' : 'AF';
+            return h.value === 'out' ? 'Opstilling: AF' : `Opstilling K${h.slot || '?'}: ${side}`;
           }
           return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
         });
@@ -2682,6 +2704,17 @@ function _addMakroHandling() {
   _updateMakroGrouping();
 }
 
+function _buildLineupKampOpts(selectedSlot) {
+  const opts = kampe.map((k, i) => {
+    if (!k.enetpulseId) return '';
+    const slot = i + 1;
+    const label = 'Kamp ' + slot + (k.hold1Kort && k.hold2Kort ? ': ' + esc(k.hold1Kort) + ' vs ' + esc(k.hold2Kort) : '');
+    return `<option value="${slot}"${String(selectedSlot) === String(slot) ? ' selected' : ''}>${label}</option>`;
+  }).filter(Boolean);
+  if (!opts.length) return `<option value="">Ingen kampe med Enetpulse</option>`;
+  return opts.join('');
+}
+
 function _buildLtSlotOpts(encodedSlot) {
   // encodedSlot: '1'-'15' for subs, 'v1'-'v8' for vmixcalls, '' for none
   const subOpts = subs.map((s, i) => {
@@ -2704,11 +2737,18 @@ function _buildLtSlotOpts(encodedSlot) {
 function _addMakroHandlingRow(key, value, slot, afterRow) {
   const list = document.getElementById('makro-handlinger-list');
   if (!list) return;
-  const isLt     = key === 'lt_trigger';
-  const isWait   = key === 'wait';
-  const isAlleAf = key === 'alle_af';
+  const isLt      = key === 'lt_trigger';
+  const isLineup  = key === 'lineup_trigger';
+  const isWait    = key === 'wait';
+  const isAlleAf  = key === 'alle_af';
   const encodedSlot = (key === 'lt_trigger' && value === 'vmixcall') ? 'v' + slot : slot;
-  const slotOpts = _buildLtSlotOpts(encodedSlot);
+  const slotOpts = isLt ? _buildLtSlotOpts(encodedSlot) : isLineup ? _buildLineupKampOpts(slot) : '';
+  const valOpts = isLineup
+    ? `<option value="home"${value === 'home' ? ' selected' : ''}>Hjemme</option>
+       <option value="away"${value === 'away' ? ' selected' : ''}>Ude</option>
+       <option value="out"${value === 'out' ? ' selected' : ''}>AF</option>`
+    : `<option value="in"${(value === 'in' || value === 'vmixcall') ? ' selected' : ''}>PÅ</option>
+       <option value="out"${value === 'out' ? ' selected' : ''}>AF</option>`;
   const row = document.createElement('div');
   row.className = 'makro-handling-row';
   row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#1a1a1a;border:1px solid #252525;border-radius:6px;padding:5px 8px;';
@@ -2718,8 +2758,7 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
       ${_makroKeyOptions(key)}
     </select>
     <select class="makro-val-sel" style="width:68px;flex-shrink:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${(isWait || isAlleAf) ? 'none' : 'block'};">
-      <option value="in"${(value === 'in' || value === 'vmixcall') ? ' selected' : ''}>PÅ</option>
-      <option value="out"${value === 'out' ? ' selected' : ''}>AF</option>
+      ${valOpts}
     </select>
     <input class="makro-wait-inp" type="number" min="0.1" step="0.1" placeholder="sek"
       value="${isWait ? esc(value) : ''}"
@@ -2728,18 +2767,27 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
       style="background:none;border:none;color:#666;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;">✕</button>
     <button class="makro-combine-btn" title="Tilføj til gruppe (kører samtidigt)"
       style="background:none;border:none;color:#4a9eff88;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;display:none;">⊕</button>
-    <select class="makro-slot-sel" style="flex:1 0 calc(100% - 22px);min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isLt ? 'block' : 'none'};">
+    <select class="makro-slot-sel" style="flex:1 0 calc(100% - 22px);min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${(isLt || isLineup) ? 'block' : 'none'};">
       ${slotOpts}
     </select>`;
   row.querySelector('.makro-key-sel').addEventListener('change', function() {
-    const lt     = this.value === 'lt_trigger';
-    const wait   = this.value === 'wait';
-    const alleAf = this.value === 'alle_af';
-    row.querySelector('.makro-slot-sel').style.display = lt            ? 'block' : 'none';
-    row.querySelector('.makro-val-sel').style.display  = (wait||alleAf)? 'none'  : 'block';
-    row.querySelector('.makro-wait-inp').style.display = wait          ? 'block' : 'none';
-    row.querySelector('.makro-slot-sel').style.flex    = lt            ? '1 0 calc(100% - 22px)' : '';
-    if (lt) row.querySelector('.makro-slot-sel').innerHTML = _buildLtSlotOpts('');
+    const lt      = this.value === 'lt_trigger';
+    const lineup  = this.value === 'lineup_trigger';
+    const wait    = this.value === 'wait';
+    const alleAf  = this.value === 'alle_af';
+    const valSel  = row.querySelector('.makro-val-sel');
+    const slotSel = row.querySelector('.makro-slot-sel');
+    slotSel.style.display = (lt || lineup) ? 'block' : 'none';
+    slotSel.style.flex    = (lt || lineup) ? '1 0 calc(100% - 22px)' : '';
+    valSel.style.display  = (wait || alleAf) ? 'none' : 'block';
+    row.querySelector('.makro-wait-inp').style.display = wait ? 'block' : 'none';
+    if (lt)     slotSel.innerHTML = _buildLtSlotOpts('');
+    if (lineup) slotSel.innerHTML = _buildLineupKampOpts('');
+    if (lineup) {
+      valSel.innerHTML = `<option value="home">Hjemme</option><option value="away">Ude</option><option value="out">AF</option>`;
+    } else if (!wait && !alleAf) {
+      valSel.innerHTML = `<option value="in">PÅ</option><option value="out">AF</option>`;
+    }
     _updateMakroGrouping();
   });
   row.querySelector('.makro-delete-btn').addEventListener('click', function() {
@@ -2840,6 +2888,9 @@ async function _confirmMakroModal() {
       if (valSel === 'out') return { key: 'lt_trigger', value: 'out' };
       if (rawSlot.startsWith('v')) return { key: 'lt_trigger', value: 'vmixcall', slot: rawSlot.slice(1) };
       return { key: 'lt_trigger', value: 'in', slot: rawSlot };
+    }
+    if (key === 'lineup_trigger') {
+      return { key: 'lineup_trigger', value: valSel, slot: rawSlot };
     }
     const h = { key, value: valSel };
     if (rawSlot) h.slot = rawSlot;
@@ -3266,6 +3317,7 @@ init();
 let liveTimer    = null;
 let lastCardSeen       = {}; // fixtureId → sidste sete korttype+minut+spiller
 let lineupOnAirMatchId = null; // matchId der aktuelt er on air, eller null
+let lineupSlots = {}; // { "1": { home: payload, away: payload }, ... } — pre-loadet per kamp-slot
 const liveExpandedLineup = new Set(); // matchId → opstilling synlig
 const livePitchMode      = new Map(); // matchId → 'liste' | 'bane'
 const liveExpandedStats  = new Set(); // matchId → statistik synlig
@@ -4108,6 +4160,14 @@ async function sendLineupSide(matchId, side) {
   const payload = buildLineupPayload(m);
   if (!payload) return;
   try {
+    // Gem data per kamp-slot så companion-links kan hente det
+    const slotIdx = kampe.findIndex(k => String(k.enetpulseId) === String(matchId));
+    if (slotIdx >= 0) {
+      const slot = String(slotIdx + 1);
+      if (!lineupSlots[slot]) lineupSlots[slot] = {};
+      lineupSlots[slot][side] = payload;
+      await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lineup_slots', value: JSON.stringify(lineupSlots) });
+    }
     await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lineup_data',    value: JSON.stringify(payload) });
     await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lineup_trigger', value: side });
     lineupOnAirMatchId = String(matchId);
