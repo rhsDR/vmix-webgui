@@ -2467,6 +2467,7 @@ function renderGrafik() {
 
 function renderEgneGrafik(leftPanel) {
   let wrap = leftPanel.querySelector('.egne-grafik-wrap');
+  const egneWasOpen = wrap?.querySelector('details')?.open ?? false;
   if (!wrap) {
     wrap = document.createElement('div');
     wrap.className = 'egne-grafik-wrap';
@@ -2474,11 +2475,12 @@ function renderEgneGrafik(leftPanel) {
   }
 
   let html = `
-    <div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;">
-      EGNE GRAFIK
-      <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;"
-        onclick="openEgneGrafikModal()">＋ Tilføj</button>
-    </div>`;
+    <details class="grafik-collapse"${egneWasOpen ? ' open' : ''} style="margin-top:12px;">
+      <summary class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;-webkit-appearance:none;">
+        <span>▸ EGNE GRAFIK</span>
+        <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;"
+          onclick="event.stopPropagation();openEgneGrafikModal()">＋ Tilføj</button>
+      </summary>`;
 
   if (!customGrafik.length) {
     html += `<div class="grafik-v2-empty">Ingen egne grafik — klik ＋ Tilføj for at uploade en fil</div>`;
@@ -2509,6 +2511,7 @@ function renderEgneGrafik(leftPanel) {
     });
   }
 
+  html += `</details>`;
   wrap.innerHTML = html;
 
   // IN/OUT knapper
@@ -2565,6 +2568,7 @@ function _makroKeyOptions(selectedKey) {
 
 function renderMakroer(leftPanel) {
   let wrap = leftPanel.querySelector('.makroer-wrap');
+  const makrWasOpen = wrap?.querySelector('details')?.open ?? false;
   if (!wrap) {
     wrap = document.createElement('div');
     wrap.className = 'makroer-wrap';
@@ -2572,11 +2576,12 @@ function renderMakroer(leftPanel) {
   }
 
   let html = `
-    <div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
-      MAKROER
-      <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;"
-        onclick="openMakroModal()">＋ Tilføj</button>
-    </div>`;
+    <details class="grafik-collapse"${makrWasOpen ? ' open' : ''} style="margin-top:8px;">
+      <summary class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;-webkit-appearance:none;">
+        <span>▸ MAKROER</span>
+        <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;"
+          onclick="event.stopPropagation();openMakroModal()">＋ Tilføj</button>
+      </summary>`;
 
   if (!makroer.length) {
     html += `<div class="grafik-v2-empty">Ingen makroer — klik ＋ Tilføj for at oprette en</div>`;
@@ -2625,6 +2630,7 @@ function renderMakroer(leftPanel) {
     });
   }
 
+  html += `</details>`;
   wrap.innerHTML = html;
 }
 
