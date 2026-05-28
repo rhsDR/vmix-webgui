@@ -2616,6 +2616,8 @@ function renderMakroer(leftPanel) {
         <div class="grafik-block-actions">
           <button class="grafik-btn-prw" title="Redigér"
             onclick="openMakroModal('${m.id}')">✎</button>
+          <button class="grafik-btn-prw" title="Slet" style="color:#c44"
+            onclick="deleteMakro('${m.id}')">✕</button>
           <button class="grafik-btn-in" style="background:${m.farve || '#4a9eff'}22;border-color:${m.farve || '#4a9eff'}66;color:${m.farve || '#4a9eff'}"
             onclick="fireMakro('${m.id}')">▶ KØR</button>
         </div>
