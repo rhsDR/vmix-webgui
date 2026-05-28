@@ -1877,17 +1877,27 @@ function renderGrafik() {
     } else {
       matchRows = dashKampe.map(k => {
         const matchId    = String(k.enetpulseId);
+        const slot       = String(kampe.indexOf(k) + 1);
         const isActive   = String(lineupOnAirMatchId) === matchId;
         const homeActive = isActive && val === 'home';
         const awayActive = isActive && val === 'away';
         const hjemNavn   = k.hold1Lang || k.hold1Kort || '—';
         const udeNavn    = k.hold2Lang || k.hold2Kort || '—';
+        const prvHjemId  = `lu-${matchId}-home`;
+        const prvUdeId   = `lu-${matchId}-away`;
+        const prvUrl     = `${origin}/opstilling.html?p=${pid}`;
         return `<div class="grafik-block${isActive ? ' active' : ''}" style="--g-color:${g.color}">
           <div class="grafik-block-info">
             <span class="grafik-block-name">${esc(hjemNavn)} <span class="muted">vs</span> ${esc(udeNavn)}</span>
             ${isActive ? `<span class="grafik-block-sub" style="color:var(--g-color)">● ${homeActive ? 'HJEM' : 'UDE'}</span>` : ''}
           </div>
           <div class="grafik-block-actions">
+            <button class="grafik-btn-prw${grafiktActivePrvKey === prvHjemId ? ' active' : ''}"
+              data-prv-type="lineup" data-prv-side="home" data-prv-matchid="${matchId}" data-prv-slot="${slot}"
+              data-prv-id="${prvHjemId}" data-prv-url="${prvUrl}&preview=home">H PRW</button>
+            <button class="grafik-btn-prw${grafiktActivePrvKey === prvUdeId ? ' active' : ''}"
+              data-prv-type="lineup" data-prv-side="away" data-prv-matchid="${matchId}" data-prv-slot="${slot}"
+              data-prv-id="${prvUdeId}" data-prv-url="${prvUrl}&preview=away">U PRW</button>
             <button class="grafik-btn-out grafik-lu-off-btn"${!isOnAir ? ' disabled' : ''}>&lt; OUT</button>
             <button class="grafik-btn-in${homeActive ? ' on' : ''} grafik-lu-btn" data-matchid="${matchId}" data-side="home">HJEM</button>
             <button class="grafik-btn-in${awayActive ? ' on' : ''} grafik-lu-btn" data-matchid="${matchId}" data-side="away">UDE</button>
@@ -2287,6 +2297,14 @@ function renderGrafik() {
           // vmixcall bruger lower-third med vmixcall-trigger til preview
           await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot_prv',    value: btn.dataset.prvSlot });
           await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger_prv', value: 'vmixcall' });
+        } else if (type === 'lineup') {
+          // Gem slot-data til lineup_data så preview-iframe henter korrekt opstilling
+          const slot = btn.dataset.prvSlot;
+          const side = btn.dataset.prvSide;
+          const slotData = lineupSlots[slot]?.[side];
+          if (slotData) {
+            await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lineup_data', value: JSON.stringify(slotData) });
+          }
         } else {
           await sbUpsert('settings', { projekt_id: aktivProjektId, key: btn.dataset.prvKey + '_prv', value: 'in' });
         }
