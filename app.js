@@ -1315,6 +1315,8 @@ let grafiktActiveSubTab = 'lower-third';
 let grafiktActivePrvKey = '';
 let grafiktActivePrvUrl = '';
 let grafiktCompanionOpen = false;
+let egneGrafikOpen = false;
+let makroerPanelOpen = false;
 
 function updateCreditsSendBtn() {
   const badge = document.getElementById('creditsTriggerBadge');
@@ -2467,7 +2469,6 @@ function renderGrafik() {
 
 function renderEgneGrafik(leftPanel) {
   let wrap = leftPanel.querySelector('.egne-grafik-wrap');
-  const egneWasOpen = wrap?.querySelector('details')?.open ?? false;
   if (!wrap) {
     wrap = document.createElement('div');
     wrap.className = 'egne-grafik-wrap';
@@ -2475,7 +2476,7 @@ function renderEgneGrafik(leftPanel) {
   }
 
   let html = `
-    <details class="grafik-collapse"${egneWasOpen ? ' open' : ''} style="margin-top:12px;">
+    <details class="grafik-collapse"${egneGrafikOpen ? ' open' : ''} style="margin-top:12px;">
       <summary class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;-webkit-appearance:none;">
         <span>▸ EGNE GRAFIK</span>
         <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;"
@@ -2513,6 +2514,7 @@ function renderEgneGrafik(leftPanel) {
 
   html += `</details>`;
   wrap.innerHTML = html;
+  wrap.querySelector('details')?.addEventListener('toggle', e => { egneGrafikOpen = e.target.open; });
 
   // IN/OUT knapper
   wrap.querySelectorAll('[data-trig]').forEach(btn =>
@@ -2568,7 +2570,6 @@ function _makroKeyOptions(selectedKey) {
 
 function renderMakroer(leftPanel) {
   let wrap = leftPanel.querySelector('.makroer-wrap');
-  const makrWasOpen = wrap?.querySelector('details')?.open ?? false;
   if (!wrap) {
     wrap = document.createElement('div');
     wrap.className = 'makroer-wrap';
@@ -2576,7 +2577,7 @@ function renderMakroer(leftPanel) {
   }
 
   let html = `
-    <details class="grafik-collapse"${makrWasOpen ? ' open' : ''} style="margin-top:8px;">
+    <details class="grafik-collapse"${makroerPanelOpen ? ' open' : ''} style="margin-top:8px;">
       <summary class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;-webkit-appearance:none;">
         <span>▸ MAKROER</span>
         <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;"
@@ -2632,6 +2633,7 @@ function renderMakroer(leftPanel) {
 
   html += `</details>`;
   wrap.innerHTML = html;
+  wrap.querySelector('details')?.addEventListener('toggle', e => { makroerPanelOpen = e.target.open; });
 }
 
 function _makroKeyLabel(key) {
