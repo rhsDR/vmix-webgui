@@ -418,7 +418,10 @@
     }
 
     // ── POLLING ───────────────────────────────────────────────────
+    const IS_PREVIEW = !!params.get('preview');
+
     async function pollTrigger() {
+      if (IS_PREVIEW) return;
       if (animating) return;
       try {
         const rows = await fetch(
