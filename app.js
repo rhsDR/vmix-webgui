@@ -2395,10 +2395,10 @@ function renderGrafik() {
     });
   }
 
-  // EGNE GRAFIK (alle faner) + MAKROER (kun ikke-afvikling)
+  // EGNE GRAFIK + MAKROER (alle faner)
   const leftPanel = container.querySelector('.grafik-v2-left');
   if (leftPanel) renderEgneGrafik(leftPanel);
-  if (leftPanel && !isAfvikling) renderMakroer(leftPanel);
+  if (leftPanel) renderMakroer(leftPanel);
 
   // ── AFVIKLING DnD ────────────────────────────────────────────────
   if (isAfvikling) {
