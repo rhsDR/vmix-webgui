@@ -94,24 +94,6 @@
           } catch {}
         }
         _wsConnect();
-
-        // Hent nuværende tilstand ved load — vis aktive bokse straks
-        var _kommLoadCount = 0;
-        function _fetchKommInitState() {
-          fetch(SB_URL + '/rest/v1/settings?select=key,value&key=in.(Komm_score_K-1,Komm_score_K-2,Komm_score_K-3,Komm_score_K-4,Komm_score_K-5,Komm_score_K-6)&projekt_id=eq.' + encodeURIComponent(_pid),
-            { headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON } }
-          ).then(function(r) { return r.json(); }).then(function(rows) {
-            var delay = 0;
-            rows.forEach(function(r) {
-              if (r.value === 'in') setTimeout(function(k) { _dispatch(k, 'in'); }.bind(null, r.key), delay += 100);
-            });
-          }).catch(function() {});
-        }
-        [1,2,3,4,5,6].forEach(function(n) {
-          document.getElementById('komm-k'+n+'-frame').addEventListener('load', function() {
-            if (++_kommLoadCount === 6) _fetchKommInitState();
-          });
-        });
       })();
     }
   </script>
