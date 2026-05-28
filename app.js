@@ -2004,7 +2004,7 @@ function renderGrafik() {
     <div style="margin-top:10px;">
       <div class="grafik-companion-head" style="margin-bottom:6px;">KOMM OVERLAY</div>
       <div class="grafik-preview-box">
-        <iframe src="${origin}/overlay-komm.html?p=${pid}" style="width:100%;height:100%;border:none;"></iframe>
+        <iframe class="grafik-onair-iframe" src="${origin}/overlay-komm.html?p=${pid}"></iframe>
       </div>
       <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
         <span class="grafik-companion-url" style="flex:1;font-size:10px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
