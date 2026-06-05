@@ -4130,7 +4130,7 @@ function toggleBreakingPreview(){
   render();
 }
 function setExportMode(m){exportMode=m;['css','gsap'].forEach(x=>document.getElementById('mode-'+x)?.classList.toggle('active',x===m));toast(m==='gsap'?'GSAP animering':'CSS animering');}
-function setExportTarget(t){exportTarget=t;['spx','vmixgui','ccg'].forEach(x=>document.getElementById('mode-'+x)?.classList.toggle('active',x===t));const animWrap=document.getElementById('anim-mode-wrap');if(animWrap)animWrap.style.display=t==='vmixgui'?'none':'';toast(t==='vmixgui'?'vmix-webgui':t==='ccg'?'CasparCG':'SPX GC');}
+function setExportTarget(t){exportTarget=t;['spx','vmixgui','ccg'].forEach(x=>document.getElementById('mode-'+x)?.classList.toggle('active',x===t));const animWrap=document.getElementById('anim-mode-wrap');if(animWrap)animWrap.style.visibility=t==='vmixgui'?'hidden':'visible';toast(t==='vmixgui'?'vmix-webgui':t==='ccg'?'CasparCG':'SPX GC');}
 let _spxFieldCallback=null;
 function _showExportFieldDialog(cb){
   const candidates=elements.filter(e=>e.type==='text'||e.type==='ticker');
