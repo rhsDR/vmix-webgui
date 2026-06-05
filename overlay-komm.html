@@ -41,6 +41,16 @@
     const customState    = {};
     const customStateTime = {};
 
+    // Built-in grafikker der kan flyttes til komm-overlay via grafikOverlayMap
+    const BUILTIN_GRAPHICS = [
+      { id: 'lower-third', file: 'lower-third.html',    trigKey: 'lt_trigger' },
+      { id: 'ticker',      file: 'Graphics/Ticker/Ticker_gsap.html', trigKey: 'ticker_ovl_trigger' },
+      { id: 'breaking',    file: 'breaking.html',        trigKey: 'breaking_trigger' },
+      { id: 'live-boks',   file: 'Graphics/LIve_bokse/Live_BOKS_gsap.html', trigKey: 'live_boks_trigger' },
+      { id: 'opstilling',  file: 'opstilling.html',      trigKey: 'lineup_trigger' },
+      { id: 'credits',     file: 'credits.html',         trigKey: 'credits_trigger' },
+    ];
+
     // Raw WebSocket — postgres_changes for instant Companion-triggers på alle 6 komm-bokse + custom grafikker
     if (_pid) {
       (function() {
@@ -53,7 +63,15 @@
           'Komm_score_K-5': 'komm-k5-frame',
           'Komm_score_K-6': 'komm-k6-frame',
         };
-        function _dispatch(key, value) {
+        function _dispatch(key, value, slot) {
+          // lt_trigger: lower-third bruger postMessage (ikke direkte runAnimationIN/OUT)
+          if (key === 'lt_trigger') {
+            var ltFrame = document.getElementById('builtin-lower-third-frame');
+            if (ltFrame && ltFrame.contentWindow) {
+              try { ltFrame.contentWindow.postMessage({ type: 'sbTrigger', key: 'lt_trigger', value: value, slot: slot || '' }, '*'); } catch {}
+            }
+            return;
+          }
           // Hardcodede komm-bokse
           var frameId = _TRIG[key];
           if (frameId) {
@@ -107,7 +125,7 @@
                 if (!msg.payload || !msg.payload.data) return;
                 var rec = msg.payload.data.record;
                 if (!rec || rec.projekt_id !== _pid) return;
-                _dispatch(rec.key, rec.value);
+                _dispatch(rec.key, rec.value, rec.slot);
               } catch {}
             };
             _ws.onclose = function() { clearInterval(_hb); _hb = null; setTimeout(_wsConnect, 3000); };
@@ -121,6 +139,26 @@
     async function loadCustomGrafik() {
       if (!_pid) return;
       try {
+        // Hent grafik_overlay_map for built-in grafikker
+        const mapRows = await fetch(
+          `${SB_URL}/rest/v1/settings?projekt_id=eq.${encodeURIComponent(_pid)}&key=eq.grafik_overlay_map&select=value`,
+          { headers: SB_HDR }
+        ).then(r => r.json());
+        const grafMap = (Array.isArray(mapRows) && mapRows[0]?.value) ? JSON.parse(mapRows[0].value) : {};
+
+        // Load built-in grafikker tildelt 'komm' som direkte iframes (de styrer sig selv via Supabase)
+        for (const bg of BUILTIN_GRAPHICS) {
+          if ((grafMap[bg.id] || 'hoved') !== 'komm') continue;
+          const frameId = 'builtin-' + bg.id + '-frame';
+          if (document.getElementById(frameId)) continue;
+          const iframe = document.createElement('iframe');
+          iframe.id = frameId;
+          iframe.allowTransparency = true;
+          iframe.src = bg.file + '?p=' + _pid;
+          iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;';
+          document.body.appendChild(iframe);
+        }
+
         const allRows = await fetch(
           `${SB_URL}/rest/v1/projekt_grafik?projekt_id=eq.${encodeURIComponent(_pid)}&order=sort_order`,
           { headers: SB_HDR }

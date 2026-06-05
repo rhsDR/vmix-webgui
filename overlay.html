@@ -59,12 +59,14 @@
     const preview = params.get('preview') || '';
 
     // Sæt iframe-sources (preview overstyre normale sources)
+    const originalSrcs = {};
     GRAPHICS.forEach(g => {
       const frame = document.getElementById(g.id + '-frame');
       if (!frame) return;
       let src = g.file + '?p=' + pid;
       if (preview === 'credits'             && g.id === 'credits')    src = g.file + '?preview=1&p=' + pid;
       if ((preview === 'home' || preview === 'away') && g.id === 'opstilling') src = g.file + '?preview=' + preview + '&p=' + pid;
+      originalSrcs[g.id] = src;
       frame.src = src;
     });
 
@@ -91,17 +93,31 @@
 
     async function pollLagOrder() {
       try {
-        const [mainRows, subRows] = await Promise.all([
+        const fetches = [
           fetch(`${SB_URL}/rest/v1/settings?key=eq.overlay_lag_order&select=value${pf}`, { headers: SB_HDR }).then(r => r.json()),
           fetch(`${SB_URL}/rest/v1/settings?key=eq.ticker_lag_order&select=value${pf}`,  { headers: SB_HDR }).then(r => r.json()),
-        ]);
+          pf ? fetch(`${SB_URL}/rest/v1/settings?key=eq.grafik_overlay_map&select=value${pf}`, { headers: SB_HDR }).then(r => r.json()) : Promise.resolve([]),
+        ];
+        const [mainRows, subRows, mapRows] = await Promise.all(fetches);
         const rawMain = mainRows[0]?.value || '';
         const rawSub  = subRows[0]?.value  || '';
         let mainOrder = rawMain ? rawMain.split(',').map(s => s.trim()).filter(Boolean) : DEFAULT_ORDER;
         tickerSubOrder  = rawSub  ? rawSub.split(',').map(s => s.trim()).filter(Boolean)  : DEFAULT_TICKER_SUB_ORDER;
-        // Sikr at 'ticker' altid er i mainOrder — uden den kører ticker-blokken aldrig
         if (!mainOrder.includes('ticker')) mainOrder = [...mainOrder, 'ticker'];
         applyOrder(mainOrder);
+        // Respekter overlay_target: sæt 'komm'-tildelte iframes til about:blank
+        const grafMap = (mapRows[0]?.value) ? JSON.parse(mapRows[0].value) : {};
+        GRAPHICS.forEach(g => {
+          const frame = document.getElementById(g.id + '-frame');
+          if (!frame) return;
+          const target = grafMap[g.id] || 'hoved';
+          if (target === 'komm') {
+            if (frame.src !== 'about:blank') frame.src = 'about:blank';
+          } else {
+            const expected = originalSrcs[g.id];
+            if (expected && frame.src === 'about:blank') frame.src = expected;
+          }
+        });
       } catch {}
       setTimeout(pollLagOrder, 3000);
     }

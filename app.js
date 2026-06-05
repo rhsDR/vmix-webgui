@@ -1311,6 +1311,7 @@ let tickerLagOrder    = [...DEFAULT_TICKER_SUB_ORDER];
 let tickerSubExpanded = false;
 let grafiktState        = {}; // { triggerKey: currentValue }
 let customGrafik        = []; // rækker fra projekt_grafik-tabellen
+let grafikOverlayMap    = {}; // { grafik-id: 'hoved'|'komm' } for built-in grafikker
 let makroer             = []; // rækker fra projekt_makroer-tabellen
 let grafiktActiveSubTab = 'lower-third';
 let grafiktActivePrvKey = '';
@@ -1447,7 +1448,7 @@ async function fireMakro(id, slotOverride = '') {
 async function refreshGrafiktState() {
   const customKeys = customGrafik.map(g => g.trigger_key);
   const kommKeys = KOMM_BOKSE.map(k => k.triggerKey);
-  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey).filter(Boolean), ...customKeys, ...kommKeys, 'lt_slot', 'score_breaking_trigger', 'ticker_lag_order', 'lineup_slots'].join(',');
+  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey).filter(Boolean), ...customKeys, ...kommKeys, 'lt_slot', 'score_breaking_trigger', 'ticker_lag_order', 'lineup_slots', 'grafik_overlay_map'].join(',');
   try {
     const rows = await sbGet('settings?select=key,value&key=in.(' + keys + ')&projekt_id=eq.' + aktivProjektId);
     rows.forEach(r => {
@@ -1456,6 +1457,8 @@ async function refreshGrafiktState() {
         DEFAULT_TICKER_SUB_ORDER.forEach(id => { if (!tickerLagOrder.includes(id)) tickerLagOrder.push(id); });
       } else if (r.key === 'lineup_slots') {
         try { lineupSlots = JSON.parse(r.value); } catch { lineupSlots = {}; }
+      } else if (r.key === 'grafik_overlay_map') {
+        try { grafikOverlayMap = JSON.parse(r.value); } catch { grafikOverlayMap = {}; }
       } else {
         grafiktState[r.key] = r.value;
       }
@@ -1470,6 +1473,15 @@ async function setGrafiktTrigger(triggerKey, value) {
   try {
     await sbUpsert('settings', { projekt_id: aktivProjektId, key: triggerKey, value });
   } catch { toast('Fejl ved trigger', 'err'); }
+}
+
+async function setBuiltinGrafikTarget(grafId, target) {
+  grafikOverlayMap = { ...grafikOverlayMap, [grafId]: target };
+  try {
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'grafik_overlay_map', value: JSON.stringify(grafikOverlayMap) });
+    toast('Overlay-vindue opdateret — genindlæs overlays i vMix', 'ok');
+  } catch { toast('Fejl ved gem', 'err'); }
+  renderGrafikOps();
 }
 
 async function saveOverlayLagOrder() {
@@ -4898,8 +4910,7 @@ function renderGrafikOps() {
     { label: 'Kommentator', url: `${origin}/overlay-komm.html?p=${pid}` },
     { label: 'Opstilling', url: `${origin}/opstilling.html?p=${pid}` },
   ];
-  const standaloneGrafik = (customGrafik || []).filter(g => g.overlay_mode === 'standalone');
-  standaloneGrafik.forEach(g => {
+  (customGrafik || []).filter(g => g.overlay_mode === 'standalone').forEach(g => {
     const inputNr = g.overlay_input ? `Input ${g.overlay_input}  ` : '';
     builtinWindows.push({ label: inputNr + g.label, url: g.file_url + '?p=' + pid });
   });
@@ -4907,8 +4918,24 @@ function renderGrafikOps() {
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1a1a1a;">
       <span style="flex:1;font-size:11px;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${w.url}">${w.label}</span>
       <span style="font-size:10px;color:#555;flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${w.url}</span>
-      <button onclick="navigator.clipboard.writeText(${JSON.stringify(w.url)});toast('Kopieret','ok')" style="padding:3px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button>
+      <button class="copy-btn icon-btn" data-copy="${w.url}" style="padding:3px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button>
     </div>`).join('');
+
+  // ─ Sektion: BUILT-IN GRAFIKKER ─
+  const targetOpts = '<option value="hoved">Hoved Overlay</option><option value="komm">Kommentator</option>';
+  const builtinRows = OVERLAY_GRAPHICS.filter(g => g.type !== 'komm').map(g => {
+    const isLive = (grafiktState[g.triggerKey] || 'out') !== 'out';
+    const statusColor = isLive ? '#22c55e' : '#555';
+    const curTarget = grafikOverlayMap[g.id] || 'hoved';
+    const paBtn = g.triggerKey ? `<button data-trig="${g.triggerKey}" data-val="in" style="padding:4px 10px;background:#1a3a1a;border:1px solid #2d5a2d;color:#86efac;border-radius:5px;cursor:pointer;font-size:10px;">▶ PÅ</button>` : '';
+    const afBtn = g.triggerKey ? `<button data-trig="${g.triggerKey}" data-val="out" style="padding:4px 10px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:5px;cursor:pointer;font-size:10px;">&#60; AF</button>` : '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #1a1a1a;">
+      <span style="font-size:10px;font-weight:700;color:${statusColor};min-width:38px;">${isLive ? '● LIVE' : '○ AF'}</span>
+      <span style="flex:1;font-size:11px;color:#ccc;">${g.label}</span>
+      <select data-builtin-id="${g.id}" style="background:#111;border:1px solid #333;color:#aaa;padding:3px 7px;border-radius:5px;font-size:10px;">${targetOpts.replace(`value="${curTarget}"`, `value="${curTarget}" selected`)}</select>
+      <div style="display:flex;gap:4px;">${afBtn}${paBtn}</div>
+    </div>`;
+  }).join('');
 
   // ─ Sektion: EGNE GRAFIKKER ─
   const grafikkort = (customGrafik || []).map(g => {
@@ -4925,7 +4952,7 @@ function renderGrafikOps() {
         <div style="font-size:10px;color:#666;letter-spacing:1px;margin-bottom:3px;">URL TIL VMIX</div>
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="flex:1;font-size:10px;color:#aaa;background:#0d0d0d;border:1px solid #2a2a2a;padding:4px 6px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fileUrlWithPid}</span>
-          <button onclick="navigator.clipboard.writeText(${JSON.stringify(fileUrlWithPid)});toast('Kopieret','ok')" style="padding:3px 7px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:10px;">⎘</button>
+          <button class="copy-btn icon-btn" data-copy="${fileUrlWithPid}" style="padding:3px 7px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:10px;">⎘</button>
         </div>
       </div>` : '';
     return `
@@ -4933,14 +4960,14 @@ function renderGrafikOps() {
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:11px;font-weight:700;color:${statusColor};">${statusDot}</span>
-          <span style="font-size:13px;color:#eee;font-weight:600;">${g.label}</span>
+          <span style="font-size:13px;color:#eee;font-weight:600;">${esc(g.label)}</span>
         </div>
         <div style="display:flex;gap:6px;">
-          <button onclick="openEgneGrafikModal(${JSON.stringify(g.id)})" style="padding:3px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:10px;">✎</button>
-          <button onclick="_grafikOpsDeleteConfirm(this,${JSON.stringify(g.id)},${JSON.stringify(g.file_path)},${JSON.stringify(g.label)})" style="padding:3px 8px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:4px;cursor:pointer;font-size:10px;">🗑</button>
+          <button data-edit-id="${g.id}" style="padding:3px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:10px;">✎</button>
+          <button data-del-id="${g.id}" data-del-path="${g.file_path || ''}" data-del-label="${esc(g.label)}" style="padding:3px 8px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:4px;cursor:pointer;font-size:10px;">🗑</button>
         </div>
       </div>
-      <div style="font-size:10px;color:#555;margin-bottom:4px;">${tilstand} · <span style="color:#4a9eff;">${g.trigger_key}</span>${g.auto_hide_seconds > 0 ? ` · auto-skjul ${g.auto_hide_seconds}s` : ''}</div>
+      <div style="font-size:10px;color:#555;margin-bottom:4px;">${tilstand} · <span style="color:#4a9eff;">${esc(g.trigger_key)}</span>${g.auto_hide_seconds > 0 ? ` · auto-skjul ${g.auto_hide_seconds}s` : ''}</div>
       ${vMixUrlRow}
       <div style="margin-top:6px;">
         <div style="font-size:10px;color:#666;letter-spacing:1px;margin-bottom:4px;">COMPANION LINKS</div>
@@ -4948,18 +4975,18 @@ function renderGrafikOps() {
           <div style="display:flex;align-items:center;gap:5px;">
             <span style="width:22px;font-size:10px;color:#86efac;">PÅ</span>
             <span style="flex:1;font-size:10px;color:#aaa;background:#0d0d0d;border:1px solid #2a2a2a;padding:3px 6px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${onUrl}</span>
-            <button onclick="navigator.clipboard.writeText(${JSON.stringify(onUrl)});toast('Kopieret','ok')" style="padding:3px 7px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:10px;">⎘</button>
+            <button class="copy-btn icon-btn" data-copy="${onUrl}" style="padding:3px 7px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:10px;">⎘</button>
           </div>
           <div style="display:flex;align-items:center;gap:5px;">
             <span style="width:22px;font-size:10px;color:#ef4444;">AF</span>
             <span style="flex:1;font-size:10px;color:#aaa;background:#0d0d0d;border:1px solid #2a2a2a;padding:3px 6px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${offUrl}</span>
-            <button onclick="navigator.clipboard.writeText(${JSON.stringify(offUrl)});toast('Kopieret','ok')" style="padding:3px 7px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:10px;">⎘</button>
+            <button class="copy-btn icon-btn" data-copy="${offUrl}" style="padding:3px 7px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:10px;">⎘</button>
           </div>
         </div>
       </div>
       <div style="display:flex;gap:6px;margin-top:10px;">
-        <button onclick="setGrafiktTrigger(${JSON.stringify(g.trigger_key)},'out');renderGrafikOps()" style="flex:1;padding:6px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:6px;cursor:pointer;font-size:11px;">&#60; AF</button>
-        <button onclick="setGrafiktTrigger(${JSON.stringify(g.trigger_key)},'in');renderGrafikOps()" style="flex:2;padding:6px;background:#1a3a1a;border:1px solid #2d5a2d;color:#86efac;border-radius:6px;cursor:pointer;font-size:11px;">&#9654; PÅ</button>
+        <button data-trig="${esc(g.trigger_key)}" data-val="out" style="flex:1;padding:6px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:6px;cursor:pointer;font-size:11px;">&#60; AF</button>
+        <button data-trig="${esc(g.trigger_key)}" data-val="in" style="flex:2;padding:6px;background:#1a3a1a;border:1px solid #2d5a2d;color:#86efac;border-radius:6px;cursor:pointer;font-size:11px;">&#9654; PÅ</button>
       </div>
     </div>`;
   }).join('');
@@ -4973,14 +5000,32 @@ function renderGrafikOps() {
         </div>
         <div style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 12px;">${overlayRows}</div>
       </div>
+      <div style="margin-bottom:24px;">
+        <div style="font-size:10px;letter-spacing:2px;color:#666;margin-bottom:4px;">BUILT-IN GRAFIKKER</div>
+        <div style="font-size:10px;color:#444;margin-bottom:8px;">Vælg overlay-vindue. Ændringer træder i kraft næste gang overlayene genindlæses i vMix.</div>
+        <div style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:4px 12px;">${builtinRows}</div>
+      </div>
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
           <div style="font-size:10px;letter-spacing:2px;color:#666;">EGNE GRAFIKKER</div>
-          <button onclick="openEgneGrafikModal()" style="padding:5px 12px;background:#1a2a3a;border:1px solid #1d4ed8;color:#93c5fd;border-radius:6px;cursor:pointer;font-size:11px;letter-spacing:1px;">＋ Tilføj ny grafik</button>
+          <button id="gops-add-btn" style="padding:5px 12px;background:#1a2a3a;border:1px solid #1d4ed8;color:#93c5fd;border-radius:6px;cursor:pointer;font-size:11px;letter-spacing:1px;">＋ Tilføj ny grafik</button>
         </div>
         ${grafikkort || '<div style="color:#555;font-size:12px;padding:16px 0;">Ingen grafikker endnu. Klik "＋ Tilføj ny grafik" for at starte.</div>'}
       </div>
     </div>`;
+
+  // Event delegation — ingen inline onclick (undgår JSON.stringify HTML-escaping-bug)
+  el.querySelectorAll('[data-copy]').forEach(btn =>
+    btn.addEventListener('click', () => copyText(btn.dataset.copy)));
+  el.querySelectorAll('[data-edit-id]').forEach(btn =>
+    btn.addEventListener('click', () => openEgneGrafikModal(btn.dataset.editId)));
+  el.querySelectorAll('[data-del-id]').forEach(btn =>
+    btn.addEventListener('click', () => _grafikOpsDeleteConfirm(btn, btn.dataset.delId, btn.dataset.delPath, btn.dataset.delLabel)));
+  el.querySelectorAll('[data-trig][data-val]').forEach(btn =>
+    btn.addEventListener('click', () => { setGrafiktTrigger(btn.dataset.trig, btn.dataset.val); renderGrafikOps(); }));
+  el.querySelectorAll('[data-builtin-id]').forEach(sel =>
+    sel.addEventListener('change', () => setBuiltinGrafikTarget(sel.dataset.builtinId, sel.value)));
+  el.querySelector('#gops-add-btn')?.addEventListener('click', () => openEgneGrafikModal());
 }
 
 function _grafikOpsDeleteConfirm(btn, id, filePath, label) {
