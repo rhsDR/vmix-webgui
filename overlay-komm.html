@@ -36,8 +36,12 @@
 
     const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
     const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
+    const SB_HDR  = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON };
+    const customFrameMap = {};
+    const customState    = {};
+    const customStateTime = {};
 
-    // Raw WebSocket — postgres_changes for instant Companion-triggers på alle 6 komm-bokse
+    // Raw WebSocket — postgres_changes for instant Companion-triggers på alle 6 komm-bokse + custom grafikker
     if (_pid) {
       (function() {
         var _ws = null, _ref = 0, _hb = null, _pgState = {};
@@ -50,17 +54,34 @@
           'Komm_score_K-6': 'komm-k6-frame',
         };
         function _dispatch(key, value) {
+          // Hardcodede komm-bokse
           var frameId = _TRIG[key];
-          if (!frameId) return;
-          var iframe = document.getElementById(frameId);
-          if (!iframe) return;
-          var prev = _pgState[key];
-          _pgState[key] = value;
+          if (frameId) {
+            var iframe = document.getElementById(frameId);
+            if (!iframe) return;
+            var prev = _pgState[key];
+            _pgState[key] = value;
+            try {
+              if (value === 'in') iframe.contentWindow?.runAnimationIN?.();
+              else if (value === 'out') {
+                if (prev === 'in') iframe.contentWindow?.runAnimationOUT?.();
+                else if (iframe.contentWindow?.__forceOut) iframe.contentWindow.__forceOut();
+              }
+            } catch {}
+            return;
+          }
+          // Custom grafikker med overlay_target='komm'
+          var cIframe = customFrameMap[key];
+          if (!cIframe) return;
+          var cPrev = customState[key];
+          if (cPrev === value) return;
+          customState[key] = value;
+          customStateTime[key] = Date.now();
           try {
-            if (value === 'in') iframe.contentWindow?.runAnimationIN?.();
+            if (value === 'in') cIframe.contentWindow?.runAnimationIN?.();
             else if (value === 'out') {
-              if (prev === 'in') iframe.contentWindow?.runAnimationOUT?.();
-              else if (iframe.contentWindow?.__forceOut) iframe.contentWindow.__forceOut();
+              if (cPrev === 'in') cIframe.contentWindow?.runAnimationOUT?.();
+              else if (cIframe.contentWindow?.__forceOut) cIframe.contentWindow.__forceOut();
             }
           } catch {}
         }
@@ -96,6 +117,73 @@
         _wsConnect();
       })();
     }
+
+    async function loadCustomGrafik() {
+      if (!_pid) return;
+      try {
+        const allRows = await fetch(
+          `${SB_URL}/rest/v1/projekt_grafik?projekt_id=eq.${encodeURIComponent(_pid)}&order=sort_order`,
+          { headers: SB_HDR }
+        ).then(r => r.json());
+        const rows = Array.isArray(allRows)
+          ? allRows.filter(g => g.overlay_mode !== 'standalone' && g.overlay_target === 'komm')
+          : [];
+        if (!rows.length) return;
+        await Promise.all(rows.map(async g => {
+          const frameId = 'custom-komm-' + g.id.slice(0, 8) + '-frame';
+          if (document.getElementById(frameId)) return;
+          let html;
+          try { html = await fetch(g.file_url, { cache: 'no-store' }).then(r => r.text()); } catch { return; }
+          const _ahs = (g.auto_hide_seconds > 0) ? Number(g.auto_hide_seconds) : 0;
+          const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(_pid)};window.__IS_PREVIEW=false;(function(){var _f=window.fetch;window.fetch=function(u,o){if(typeof u==='string'&&u.indexOf('supabase.co')!==-1)return Promise.resolve({ok:true,json:function(){return Promise.resolve([])}});return _f.apply(this,arguments);};})();window.__forceOut=function(){if(typeof window._spxVisible!=='undefined')window._spxVisible=false;if(window.gsap)window.gsap.killTweensOf('*');if(document.body)document.body.style.opacity='0';};document.addEventListener('DOMContentLoaded',function(){if(document.body)document.body.style.opacity='0';var _ahs=${_ahs};var _aht=null;var _o=window.runAnimationIN;if(typeof _o==='function')window.runAnimationIN=function(){if(document.body)document.body.style.opacity='';if(_aht){clearTimeout(_aht);_aht=null;}_o.apply(this,arguments);if(_ahs>0)_aht=setTimeout(function(){_aht=null;if(typeof window.runAnimationOUT==='function')window.runAnimationOUT();},_ahs*1000);};});Object.defineProperty(window,'supabase',{value:{createClient:()=>({channel:()=>({on:()=>({on:()=>({subscribe:()=>{}}),subscribe:()=>{}}),subscribe:()=>{}})})},writable:false,configurable:false});<\/script>`;
+          const injectedHtml = html.replace(/(<html[^>]*>)/i, '$1' + inject);
+          html = injectedHtml.includes('__PROJEKT_ID') ? injectedHtml : inject + html;
+          const blob = new Blob([html], { type: 'text/html' });
+          const iframe = document.createElement('iframe');
+          iframe.id = frameId;
+          iframe.allowTransparency = true;
+          iframe.src = URL.createObjectURL(blob);
+          iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;';
+          document.body.appendChild(iframe);
+          customFrameMap[g.trigger_key] = iframe;
+          customState[g.trigger_key] = 'out';
+        }));
+      } catch {}
+    }
+
+    async function pollCustomTriggers() {
+      if (!_pid) { setTimeout(pollCustomTriggers, 5000); return; }
+      const trigKeys = Object.keys(customFrameMap);
+      if (trigKeys.length) {
+        try {
+          const data = await fetch(
+            `${SB_URL}/rest/v1/settings?key=in.(${trigKeys.map(k => encodeURIComponent(k)).join(',')})&projekt_id=eq.${encodeURIComponent(_pid)}&select=key,value`,
+            { headers: SB_HDR }
+          ).then(r => r.json());
+          if (Array.isArray(data)) {
+            for (const row of data) {
+              if (Date.now() - (customStateTime[row.key] || 0) < 3000) continue;
+              if (customState[row.key] === row.value) continue;
+              const prev = customState[row.key];
+              customState[row.key] = row.value;
+              const iframe = customFrameMap[row.key];
+              if (!iframe) continue;
+              try {
+                if (row.value === 'in') iframe.contentWindow?.runAnimationIN?.();
+                else if (row.value === 'out') {
+                  if (prev === 'in') iframe.contentWindow?.runAnimationOUT?.();
+                  else if (iframe.contentWindow?.__forceOut) iframe.contentWindow.__forceOut();
+                }
+              } catch {}
+            }
+          }
+        } catch {}
+      }
+      setTimeout(pollCustomTriggers, 5000);
+    }
+
+    loadCustomGrafik();
+    pollCustomTriggers();
   </script>
 </body>
 </html>

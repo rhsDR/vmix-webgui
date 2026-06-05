@@ -238,10 +238,17 @@
           <label style="display:flex;gap:10px;cursor:pointer;align-items:flex-start;">
             <input type="radio" id="egn-mode-embed" name="egn-mode" value="embed" checked style="margin-top:2px;accent-color:#4a9eff;">
             <div>
-              <div style="font-size:11px;color:#ccc;font-weight:600;">Indlejret i Hoved Overlay</div>
-              <div style="font-size:10px;color:#555;margin-top:2px;">Filen loades automatisk i overlay.html. Intet ekstra vMix-input nødvendigt.</div>
+              <div style="font-size:11px;color:#ccc;font-weight:600;">Indlejret i et overlay</div>
+              <div style="font-size:10px;color:#555;margin-top:2px;">Filen loades automatisk i det valgte overlay. Intet ekstra vMix-input nødvendigt.</div>
             </div>
           </label>
+        </div>
+        <div id="egn-target-row" style="display:none;padding-left:24px;">
+          <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">OVERLAY-VINDUE</label>
+          <select id="egn-target-sel" style="background:#111;border:1px solid #333;color:#ccc;padding:6px 10px;border-radius:6px;font-size:11px;width:100%;">
+            <option value="hoved">Hoved Overlay (overlay.html)</option>
+            <option value="komm">Kommentator (overlay-komm.html)</option>
+          </select>
         </div>
         <div id="egn-input-row" style="display:none;">
           <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">VMIX INPUT-NUMMER (valgfrit)</label>

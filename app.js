@@ -3036,7 +3036,7 @@ function openEgneGrafikModal(editId) {
   _egneGrafikData = {};
   if (editId) {
     const g = (customGrafik || []).find(x => x.id === editId);
-    if (g) _egneGrafikData = { label: g.label, trigKey: g.trigger_key, color: g.color || '#888888', overlay_mode: g.overlay_mode || 'embed', overlay_input: g.overlay_input || '', auto_hide_seconds: g.auto_hide_seconds || '' };
+    if (g) _egneGrafikData = { label: g.label, trigKey: g.trigger_key, color: g.color || '#888888', overlay_mode: g.overlay_mode || 'embed', overlay_input: g.overlay_input || '', overlay_target: g.overlay_target || 'hoved', auto_hide_seconds: g.auto_hide_seconds || '' };
   }
   _egneGrafikGoStep(1);
   document.getElementById('egne-grafik-modal').style.display = 'flex';
@@ -3160,13 +3160,16 @@ function _egneGrafikRenderStep2() {
   document.getElementById('egn-mode-standalone').checked = d.overlay_mode === 'standalone';
   document.getElementById('egn-mode-embed').checked = d.overlay_mode !== 'standalone';
   document.getElementById('egn-input-nr').value = d.overlay_input || '';
-  const toggleInput = () => {
+  const targetSel = document.getElementById('egn-target-sel');
+  if (targetSel) targetSel.value = d.overlay_target || 'hoved';
+  const toggleMode = () => {
     const sa = document.getElementById('egn-mode-standalone').checked;
     document.getElementById('egn-input-row').style.display = sa ? 'block' : 'none';
+    document.getElementById('egn-target-row').style.display = sa ? 'none' : 'block';
   };
-  document.getElementById('egn-mode-standalone').onchange = toggleInput;
-  document.getElementById('egn-mode-embed').onchange = toggleInput;
-  toggleInput();
+  document.getElementById('egn-mode-standalone').onchange = toggleMode;
+  document.getElementById('egn-mode-embed').onchange = toggleMode;
+  toggleMode();
 }
 
 async function _egneGrafikNextStep() {
@@ -3201,6 +3204,7 @@ async function _egneGrafikNextStep() {
   } else if (_egneGrafikStep === 2) {
     _egneGrafikData.overlay_mode = document.getElementById('egn-mode-standalone').checked ? 'standalone' : 'embed';
     _egneGrafikData.overlay_input = parseInt(document.getElementById('egn-input-nr').value) || null;
+    _egneGrafikData.overlay_target = _egneGrafikData.overlay_mode === 'standalone' ? 'hoved' : (document.getElementById('egn-target-sel')?.value || 'hoved');
     await _egneGrafikSave();
   }
 }
@@ -3245,6 +3249,7 @@ async function _egneGrafikSave() {
         projekt_id: aktivProjektId, label: d.label, trigger_key: d.trigKey,
         file_url: fileUrl, file_path: filePath, color: d.color,
         overlay_mode: d.overlay_mode, overlay_input: d.overlay_input,
+        overlay_target: d.overlay_target || 'hoved',
         auto_hide_seconds: d.auto_hide_seconds, template_type: d.templateType
       });
       if (dbErr) { toast('DB fejl: ' + dbErr.message, 'err'); return; }
@@ -3261,6 +3266,7 @@ async function _egneGrafikSave() {
       const { error: dbErr } = await sbClient.from('projekt_grafik').update({
         label: d.label, color: d.color, trigger_key: d.trigKey,
         overlay_mode: d.overlay_mode, overlay_input: d.overlay_input,
+        overlay_target: d.overlay_target || 'hoved',
         auto_hide_seconds: d.auto_hide_seconds
       }).eq('id', _egneGrafikEditId);
       if (dbErr) { toast('DB fejl: ' + dbErr.message, 'err'); return; }
@@ -3290,7 +3296,8 @@ function _egneGrafikShowConfirm(g) {
       <div style="display:flex;align-items:center;gap:6px;"><span style="flex:1;font-size:10px;color:#aaa;background:#111;border:1px solid #333;padding:5px 8px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fileUrlWithPid}</span>
       <button onclick="navigator.clipboard.writeText(${JSON.stringify(fileUrlWithPid)});toast('Kopieret','ok')" style="padding:4px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button></div></div>`;
   } else {
-    html += `<div style="font-size:11px;color:#666;margin-bottom:10px;padding:8px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;">Indlejret i Hoved Overlay — genindlæs overlay.html i vMix for at aktivere grafikken.</div>`;
+    const tLabel = g.overlay_target === 'komm' ? 'Kommentator (overlay-komm.html)' : 'Hoved Overlay (overlay.html)';
+    html += `<div style="font-size:11px;color:#666;margin-bottom:10px;padding:8px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;">Indlejret i ${tLabel} — genindlæs overlayet i vMix for at aktivere grafikken.</div>`;
   }
   html += `<div><div style="font-size:10px;color:#666;letter-spacing:1px;margin-bottom:6px;">COMPANION LINKS:</div>
     <div style="display:flex;flex-direction:column;gap:4px;">
@@ -4908,7 +4915,8 @@ function renderGrafikOps() {
     const isLive = grafiktState[g.trigger_key] === 'in';
     const statusDot = isLive ? '● LIVE' : '○ AF';
     const statusColor = isLive ? '#22c55e' : '#555';
-    const tilstand = g.overlay_mode === 'standalone' ? `Standalone${g.overlay_input ? ' · Input ' + g.overlay_input : ''}` : 'Indlejret i Hoved Overlay';
+    const targetLabel = g.overlay_target === 'komm' ? 'Kommentator' : 'Hoved Overlay';
+    const tilstand = g.overlay_mode === 'standalone' ? `Standalone${g.overlay_input ? ' · Input ' + g.overlay_input : ''}` : `Indlejret i ${targetLabel}`;
     const fileUrlWithPid = g.overlay_mode === 'standalone' ? (g.file_url + '?p=' + pid) : null;
     const onUrl  = `${origin}/api/trigger/${pid}?key=${encodeURIComponent(g.trigger_key)}&value=in`;
     const offUrl = `${origin}/api/trigger/${pid}?key=${encodeURIComponent(g.trigger_key)}&value=out`;

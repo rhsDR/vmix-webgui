@@ -216,7 +216,7 @@
           `${SB_URL}/rest/v1/projekt_grafik?projekt_id=eq.${encodeURIComponent(pid)}&order=sort_order`,
           { headers: SB_HDR }
         ).then(r => r.json());
-        const rows = Array.isArray(allRows) ? allRows.filter(g => g.overlay_mode !== 'standalone') : [];
+        const rows = Array.isArray(allRows) ? allRows.filter(g => g.overlay_mode !== 'standalone' && g.overlay_target !== 'komm') : [];
         if (rows.length) {
           await Promise.all(rows.map(async g => {
             const frameId = 'custom-' + g.id.slice(0, 8) + '-frame';
