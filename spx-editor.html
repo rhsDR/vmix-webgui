@@ -466,11 +466,18 @@ html.theme-kold{
   <button class="theme-dot" id="ts-kold" onclick="setTheme('kold')" title="Kold" style="background:#191e2a"></button>
   <div class="tb-sep"></div>
   <div class="export-mode">
-    <span>Eksport:</span>
+    <span>Mål:</span>
+    <div class="mode-pill">
+      <div class="mode-opt active" id="mode-spx" onclick="setExportTarget('spx')">SPX GC</div>
+      <div class="mode-opt" id="mode-vmixgui" onclick="setExportTarget('vmixgui')">vmix-webgui</div>
+      <div class="mode-opt" id="mode-ccg" onclick="setExportTarget('ccg')">CasparCG</div>
+    </div>
+  </div>
+  <div class="export-mode" id="anim-mode-wrap">
+    <span>Anim:</span>
     <div class="mode-pill">
       <div class="mode-opt active" id="mode-css" onclick="setExportMode('css')">CSS</div>
       <div class="mode-opt" id="mode-gsap" onclick="setExportMode('gsap')">GSAP</div>
-      <div class="mode-opt" id="mode-vmix" onclick="setExportMode('vmix')">vMix</div>
     </div>
   </div>
   <button class="tb-btn" id="btn-breaking-preview" style="display:none" onclick="toggleBreakingPreview()">&#9889; Breaking</button>
@@ -478,8 +485,6 @@ html.theme-kold{
   <button class="tb-btn primary" id="btn-st-export" style="display:none" onclick="exportSmartTicker()">&#11014; Smart Ticker</button>
   <button class="tb-btn" onclick="exportCanvasPNG()" title="Eksportér canvas som PNG">&#128247; PNG</button>
   <button class="tb-btn primary" id="btn-spx-export" onclick="exportSPX()">&#11014; Eksportér</button>
-  <button class="tb-btn" id="btn-export-supabase" onclick="exportSPX_Supabase()" title="Eksportér GSAP-animation med Supabase-integration (vMix WebGUI lower third)" style="background:#2d1a4a;color:#c084fc;border:1px solid #6b21a8;">Supabase LT &#11015;</button>
-  <button class="tb-btn" id="btn-export-produktion" onclick="exportSPX_Produktion()" title="Eksporter med generisk Supabase-trigger" style="background:#14532d;color:#86efac;border:1px solid #166534;">&rarr; Produktion &#11015;</button>
   <button class="tb-btn icon" onclick="document.getElementById('help-modal').classList.toggle('open')" title="Genvejstaster" style="font-size:13px;font-weight:700;width:26px">?</button>
   <!-- DROPDOWN MENUS -->
   <div id="edit-dropdown" class="mb-dropdown">
@@ -806,6 +811,33 @@ html.theme-kold{
     </div>
   </div>
 </div>
+<div id="vmixgui-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000;display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,.7);display:flex;flex-direction:column;">
+    <h2 style="font-size:14px;font-weight:600;padding:15px 18px 11px;border-bottom:1px solid var(--border);color:var(--text);margin:0;">Eksportér til vmix-webgui</h2>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <label style="font-size:12px;color:#aaa;display:flex;flex-direction:column;gap:4px;">
+        Trigger-nøgle
+        <input id="vmixgui-trig-inp" class="tb-input" style="width:100%;" placeholder="min_grafik_trigger">
+      </label>
+      <label style="font-size:12px;color:#aaa;display:flex;flex-direction:column;gap:4px;">
+        <span style="display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" id="vmixgui-autohide-check" onchange="document.getElementById('vmixgui-autohide-row').style.display=this.checked?'flex':'none'">
+          Auto-skjul efter
+          <input id="vmixgui-autohide-secs" class="tb-input" type="number" value="5" min="1" max="300" style="width:55px;display:inline-block;">
+          sekunder
+        </span>
+      </label>
+      <label id="vmixgui-df-row" style="font-size:12px;color:#aaa;display:flex;align-items:center;gap:6px;">
+        <input type="checkbox" id="vmixgui-df-check">
+        Inkludér indholdsfelter (DataFields + _updateContent)
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);">
+      <button class="tb-btn" style="flex:1;" onclick="_closeVmixGuiModal()">Annullér</button>
+      <button class="tb-btn primary" style="flex:2;" onclick="_confirmVmixGuiModal()">&#11015; Eksportér</button>
+    </div>
+  </div>
+</div>
 <script>
 const CW=1920,CH=1080;
 let scale=1,canvasZoom=1,tool='select',elements=[],selIds=[],elCtr=0;
@@ -821,6 +853,7 @@ let showGrid=false,snapOn=false,gridSz=4;
 let bgColor='transparent';
 let currentTab='props';
 let exportMode='css';
+let exportTarget='spx';
 let ribbonTab='format';
 const THEMES=['default','dark','graa','kold'];
 let _dirty=false;
@@ -4096,7 +4129,8 @@ function toggleBreakingPreview(){
   document.getElementById('btn-breaking-preview').classList.toggle('active',previewBreaking);
   render();
 }
-function setExportMode(m){exportMode=m;document.getElementById('mode-css').classList.toggle('active',m==='css');document.getElementById('mode-gsap').classList.toggle('active',m==='gsap');document.getElementById('mode-vmix').classList.toggle('active',m==='vmix');toast(m==='gsap'?'GSAP eksport':m==='vmix'?'vMix WebGUI eksport':'CSS eksport');}
+function setExportMode(m){exportMode=m;['css','gsap'].forEach(x=>document.getElementById('mode-'+x)?.classList.toggle('active',x===m));toast(m==='gsap'?'GSAP animering':'CSS animering');}
+function setExportTarget(t){exportTarget=t;['spx','vmixgui','ccg'].forEach(x=>document.getElementById('mode-'+x)?.classList.toggle('active',x===t));const animWrap=document.getElementById('anim-mode-wrap');if(animWrap)animWrap.style.display=t==='vmixgui'?'none':'';toast(t==='vmixgui'?'vmix-webgui':t==='ccg'?'CasparCG':'SPX GC');}
 let _spxFieldCallback=null;
 function _showExportFieldDialog(cb){
   const candidates=elements.filter(e=>e.type==='text'||e.type==='ticker');
@@ -4133,7 +4167,7 @@ function _confirmSpxFieldDialog(){
   document.getElementById('spx-field-modal').classList.remove('open');
   if(_spxFieldCallback){const cb=_spxFieldCallback;_spxFieldCallback=null;cb();}
 }
-function exportSPX(){if(!elements.length){toast('Ingen elementer');return;}_showExportFieldDialog(()=>{if(exportMode==='gsap')exportSPX_GSAP();else if(exportMode==='vmix')exportSPX_VMIX();else exportSPX_CSS();});}
+function exportSPX(){if(!elements.length){toast('Ingen elementer');return;}if(exportTarget==='vmixgui'){exportSPX_vMixGUI();return;}if(exportTarget==='ccg'){if(elements.some(e=>e.type==='text'||e.type==='ticker'))_showExportFieldDialog(()=>exportSPX_GSAP(null,null,false,null,{}));else exportSPX_GSAP(null,null,false,null,{});return;}_showExportFieldDialog(()=>{if(exportMode==='gsap')exportSPX_GSAP();else exportSPX_CSS();});}
 function exportSPX_Supabase(){if(!elements.length){toast('Ingen elementer');return;}document.getElementById('supabase-modal').style.display='flex';}
 function _closeSbModal(){document.getElementById('supabase-modal').style.display='none';}
 function _confirmSbModal(){_closeSbModal();const label=document.getElementById('sb-label-inp').value.trim()||'SPORT';const side=document.getElementById('sb-side-sel').value;exportSPX_GSAP({label,side});}
@@ -4416,9 +4450,9 @@ function exportSPX_CSS(){
   toast('CSS template downloadet!','ok');
 }
 
-function exportSPX_GSAP(sbMode=null,prodConfig=null,vmixMode=false){
+function exportSPX_GSAP(sbMode=null,prodConfig=null,vmixMode=false,vmixGuiConfig=null,ccgConfig=null){
   const _ttype=document.getElementById('ttype').value;
-  const isLT=!vmixMode&&_ttype==='lower_third';
+  const isLT=!vmixMode&&!vmixGuiConfig&&!ccgConfig&&_ttype==='lower_third';
   const spxEls=elements.filter(e=>(e.type==='text'||e.type==='ticker')&&e.spxField);
   const fieldDefsArr=spxEls.map((e,i)=>`    {"field":"f${i}","ftype":"${e.type==='ticker'?'textarea':'textfield'}","title":"${e.fieldLabel}","value":"${e.text.replace(/"/g,'\\"')}"}`);
   if(isLT)fieldDefsArr.push('    {"field":"f'+spxEls.length+'","ftype":"dropdown","title":"Placering","value":"venstre","items":[{"text":"Venstre side","value":"venstre"},{"text":"H\\u00f8jre side","value":"h\\u00f8jre"}]}');
@@ -4558,6 +4592,22 @@ function exportSPX_GSAP(sbMode=null,prodConfig=null,vmixMode=false){
   const _scScriptG=(scoreCycleSettings.enabled&&_gScFields.length)?`<script>\nwindow.ScoreCycle={\n  projectId:'${scoreCycleSettings.projectId}',\n  displayDuration:${scoreCycleSettings.displayDuration},\n  refreshInterval:${scoreCycleSettings.refreshInterval},\n  transition:'${scoreCycleSettings.transition}',\n  dataFields:${JSON.stringify(_gScFields)}\n};\n<\/script>\n<script>\n${_scPluginSrc()}\n<\/script>`:'';
   const _animIn=`function runAnimationIN(){_spxVisible=true;\n${_buildGSAPPlay(elements)}${_grpGsapPlay}\n}`;
   const _animOut=`function runAnimationOUT(){_spxVisible=false;\n${_buildGSAPStop(elements)}${_grpGsapStop}\n}`;
+  // vmix-webgui: animIn with optional auto-hide timer (no runTemplateUpdate, no onSpxUpdate)
+  const _vmixAnimIn=`function runAnimationIN(){_spxVisible=true;\n  if(_autoHideTimer){clearTimeout(_autoHideTimer);_autoHideTimer=null;}\n${_buildGSAPPlay(elements)}${_grpGsapPlay}\n  if(AUTO_HIDE_SECONDS>0)_autoHideTimer=setTimeout(function(){_autoHideTimer=null;runAnimationOUT();},AUTO_HIDE_SECONDS*1000);\n}`;
+  const _vmixUpdateFn=(vmixGuiConfig&&vmixGuiConfig.includeDataFields&&updateLines.length)
+    ?`${_gCleanFn}\n${_gPrefetchFn}\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}${gExtraJS}`
+    :(gExtraJS||'');
+  const _ccgUpdateFn=`${_gCleanFn}\n${_gPrefetchFn}\nvar _spxVisible=false;\nfunction _updateContent(data){\n${updateLines.join('\n')}\n}${gExtraJS}`;
+  if(vmixGuiConfig){
+    _downloadHTML(_buildHTML_vMixGUI({fontUrl,css:css+gTickerCSS,htmlLines,tname,updateFn:_vmixUpdateFn,animIn:_vmixAnimIn,animOut:_animOut,extraHead:gsapTag+extraHeadG,fieldDefs,trigKey:vmixGuiConfig.trigKey||'my_trigger',autoHideSec:vmixGuiConfig.autoHideSec||0,includeDataFields:vmixGuiConfig.includeDataFields||false}),_projFilename('.html'));
+    toast('vmix-webgui grafik eksporteret!','ok');
+    return;
+  }
+  if(ccgConfig){
+    _downloadHTML(_buildHTML_CasparCG({fontUrl,css:css+gTickerCSS,htmlLines,tname,updateFn:_ccgUpdateFn,animIn:_animIn,animOut:_animOut,extraHead:gsapTag+extraHeadG}),_projFilename('_ccg.html'));
+    toast('CasparCG template eksporteret!','ok');
+    return;
+  }
   if(sbMode){
     _downloadHTML(_buildHTML_Supabase(fontUrl,css+gTickerCSS,htmlLines,tname,_gUpdateFn,_animIn,_animOut,hiddenDivLines.join('\n'),gsapTag+extraHeadG,_scScriptG,sbMode.label,sbMode.side),_projFilename('_supabase.html'));
     toast('Supabase LT eksporteret!','ok');
@@ -4575,6 +4625,49 @@ function exportSPX_GSAP(sbMode=null,prodConfig=null,vmixMode=false){
 function exportSPX_VMIX(){
   if(!elements.length){toast('Ingen elementer');return;}
   _showExportFieldDialog(()=>exportSPX_GSAP(null,null,true));
+}
+
+function exportSPX_vMixGUI(){
+  if(!elements.length){toast('Ingen elementer');return;}
+  const modal=document.getElementById('vmixgui-modal');
+  modal.style.display='flex';
+  const trig=document.getElementById('vmixgui-trig-inp');
+  if(trig&&!trig._userEdited){
+    const raw=(document.getElementById('project-name')?.value||document.getElementById('project-name-vis')?.value||'min_grafik').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+    trig.value=(raw||'min_grafik')+'_trigger';
+    trig.oninput=function(){trig._userEdited=true;};
+  }
+  const dfRow=document.getElementById('vmixgui-df-row');
+  if(dfRow)dfRow.style.display=elements.some(e=>e.type==='text'||e.type==='ticker')?'':'none';
+}
+function _closeVmixGuiModal(){document.getElementById('vmixgui-modal').style.display='none';}
+function _confirmVmixGuiModal(){
+  _closeVmixGuiModal();
+  const trigKey=document.getElementById('vmixgui-trig-inp').value.trim()||'my_trigger';
+  const doAutoHide=document.getElementById('vmixgui-autohide-check').checked;
+  const autoHideSec=doAutoHide?(parseInt(document.getElementById('vmixgui-autohide-secs').value)||5):0;
+  const includeDataFields=document.getElementById('vmixgui-df-check').checked&&elements.some(e=>(e.type==='text'||e.type==='ticker'));
+  if(includeDataFields){
+    _showExportFieldDialog(()=>exportSPX_GSAP(null,null,false,{trigKey,autoHideSec,includeDataFields:true}));
+  }else{
+    exportSPX_GSAP(null,null,false,{trigKey,autoHideSec,includeDataFields:false});
+  }
+}
+
+function _buildHTML_vMixGUI({fontUrl,css,htmlLines,tname,updateFn,animIn,animOut,extraHead,fieldDefs,trigKey,autoHideSec,includeDataFields}){
+  const _sbAnon='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
+  const wsBlock=`// ── VMIX-WEBGUI WS LISTENER ──\nvar _pid=window.__PROJEKT_ID||new URLSearchParams(window.location.search).get('p')||'';\ndocument.addEventListener('DOMContentLoaded',function(){\n  if(!_pid)return;\n  var _SB='https://rxzxdcweqpbnvfkpnnrn.supabase.co',_SA='${_sbAnon}',_H={'apikey':_SA,'Authorization':'Bearer '+_SA};\n  fetch(_SB+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+encodeURIComponent(_pid)+'&select=value',{headers:_H}).then(function(r){return r.json();}).then(function(rows){if(rows[0]&&rows[0].value==='in'&&!_spxVisible)runAnimationIN();}).catch(function(){});\n  var _ws,_ref=0,_hb;\n  function _wsConnect(){\n    try{\n      _ws=new WebSocket('wss://rxzxdcweqpbnvfkpnnrn.supabase.co/realtime/v1/websocket?apikey='+_SA+'&vsn=1.0.0');\n      _ws.onopen=function(){\n        _ws.send(JSON.stringify({topic:'realtime:triggers-'+_pid,event:'phx_join',payload:{config:{broadcast:{self:false,ack:false},presence:{key:''},postgres_changes:[{event:'UPDATE',schema:'public',table:'settings',filter:'projekt_id=eq.'+_pid}]},access_token:_SA},ref:String(++_ref)}));\n        _hb=setInterval(function(){if(_ws&&_ws.readyState===1)_ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:String(++_ref)}));},25000);\n      };\n      _ws.onmessage=function(e){\n        try{\n          var msg=JSON.parse(e.data);\n          if(!msg||msg.event!=='postgres_changes')return;\n          var rec=msg.payload&&msg.payload.data&&msg.payload.data.record;\n          if(!rec||rec.projekt_id!==_pid||rec.key!==_trigKey)return;\n          if(rec.value==='in'&&!_spxVisible)runAnimationIN();\n          if(rec.value==='out'&&_spxVisible)runAnimationOUT();\n        }catch{}\n      };\n      _ws.onclose=function(){clearInterval(_hb);_hb=null;setTimeout(_wsConnect,3000);};\n      _ws.onerror=function(){try{_ws.close();}catch{}};\n    }catch{}\n  }\n  _wsConnect();\n});\n// ── END WS LISTENER ──`;
+  const spxDef=includeDataFields?`\nwindow.SPXGCTemplateDefinition={"description":${JSON.stringify(tname)},"DataFields":[${fieldDefs}]};`:'';
+  const fontLink=fontUrl?`\n<link href="${fontUrl}" rel="stylesheet">`:'';
+  const customFontCss=_customFontCSS();
+  return `<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">${fontLink}\n${extraHead}\n<style>\n*{margin:0;padding:0;box-sizing:border-box;}\nbody{width:1920px;height:1080px;overflow:hidden;background:transparent;}\n${customFontCss}\n${css}\n</style>\n</head>\n<body>\n${htmlLines.join('\n')}\n<script>\nvar _trigKey=${JSON.stringify(trigKey)};\nvar _spxVisible=false;\nvar _autoHideTimer=null;\nvar AUTO_HIDE_SECONDS=${autoHideSec||0};\n${updateFn}\n${animIn}\n${animOut}\n${wsBlock}${spxDef}\n<\/script>\n</body>\n</html>`;
+}
+
+function _buildHTML_CasparCG({fontUrl,css,htmlLines,tname,updateFn,animIn,animOut,extraHead}){
+  const ccgWrap=`\nfunction play(){runAnimationIN();}\nfunction stop(){runAnimationOUT();}\nfunction update(data){if(typeof _updateContent==='function')_updateContent(data);}\nfunction next(){}`;
+  const fontLink=fontUrl?`\n<link href="${fontUrl}" rel="stylesheet">`:'';
+  const customFontCss=_customFontCSS();
+  return `<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">${fontLink}\n${extraHead}\n<style>\n*{margin:0;padding:0;box-sizing:border-box;}\nbody{width:1920px;height:1080px;overflow:hidden;background:transparent;}\n${customFontCss}\n${css}\n</style>\n</head>\n<body>\n${htmlLines.join('\n')}\n<script>\n${updateFn}\n${animIn}\n${animOut}\n${ccgWrap}\n<\/script>\n</body>\n</html>`;
 }
 
 function _cssAnimOutTo(ao,el){
