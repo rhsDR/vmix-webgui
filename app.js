@@ -1677,6 +1677,7 @@ function renderGrafik() {
   if (!g && grafiktActiveSubTab !== 'afvikling' && !isCustomEmbedTab) { grafiktActiveSubTab = OVERLAY_GRAPHICS[0].id; g = OVERLAY_GRAPHICS[0]; }
   const isAfvikling = grafiktActiveSubTab === 'afvikling';
   const customEmbedActive = (customGrafik || []).find(x => 'custom-' + x.trigger_key === grafiktActiveSubTab && x.overlay_mode === 'embed');
+  if (isCustomEmbedTab && !customEmbedActive) { grafiktActiveSubTab = OVERLAY_GRAPHICS[0].id; g = OVERLAY_GRAPHICS[0]; }
 
   // ── SUB-TABS ────────────────────────────────────────────────────
   const embedCustomTabs = (customGrafik || []).filter(cg => cg.overlay_mode === 'embed').map(cg => {
@@ -2005,8 +2006,8 @@ function renderGrafik() {
   }
 
   // ── HØJRE PANEL: PREVIEW ─────────────────────────────────────────
-  const prvSrc = (!isAfvikling && grafiktActivePrvKey)
-    ? (g.type === 'vmixcalls' ? combinedUrl : previewIframeUrl)
+  const prvSrc = (!isAfvikling && !customEmbedActive && grafiktActivePrvKey)
+    ? (g && g.type === 'vmixcalls' ? combinedUrl : previewIframeUrl)
     : 'about:blank';
   const previewHTML = `
     <div>
@@ -2044,7 +2045,7 @@ function renderGrafik() {
 
   // ── HØJRE PANEL: COMPANION URLS ──────────────────────────────────
   let companionRows = '';
-  if (!isAfvikling && g.type === 'lt') {
+  if (!isAfvikling && g && g.type === 'lt') {
     const slotRows = subs.map((s, i) => {
       const slot = i + 1;
       const url  = `${origin}/api/trigger/${pid}?key=lt_trigger&value=in&slot=${slot}`;
@@ -2072,7 +2073,7 @@ function renderGrafik() {
     const vmixHead = vmixRows ? `<div class="grafik-companion-subhead">VMIX CALLS</div>` : '';
     companionRows = (slotRows ? `<div class="grafik-companion-subhead">SUBS</div>${slotRows}` : '') +
                    vmixHead + vmixRows + afRow;
-  } else if (!isAfvikling && g.type === 'credits') {
+  } else if (!isAfvikling && g && g.type === 'credits') {
     const paUrl = `${origin}/api/trigger/${pid}?key=credits_trigger&value=in`;
     const afUrl = `${origin}/api/trigger/${pid}?key=credits_trigger&value=out`;
     companionRows = `
@@ -2086,7 +2087,7 @@ function renderGrafik() {
         <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
         <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
       </div>`;
-  } else if (!isAfvikling && g.type === 'lineup') {
+  } else if (!isAfvikling && g && g.type === 'lineup') {
     const afUrl = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=out`;
     const lineupKampe = kampe.filter(k => k.enetpulseId);
     if (!lineupKampe.length) {
@@ -2118,7 +2119,7 @@ function renderGrafik() {
         <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
       </div>`;
     }
-  } else if (!isAfvikling && g.type === 'ticker') {
+  } else if (!isAfvikling && g && g.type === 'ticker') {
     const tPaUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=in`;
     const tAfUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=out`;
     const bPaUrl = `${origin}/api/trigger/${pid}?key=breaking_trigger&value=in`;
