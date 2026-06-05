@@ -26,7 +26,7 @@
   <iframe id="ticker-breaking-frame" allowtransparency="true" src=""></iframe>
   <iframe id="score-frame"          allowtransparency="true" src=""></iframe>
   <iframe id="score-breaking-frame"  allowtransparency="true" src=""></iframe>
-  <iframe id="opstilling-frame"  allowtransparency="true" src=""></iframe>
+  <iframe id="overlay-3-frame"   allowtransparency="true" src=""></iframe>
   <iframe id="credits-frame"     allowtransparency="true" src=""></iframe>
 
   <script>
@@ -46,7 +46,7 @@
       { id: 'ticker-breaking', file: 'Graphics/Ticker/Ticker_breaking_gsap.html' },
       { id: 'score',           file: 'Graphics/Stillings_boks/Stillings_boks_uden_live_boks_gsap.html' },
       { id: 'score-breaking',  file: 'Graphics/Stillings_boks/Stillings_boks_BREAKING_MASTER.html' },
-      { id: 'opstilling',  file: 'opstilling.html'      },
+      { id: 'overlay-3',   file: 'OverLay_3.html'        },
       { id: 'credits',     file: 'credits.html'         },
     ];
     const DEFAULT_ORDER = GRAPHICS.map(g => g.id); // top→bund
@@ -65,7 +65,7 @@
       if (!frame) return;
       let src = g.file + '?p=' + pid;
       if (preview === 'credits'             && g.id === 'credits')    src = g.file + '?preview=1&p=' + pid;
-      if ((preview === 'home' || preview === 'away') && g.id === 'opstilling') src = g.file + '?preview=' + preview + '&p=' + pid;
+      if ((preview === 'home' || preview === 'away') && g.id === 'overlay-3') src = g.file + '?preview=' + preview + '&p=' + pid;
       originalSrcs[g.id] = src;
       frame.src = src;
     });
@@ -111,7 +111,7 @@
           const frame = document.getElementById(g.id + '-frame');
           if (!frame) return;
           const target = grafMap[g.id] || 'hoved';
-          if (target === 'komm') {
+          if (target !== 'hoved') {
             if (frame.src !== 'about:blank') frame.src = 'about:blank';
           } else {
             const expected = originalSrcs[g.id];
@@ -143,7 +143,7 @@
           }
           if (p.key === 'lineup_trigger') {
             setTimeout(function() {
-              try { document.getElementById('opstilling-frame')?.contentWindow?.pollTrigger?.(); } catch {}
+              try { document.getElementById('overlay-3-frame')?.contentWindow?.pollTrigger?.(); } catch {}
             }, 120);
             return;
           }
@@ -171,7 +171,7 @@
         function _dispatch(key, value) {
           if (key === 'lineup_trigger') {
             setTimeout(function() {
-              try { document.getElementById('opstilling-frame')?.contentWindow?.pollTrigger?.(); } catch {}
+              try { document.getElementById('overlay-3-frame')?.contentWindow?.pollTrigger?.(); } catch {}
             }, 120);
             return;
           }
