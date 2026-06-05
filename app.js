@@ -4896,9 +4896,8 @@ function renderGrafikOps() {
     const inputNr = g.overlay_input ? `Input ${g.overlay_input}  ` : '';
     builtinWindows.push({ label: inputNr + g.label, url: g.file_url + '?p=' + pid });
   });
-  const overlayRows = builtinWindows.map((w, i) => `
+  const overlayRows = builtinWindows.map(w => `
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1a1a1a;">
-      <span style="font-size:10px;color:#555;min-width:60px;white-space:nowrap;">vMix Input ${i+1}</span>
       <span style="flex:1;font-size:11px;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${w.url}">${w.label}</span>
       <span style="font-size:10px;color:#555;flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${w.url}</span>
       <button onclick="navigator.clipboard.writeText(${JSON.stringify(w.url)});toast('Kopieret','ok')" style="padding:3px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button>
@@ -4960,7 +4959,10 @@ function renderGrafikOps() {
   el.innerHTML = `
     <div style="max-width:800px;margin:0 auto;padding:16px;">
       <div style="margin-bottom:24px;">
-        <div style="font-size:10px;letter-spacing:2px;color:#666;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #222;">OVERLAY VINDUER — Indsæt disse URLs i vMix som Browser-inputs</div>
+        <div style="margin-bottom:10px;">
+          <div style="font-size:10px;letter-spacing:2px;color:#666;margin-bottom:4px;">OVERLAY VINDUER</div>
+          <div style="font-size:10px;color:#444;">Indsæt disse URLs i vMix som Browser-inputs. Standalone grafikker tilføjet under EGNE GRAFIKKER dukker automatisk op her.</div>
+        </div>
         <div style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 12px;">${overlayRows}</div>
       </div>
       <div>
