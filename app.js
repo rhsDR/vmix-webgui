@@ -1387,13 +1387,63 @@ async function loadMakroer() {
   } catch { makroer = []; }
 }
 
+async function _fireOneHandling(h, slotOverride) {
+  if (h.key === 'lt_trigger') {
+    const raw = slotOverride || (h.value === 'vmixcall' ? 'v' + (h.slot || '') : (h.slot || ''));
+    const isVmix = raw.startsWith('v');
+    const slotNum = isVmix ? raw.slice(1) : raw;
+    const triggerVal = isVmix ? 'vmixcall' : (raw ? 'in' : h.value);
+    if (slotNum) {
+      await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: slotNum });
+      grafiktState['lt_slot'] = slotNum;
+    }
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: triggerVal, slot: slotNum || undefined });
+    grafiktState['lt_trigger'] = triggerVal;
+    return;
+  }
+  if (h.key === 'komm_alle') {
+    const kommKeys = KOMM_BOKSE.map(k => k.triggerKey);
+    if (h.value === 'out') {
+      kommKeys.forEach(k => { grafiktState[k] = 'out'; });
+      await Promise.all(kommKeys.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k, value: 'out' })));
+    } else {
+      let activeSlots = [];
+      try {
+        const rows = await sbGet('kampe?projekt_id=eq.' + aktivProjektId + '&on_air=eq.true&select=slot');
+        activeSlots = rows.map(r => r.slot).filter(s => s >= 1 && s <= 6);
+      } catch {}
+      const onKeys = activeSlots.map(s => `Komm_score_K-${s}`);
+      onKeys.forEach(k => { grafiktState[k] = 'in'; });
+      if (onKeys.length) await Promise.all(onKeys.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k, value: 'in' })));
+    }
+    return;
+  }
+  await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value });
+  grafiktState[h.key] = h.value;
+}
+
 async function fireMakro(id, slotOverride = '') {
   const m = makroer.find(x => x.id === id);
   if (!m || !m.handlinger?.length) return;
   try {
+    // Gruppér handlinger: wait/alle_af er separatorer — øvrige kører simultant med Promise.all
+    const groups = [];
+    let cur = [];
     for (const h of m.handlinger) {
-      if (h.key === 'wait') { await new Promise(r => setTimeout(r, parseFloat(h.value) * 1000)); continue; }
-      if (h.key === 'alle_af') {
+      if (h.key === 'wait' || h.key === 'alle_af') {
+        if (cur.length) { groups.push(cur); cur = []; }
+        groups.push([h]);
+      } else { cur.push(h); }
+    }
+    if (cur.length) groups.push(cur);
+
+    for (const grp of groups) {
+      const h0 = grp[0];
+      if (h0.key === 'wait') {
+        await new Promise(r => setTimeout(r, parseFloat(h0.value) * 1000));
+        continue;
+      }
+      if (h0.key === 'alle_af') {
         const allKeys = [...OVERLAY_GRAPHICS.map(og => og.triggerKey).filter(Boolean), 'score_breaking_trigger'];
         const customKeys = customGrafik.map(g => g.trigger_key);
         OVERLAY_GRAPHICS.forEach(og => { grafiktState[og.triggerKey] = 'out'; });
@@ -1407,38 +1457,8 @@ async function fireMakro(id, slotOverride = '') {
         ]);
         continue;
       }
-      if (h.key === 'lt_trigger') {
-        const raw = slotOverride || (h.value === 'vmixcall' ? 'v' + (h.slot || '') : (h.slot || ''));
-        const isVmix = raw.startsWith('v');
-        const slotNum = isVmix ? raw.slice(1) : raw;
-        const triggerVal = isVmix ? 'vmixcall' : (raw ? 'in' : h.value);
-        if (slotNum) {
-          await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: slotNum });
-          grafiktState['lt_slot'] = slotNum;
-        }
-        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: triggerVal, slot: slotNum || undefined });
-        grafiktState['lt_trigger'] = triggerVal;
-        continue;
-      }
-      if (h.key === 'komm_alle') {
-        const kommKeys = KOMM_BOKSE.map(k => k.triggerKey);
-        if (h.value === 'out') {
-          kommKeys.forEach(k => { grafiktState[k] = 'out'; });
-          await Promise.all(kommKeys.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k, value: 'out' })));
-        } else {
-          let activeSlots = [];
-          try {
-            const rows = await sbGet('kampe?projekt_id=eq.' + aktivProjektId + '&on_air=eq.true&select=slot');
-            activeSlots = rows.map(r => r.slot).filter(s => s >= 1 && s <= 6);
-          } catch {}
-          const onKeys = activeSlots.map(s => `Komm_score_K-${s}`);
-          onKeys.forEach(k => { grafiktState[k] = 'in'; });
-          if (onKeys.length) await Promise.all(onKeys.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k, value: 'in' })));
-        }
-        continue;
-      }
-      await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value });
-      grafiktState[h.key] = h.value;
+      // Kør alle trin i gruppen simultant
+      await Promise.all(grp.map(h => _fireOneHandling(h, slotOverride)));
     }
     renderGrafik();
     toast(m.label + ' kørt', 'ok');
