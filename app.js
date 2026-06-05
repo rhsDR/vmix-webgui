@@ -4898,7 +4898,7 @@ function renderGrafikOps() {
   });
   const overlayRows = builtinWindows.map((w, i) => `
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1a1a1a;">
-      <span style="font-size:10px;color:#555;min-width:24px;">I${i+1}</span>
+      <span style="font-size:10px;color:#555;min-width:60px;white-space:nowrap;">vMix Input ${i+1}</span>
       <span style="flex:1;font-size:11px;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${w.url}">${w.label}</span>
       <span style="font-size:10px;color:#555;flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${w.url}</span>
       <button onclick="navigator.clipboard.writeText(${JSON.stringify(w.url)});toast('Kopieret','ok')" style="padding:3px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button>
@@ -4930,7 +4930,7 @@ function renderGrafikOps() {
         </div>
         <div style="display:flex;gap:6px;">
           <button onclick="openEgneGrafikModal(${JSON.stringify(g.id)})" style="padding:3px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:10px;">✎</button>
-          <button onclick="deleteEgneGrafikById(${JSON.stringify(g.id)},${JSON.stringify(g.file_path)},${JSON.stringify(g.label)})" style="padding:3px 8px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:4px;cursor:pointer;font-size:10px;">🗑</button>
+          <button onclick="_grafikOpsDeleteConfirm(this,${JSON.stringify(g.id)},${JSON.stringify(g.file_path)},${JSON.stringify(g.label)})" style="padding:3px 8px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:4px;cursor:pointer;font-size:10px;">🗑</button>
         </div>
       </div>
       <div style="font-size:10px;color:#555;margin-bottom:4px;">${tilstand} · <span style="color:#4a9eff;">${g.trigger_key}</span>${g.auto_hide_seconds > 0 ? ` · auto-skjul ${g.auto_hide_seconds}s` : ''}</div>
@@ -4971,4 +4971,18 @@ function renderGrafikOps() {
         ${grafikkort || '<div style="color:#555;font-size:12px;padding:16px 0;">Ingen grafikker endnu. Klik "＋ Tilføj ny grafik" for at starte.</div>'}
       </div>
     </div>`;
+}
+
+function _grafikOpsDeleteConfirm(btn, id, filePath, label) {
+  const wrap = btn.parentElement;
+  if (wrap.dataset.confirming) return;
+  wrap.dataset.confirming = '1';
+  const shortLabel = label.length > 22 ? label.slice(0, 22) + '…' : label;
+  const origHTML = wrap.innerHTML;
+  wrap.innerHTML = `
+    <span style="font-size:10px;color:#ef4444;margin-right:6px;">Slet "${shortLabel}"?</span>
+    <button id="_gops_ja" style="padding:3px 9px;background:#4a1010;border:1px solid #ef4444;color:#ef4444;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700;">Ja, slet</button>
+    <button id="_gops_ann" style="padding:3px 9px;background:#222;border:1px solid #444;color:#aaa;border-radius:4px;cursor:pointer;font-size:10px;">Annuller</button>`;
+  wrap.querySelector('#_gops_ja').onclick = () => deleteEgneGrafikById(id, filePath, label);
+  wrap.querySelector('#_gops_ann').onclick = () => { delete wrap.dataset.confirming; wrap.innerHTML = origHTML; };
 }
