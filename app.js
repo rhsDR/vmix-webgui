@@ -4923,7 +4923,7 @@ function renderGrafikOps() {
 
   // ─ Sektion: BUILT-IN GRAFIKKER ─
   const targetOpts = '<option value="hoved">Hoved Overlay</option><option value="komm">Kommentator</option><option value="overlay-3">OverLay_3</option>';
-  const builtinRows = OVERLAY_GRAPHICS.filter(g => g.type !== 'komm').map(g => {
+  const builtinRows = OVERLAY_GRAPHICS.filter(g => g.type !== 'komm' && g.type !== 'lineup').map(g => {
     const isLive = (grafiktState[g.triggerKey] || 'out') !== 'out';
     const statusColor = isLive ? '#22c55e' : '#555';
     const curTarget = grafikOverlayMap[g.id] || 'hoved';
