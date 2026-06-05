@@ -212,11 +212,12 @@
 
       // Indlæs custom grafik-filer (fejl stopper ikke broadcast-kanalen nedenfor)
       try {
-        const rows = await fetch(
-          `${SB_URL}/rest/v1/projekt_grafik?projekt_id=eq.${encodeURIComponent(pid)}&overlay_mode=eq.embed&order=sort_order`,
+        const allRows = await fetch(
+          `${SB_URL}/rest/v1/projekt_grafik?projekt_id=eq.${encodeURIComponent(pid)}&order=sort_order`,
           { headers: SB_HDR }
         ).then(r => r.json());
-        if (Array.isArray(rows) && rows.length) {
+        const rows = Array.isArray(allRows) ? allRows.filter(g => g.overlay_mode !== 'standalone') : [];
+        if (rows.length) {
           await Promise.all(rows.map(async g => {
             const frameId = 'custom-' + g.id.slice(0, 8) + '-frame';
             if (document.getElementById(frameId)) return;
