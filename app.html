@@ -39,6 +39,7 @@
   <button class="tab-btn" data-tab="ticker">TICKER</button>
   <button class="tab-btn" data-tab="credits">CREDITS</button>
   <button class="tab-btn" data-tab="grafik">GRAFIK</button>
+  <button class="tab-btn" data-tab="grafik-ops">GRAFIK OPS</button>
 </nav>
 
 <!-- TAB: KAMPE -->
@@ -105,6 +106,11 @@
   <div id="grafikList"><div class="loading">Henter data…</div></div>
 </div>
 
+<!-- TAB: GRAFIK OPS -->
+<div id="tab-grafik-ops" class="tab-pane">
+  <div id="grafikOpsList"><div class="loading">Henter data…</div></div>
+</div>
+
 <!-- TAB: LIVE -->
 <div id="tab-live" class="tab-pane">
   <div id="liveGrid" class="live-grid"><div class="live-no-fixtures">INGEN KAMPE VALGT</div></div>
@@ -130,46 +136,135 @@
   </div>
 </div>
 
-<!-- EGNE GRAFIK: UPLOAD MODAL -->
+<!-- EGNE GRAFIK: 3-TRINS MODAL -->
 <div id="egne-grafik-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9000;display:none;align-items:center;justify-content:center;">
-  <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,.7);display:flex;flex-direction:column;">
-    <div style="padding:14px 16px;border-bottom:1px solid #2a2a2a;font-size:12px;letter-spacing:2px;color:#aaa;">TILFØJ GRAFIK</div>
-    <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-      <div>
-        <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">HTML-FIL</label>
-        <input id="egne-file-inp" type="file" accept=".html"
-          style="width:100%;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
-      </div>
-      <div>
-        <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">LABEL</label>
-        <input id="egne-label-inp" type="text" placeholder="Min grafik…"
-          style="width:100%;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:12px;">
-      </div>
-      <div>
-        <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">TRIGGER-NØGLE</label>
-        <div style="display:flex;gap:6px;">
-          <select id="egne-trig-sel" style="flex:1;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
-            <option value="ticker_ovl_trigger">ticker_ovl_trigger</option>
-            <option value="breaking_trigger">breaking_trigger</option>
-            <option value="score_trigger">score_trigger</option>
-            <option value="stilling_trigger">stilling_trigger</option>
-            <option value="credits_trigger">credits_trigger</option>
-            <option value="custom">Brugerdefineret…</option>
-          </select>
-          <input id="egne-trig-custom" type="text" placeholder="min_trigger"
-            style="display:none;flex:1;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
+  <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;width:380px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.7);display:flex;flex-direction:column;">
+
+    <!-- TRIN 1: FIL & IDENTITET -->
+    <div id="egn-step1" style="display:flex;flex-direction:column;">
+      <div style="padding:14px 16px;border-bottom:1px solid #2a2a2a;font-size:12px;letter-spacing:2px;color:#aaa;" id="egn-step1-title">TILFØJ GRAFIK (1/3)</div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+        <!-- Kilde-valg -->
+        <div>
+          <label style="font-size:10px;color:#666;display:block;margin-bottom:6px;letter-spacing:1px;">KILDE</label>
+          <div style="display:flex;gap:12px;">
+            <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#aaa;cursor:pointer;">
+              <input type="radio" id="egn-src-upload" name="egn-src" value="upload" checked style="accent-color:#4a9eff;">
+              Upload HTML-fil
+            </label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#aaa;cursor:pointer;">
+              <input type="radio" id="egn-src-template" name="egn-src" value="template" style="accent-color:#4a9eff;">
+              Opret fra skabelon
+            </label>
+          </div>
+        </div>
+        <!-- Upload-sektion -->
+        <div id="egn-upload-section" style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:10px;color:#666;letter-spacing:1px;">HTML-FIL</label>
+          <input id="egn-file-inp" type="file" accept=".html"
+            style="width:100%;box-sizing:border-box;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
+        </div>
+        <!-- Skabelon-sektion -->
+        <div id="egn-template-section" style="display:none;flex-direction:column;gap:8px;">
+          <div>
+            <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">TYPE</label>
+            <select id="egn-tpl-type" style="width:100%;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
+              <option value="lower_third">Nedre tredjedel</option>
+              <option value="bug">Hjørne-bug</option>
+              <option value="fullscreen">Fuld skærm</option>
+              <option value="timer">Tæller</option>
+            </select>
+          </div>
+          <div id="egn-tpl-fields"></div>
+        </div>
+        <!-- Label -->
+        <div>
+          <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">LABEL</label>
+          <input id="egn-label-inp" type="text" placeholder="Min grafik…"
+            style="width:100%;box-sizing:border-box;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:12px;">
+        </div>
+        <!-- Trigger-nøgle -->
+        <div>
+          <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">TRIGGER-NØGLE</label>
+          <div style="display:flex;gap:6px;">
+            <select id="egn-trig-sel" style="flex:1;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
+              <option value="ticker_ovl_trigger">ticker_ovl_trigger</option>
+              <option value="breaking_trigger">breaking_trigger</option>
+              <option value="score_trigger">score_trigger</option>
+              <option value="stilling_trigger">stilling_trigger</option>
+              <option value="credits_trigger">credits_trigger</option>
+              <option value="custom">Brugerdefineret…</option>
+            </select>
+            <input id="egn-trig-custom" type="text" placeholder="min_trigger"
+              style="display:none;flex:1;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
+          </div>
+        </div>
+        <!-- Farve -->
+        <div style="display:flex;align-items:center;gap:10px;">
+          <label style="font-size:10px;color:#666;letter-spacing:1px;">FARVE</label>
+          <input id="egn-color-inp" type="color" value="#888888"
+            style="height:32px;width:60px;background:#111;border:1px solid #333;border-radius:6px;cursor:pointer;padding:2px;">
+        </div>
+        <!-- Auto-skjul -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:#aaa;cursor:pointer;">
+            <input type="checkbox" id="egn-auto-hide-check" style="accent-color:#4a9eff;">
+            Auto-skjul efter
+          </label>
+          <input id="egn-auto-hide-secs" type="number" min="1" max="300" placeholder="sek"
+            style="display:none;width:60px;background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:4px;font-size:11px;">
+          <span id="egn-auto-hide-label" style="font-size:11px;color:#666;">sekunder</span>
         </div>
       </div>
-      <div>
-        <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">FARVE</label>
-        <input id="egne-color-inp" type="color" value="#888888"
-          style="height:32px;width:60px;background:#111;border:1px solid #333;border-radius:6px;cursor:pointer;padding:2px;">
+      <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid #2a2a2a;">
+        <button onclick="closeEgneGrafikModal()" style="flex:1;padding:8px;background:#222;border:1px solid #333;color:#aaa;border-radius:6px;cursor:pointer;font-size:11px;">Annuller</button>
+        <button onclick="_egneGrafikNextStep()" style="flex:2;padding:8px;background:#1a2a3a;border:1px solid #1d4ed8;color:#93c5fd;border-radius:6px;cursor:pointer;font-size:11px;letter-spacing:1px;">Næste →</button>
       </div>
     </div>
-    <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid #2a2a2a;">
-      <button onclick="closeEgneGrafikModal()" style="flex:1;padding:8px;background:#222;border:1px solid #333;color:#aaa;border-radius:6px;cursor:pointer;font-size:11px;">Annuller</button>
-      <button id="egne-upload-btn" onclick="_confirmEgneGrafik()" style="flex:2;padding:8px;background:#1a3a1a;border:1px solid #2d5a2d;color:#86efac;border-radius:6px;cursor:pointer;font-size:11px;letter-spacing:1px;">↑ UPLOAD &amp; TILFØJ</button>
+
+    <!-- TRIN 2: OVERLAY-KONFIGURATION -->
+    <div id="egn-step2" style="display:none;flex-direction:column;">
+      <div style="padding:14px 16px;border-bottom:1px solid #2a2a2a;font-size:12px;letter-spacing:2px;color:#aaa;">OVERLAY-KONFIGURATION (2/3)</div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="font-size:10px;color:#666;display:block;margin-bottom:8px;letter-spacing:1px;">PLACERING I VMIX</label>
+          <label style="display:flex;gap:10px;margin-bottom:10px;cursor:pointer;align-items:flex-start;">
+            <input type="radio" id="egn-mode-standalone" name="egn-mode" value="standalone" style="margin-top:2px;accent-color:#4a9eff;">
+            <div>
+              <div style="font-size:11px;color:#ccc;font-weight:600;">Standalone</div>
+              <div style="font-size:10px;color:#555;margin-top:2px;">Filen loades som eget vMix Browser-input. Du indsætter URL i vMix selv.</div>
+            </div>
+          </label>
+          <label style="display:flex;gap:10px;cursor:pointer;align-items:flex-start;">
+            <input type="radio" id="egn-mode-embed" name="egn-mode" value="embed" checked style="margin-top:2px;accent-color:#4a9eff;">
+            <div>
+              <div style="font-size:11px;color:#ccc;font-weight:600;">Indlejret i Hoved Overlay</div>
+              <div style="font-size:10px;color:#555;margin-top:2px;">Filen loades automatisk i overlay.html. Intet ekstra vMix-input nødvendigt.</div>
+            </div>
+          </label>
+        </div>
+        <div id="egn-input-row" style="display:none;">
+          <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">VMIX INPUT-NUMMER (valgfrit)</label>
+          <input id="egn-input-nr" type="number" min="1" max="20" placeholder="f.eks. 4"
+            style="width:80px;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:12px;">
+          <span style="font-size:10px;color:#555;margin-left:8px;">Vises i OVERLAY VINDUER-sektionen</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid #2a2a2a;">
+        <button onclick="_egneGrafikGoStep(1)" style="flex:1;padding:8px;background:#222;border:1px solid #333;color:#aaa;border-radius:6px;cursor:pointer;font-size:11px;">← Tilbage</button>
+        <button id="egn-save-btn" onclick="_egneGrafikNextStep()" style="flex:2;padding:8px;background:#1a3a1a;border:1px solid #2d5a2d;color:#86efac;border-radius:6px;cursor:pointer;font-size:11px;letter-spacing:1px;">Gem grafik</button>
+      </div>
     </div>
+
+    <!-- TRIN 3: BEKRÆFTELSE -->
+    <div id="egn-step3" style="display:none;flex-direction:column;">
+      <div style="padding:14px 16px;border-bottom:1px solid #2a2a2a;font-size:12px;letter-spacing:2px;color:#aaa;">GRAFIK TILFØJET</div>
+      <div id="egn-confirm-body" style="padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
+      <div style="padding:12px 16px;border-top:1px solid #2a2a2a;">
+        <button onclick="closeEgneGrafikModal()" style="width:100%;padding:8px;background:#222;border:1px solid #333;color:#aaa;border-radius:6px;cursor:pointer;font-size:11px;">Luk</button>
+      </div>
+    </div>
+
   </div>
 </div>
 

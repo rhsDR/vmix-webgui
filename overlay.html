@@ -213,7 +213,7 @@
       // Indlæs custom grafik-filer (fejl stopper ikke broadcast-kanalen nedenfor)
       try {
         const rows = await fetch(
-          `${SB_URL}/rest/v1/projekt_grafik?projekt_id=eq.${encodeURIComponent(pid)}&order=sort_order`,
+          `${SB_URL}/rest/v1/projekt_grafik?projekt_id=eq.${encodeURIComponent(pid)}&overlay_mode=eq.embed&order=sort_order`,
           { headers: SB_HDR }
         ).then(r => r.json());
         if (Array.isArray(rows) && rows.length) {
@@ -223,7 +223,8 @@
             let html;
             try { html = await fetch(g.file_url, { cache: 'no-store' }).then(r => r.text()); } catch { return; }
             // Bloker Supabase realtime og fetch i iframen — overlay.html styrer al trigger-logik direkte
-            const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(pid)};window.__IS_PREVIEW=false;(function(){var _f=window.fetch;window.fetch=function(u,o){if(typeof u==='string'&&u.indexOf('supabase.co')!==-1)return Promise.resolve({ok:true,json:function(){return Promise.resolve([])}});return _f.apply(this,arguments);};})();window.__forceOut=function(){if(typeof window._spxVisible!=='undefined')window._spxVisible=false;if(window.gsap)window.gsap.killTweensOf('*');if(document.body)document.body.style.opacity='0';};document.addEventListener('DOMContentLoaded',function(){if(document.body)document.body.style.opacity='0';var _o=window.runAnimationIN;if(typeof _o==='function')window.runAnimationIN=function(){if(document.body)document.body.style.opacity='';_o.apply(this,arguments);};});Object.defineProperty(window,'supabase',{value:{createClient:()=>({channel:()=>({on:()=>({on:()=>({subscribe:()=>{}}),subscribe:()=>{}}),subscribe:()=>{}})})},writable:false,configurable:false});<\/script>`;
+            const _ahs = (g.auto_hide_seconds > 0) ? Number(g.auto_hide_seconds) : 0;
+            const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(pid)};window.__IS_PREVIEW=false;(function(){var _f=window.fetch;window.fetch=function(u,o){if(typeof u==='string'&&u.indexOf('supabase.co')!==-1)return Promise.resolve({ok:true,json:function(){return Promise.resolve([])}});return _f.apply(this,arguments);};})();window.__forceOut=function(){if(typeof window._spxVisible!=='undefined')window._spxVisible=false;if(window.gsap)window.gsap.killTweensOf('*');if(document.body)document.body.style.opacity='0';};document.addEventListener('DOMContentLoaded',function(){if(document.body)document.body.style.opacity='0';var _ahs=${_ahs};var _aht=null;var _o=window.runAnimationIN;if(typeof _o==='function')window.runAnimationIN=function(){if(document.body)document.body.style.opacity='';if(_aht){clearTimeout(_aht);_aht=null;}_o.apply(this,arguments);if(_ahs>0)_aht=setTimeout(function(){_aht=null;if(typeof window.runAnimationOUT==='function')window.runAnimationOUT();},_ahs*1000);};});Object.defineProperty(window,'supabase',{value:{createClient:()=>({channel:()=>({on:()=>({on:()=>({subscribe:()=>{}}),subscribe:()=>{}}),subscribe:()=>{}})})},writable:false,configurable:false});<\/script>`;
             const injectedHtml = html.replace(/(<html[^>]*>)/i, '$1' + inject);
             html = injectedHtml.includes('__PROJEKT_ID') ? injectedHtml : inject + html;
             const blob = new Blob([html], { type: 'text/html' });

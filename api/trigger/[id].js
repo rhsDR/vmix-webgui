@@ -148,7 +148,14 @@ export default async function handler(req, res) {
   const value = req.query.value || '';
   const slot  = req.query.slot  || '';
 
-  if (!ALLOWED_KEYS.includes(key)) return res.status(400).json({ error: 'Ukendt key: ' + key });
+  if (!ALLOWED_KEYS.includes(key)) {
+    try {
+      const customRows = await sbGet(`projekt_grafik?projekt_id=eq.${encodeURIComponent(id)}&trigger_key=eq.${encodeURIComponent(key)}&limit=1&select=id`);
+      if (!customRows.length) return res.status(400).json({ error: 'Ukendt key: ' + key });
+    } catch {
+      return res.status(400).json({ error: 'Ukendt key: ' + key });
+    }
+  }
   if (!value) return res.status(400).json({ error: 'value mangler' });
 
   try {
