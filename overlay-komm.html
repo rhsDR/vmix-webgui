@@ -139,14 +139,34 @@
     async function loadCustomGrafik() {
       if (!_pid) return;
       try {
-        // Hent grafik_overlay_map for built-in grafikker
-        const mapRows = await fetch(
-          `${SB_URL}/rest/v1/settings?projekt_id=eq.${encodeURIComponent(_pid)}&key=eq.grafik_overlay_map&select=value`,
-          { headers: SB_HDR }
-        ).then(r => r.json());
-        const grafMap = (Array.isArray(mapRows) && mapRows[0]?.value) ? JSON.parse(mapRows[0].value) : {};
+        const [mapRows, lagRows] = await Promise.all([
+          fetch(`${SB_URL}/rest/v1/settings?projekt_id=eq.${encodeURIComponent(_pid)}&key=eq.grafik_overlay_map&select=value`, { headers: SB_HDR }).then(r => r.json()),
+          fetch(`${SB_URL}/rest/v1/settings?projekt_id=eq.${encodeURIComponent(_pid)}&key=eq.overlay_lag_order&select=value`, { headers: SB_HDR }).then(r => r.json()),
+        ]);
+        const grafMap  = (Array.isArray(mapRows) && mapRows[0]?.value) ? JSON.parse(mapRows[0].value) : {};
+        const lagOrder = lagRows[0]?.value ? lagRows[0].value.split(',').map(s => s.trim()).filter(Boolean) : [];
 
-        // Load built-in grafikker tildelt 'komm' som direkte iframes (de styrer sig selv via Supabase)
+        // z-index baseret på overlay_lag_order — samme formel som overlay.html's applyOrder
+        function zForId(id) {
+          const idx = lagOrder.indexOf(id);
+          return idx >= 0 ? String((lagOrder.length - idx) * 1000) : '500';
+        }
+
+        // Komm bokse — kun i dette overlay hvis 'komm' er tildelt 'komm' (default)
+        const kommTarget = grafMap['komm'] || 'komm';
+        [1,2,3,4,5,6].forEach(function(n) {
+          const frame = document.getElementById('komm-k'+n+'-frame');
+          if (!frame) return;
+          if (kommTarget === 'komm') {
+            let src = 'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid;
+            if (_testOt) src += '&test_ot=' + encodeURIComponent(_testOt);
+            if (frame.src !== src) frame.src = src;
+          } else {
+            frame.src = 'about:blank';
+          }
+        });
+
+        // Built-in grafikker tildelt 'komm'
         for (const bg of BUILTIN_GRAPHICS) {
           if ((grafMap[bg.id] || 'hoved') !== 'komm') continue;
           const frameId = 'builtin-' + bg.id + '-frame';
@@ -155,7 +175,7 @@
           iframe.id = frameId;
           iframe.allowTransparency = true;
           iframe.src = bg.file + '?p=' + _pid;
-          iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;';
+          iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;z-index:' + zForId(bg.id) + ';';
           document.body.appendChild(iframe);
         }
 
@@ -181,7 +201,7 @@
           iframe.id = frameId;
           iframe.allowTransparency = true;
           iframe.src = URL.createObjectURL(blob);
-          iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;';
+          iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;z-index:' + zForId('custom-' + g.id.slice(0,8)) + ';';
           document.body.appendChild(iframe);
           customFrameMap[g.trigger_key] = iframe;
           customState[g.trigger_key] = 'out';
