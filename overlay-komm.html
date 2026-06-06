@@ -240,8 +240,29 @@
       setTimeout(pollCustomTriggers, 5000);
     }
 
+    async function pollLagOrder() {
+      if (_pid) {
+        try {
+          const rows = await fetch(
+            `${SB_URL}/rest/v1/settings?projekt_id=eq.${encodeURIComponent(_pid)}&key=eq.overlay_lag_order&select=value`,
+            { headers: SB_HDR }
+          ).then(r => r.json());
+          const order = rows[0]?.value ? rows[0].value.split(',').map(s => s.trim()).filter(Boolean) : [];
+          if (order.length) {
+            document.body.querySelectorAll('iframe[id]').forEach(f => {
+              const id = f.id.replace('builtin-', '').replace('-frame', '').replace('custom-komm-', 'custom-').replace(/-frame$/, '');
+              const idx = order.indexOf(id);
+              if (idx >= 0) f.style.zIndex = String((order.length - idx) * 1000);
+            });
+          }
+        } catch {}
+      }
+      setTimeout(pollLagOrder, 3000);
+    }
+
     loadCustomGrafik();
     pollCustomTriggers();
+    pollLagOrder();
   </script>
 </body>
 </html>

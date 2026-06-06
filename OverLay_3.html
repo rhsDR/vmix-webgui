@@ -652,8 +652,29 @@
         setTimeout(_OPpollCustom, 5000);
       }
 
+      async function _OPpollLagOrder() {
+        if (projektId) {
+          try {
+            const rows = await fetch(
+              `${SB_URL}/rest/v1/settings?projekt_id=eq.${encodeURIComponent(projektId)}&key=eq.overlay_lag_order&select=value`,
+              { headers: SB_HDR }
+            ).then(r => r.json());
+            const order = rows[0]?.value ? rows[0].value.split(',').map(s => s.trim()).filter(Boolean) : [];
+            if (order.length) {
+              document.body.querySelectorAll('iframe[id]').forEach(f => {
+                const id = f.id.replace('builtin-', '').replace('-frame', '').replace('custom-op-', 'custom-').replace(/-frame$/, '');
+                const idx = order.indexOf(id);
+                if (idx >= 0) f.style.zIndex = String((order.length - idx) * 1000);
+              });
+            }
+          } catch {}
+        }
+        setTimeout(_OPpollLagOrder, 3000);
+      }
+
       _OPloadGrafikker();
       _OPpollCustom();
+      _OPpollLagOrder();
     }
   </script>
 
