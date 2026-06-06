@@ -512,6 +512,7 @@ html.theme-kold{
   <div id="fil-dropdown">
     <div class="fd-left">
       <div style="padding:10px 14px 8px;border-bottom:1px solid var(--border);margin-bottom:4px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px;font-weight:600;letter-spacing:.04em;text-transform:uppercase">Projektnavn</div>
         <input id="project-name-vis" placeholder="Projektnavn..." style="width:100%;background:var(--surface3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:12px;padding:5px 8px;outline:none" oninput="document.getElementById('project-name').value=this.value" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'">
       </div>
       <div class="fd-item" onclick="newProject()"><span class="fd-icon">📄</span><span>Ny</span></div>
@@ -565,33 +566,40 @@ html.theme-kold{
       <button class="res-tool" onclick="alignSel('vcenter')" title="Centrér vertikalt">&#8661;</button>
       <button class="res-tool" onclick="alignSel('bottom')" title="Justér bund">&#8681;</button>
     </div>
-    <!-- Elementer sektion -->
-    <div class="res-section" id="res-sec-elementer">
-      <div class="res-sec-hdr" onclick="toggleResSection('res-sec-elementer')">
-        <span>Elementer</span><span class="res-arrow">&#9660;</span>
-      </div>
-      <div class="res-sec-body">
-        <div class="res-el-grid">
-          <button class="res-el-btn" onclick="document.getElementById('img-file-inp').click()" title="Billede (I)"><span>&#9974;</span><span>Billede</span></button>
-          <button class="res-el-btn" onclick="document.getElementById('lottie-file-inp').click()" title="Lottie"><span>&#9711;</span><span>Lottie</span></button>
-          <button class="res-el-btn" onclick="document.getElementById('pngseq-file-inp').click()" title="PNG Sekvens"><span>&#9635;</span><span>PNG Seq</span></button>
-        </div>
-      </div>
-    </div>
     <!-- Billeder sektion -->
-    <div class="res-section" id="res-sec-billeder">
+    <div class="res-section collapsed" id="res-sec-billeder">
       <div class="res-sec-hdr" onclick="toggleResSection('res-sec-billeder')">
-        <span>Billeder</span>
+        <span>Billeder</span><span class="res-arrow">&#9660;</span>
         <button class="res-sec-add" onclick="event.stopPropagation();document.getElementById('img-file-inp').click()" title="Upload billede">+</button>
       </div>
       <div class="res-sec-body">
         <div class="res-img-grid" id="res-images-grid"></div>
       </div>
     </div>
+    <!-- Lottie sektion -->
+    <div class="res-section collapsed" id="res-sec-lottie">
+      <div class="res-sec-hdr" onclick="toggleResSection('res-sec-lottie')">
+        <span>Lottie</span><span class="res-arrow">&#9660;</span>
+        <button class="res-sec-add" onclick="event.stopPropagation();document.getElementById('lottie-file-inp').click()" title="Upload Lottie (.json)">+</button>
+      </div>
+      <div class="res-sec-body">
+        <div id="res-lottie-list" style="font-size:11px;color:var(--text3);padding:2px">Ingen Lottie uploadet</div>
+      </div>
+    </div>
+    <!-- PNG Sekvenser sektion -->
+    <div class="res-section collapsed" id="res-sec-pngseq">
+      <div class="res-sec-hdr" onclick="toggleResSection('res-sec-pngseq')">
+        <span>PNG Sekvenser</span><span class="res-arrow">&#9660;</span>
+        <button class="res-sec-add" onclick="event.stopPropagation();document.getElementById('pngseq-file-inp').click()" title="Upload PNG sekvens">+</button>
+      </div>
+      <div class="res-sec-body">
+        <div id="res-pngseq-list" style="font-size:11px;color:var(--text3);padding:2px">Ingen sekvenser uploadet</div>
+      </div>
+    </div>
     <!-- Fonte sektion -->
-    <div class="res-section" id="res-sec-fonte">
+    <div class="res-section collapsed" id="res-sec-fonte">
       <div class="res-sec-hdr" onclick="toggleResSection('res-sec-fonte')">
-        <span>Fonte</span>
+        <span>Fonte</span><span class="res-arrow">&#9660;</span>
         <button class="res-sec-add" onclick="event.stopPropagation();document.getElementById('fd-font-file').click()" title="Upload font">+</button>
       </div>
       <div class="res-sec-body">
@@ -676,7 +684,7 @@ html.theme-kold{
   <div class="sb" style="margin-left:auto">Elementer: <span id="sb-n">0</span></div>
   <div class="sb" style="display:flex;align-items:center;gap:4px">
     <span id="sb-zoom" style="font-family:var(--mono);font-size:11px;color:var(--text2);min-width:38px;text-align:center">100%</span>
-    <button onclick="setCanvasZoom(1)" style="background:none;border:1px solid var(--border2);color:var(--text3);height:18px;padding:0 5px;border-radius:3px;cursor:pointer;font-size:10px" title="Tilpas til vindue (Ctrl+0)">Fit Canvas</button>
+    <button onclick="fitCanvas()" style="background:none;border:1px solid var(--border2);color:var(--text3);height:18px;padding:0 5px;border-radius:3px;cursor:pointer;font-size:10px" title="Tilpas til vindue (Ctrl+0)">Fit Canvas</button>
     <button onclick="zoomToActual()" style="background:none;border:1px solid var(--border2);color:var(--text3);height:18px;padding:0 5px;border-radius:3px;cursor:pointer;font-size:10px" title="Faktisk størrelse (1:1 pixels)">100%</button>
     <button onclick="setCanvasZoom(canvasZoom*1.25)" style="background:none;border:1px solid var(--border2);color:var(--text2);width:18px;height:18px;border-radius:3px;cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center" title="Zoom ind (Ctrl+=)">+</button>
     <button onclick="setCanvasZoom(canvasZoom/1.25)" style="background:none;border:1px solid var(--border2);color:var(--text2);width:18px;height:18px;border-radius:3px;cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center" title="Zoom ud (Ctrl+−)">−</button>
@@ -932,6 +940,13 @@ function zoomToActual(){
   vport.style.overflow=prevOv||'';
   const base=Math.min(aw/CW,ah/CH);
   if(base>0)setCanvasZoom(1/base);
+}
+function fitCanvas(){
+  const prevOv=vport.style.overflow;vport.style.overflow='hidden';
+  const aw=area.offsetWidth-80,ah=area.offsetHeight-80;
+  vport.style.overflow=prevOv||'';
+  canvasZoom=Math.max(0.15,Math.min(8,Math.min(aw/CW,ah/CH)));
+  calcScale();
 }
 function drawRulers(){
   const rh=document.getElementById('ruler-h'),rv=document.getElementById('ruler-v');
@@ -2599,15 +2614,16 @@ function renderResourceImages(){
 }
 function renderResourceFonts(){
   const list=document.getElementById('res-fonts-list');if(!list)return;
-  const fonts=['DM Sans','Inter','Barlow','Poppins','Nunito','Oswald','Bebas Neue','Barlow Condensed','Exo 2','Rajdhani','Teko','Kanit','Playfair Display','Montserrat','Raleway','Anton','Roboto Condensed','Source Sans 3','PT Sans','Lato'];
   list.innerHTML='';
-  fonts.forEach(f=>{
+  const names=[...new Set(customFonts.map(f=>f.name))];
+  if(!names.length){list.innerHTML='<div style="font-size:11px;color:var(--text3);padding:2px">Ingen fonte uploadet</div>';return;}
+  names.forEach(f=>{
     const div=document.createElement('div');div.className='res-font-item';
     div.textContent=f;div.style.fontFamily=f;
     div.onclick=()=>{
       const sel=elements.filter(e=>selIds.includes(e.id)&&e.type==='text');
       if(!sel.length){toast('Vælg et tekstelement','');return;}
-      saveState();sel.forEach(e=>e.font=f);render();renderPanel();
+      saveState();sel.forEach(e=>e.fontFamily=f);render();renderPanel();
       toast('Font ændret: '+f,'ok');
     };
     list.appendChild(div);
@@ -5556,7 +5572,7 @@ function applyImport(els,bg){saveState();elements=els;bgColor=bg;canvas.style.ba
 document.getElementById('import-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 document.getElementById('help-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 
-calcScale();canvas.style.background=bgColor;render();renderPanel();renderTimeline();updUndoBtns();
+canvas.style.background=bgColor;render();renderPanel();renderTimeline();updUndoBtns();requestAnimationFrame(fitCanvas);
 new ResizeObserver(()=>renderTimeline()).observe(document.getElementById('tl-track'));
 
 // Timeline resize handle
