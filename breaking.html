@@ -24,7 +24,11 @@
 
     let animating = false;
 
+    function runAnimationIN()  { if (!animating) runIN();  }
+    function runAnimationOUT() { if (!animating) runOUT(); }
+
     async function pollTrigger() {
+      if (window !== window.top) return;
       if (animating) return;
       try {
         const rows = await fetch(

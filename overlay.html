@@ -175,6 +175,15 @@
             }, 120);
             return;
           }
+          if (key === 'credits_trigger') {
+            if (value === 'in') try { document.getElementById('credits-frame')?.contentWindow?.runAnimationIN?.(); } catch {}
+            return;
+          }
+          if (key === 'breaking_trigger') {
+            if (value === 'in') try { document.getElementById('breaking-frame')?.contentWindow?.runAnimationIN?.(); } catch {}
+            else try { document.getElementById('breaking-frame')?.contentWindow?.runAnimationOUT?.(); } catch {}
+            return;
+          }
           var cIframe = customFrameMap[key];
           if (!cIframe) return;
           var cPrev = customState[key];
