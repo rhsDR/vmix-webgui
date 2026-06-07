@@ -135,6 +135,7 @@ function _autoIn(){
 }
 function runAnimationIN(){_spxVisible=true;
   if(_animTL){_animTL.kill();_animTL=null;}
+  gsap.killTweensOf(['#el2','#el3','#el4','#el5','#el-cards']);
   gsap.set(['#el2','#el3','#el4','#el5','#el-cards'],{opacity:1});
   gsap.set('#el-overtime',{clipPath:'inset(50% 0% 50% 0%)'});
   _overtimeVisible=false;
@@ -150,12 +151,7 @@ function runAnimationOUT(){_spxVisible=false;
   if(_animTL){_animTL.kill();_animTL=null;}
   _stopCycle();
   if(_overtimeVisible){gsap.to('#el-overtime',{clipPath:'inset(50% 0% 50% 0%)',duration:0.60,ease:'power2.in'});_overtimeVisible=false;}
-  _animTL=gsap.timeline();
-  _animTL.to('#el3',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
-  _animTL.to('#el4',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
-  _animTL.to('#el2',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
-  _animTL.to('#el5',{opacity:0,duration:0.30,ease:'power2.in'},0.482);
-  _animTL.to('#el-cards',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
+  gsap.to(['#el2','#el3','#el4','#el5','#el-cards'],{opacity:0,duration:0.30,ease:'power2.in',overwrite:true});
 }
 
 // ── SUPABASE INTEGRATION ──
