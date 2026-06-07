@@ -46,6 +46,7 @@ var _komm='',_lok='',_cycleState='komm',_cycleTimer=null;
 var _spxVisible=false;
 var _embed=!!new URLSearchParams(window.location.search).get('embed');
 var _prevOnAir=false;
+var _animTL=null;
 var _prevCards={g1:0,r1:0,g2:0,r2:0};
 var _overtimeVisible=false;
 function _applyKampRow(row){
@@ -133,26 +134,28 @@ function _autoIn(){
   }).catch(function(){});
 }
 function runAnimationIN(){_spxVisible=true;
+  if(_animTL){_animTL.kill();_animTL=null;}
   gsap.set(['#el2','#el3','#el4','#el5','#el-cards'],{opacity:1});
   gsap.set('#el-overtime',{clipPath:'inset(50% 0% 50% 0%)'});
   _overtimeVisible=false;
-  var tl=gsap.timeline();
-  tl.fromTo('#el3',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.2);
-  tl.fromTo('#el4',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.2);
-  tl.fromTo('#el2',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
-  tl.fromTo('#el5',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
-  tl.fromTo('#el-cards',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
-  tl.call(_startCycle);
+  _animTL=gsap.timeline();
+  _animTL.fromTo('#el3',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.2);
+  _animTL.fromTo('#el4',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.2);
+  _animTL.fromTo('#el2',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
+  _animTL.fromTo('#el5',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
+  _animTL.fromTo('#el-cards',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
+  _animTL.call(_startCycle);
 }
 function runAnimationOUT(){_spxVisible=false;
+  if(_animTL){_animTL.kill();_animTL=null;}
   _stopCycle();
   if(_overtimeVisible){gsap.to('#el-overtime',{clipPath:'inset(50% 0% 50% 0%)',duration:0.60,ease:'power2.in'});_overtimeVisible=false;}
-  var tl=gsap.timeline();
-  tl.to('#el3',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
-  tl.to('#el4',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
-  tl.to('#el2',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
-  tl.to('#el5',{opacity:0,duration:0.30,ease:'power2.in'},0.482);
-  tl.to('#el-cards',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
+  _animTL=gsap.timeline();
+  _animTL.to('#el3',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
+  _animTL.to('#el4',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
+  _animTL.to('#el2',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
+  _animTL.to('#el5',{opacity:0,duration:0.30,ease:'power2.in'},0.482);
+  _animTL.to('#el-cards',{opacity:0,duration:0.30,ease:'power2.in'},0.483);
 }
 
 // ── SUPABASE INTEGRATION ──
