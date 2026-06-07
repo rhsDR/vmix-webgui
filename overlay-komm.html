@@ -77,14 +77,11 @@
           if (frameId) {
             var iframe = document.getElementById(frameId);
             if (!iframe) return;
-            var prev = _pgState[key];
             _pgState[key] = value;
             try {
-              if (value === 'in') iframe.contentWindow?.runAnimationIN?.();
-              else if (value === 'out') {
-                if (prev === 'in') iframe.contentWindow?.runAnimationOUT?.();
-                else if (iframe.contentWindow?.__forceOut) iframe.contentWindow.__forceOut();
-              }
+              // Tjek _spxVisible direkte — undgår dobbelt-kald når intern subscription allerede håndterede det
+              if (value === 'in') { if (!iframe.contentWindow?._spxVisible) iframe.contentWindow?.runAnimationIN?.(); }
+              else if (value === 'out') { if (iframe.contentWindow?._spxVisible) iframe.contentWindow?.runAnimationOUT?.(); }
             } catch {}
             return;
           }
