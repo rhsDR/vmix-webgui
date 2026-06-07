@@ -105,6 +105,7 @@
     let speed = 30;
 
     async function pollTrigger() {
+      if (window !== window.top) return;
       if (animating) return;
       try {
         const rows = await fetch(SB_URL + '/rest/v1/settings?key=eq.credits_trigger&select=value' + pidFilter, { headers: SB_HEADERS }).then(r => r.json());

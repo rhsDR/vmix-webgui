@@ -100,7 +100,6 @@ document.addEventListener('DOMContentLoaded',function(){
       }).catch(function(){});
   }
   _loadContent();
-  setInterval(_loadContent,15000);
   var _sbC=_sbShared;
   _sbC.channel('ticker-content-'+_pid)
     .on('postgres_changes',{event:'*',schema:'public',table:'tickers'},function(){

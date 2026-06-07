@@ -96,7 +96,6 @@ document.addEventListener('DOMContentLoaded',function(){
       }).catch(function(){});
   }
   _loadContent();
-  setInterval(_loadContent,15000);
   _sb.channel('breaking-content-'+_pid)
     .on('postgres_changes',{event:'*',schema:'public',table:'tickers'},_loadContent)
     .subscribe();

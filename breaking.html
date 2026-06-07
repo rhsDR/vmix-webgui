@@ -25,6 +25,7 @@
     let animating = false;
 
     async function pollTrigger() {
+      if (window !== window.top) return;
       if (animating) return;
       try {
         const rows = await fetch(

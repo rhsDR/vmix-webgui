@@ -370,7 +370,6 @@
           animatePlayers(getPlayerEls(), 'in', 0, 60, () => {
             currentSide = side;
             animating   = false;
-            setTimeout(pollTrigger, 2000);
           });
         }, 500);
       } else {
@@ -382,7 +381,6 @@
             animatePlayers(getPlayerEls(), 'in', 0, 60, () => {
               currentSide = side;
               animating   = false;
-              setTimeout(pollTrigger, 2000);
             });
           }, 200);
         });
@@ -404,7 +402,6 @@
             await resetTrigger();
             currentSide = null;
             animating   = false;
-            setTimeout(pollTrigger, 2000);
           }, 350);
         }, 300);
       });
@@ -417,36 +414,7 @@
       } catch {}
     }
 
-    // ── POLLING ───────────────────────────────────────────────────
     const IS_PREVIEW = !!params.get('preview');
-
-    async function pollTrigger() {
-      if (IS_PREVIEW) return;
-      if (animating) return;
-      try {
-        const rows = await fetch(
-          `${SB_URL}/rest/v1/settings?select=key,value&key=in.(lineup_trigger,lineup_data)${pidFilter}`,
-          { headers: SB_HDR }
-        ).then(r => r.json());
-
-        const trigger = rows.find(r => r.key === 'lineup_trigger')?.value;
-        const dataStr = rows.find(r => r.key === 'lineup_data')?.value;
-
-        if (trigger !== 'out' && dataStr) {
-          try { lineupData = JSON.parse(dataStr); } catch { lineupData = null; }
-        }
-
-        if ((trigger === 'home' || trigger === 'away') && trigger !== currentSide && lineupData) {
-          showSide(trigger);
-          return;
-        }
-        if (trigger === 'out' && currentSide !== null) {
-          hideSide();
-          return;
-        }
-      } catch {}
-      setTimeout(pollTrigger, 2000);
-    }
 
     // ── PREVIEW ───────────────────────────────────────────────────
     function getDemoData() {
@@ -502,8 +470,6 @@
         }
         showSide(side);
       })();
-    } else {
-      pollTrigger();
     }
 
     // ── OVERLAY GRAFIKKER (built-in + custom tildelt 'overlay-3') ────
@@ -594,6 +560,19 @@
           _OPcustomFrameMap[g.trigger_key] = iframe;
           _OPcustomState[g.trigger_key] = 'out';
         }));
+        // Initial state for lineup_trigger + lineup_data (erstatter pollTrigger)
+        if (!IS_PREVIEW) {
+          const ltRows = await fetch(
+            `${SB_URL}/rest/v1/settings?projekt_id=eq.${encodeURIComponent(projektId)}&key=in.(lineup_trigger,lineup_data)&select=key,value`,
+            { headers: SB_HDR }
+          ).then(r => r.json());
+          if (Array.isArray(ltRows)) {
+            const dataRow = ltRows.find(r => r.key === 'lineup_data');
+            const trigRow = ltRows.find(r => r.key === 'lineup_trigger');
+            if (dataRow?.value) { try { lineupData = JSON.parse(dataRow.value); } catch {} }
+            if (trigRow?.value && trigRow.value !== 'out' && lineupData) showSide(trigRow.value);
+          }
+        }
       } catch {}
     }
 
@@ -641,28 +620,21 @@
         _wsConnect();
       })();
 
-      async function _OPpollCustom() {
+      _OPloadGrafikker().then(async function() {
         const keys = Object.keys(_OPcustomFrameMap);
-        if (keys.length) {
-          try {
-            const data = await fetch(
-              `${SB_URL}/rest/v1/settings?key=in.(${keys.join(',')})&projekt_id=eq.${encodeURIComponent(projektId)}&select=key,value`,
-              { headers: SB_HDR }
-            ).then(r => r.json());
-            if (Array.isArray(data)) {
-              for (const row of data) {
-                if (Date.now() - (_OPcustomStateTime[row.key] || 0) < 3000) continue;
-                if (_OPcustomState[row.key] === row.value) continue;
-                _OPdispatch(row.key, row.value);
-              }
+        if (!keys.length) return;
+        try {
+          const data = await fetch(
+            `${SB_URL}/rest/v1/settings?key=in.(${keys.join(',')})&projekt_id=eq.${encodeURIComponent(projektId)}&select=key,value`,
+            { headers: SB_HDR }
+          ).then(r => r.json());
+          if (Array.isArray(data)) {
+            for (const row of data) {
+              if (_OPcustomState[row.key] !== row.value) _OPdispatch(row.key, row.value);
             }
-          } catch {}
-        }
-        setTimeout(_OPpollCustom, 5000);
-      }
-
-      _OPloadGrafikker();
-      _OPpollCustom();
+          }
+        } catch {}
+      });
     }
   </script>
 
