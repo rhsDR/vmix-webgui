@@ -44,6 +44,7 @@ body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
 var _slot=3;
 var _komm='',_lok='',_cycleState='komm',_cycleTimer=null;
 var _spxVisible=false;
+var _embed=!!new URLSearchParams(window.location.search).get('embed');
 var _prevCards={g1:0,r1:0,g2:0,r2:0};
 var _overtimeVisible=false;
 function _applyKampRow(row){
@@ -121,6 +122,15 @@ function _autoOut(){
     body:JSON.stringify({projekt_id:_pid,key:_trigKey,value:'out'})
   }).catch(function(){});
 }
+function _autoIn(){
+  if(_spxVisible)return;
+  runAnimationIN();
+  fetch(_SB_URL+'/rest/v1/settings',{
+    method:'POST',
+    headers:Object.assign({},_SB_HDR,{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'}),
+    body:JSON.stringify({projekt_id:_pid,key:_trigKey,value:'in'})
+  }).catch(function(){});
+}
 function runAnimationIN(){_spxVisible=true;
   gsap.set(['#el2','#el3','#el4','#el5','#el-cards'],{opacity:1});
   gsap.set('#el-overtime',{clipPath:'inset(50% 0% 50% 0%)'});
@@ -167,6 +177,7 @@ document.addEventListener('DOMContentLoaded',function(){
   var _lastBcTime=0;
   _sb.channel('prod-'+_trigKey+'-'+_pid)
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(p){
+      if(_embed)return;
       if(p.new.projekt_id!==_pid||p.new.key!==_trigKey)return;
       if(Date.now()-_lastBcTime<3000)return;
       if(p.new.value==='in'&&!_spxVisible)runAnimationIN();
@@ -177,10 +188,12 @@ document.addEventListener('DOMContentLoaded',function(){
         filter:'slot=eq.'+_slot},function(p){
       if(p.new.projekt_id!==_pid)return;
       _applyKampRow(p.new);
+      if(p.new.on_air&&!_spxVisible)_autoIn();
       if(!p.new.on_air)_autoOut();
     }).subscribe();
   _sb.channel('triggers-'+_pid)
     .on('broadcast',{event:'trigger'},function(msg){
+      if(_embed)return;
       var p=msg.payload;
       if(!p||p.key!==_trigKey)return;
       _lastBcTime=Date.now();

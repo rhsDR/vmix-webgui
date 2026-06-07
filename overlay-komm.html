@@ -29,7 +29,7 @@
     const _pid    = _params.get('p') || '';
     const _testOt = _params.get('test_ot') || '';
     [1,2,3,4,5,6].forEach(function(n){
-      let src = 'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid;
+      let src = 'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid + '&embed=1';
       if (_testOt) src += '&test_ot=' + encodeURIComponent(_testOt);
       document.getElementById('komm-k'+n+'-frame').src = src;
     });
@@ -164,7 +164,7 @@
           const frame = document.getElementById('komm-k'+n+'-frame');
           if (!frame) return;
           if (kommTarget === 'komm') {
-            let src = 'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid;
+            let src = 'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid + '&embed=1';
             if (_testOt) src += '&test_ot=' + encodeURIComponent(_testOt);
             if (frame.src !== src) frame.src = src;
           } else {
