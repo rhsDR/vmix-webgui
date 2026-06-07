@@ -45,6 +45,7 @@ var _slot=3;
 var _komm='',_lok='',_cycleState='komm',_cycleTimer=null;
 var _spxVisible=false;
 var _embed=!!new URLSearchParams(window.location.search).get('embed');
+var _prevOnAir=false;
 var _prevCards={g1:0,r1:0,g2:0,r2:0};
 var _overtimeVisible=false;
 function _applyKampRow(row){
@@ -169,7 +170,7 @@ document.addEventListener('DOMContentLoaded',function(){
         '&select=hold1_kort,hold2_kort,hold1_score,hold2_score,kommentator,lokation,on_air,status_short,status_elapsed',
         {headers:_SB_HDR})
     .then(function(r){return r.json();})
-    .then(function(rows){if(rows[0])_applyKampRow(rows[0]);});
+    .then(function(rows){if(rows[0]){_applyKampRow(rows[0]);_prevOnAir=!!rows[0].on_air;}});
   fetch(_SB_URL+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+_pid+'&select=value',{headers:_SB_HDR})
     .then(function(r){return r.json();})
     .then(function(rows){if(rows[0]?.value==='in'&&!_spxVisible)runAnimationIN();});
@@ -188,8 +189,9 @@ document.addEventListener('DOMContentLoaded',function(){
         filter:'slot=eq.'+_slot},function(p){
       if(p.new.projekt_id!==_pid)return;
       _applyKampRow(p.new);
-      if(p.new.on_air&&!_spxVisible)_autoIn();
-      if(!p.new.on_air)_autoOut();
+      if(p.new.on_air&&!_prevOnAir)_autoIn();
+      if(!p.new.on_air&&_prevOnAir)_autoOut();
+      _prevOnAir=p.new.on_air;
     }).subscribe();
   _sb.channel('triggers-'+_pid)
     .on('broadcast',{event:'trigger'},function(msg){
