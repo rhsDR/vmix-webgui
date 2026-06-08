@@ -1310,6 +1310,7 @@ let overlayLagOrder   = [...DEFAULT_LAG_ORDER];
 let tickerLagOrder    = [...DEFAULT_TICKER_SUB_ORDER];
 let tickerSubExpanded = false;
 let grafiktState        = {}; // { triggerKey: currentValue }
+let _kommPaaMode        = false; // sættes true ved PÅ-klik, false ved AF-klik
 let _rgDebounceTimer    = null;
 let _rgoDebounceTimer   = null;
 function _debouncedRenderGrafik()    { clearTimeout(_rgDebounceTimer);  _rgDebounceTimer  = setTimeout(renderGrafik,    80); }
@@ -2466,6 +2467,7 @@ function renderGrafik() {
   container.querySelectorAll('.komm-alle-paa-btn').forEach(btn => {
     if (btn.dataset.bound) return; btn.dataset.bound = '1';
     btn.addEventListener('click', async () => {
+      _kommPaaMode = true;
       const targets = KOMM_BOKSE.filter(k => kampe[k.slot - 1]?.onAir === true);
       targets.forEach(k => { grafiktState[k.triggerKey] = 'in'; });
       renderGrafik();
@@ -2475,6 +2477,7 @@ function renderGrafik() {
   container.querySelectorAll('.komm-alle-af-btn').forEach(btn => {
     if (btn.dataset.bound) return; btn.dataset.bound = '1';
     btn.addEventListener('click', async () => {
+      _kommPaaMode = false;
       KOMM_BOKSE.forEach(k => { grafiktState[k.triggerKey] = 'out'; });
       renderGrafik();
       await Promise.all(KOMM_BOKSE.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k.triggerKey, value: 'out' }))).catch(() => toast('Fejl ved Komm AF', 'err'));
@@ -4757,11 +4760,10 @@ function applyKampRow(row) {
   }
   const enetChanged = prev.enetpulseId !== data.enetpulseId;
   kampe[i] = merged;
-  // Auto-trigger komm-boks IN hvis en kamp netop gik on_air og mindst én anden boks er ON
+  // Auto-trigger komm-boks IN kun hvis brugeren aktivt har trykket PÅ (_kommPaaMode)
   if (data.onAir && !prev.onAir) {
-    const isAnyKommOn = KOMM_BOKSE.some(k => (grafiktState[k.triggerKey] || 'out') !== 'out');
     const newBoks = KOMM_BOKSE.find(k => k.slot === row.slot);
-    if (isAnyKommOn && newBoks && (grafiktState[newBoks.triggerKey] || 'out') === 'out') {
+    if (_kommPaaMode && newBoks && (grafiktState[newBoks.triggerKey] || 'out') === 'out') {
       setGrafiktTrigger(newBoks.triggerKey, 'in');
     }
   } else if (!data.onAir && prev.onAir) {
