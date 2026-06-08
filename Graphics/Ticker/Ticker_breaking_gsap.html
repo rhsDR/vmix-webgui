@@ -55,7 +55,6 @@ var _SB_HDR={'apikey':_SB_ANON,'Authorization':'Bearer '+_SB_ANON};
 var _pid=window.__PROJEKT_ID||new URLSearchParams(window.location.search).get('p')||'';
 var _prv=window.__IS_PREVIEW||new URLSearchParams(window.location.search).has('preview');
 var _trigKey='breaking_trigger'+(_prv?'_prv':'');
-var _lastBcTime={};
 document.addEventListener('DOMContentLoaded',function(){
   if(!_pid)return;
   fetch(_SB_URL+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+_pid+'&select=value',{headers:_SB_HDR})
@@ -65,18 +64,8 @@ document.addEventListener('DOMContentLoaded',function(){
     .on('broadcast',{event:'trigger'},function(msg){
       var p=msg.payload;
       if(p.projekt_id!==_pid||p.key!==_trigKey)return;
-      _lastBcTime[p.key]=Date.now();
       if(p.value==='in'&&!_spxVisible)runAnimationIN();
       if(p.value==='out'&&_spxVisible)runAnimationOUT();
-    }).subscribe();
-  _sb.channel('prod-'+_trigKey+'-'+_pid)
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(p){
-      if(p.new.projekt_id!==_pid)return;
-      if(_lastBcTime[p.new.key]&&Date.now()-_lastBcTime[p.new.key]<3000)return;
-      if(p.new.key===_trigKey){
-        if(p.new.value==='in'&&!_spxVisible)runAnimationIN();
-        if(p.new.value==='out'&&_spxVisible)runAnimationOUT();
-      }
     }).subscribe();
   function _loadContent(){
     fetch(_SB_URL+'/rest/v1/tickers?on_air=eq.true&breaking=eq.true&projekt_id=eq.'+_pid+'&order=slot&select=tekst,overskrift',{headers:_SB_HDR})

@@ -115,22 +115,17 @@ document.addEventListener('DOMContentLoaded',function(){
     .then(function(r){return r.ok?r.json():[];})
     .then(function(rows){rows.forEach(_processKampRow);_rebuildMatches();})
     .catch(function(){});
-    var _lastBcTime={};
   var _sb=window.supabase.createClient(SB_URL,SB_KEY);
   _sb.channel('triggers-'+PROJEKT_ID)
     .on('broadcast',{event:'trigger'},function(msg){
       var p=msg.payload;if(p.projekt_id!==PROJEKT_ID)return;
-      _lastBcTime[p.key]=Date.now();
       _processSettings({projekt_id:PROJEKT_ID,key:p.key,value:p.value});
-    }).subscribe();
-  _sb.channel('score-live')
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'kampe'},
-        function(p){_processKampRow(p.new);_rebuildMatches();})
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},
-        function(p){
-          if(_lastBcTime[p.new.key]&&Date.now()-_lastBcTime[p.new.key]<3000)return;
-          _processSettings(p.new);
-        })
+    })
+    .on('broadcast',{event:'kamp'},function(msg){
+      var p=msg.payload;
+      if(!p||p.projekt_id!==PROJEKT_ID)return;
+      _processKampRow(p);_rebuildMatches();
+    })
     .subscribe();
 });
 </script>

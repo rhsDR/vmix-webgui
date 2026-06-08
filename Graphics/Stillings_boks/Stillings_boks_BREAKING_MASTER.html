@@ -68,7 +68,6 @@ function _processKampRow(row){if(row.on_air&&(row.hold1_kort||row.hold2_kort)){_
 function _rebuildMatches(){var newMatches=Object.values(_kampeBySlot);_matches.forEach(function(cur,i){var nxt=newMatches[i];if(nxt&&(cur.s1!==nxt.s1||cur.s2!==nxt.s2)&&_spxVisible)_showMatch(nxt,true);});_matches=newMatches;_matchIdx=Math.min(_matchIdx,Math.max(0,_matches.length-1));if(_spxVisible&&_matches.length)_showMatch(_matches[_matchIdx]);if(_spxVisible&&!_cycleTimer&&_matches.length>1)_startCycle();}
 document.addEventListener('DOMContentLoaded',function(){
   if(!_pid)return;
-  var _lastBcTime={};
   fetch(_SB_URL+'/rest/v1/settings?key=eq.'+_trigKey+'&projekt_id=eq.'+_pid+'&select=value',{headers:_SB_HDR})
     .then(function(r){return r.ok?r.json():[];})
     .then(function(rows){if(rows[0]&&rows[0].value==='in'&&!_spxVisible)runAnimationIN();});
@@ -77,26 +76,19 @@ document.addEventListener('DOMContentLoaded',function(){
     .on('broadcast',{event:'trigger'},function(msg){
       var p=msg.payload;
       if(p.projekt_id!==_pid||p.key!==_trigKey)return;
-      _lastBcTime[p.key]=Date.now();
       if(p.value==='in'&&!_spxVisible)runAnimationIN();
       if(p.value==='out'&&_spxVisible)runAnimationOUT();
-    }).subscribe();
-  _sb.channel('prod-'+_trigKey+'-'+_pid)
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(p){
-      if(p.new.projekt_id!==_pid)return;
-      if(_lastBcTime[p.new.key]&&Date.now()-_lastBcTime[p.new.key]<3000)return;
-      if(p.new.key===_trigKey){
-        if(p.new.value==='in'&&!_spxVisible)runAnimationIN();
-        if(p.new.value==='out'&&_spxVisible)runAnimationOUT();
-      }
-    }).subscribe();
+    })
+    .on('broadcast',{event:'kamp'},function(msg){
+      var p=msg.payload;
+      if(!p||p.projekt_id!==_pid)return;
+      _processKampRow(p);_rebuildMatches();
+    })
+    .subscribe();
   fetch(_SB_URL+'/rest/v1/kampe?select=slot,hold1_kort,hold2_kort,hold1_score,hold2_score,on_air&projekt_id=eq.'+_pid,{headers:_SB_HDR})
     .then(function(r){return r.ok?r.json():[]; })
     .then(function(rows){rows.forEach(_processKampRow);_rebuildMatches();})
     .catch(function(){});
-  _sb.channel('score-live-breaking-'+_pid)
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'kampe'},function(p){_processKampRow(p.new);_rebuildMatches();})
-    .subscribe();
 });
 window.SPXGCTemplateDefinition={"description":"Lower Third","DataFields":[]};
 </script>
