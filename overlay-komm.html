@@ -63,7 +63,7 @@
           'Komm_score_K-5': 'komm-k5-frame',
           'Komm_score_K-6': 'komm-k6-frame',
         };
-        // Batching: samler in/out events for komm-bokse inden for 60ms og affyrer dem samlet
+        // Batching: samler in/out events for komm-bokse og affyrer dem samlet (debounce 150ms)
         var _batchOut = {}, _batchIn = {}, _batchTimer = null;
         function _flushBatch() {
           _batchTimer = null;
@@ -93,7 +93,7 @@
             _pgState[key] = value;
             if (value === 'in') { _batchIn[frameId] = iframe; delete _batchOut[frameId]; }
             else if (value === 'out') { _batchOut[frameId] = iframe; delete _batchIn[frameId]; }
-            if (!_batchTimer) _batchTimer = setTimeout(_flushBatch, 200);
+            clearTimeout(_batchTimer); _batchTimer = setTimeout(_flushBatch, 150);
             return;
           }
           // Custom grafikker med overlay_target='komm'
@@ -129,7 +129,14 @@
             _ws.onmessage = function(e) {
               try {
                 var msg = JSON.parse(e.data);
-                if (!msg || msg.event !== 'postgres_changes') return;
+                if (!msg) return;
+                if (msg.event === 'broadcast') {
+                  if (msg.payload?.event !== 'trigger') return;
+                  var bp = msg.payload.payload;
+                  if (bp && bp.projekt_id === _pid) _dispatch(bp.key, bp.value);
+                  return;
+                }
+                if (msg.event !== 'postgres_changes') return;
                 if (!msg.payload || !msg.payload.data) return;
                 var rec = msg.payload.data.record;
                 if (!rec || rec.projekt_id !== _pid) return;

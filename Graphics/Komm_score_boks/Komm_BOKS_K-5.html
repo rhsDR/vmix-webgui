@@ -195,6 +195,7 @@ document.addEventListener('DOMContentLoaded',function(){
   _sb.channel('triggers-'+_pid)
     .on('broadcast',{event:'trigger'},function(msg){
       var p=msg.payload;
+      if(_embed)return;
       if(!p||p.key!==_trigKey)return;
       _lastBcTime=Date.now();
       if(p.value==='in'&&!_spxVisible)runAnimationIN();
