@@ -194,7 +194,6 @@ document.addEventListener('DOMContentLoaded',function(){
     }).subscribe();
   _sb.channel('triggers-'+_pid)
     .on('broadcast',{event:'trigger'},function(msg){
-      if(_embed)return;
       var p=msg.payload;
       if(!p||p.key!==_trigKey)return;
       _lastBcTime=Date.now();
