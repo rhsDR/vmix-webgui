@@ -175,15 +175,6 @@ document.addEventListener('DOMContentLoaded',function(){
     .then(function(rows){if(rows[0]?.value==='in'&&!_spxVisible)runAnimationIN();});
   var _sb=window.supabase.createClient(_SB_URL,_SB_ANON);
   var _lastBcTime=0;
-  _sb.channel('komm-kamp-'+_slot+'-'+_pid)
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'kampe',
-        filter:'slot=eq.'+_slot},function(p){
-      if(p.new.projekt_id!==_pid)return;
-      _applyKampRow(p.new);
-      if(p.new.on_air&&!_prevOnAir)_autoIn();
-      if(!p.new.on_air&&_prevOnAir)_autoOut();
-      _prevOnAir=p.new.on_air;
-    }).subscribe();
   _sb.channel('triggers-'+_pid)
     .on('broadcast',{event:'trigger'},function(msg){
       var p=msg.payload;
@@ -196,7 +187,16 @@ document.addEventListener('DOMContentLoaded',function(){
     .on('broadcast',{event:'cards'},function(msg){
       var p=msg.payload;
       if(p&&p.slot===_slot) _renderCards(p.g1||0,p.r1||0,p.g2||0,p.r2||0);
-    }).subscribe();
+    })
+    .on('broadcast',{event:'kamp'},function(msg){
+      var p=msg.payload;
+      if(!p||p.slot!==_slot||p.projekt_id!==_pid)return;
+      _applyKampRow(p);
+      if(p.on_air&&!_prevOnAir)_autoIn();
+      if(!p.on_air&&_prevOnAir)_autoOut();
+      _prevOnAir=!!p.on_air;
+    })
+    .subscribe();
 });
 </script>
 </body>

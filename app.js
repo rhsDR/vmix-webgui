@@ -118,6 +118,27 @@ function sbBroadcast(key, value, extra) {
       payload: { key, value, projekt_id: aktivProjektId, ...(extra || {}) } });
   } catch { /* non-critical */ }
 }
+
+function _broadcastKampState(i, statusShort, statusElapsed) {
+  const k = kampe[i];
+  if (!k || !aktivProjektId) return;
+  try {
+    _ensureBcChannel(aktivProjektId);
+    _bcChannel.send({ type: 'broadcast', event: 'kamp', payload: {
+      slot:           i + 1,
+      projekt_id:     aktivProjektId,
+      hold1_kort:     k.hold1Kort,
+      hold2_kort:     k.hold2Kort,
+      hold1_score:    k.hold1Score,
+      hold2_score:    k.hold2Score,
+      kommentator:    k.kommentator,
+      lokation:       k.lokation,
+      on_air:         k.onAir,
+      status_short:   statusShort  ?? null,
+      status_elapsed: statusElapsed ?? null
+    }});
+  } catch { /* non-critical */ }
+}
 if (aktivProjektId) _ensureBcChannel(aktivProjektId);
 
 async function sbGet(path) {
@@ -704,6 +725,7 @@ function toggleOnAir(i) {
   if (!kampe[i].onAir && !kampKlarTilOnAir(i)) return;
   kampe[i].onAir = !kampe[i].onAir;
   kampe[i].onAirPending = true;
+  _broadcastKampState(i);
   rerender(i);
   sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { on_air: kampe[i].onAir })
     .then(() => { kampe[i].onAirPending = false; })
@@ -763,6 +785,7 @@ async function searchFixtureByDate(i, div, date) {
           kampe[i].hold2Lang = f.away;
           kampe[i].hold2Kort = f.away_kort || f.away;
           toast('Kamp valgt ✓', 'ok');
+          _broadcastKampState(i);
           rerender(i);
         } catch { toast('Fejl ved gem af fixture', 'err'); }
       });
@@ -862,6 +885,7 @@ async function saveKamp(i, div) {
       enetpulse_id: k.enetpulseId
     });
     toast('Gemt ✓', 'ok');
+    _broadcastKampState(i);
     if (k.enetpulseId !== prevEnetpulseId) fetchLiveMatches();
     // Synk link + kommentator navn/titel til vmix_calls slot
     if (i < 6 && vmixCalls[i]) {
@@ -900,6 +924,7 @@ async function changeScore(i, team, delta) {
       ? { hold1_score: kampe[i].hold1Score }
       : { hold2_score: kampe[i].hold2Score };
     await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), body);
+    _broadcastKampState(i);
   } catch {
     toast('Fejl ved scoreopdatering', 'err');
   }
@@ -3972,6 +3997,7 @@ async function fetchLiveMatches() {
         _ensureBcChannel(aktivProjektId);
         _bcChannel.send({ type: 'broadcast', event: 'cards',
           payload: { projekt_id: aktivProjektId, slot: i + 1, g1, r1, g2, r2 } });
+        _broadcastKampState(i, m.status.short || null, m.status.elapsed ?? null);
       } catch { /* non-critical */ }
     }
 
