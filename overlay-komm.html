@@ -29,7 +29,7 @@
     const _pid    = _params.get('p') || '';
     const _testOt = _params.get('test_ot') || '';
     [1,2,3,4,5,6].forEach(function(n){
-      let src = 'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid + '&embed=1';
+      let src = 'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid;
       if (_testOt) src += '&test_ot=' + encodeURIComponent(_testOt);
       document.getElementById('komm-k'+n+'-frame').src = src;
     });
@@ -129,26 +129,7 @@
             _ws.onmessage = function(e) {
               try {
                 var msg = JSON.parse(e.data);
-                if (!msg) return;
-                // Broadcast: alle 6 triggers sendes simultant fra vMix-control — direkte dispatch
-                if (msg.event === 'broadcast' && msg.payload && msg.payload.event === 'trigger') {
-                  var bp = msg.payload.payload;
-                  if (!bp || bp.projekt_id !== _pid) return;
-                  var bpFid = _TRIG[bp.key];
-                  if (bpFid) {
-                    _pgState[bp.key] = bp.value;
-                    var bpF = document.getElementById(bpFid);
-                    if (bpF) try {
-                      if (bp.value === 'in') { if (!bpF.contentWindow?._spxVisible) bpF.contentWindow?.runAnimationIN?.(); }
-                      else if (bp.value === 'out') { if (bpF.contentWindow?._spxVisible) bpF.contentWindow?.runAnimationOUT?.(); }
-                    } catch {}
-                    return;
-                  }
-                  _dispatch(bp.key, bp.value, bp.slot);
-                  return;
-                }
-                // Postgres_changes: fallback — ankommer sekventielt via WAL, bruger batching
-                if (msg.event !== 'postgres_changes') return;
+                if (!msg || msg.event !== 'postgres_changes') return;
                 if (!msg.payload || !msg.payload.data) return;
                 var rec = msg.payload.data.record;
                 if (!rec || rec.projekt_id !== _pid) return;
@@ -194,7 +175,7 @@
           const frame = document.getElementById('komm-k'+n+'-frame');
           if (!frame) return;
           if (kommTarget === 'komm') {
-            let src = 'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid + '&embed=1';
+            let src = 'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid;
             if (_testOt) src += '&test_ot=' + encodeURIComponent(_testOt);
             if (frame.src !== src) frame.src = src;
           } else {
