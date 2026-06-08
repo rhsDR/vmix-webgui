@@ -1311,7 +1311,9 @@ let tickerLagOrder    = [...DEFAULT_TICKER_SUB_ORDER];
 let tickerSubExpanded = false;
 let grafiktState        = {}; // { triggerKey: currentValue }
 let _rgDebounceTimer    = null;
-function _debouncedRenderGrafik() { clearTimeout(_rgDebounceTimer); _rgDebounceTimer = setTimeout(renderGrafik, 80); }
+let _rgoDebounceTimer   = null;
+function _debouncedRenderGrafik()    { clearTimeout(_rgDebounceTimer);  _rgDebounceTimer  = setTimeout(renderGrafik,    80); }
+function _debouncedRenderGrafikOps() { clearTimeout(_rgoDebounceTimer); _rgoDebounceTimer = setTimeout(renderGrafikOps, 80); }
 let customGrafik        = []; // rækker fra projekt_grafik-tabellen
 let grafikOverlayMap    = {}; // { grafik-id: 'hoved'|'komm' } for built-in grafikker
 let makroer             = []; // rækker fra projekt_makroer-tabellen
@@ -2603,12 +2605,10 @@ function renderEgneGrafik(leftPanel) {
   }
 
   let html = `
-    <details class="grafik-collapse"${egneGrafikOpen ? ' open' : ''} style="margin-top:12px;">
-      <summary class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;-webkit-appearance:none;">
-        <span>▸ EGNE GRAFIK</span>
-        <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;"
-          onclick="event.stopPropagation();openEgneGrafikModal()">＋ Tilføj</button>
-      </summary>`;
+    <details class="grafik-collapse"${egneGrafikOpen ? ' open' : ''} style="margin-top:12px;display:block;">
+      <summary class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;-webkit-appearance:none;">▸ EGNE GRAFIK</summary>
+      <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;float:right;margin-top:-22px;position:relative;z-index:1;"
+        onclick="openEgneGrafikModal()">＋ Tilføj</button>`;
 
   if (!customGrafik.length) {
     html += `<div class="grafik-v2-empty">Ingen egne grafik — klik ＋ Tilføj for at uploade en fil</div>`;
@@ -2704,12 +2704,10 @@ function renderMakroer(leftPanel) {
   }
 
   let html = `
-    <details class="grafik-collapse"${makroerPanelOpen ? ' open' : ''} style="margin-top:8px;">
-      <summary class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;-webkit-appearance:none;">
-        <span>▸ MAKROER</span>
-        <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;"
-          onclick="event.stopPropagation();openMakroModal()">＋ Tilføj</button>
-      </summary>`;
+    <details class="grafik-collapse"${makroerPanelOpen ? ' open' : ''} style="margin-top:8px;display:block;">
+      <summary class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none;-webkit-appearance:none;">▸ MAKROER</summary>
+      <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;float:right;margin-top:-22px;position:relative;z-index:1;"
+        onclick="openMakroModal()">＋ Tilføj</button>`;
 
   if (!makroer.length) {
     html += `<div class="grafik-v2-empty">Ingen makroer — klik ＋ Tilføj for at oprette en</div>`;
@@ -4844,7 +4842,7 @@ sbClient.channel('db-changes')
         if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot' || p.new.key === 'score_breaking_trigger' || customGrafik.some(g => g.trigger_key === p.new.key) || KOMM_BOKSE.some(k => k.triggerKey === p.new.key) || BROADCAST_TRIGGER_KEYS.has(p.new.key)) {
           grafiktState[p.new.key] = p.new.value;
           if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
-          if (document.getElementById('tab-grafik-ops')?.classList.contains('active')) renderGrafikOps();
+          if (document.getElementById('tab-grafik-ops')?.classList.contains('active')) _debouncedRenderGrafikOps();
         }
       })
   .subscribe();
