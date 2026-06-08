@@ -2463,19 +2463,23 @@ function renderGrafik() {
       setGrafiktTrigger(btn.dataset.trig, btn.dataset.val);
     }));
 
-  container.querySelectorAll('.komm-alle-paa-btn').forEach(btn =>
+  container.querySelectorAll('.komm-alle-paa-btn').forEach(btn => {
+    if (btn.dataset.bound) return; btn.dataset.bound = '1';
     btn.addEventListener('click', async () => {
       const targets = KOMM_BOKSE.filter(k => kampe[k.slot - 1]?.onAir === true);
       targets.forEach(k => { grafiktState[k.triggerKey] = 'in'; });
       renderGrafik();
       await Promise.all(targets.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k.triggerKey, value: 'in' }))).catch(() => toast('Fejl ved Komm PÅ', 'err'));
-    }));
-  container.querySelectorAll('.komm-alle-af-btn').forEach(btn =>
+    });
+  });
+  container.querySelectorAll('.komm-alle-af-btn').forEach(btn => {
+    if (btn.dataset.bound) return; btn.dataset.bound = '1';
     btn.addEventListener('click', async () => {
       KOMM_BOKSE.forEach(k => { grafiktState[k.triggerKey] = 'out'; });
       renderGrafik();
       await Promise.all(KOMM_BOKSE.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k.triggerKey, value: 'out' }))).catch(() => toast('Fejl ved Komm AF', 'err'));
-    }));
+    });
+  });
 
   container.querySelectorAll('.grafik-lu-btn').forEach(btn =>
     btn.addEventListener('click', () => sendLineupSide(btn.dataset.matchid, btn.dataset.side)));
