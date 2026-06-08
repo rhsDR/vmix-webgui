@@ -63,6 +63,19 @@
           'Komm_score_K-5': 'komm-k5-frame',
           'Komm_score_K-6': 'komm-k6-frame',
         };
+        // Batching: samler in/out events for komm-bokse inden for 60ms og affyrer dem samlet
+        var _batchOut = {}, _batchIn = {}, _batchTimer = null;
+        function _flushBatch() {
+          _batchTimer = null;
+          var ins = _batchIn, outs = _batchOut;
+          _batchIn = {}; _batchOut = {};
+          Object.keys(ins).forEach(function(fid) {
+            try { if (!ins[fid].contentWindow?._spxVisible) ins[fid].contentWindow?.runAnimationIN?.(); } catch {}
+          });
+          Object.keys(outs).forEach(function(fid) {
+            try { if (outs[fid].contentWindow?._spxVisible) outs[fid].contentWindow?.runAnimationOUT?.(); } catch {}
+          });
+        }
         function _dispatch(key, value, slot) {
           // lt_trigger: lower-third bruger postMessage (ikke direkte runAnimationIN/OUT)
           if (key === 'lt_trigger') {
@@ -72,17 +85,16 @@
             }
             return;
           }
-          // Hardcodede komm-bokse
+          // Hardcodede komm-bokse — batches events inden for 60ms så alle bokse starter simultant
           var frameId = _TRIG[key];
           if (frameId) {
             var iframe = document.getElementById(frameId);
             if (!iframe) return;
             _pgState[key] = value;
-            try {
-              // Tjek _spxVisible direkte — undgår dobbelt-kald når intern subscription allerede håndterede det
-              if (value === 'in') { if (!iframe.contentWindow?._spxVisible) iframe.contentWindow?.runAnimationIN?.(); }
-              else if (value === 'out') { if (iframe.contentWindow?._spxVisible) iframe.contentWindow?.runAnimationOUT?.(); }
-            } catch {}
+            if (value === 'in') { _batchIn[frameId] = iframe; delete _batchOut[frameId]; }
+            else if (value === 'out') { _batchOut[frameId] = iframe; delete _batchIn[frameId]; }
+            if (_batchTimer) clearTimeout(_batchTimer);
+            _batchTimer = setTimeout(_flushBatch, 60);
             return;
           }
           // Custom grafikker med overlay_target='komm'
