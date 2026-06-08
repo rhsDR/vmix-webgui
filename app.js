@@ -1491,7 +1491,7 @@ async function refreshGrafiktState() {
 
 async function setGrafiktTrigger(triggerKey, value) {
   grafiktState[triggerKey] = value;
-  renderGrafik();
+  _debouncedRenderGrafik();
   try {
     await sbUpsert('settings', { projekt_id: aktivProjektId, key: triggerKey, value });
   } catch { toast('Fejl ved trigger', 'err'); }
@@ -4779,7 +4779,7 @@ function applySubRow(row) {
   if (subs[i].editMode || subs[i].savePending) return;
   subs[i] = { ...subs[i], navn: row.navn || '', titel: row.titel || '' };
   rerenderSub(i);
-  if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
+  if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
 }
 
 function applyVmixCallRow(row) {
@@ -4789,7 +4789,7 @@ function applyVmixCallRow(row) {
   if (vmixCalls[i].editMode || vmixCalls[i].savePending) return;
   vmixCalls[i] = { ...vmixCalls[i], navn: row.navn || '', titel: row.titel || '', link: row.link || '' };
   rerenderVmixCall(i);
-  if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
+  if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
 }
 
 function applyTickerRow(row) {
@@ -4831,12 +4831,12 @@ sbClient.channel('db-changes')
         } else if (p.new.key === 'overlay_lag_order') {
           const raw = p.new.value || '';
           overlayLagOrder = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_LAG_ORDER];
-          if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
+          if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
         } else if (p.new.key === 'ticker_lag_order') {
           const raw = p.new.value || '';
           tickerLagOrder = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_TICKER_SUB_ORDER];
           DEFAULT_TICKER_SUB_ORDER.forEach(id => { if (!tickerLagOrder.includes(id)) tickerLagOrder.push(id); });
-          if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
+          if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
         } else {
           refreshCredits();
         }
