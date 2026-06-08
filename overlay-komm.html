@@ -93,8 +93,7 @@
             _pgState[key] = value;
             if (value === 'in') { _batchIn[frameId] = iframe; delete _batchOut[frameId]; }
             else if (value === 'out') { _batchOut[frameId] = iframe; delete _batchIn[frameId]; }
-            if (_batchTimer) clearTimeout(_batchTimer);
-            _batchTimer = setTimeout(_flushBatch, 60);
+            if (!_batchTimer) _batchTimer = setTimeout(_flushBatch, 200);
             return;
           }
           // Custom grafikker med overlay_target='komm'
