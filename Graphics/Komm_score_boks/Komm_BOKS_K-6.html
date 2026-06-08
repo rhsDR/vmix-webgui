@@ -175,14 +175,6 @@ document.addEventListener('DOMContentLoaded',function(){
     .then(function(rows){if(rows[0]?.value==='in'&&!_spxVisible)runAnimationIN();});
   var _sb=window.supabase.createClient(_SB_URL,_SB_ANON);
   var _lastBcTime=0;
-  _sb.channel('prod-'+_trigKey+'-'+_pid)
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'settings'},function(p){
-      if(_embed)return;
-      if(p.new.projekt_id!==_pid||p.new.key!==_trigKey)return;
-      if(Date.now()-_lastBcTime<3000)return;
-      if(p.new.value==='in'&&!_spxVisible)runAnimationIN();
-      if(p.new.value==='out'&&_spxVisible)runAnimationOUT();
-    }).subscribe();
   _sb.channel('komm-kamp-'+_slot+'-'+_pid)
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'kampe',
         filter:'slot=eq.'+_slot},function(p){
