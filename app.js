@@ -1310,6 +1310,8 @@ let overlayLagOrder   = [...DEFAULT_LAG_ORDER];
 let tickerLagOrder    = [...DEFAULT_TICKER_SUB_ORDER];
 let tickerSubExpanded = false;
 let grafiktState        = {}; // { triggerKey: currentValue }
+let _rgDebounceTimer    = null;
+function _debouncedRenderGrafik() { clearTimeout(_rgDebounceTimer); _rgDebounceTimer = setTimeout(renderGrafik, 80); }
 let customGrafik        = []; // rækker fra projekt_grafik-tabellen
 let grafikOverlayMap    = {}; // { grafik-id: 'hoved'|'komm' } for built-in grafikker
 let makroer             = []; // rækker fra projekt_makroer-tabellen
@@ -2459,13 +2461,19 @@ function renderGrafik() {
       setGrafiktTrigger(btn.dataset.trig, btn.dataset.val);
     }));
 
-  container.querySelector('.komm-alle-paa-btn')?.addEventListener('click', async () => {
-    const targets = KOMM_BOKSE.filter(k => kampe[k.slot - 1]?.onAir === true);
-    for (const k of targets) await setGrafiktTrigger(k.triggerKey, 'in');
-  });
-  container.querySelector('.komm-alle-af-btn')?.addEventListener('click', async () => {
-    for (const k of KOMM_BOKSE) await setGrafiktTrigger(k.triggerKey, 'out');
-  });
+  container.querySelectorAll('.komm-alle-paa-btn').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      const targets = KOMM_BOKSE.filter(k => kampe[k.slot - 1]?.onAir === true);
+      targets.forEach(k => { grafiktState[k.triggerKey] = 'in'; });
+      renderGrafik();
+      await Promise.all(targets.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k.triggerKey, value: 'in' }))).catch(() => toast('Fejl ved Komm PÅ', 'err'));
+    }));
+  container.querySelectorAll('.komm-alle-af-btn').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      KOMM_BOKSE.forEach(k => { grafiktState[k.triggerKey] = 'out'; });
+      renderGrafik();
+      await Promise.all(KOMM_BOKSE.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k.triggerKey, value: 'out' }))).catch(() => toast('Fejl ved Komm AF', 'err'));
+    }));
 
   container.querySelectorAll('.grafik-lu-btn').forEach(btn =>
     btn.addEventListener('click', () => sendLineupSide(btn.dataset.matchid, btn.dataset.side)));
@@ -4835,7 +4843,7 @@ sbClient.channel('db-changes')
         // Opdater grafik-tab hvis det er åbent og en trigger-key, lt_slot eller score_breaking_trigger ændrer sig
         if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot' || p.new.key === 'score_breaking_trigger' || customGrafik.some(g => g.trigger_key === p.new.key) || KOMM_BOKSE.some(k => k.triggerKey === p.new.key)) {
           grafiktState[p.new.key] = p.new.value;
-          if (document.getElementById('tab-grafik')?.classList.contains('active')) renderGrafik();
+          if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
           if (document.getElementById('tab-grafik-ops')?.classList.contains('active')) renderGrafikOps();
         }
       })
