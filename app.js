@@ -845,6 +845,7 @@ function resetEdit(i) {
   buf.lokation = '';
   buf.lokSomKomm = false;
   buf.enetpulseId = null;
+  buf.nulstilScoreOgOnAir = true; // score 0-0 + off air — træder først i kraft ved GEM
   // buf.vmixcall bevares — linket må ikke ryddes
   rerender(i);
 }
@@ -865,6 +866,11 @@ async function saveKamp(i, div) {
   k.vmixcall     = buf.vmixcall;
   k.enetpulseId  = buf.enetpulseId !== undefined ? buf.enetpulseId : k.enetpulseId;
   if (!k.enetpulseId) { k.hold1PartFk = null; k.hold2PartFk = null; k.starttime = ''; }
+  if (buf.nulstilScoreOgOnAir) {
+    k.hold1Score = 0;
+    k.hold2Score = 0;
+    k.onAir = false;
+  }
   k.editMode     = false;
 
   rerender(i);
@@ -882,7 +888,8 @@ async function saveKamp(i, div) {
       kommentator:  k.kommentator,
       lokation:     k.lokation,
       vmixcall:     k.vmixcall,
-      enetpulse_id: k.enetpulseId
+      enetpulse_id: k.enetpulseId,
+      ...(buf.nulstilScoreOgOnAir ? { on_air: false } : {})
     });
     toast('Gemt ✓', 'ok');
     _broadcastKampState(i);
