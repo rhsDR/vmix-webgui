@@ -43,7 +43,7 @@
       { id: 'ticker-breaking', file: 'Graphics/Ticker/Ticker_breaking_gsap.html' },
       { id: 'score',           file: 'Graphics/Stillings_boks/Stillings_boks_uden_live_boks_gsap.html' },
       { id: 'score-breaking',  file: 'Graphics/Stillings_boks/Stillings_boks_BREAKING_MASTER.html' },
-      { id: 'overlay-3',   file: 'overlay-3.html'        },
+      { id: 'overlay-3',   file: 'overlay-3.html', embed: true },
       { id: 'credits',     file: 'credits.html'         },
     ];
     const DEFAULT_ORDER = GRAPHICS.map(g => g.id); // top→bund
@@ -61,7 +61,7 @@
     GRAPHICS.forEach(g => {
       const frame = document.getElementById(g.id + '-frame');
       if (!frame) return;
-      let src = g.file + '?p=' + pid;
+      let src = g.file + '?p=' + pid + (g.embed ? '&embed=1' : '');
       if (preview === 'credits'             && g.id === 'credits')    src = g.file + '?preview=1&p=' + pid;
       if ((preview === 'home' || preview === 'away') && g.id === 'overlay-3') src = g.file + '?preview=' + preview + '&p=' + pid;
       originalSrcs[g.id] = src;

@@ -414,6 +414,7 @@
     }
 
     const IS_PREVIEW = !!params.get('preview');
+    const IS_EMBED   = !!params.get('embed'); // kører som iframe inde i overlay.html
 
     // ── PREVIEW ───────────────────────────────────────────────────
     function getDemoData() {
@@ -559,7 +560,7 @@
           _OPcustomState[g.trigger_key] = 'out';
         }));
         // Initial state for lineup_trigger + lineup_data (erstatter pollTrigger)
-        if (!IS_PREVIEW) {
+        if (!IS_PREVIEW && !IS_EMBED) {
           const ltRows = await fetch(
             `${SB_URL}/rest/v1/settings?projekt_id=eq.${encodeURIComponent(projektId)}&key=in.(lineup_trigger,lineup_data)&select=key,value`,
             { headers: SB_HDR }
@@ -594,7 +595,7 @@
             return;
           }
           if (rec.key === 'lineup_trigger') {
-            if (IS_PREVIEW) return;
+            if (IS_PREVIEW || IS_EMBED) return;
             var lv = rec.value;
             if (lv === 'home' || lv === 'away') {
               // Hent friske data først — rækkefølgen af data/trigger-events er ikke garanteret
