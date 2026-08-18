@@ -278,10 +278,18 @@ function normalizeEventDetails(raw, statsRaw, id) {
     }
   }
 
-  // Grupper på enetID for at parre mål+assist og subst+subst_in
+  // Grupper på enetID for at parre mål+assist og subst+subst_in.
+  // OBS: nogle turneringer (fx A-Liga kvinder) sender enetID="0" på ALLE
+  // hændelser — dér skal hver hændelse stå for sig selv (nøgle = eget id),
+  // ellers kollapser dublet-tjekket alle mål til ét.
+  tagged.forEach((inc, idx) => {
+    const eid = String(inc.enetID ?? '');
+    inc._key = (eid && eid !== '0') ? 'e' + eid : 'i' + (inc.id ?? idx);
+  });
+
   const byEnetId = {};
   for (const inc of tagged) {
-    const k = inc.enetID;
+    const k = inc._key;
     if (!byEnetId[k]) byEnetId[k] = [];
     byEnetId[k].push(inc);
   }
@@ -290,7 +298,7 @@ function normalizeEventDetails(raw, statsRaw, id) {
   const seen = new Set();
 
   for (const inc of tagged) {
-    const k    = inc.enetID;
+    const k    = inc._key;
     if (seen.has(k)) continue;
     seen.add(k);
 
