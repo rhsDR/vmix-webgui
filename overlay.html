@@ -125,12 +125,8 @@
     if (pid) {
       (function() {
         function _dispatch(key, value) {
-          if (key === 'lineup_trigger') {
-            setTimeout(function() {
-              try { document.getElementById('overlay-3-frame')?.contentWindow?.pollTrigger?.(); } catch {}
-            }, 120);
-            return;
-          }
+          // lineup_trigger håndteres af overlay-3.html selv via dens egen kanal
+          if (key === 'lineup_trigger') return;
           if (key === 'credits_trigger') {
             if (value === 'in') try { document.getElementById('credits-frame')?.contentWindow?.runAnimationIN?.(); } catch {}
             return;
@@ -175,12 +171,8 @@
                 } catch {}
                 return;
               }
-              if (p.key === 'lineup_trigger') {
-                setTimeout(function() {
-                  try { document.getElementById('overlay-3-frame')?.contentWindow?.pollTrigger?.(); } catch {}
-                }, 120);
-                return;
-              }
+              // lineup_trigger håndteres af overlay-3.html selv via dens egen kanal
+              if (p.key === 'lineup_trigger') return;
               var bIframe = customFrameMap[p.key];
               if (!bIframe) return;
               var prevBc = customState[p.key];

@@ -587,6 +587,29 @@
           if (!msg.payload || !msg.payload.data) return;
           var rec = msg.payload.data.record;
           if (!rec || rec.projekt_id !== projektId) return;
+          // Opstillingen: live-reaktion på triggers (pollTrigger findes ikke
+          // længere — kanalen SKAL selv håndtere lineup_trigger/lineup_data)
+          if (rec.key === 'lineup_data') {
+            if (!IS_PREVIEW) { try { lineupData = rec.value ? JSON.parse(rec.value) : lineupData; } catch {} }
+            return;
+          }
+          if (rec.key === 'lineup_trigger') {
+            if (IS_PREVIEW) return;
+            var lv = rec.value;
+            if (lv === 'home' || lv === 'away') {
+              // Hent friske data først — rækkefølgen af data/trigger-events er ikke garanteret
+              fetch(`${SB_URL}/rest/v1/settings?projekt_id=eq.${encodeURIComponent(projektId)}&key=eq.lineup_data&select=value`, { headers: SB_HDR })
+                .then(function(r) { return r.json(); })
+                .then(function(rows) {
+                  try { if (rows && rows[0] && rows[0].value) lineupData = JSON.parse(rows[0].value); } catch {}
+                  if (lineupData) showSide(lv);
+                })
+                .catch(function() { if (lineupData) showSide(lv); });
+            } else if (lv === 'out') {
+              if (currentSide !== null) hideSide();
+            }
+            return;
+          }
           if (rec.key === 'overlay_lag_order') {
             var order = rec.value ? rec.value.split(',').map(function(s){return s.trim();}).filter(Boolean) : [];
             document.body.querySelectorAll('iframe[id]').forEach(function(f) {
