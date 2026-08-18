@@ -59,11 +59,8 @@
     </div>
   </div>
 
+  <script src="js/supabase-config.js"></script>
   <script>
-    const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
-    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
-    const SB_HDR  = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Content-Type': 'application/json' };
-
     const params    = new URLSearchParams(window.location.search);
     const pid       = params.get('p') || '';
     const isPreview = params.has('preview');
