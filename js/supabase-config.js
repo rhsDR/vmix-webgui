@@ -1,5 +1,5 @@
 // ── Fælles Supabase-konfiguration for overlay-siderne ────────────────────
-// Bruges af de faste overlays (overlay, overlay-komm, lower-third, OverLay_3,
+// Bruges af de faste overlays (overlay, overlay-komm, lower-third, overlay-3,
 // ticker-overlay, credits m.fl.). Skal indlæses FØR sidens egen kode:
 //   <script src="js/supabase-config.js"></script>
 //

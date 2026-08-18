@@ -1347,7 +1347,7 @@ const OVERLAY_GRAPHICS = [
   { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html',       triggerKey: 'breaking_trigger',   type: 'simple',  color: '#ff4444', subOf: 'ticker' },
   { id: 'score',       label: 'Stillings',        file: null,                  triggerKey: 'score_trigger',      type: 'simple',  color: '#44cc88', subOf: 'ticker' },
   { id: 'live-boks',  label: 'Live Boks',        file: 'Graphics/LIve_bokse/Live_BOKS_gsap.html', triggerKey: 'live_boks_trigger', type: 'simple', color: '#ff2244', subOf: 'ticker' },
-  { id: 'overlay-3',   label: 'OverLay_3',        file: 'OverLay_3.html',      triggerKey: 'lineup_trigger',     type: 'lineup',  color: '#ff8833' },
+  { id: 'overlay-3',   label: 'Overlay 3',        file: 'overlay-3.html',      triggerKey: 'lineup_trigger',     type: 'lineup',  color: '#ff8833' },
   { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits', color: '#ffcc44' },
   { id: 'komm',        label: 'Komm Boks',        file: null,                  triggerKey: null,                 type: 'komm',    color: '#4a9eff' },
 ];
@@ -1987,7 +1987,7 @@ function renderGrafik() {
         const udeNavn    = k.hold2Lang || k.hold2Kort || '—';
         const prvHjemId  = `lu-${matchId}-home`;
         const prvUdeId   = `lu-${matchId}-away`;
-        const prvUrl     = `${origin}/OverLay_3.html?p=${pid}`;
+        const prvUrl     = `${origin}/overlay-3.html?p=${pid}`;
         return `<div class="grafik-block${isActive ? ' active' : ''}" style="--g-color:${g.color}">
           <div class="grafik-block-info">
             <span class="grafik-block-name">${esc(hjemNavn)} <span class="muted">vs</span> ${esc(udeNavn)}</span>
@@ -2204,7 +2204,7 @@ function renderGrafik() {
         </div>`;
       }).join('');
       companionRows = kampRows + `
-      <div style="font-size:10px;color:#666;margin-top:6px;padding-top:6px;border-top:1px solid #222">Sluk OverLay_3</div>
+      <div style="font-size:10px;color:#666;margin-top:6px;padding-top:6px;border-top:1px solid #222">Sluk Overlay 3</div>
       <div class="grafik-companion-row">
         <span class="grafik-companion-lbl">AF</span>
         <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
@@ -3846,13 +3846,13 @@ async function fetchLiveMatches() {
         }
         const modal = document.getElementById('previewModal');
         const frame = document.getElementById('previewFrame');
-        frame.src = 'OverLay_3?preview=home&p=' + aktivProjektId + '&t=' + Date.now();
+        frame.src = 'overlay-3?preview=home&p=' + aktivProjektId + '&t=' + Date.now();
         modal.style.display = 'flex';
       });
     });
     grid.querySelectorAll('.lu-vmix-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const url = `${location.origin}/OverLay_3?p=${aktivProjektId}`;
+        const url = `${location.origin}/overlay-3?p=${aktivProjektId}`;
         navigator.clipboard.writeText(url);
         btn.textContent = '✓ Kopieret!';
         setTimeout(() => { btn.textContent = '⧉ vMix URL'; }, 2000);
@@ -4998,7 +4998,7 @@ function renderGrafikOps() {
   const builtinWindows = [
     { label: 'Hoved Overlay', url: `${origin}/overlay.html?p=${pid}` },
     { label: 'Kommentator', url: `${origin}/overlay-komm.html?p=${pid}` },
-    { label: 'OverLay_3', url: `${origin}/OverLay_3.html?p=${pid}` },
+    { label: 'Overlay 3', url: `${origin}/overlay-3.html?p=${pid}` },
   ];
   (customGrafik || []).filter(g => g.overlay_mode === 'standalone').forEach(g => {
     const inputNr = g.overlay_input ? `Input ${g.overlay_input}  ` : '';
@@ -5012,7 +5012,7 @@ function renderGrafikOps() {
     </div>`).join('');
 
   // ─ Sektion: BUILT-IN GRAFIKKER ─
-  const targetOpts = '<option value="hoved">Hoved Overlay</option><option value="komm">Kommentator</option><option value="overlay-3">OverLay_3</option>';
+  const targetOpts = '<option value="hoved">Hoved Overlay</option><option value="komm">Kommentator</option><option value="overlay-3">Overlay 3</option>';
   const builtinRows = OVERLAY_GRAPHICS.filter(g => g.type !== 'komm' && g.type !== 'lineup').map(g => {
     const isLive = (grafiktState[g.triggerKey] || 'out') !== 'out';
     const statusColor = isLive ? '#22c55e' : '#555';
