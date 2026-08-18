@@ -203,11 +203,10 @@
     </div>
   </div>
 
+  <script src="js/supabase-config.js"></script>
+  <script src="js/realtime-ws.js"></script>
   <script>
-    const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
-    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
-    const SB_HDR  = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON, 'Content-Type': 'application/json' };
-
+    // SB_URL / SB_ANON / SB_HDR kommer fra js/supabase-config.js
     const params    = new URLSearchParams(window.location.search);
     const projektId = params.get('p') || '';
     const pidFilter = projektId ? '&projekt_id=eq.' + encodeURIComponent(projektId) : PLACEHOLDER_LOGO;
@@ -577,48 +576,30 @@
     }
 
     if (projektId) {
-      (function() {
-        var _ws = null, _ref = 0, _hb = null;
-        function _wsConnect() {
-          try {
-            _ws = new WebSocket('wss://rxzxdcweqpbnvfkpnnrn.supabase.co/realtime/v1/websocket?apikey=' + SB_ANON + '&vsn=1.0.0');
-            _ws.onopen = function() {
-              _ws.send(JSON.stringify({ topic: 'realtime:op-grafik-' + projektId, event: 'phx_join',
-                payload: { config: { broadcast: { self: false, ack: false }, presence: { key: '' },
-                  postgres_changes: [
-                    { event: 'UPDATE', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + projektId },
-                    { event: 'INSERT', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + projektId }
-                  ] }, access_token: SB_ANON }, ref: String(++_ref) }));
-              _hb = setInterval(function() {
-                if (_ws && _ws.readyState === 1)
-                  _ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(++_ref) }));
-              }, 25000);
-            };
-            _ws.onmessage = function(e) {
-              try {
-                var msg = JSON.parse(e.data);
-                if (!msg || msg.event !== 'postgres_changes') return;
-                if (!msg.payload || !msg.payload.data) return;
-                var rec = msg.payload.data.record;
-                if (!rec || rec.projekt_id !== projektId) return;
-                if (rec.key === 'overlay_lag_order') {
-                  var order = rec.value ? rec.value.split(',').map(function(s){return s.trim();}).filter(Boolean) : [];
-                  document.body.querySelectorAll('iframe[id]').forEach(function(f) {
-                    var id = f.id.replace('builtin-','').replace('-frame','').replace('custom-op-','custom-');
-                    var idx = order.indexOf(id);
-                    if (idx >= 0) f.style.zIndex = String((order.length - idx) * 1000);
-                  });
-                  return;
-                }
-                _OPdispatch(rec.key, rec.value, rec.slot);
-              } catch {}
-            };
-            _ws.onclose = function() { clearInterval(_hb); _hb = null; setTimeout(_wsConnect, 3000); };
-            _ws.onerror = function() { try { _ws.close(); } catch {} };
-          } catch {}
+      // Transportlaget (join/heartbeat/reconnect) bor i js/realtime-ws.js
+      createRealtimeWS({
+        topic: 'op-grafik-' + projektId,
+        postgresChanges: [
+          { event: 'UPDATE', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + projektId },
+          { event: 'INSERT', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + projektId }
+        ],
+        onMessage: function(msg) {
+          if (msg.event !== 'postgres_changes') return;
+          if (!msg.payload || !msg.payload.data) return;
+          var rec = msg.payload.data.record;
+          if (!rec || rec.projekt_id !== projektId) return;
+          if (rec.key === 'overlay_lag_order') {
+            var order = rec.value ? rec.value.split(',').map(function(s){return s.trim();}).filter(Boolean) : [];
+            document.body.querySelectorAll('iframe[id]').forEach(function(f) {
+              var id = f.id.replace('builtin-','').replace('-frame','').replace('custom-op-','custom-');
+              var idx = order.indexOf(id);
+              if (idx >= 0) f.style.zIndex = String((order.length - idx) * 1000);
+            });
+            return;
+          }
+          _OPdispatch(rec.key, rec.value, rec.slot);
         }
-        _wsConnect();
-      })();
+      });
 
       _OPloadGrafikker().then(async function() {
         const keys = Object.keys(_OPcustomFrameMap);

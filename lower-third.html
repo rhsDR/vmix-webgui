@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/realtime-ws.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
@@ -55,10 +57,9 @@ var _spxVisible=false;
      - function _updateContent(data)  — data.f0=titel, data.f1=navn, data.f2=label, data.f3=side
      - function runAnimationIN(skipLabel)
      - function runAnimationOUT(keepLabel)
+     - <script src="js/supabase-config.js"> + js/realtime-ws.js indlæst FØR denne blok
    ────────────────────────────────────── */
-const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
-const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
-const SB_HDR  = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON };
+// SB_URL / SB_ANON / SB_HDR kommer fra js/supabase-config.js
 const _params    = new URLSearchParams(window.location.search);
 const _pid       = _params.get('p') || '';
 const _pf        = _pid ? '&projekt_id=eq.' + encodeURIComponent(_pid) : '';
@@ -141,35 +142,21 @@ if (_pid) {
   fetch(SB_URL + '/rest/v1/vmix_calls?select=slot,navn,titel' + _pf, { headers: SB_HDR })
     .then(r => r.json()).then(rows => rows.forEach(r => { _vmixCache[String(r.slot)] = r; })).catch(() => {});
 }
-// Direct Supabase Realtime WebSocket — broadcast (web UI) + postgres_changes (Companion)
+// Fælles realtime-forbindelse (js/realtime-ws.js) — broadcast (web UI) + postgres_changes (Companion)
 (function() {
   if (!_pid) return;
-  var _ws = null, _ref = 0, _hb = null, _pgSlot = '';
-  function _wsConnect() {
-    try {
-      _ws = new WebSocket('wss://rxzxdcweqpbnvfkpnnrn.supabase.co/realtime/v1/websocket?apikey=' + SB_ANON + '&vsn=1.0.0');
-      _ws.onopen = function() {
-        _ws.send(JSON.stringify({ topic: 'realtime:triggers-' + _pid, event: 'phx_join',
-          payload: { config: { broadcast: { self: false, ack: false }, presence: { key: '' },
-            postgres_changes: [
-              { event: 'UPDATE', schema: 'public', table: 'settings',   filter: 'projekt_id=eq.' + _pid },
-              { event: 'INSERT', schema: 'public', table: 'settings',   filter: 'projekt_id=eq.' + _pid },
-              { event: 'UPDATE', schema: 'public', table: 'subs',       filter: 'projekt_id=eq.' + _pid },
-              { event: 'INSERT', schema: 'public', table: 'subs',       filter: 'projekt_id=eq.' + _pid },
-              { event: 'UPDATE', schema: 'public', table: 'vmix_calls', filter: 'projekt_id=eq.' + _pid },
-              { event: 'INSERT', schema: 'public', table: 'vmix_calls', filter: 'projekt_id=eq.' + _pid }
-            ] }, access_token: SB_ANON }, ref: String(++_ref) }));
-        _hb = setInterval(function() {
-          if (_ws && _ws.readyState === 1)
-            _ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(++_ref) }));
-        }, 25000);
-
-      };
-      _ws.onmessage = function(e) {
-        try {
-          var msg = JSON.parse(e.data);
-          if (!msg) return;
-
+  var _pgSlot = '';
+  createRealtimeWS({
+    topic: 'triggers-' + _pid,
+    postgresChanges: [
+      { event: 'UPDATE', schema: 'public', table: 'settings',   filter: 'projekt_id=eq.' + _pid },
+      { event: 'INSERT', schema: 'public', table: 'settings',   filter: 'projekt_id=eq.' + _pid },
+      { event: 'UPDATE', schema: 'public', table: 'subs',       filter: 'projekt_id=eq.' + _pid },
+      { event: 'INSERT', schema: 'public', table: 'subs',       filter: 'projekt_id=eq.' + _pid },
+      { event: 'UPDATE', schema: 'public', table: 'vmix_calls', filter: 'projekt_id=eq.' + _pid },
+      { event: 'INSERT', schema: 'public', table: 'vmix_calls', filter: 'projekt_id=eq.' + _pid }
+    ],
+    onMessage: function(msg) {
           if (msg.event === 'postgres_changes' && msg.payload && msg.payload.data) {
             var tbl = msg.payload.data.table;
             var rec = msg.payload.data.record;
@@ -209,13 +196,8 @@ if (_pid) {
           window.dispatchEvent(new MessageEvent('message', {
             data: { type: 'sbTrigger', key: 'lt_trigger', value: p.value, slot: p.slot || '' }
           }));
-        } catch {}
-      };
-      _ws.onclose = function() { clearInterval(_hb); _hb = null; setTimeout(_wsConnect, 3000); };
-      _ws.onerror = function() { try { _ws.close(); } catch {} };
-    } catch {}
-  }
-  _wsConnect();
+    }
+  });
 })();
 
 window.addEventListener('message', function(evt) {
