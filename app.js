@@ -1344,7 +1344,7 @@ let creditsTriggerActive = false;
 const OVERLAY_GRAPHICS = [
   { id: 'lower-third', label: 'SUB',              file: 'lower-third.html',    triggerKey: 'lt_trigger',         type: 'lt',      color: '#4a9eff' },
   { id: 'ticker',      label: 'Ticker',           file: 'Graphics/Ticker/Ticker_gsap.html', triggerKey: 'ticker_ovl_trigger', type: 'ticker',  color: '#aa66ff' },
-  { id: 'breaking',    label: 'Breaking Ticker',  file: 'breaking.html',       triggerKey: 'breaking_trigger',   type: 'simple',  color: '#ff4444', subOf: 'ticker' },
+  { id: 'breaking',    label: 'Breaking Ticker',  file: null,                  triggerKey: 'breaking_trigger',   type: 'simple',  color: '#ff4444', subOf: 'ticker' },
   { id: 'score',       label: 'Stillings',        file: null,                  triggerKey: 'score_trigger',      type: 'simple',  color: '#44cc88', subOf: 'ticker' },
   { id: 'live-boks',  label: 'Live Boks',        file: 'Graphics/LIve_bokse/Live_BOKS_gsap.html', triggerKey: 'live_boks_trigger', type: 'simple', color: '#ff2244', subOf: 'ticker' },
   { id: 'overlay-3',   label: 'Overlay 3',        file: 'overlay-3.html',      triggerKey: 'lineup_trigger',     type: 'lineup',  color: '#ff8833' },

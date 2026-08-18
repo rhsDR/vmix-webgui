@@ -20,7 +20,6 @@
 <body>
   <iframe id="lower-third-frame" allowtransparency="true" src=""></iframe>
   <iframe id="live-boks-frame"   allowtransparency="true" src=""></iframe>
-  <iframe id="breaking-frame"    allowtransparency="true" src=""></iframe>
   <iframe id="ticker-frame"         allowtransparency="true" src=""></iframe>
   <iframe id="ticker-breaking-frame" allowtransparency="true" src=""></iframe>
   <iframe id="score-frame"          allowtransparency="true" src=""></iframe>
@@ -40,7 +39,6 @@
     const GRAPHICS = [
       { id: 'lower-third', file: 'lower-third.html'    },
       { id: 'live-boks',   file: 'Graphics/LIve_bokse/Live_BOKS_gsap.html' },
-      { id: 'breaking',    file: 'breaking.html'        },
       { id: 'ticker',          file: 'Graphics/Ticker/Ticker_gsap.html'  },
       { id: 'ticker-breaking', file: 'Graphics/Ticker/Ticker_breaking_gsap.html' },
       { id: 'score',           file: 'Graphics/Stillings_boks/Stillings_boks_uden_live_boks_gsap.html' },
@@ -49,7 +47,7 @@
       { id: 'credits',     file: 'credits.html'         },
     ];
     const DEFAULT_ORDER = GRAPHICS.map(g => g.id); // top→bund
-    const DEFAULT_TICKER_SUB_ORDER = ['live-boks', 'breaking', 'ticker-breaking', 'score-breaking', 'ticker', 'score'];
+    const DEFAULT_TICKER_SUB_ORDER = ['live-boks', 'ticker-breaking', 'score-breaking', 'ticker', 'score'];
     let tickerSubOrder = [...DEFAULT_TICKER_SUB_ORDER];
     let mainOrder = [...DEFAULT_ORDER];
 
@@ -135,11 +133,6 @@
           }
           if (key === 'credits_trigger') {
             if (value === 'in') try { document.getElementById('credits-frame')?.contentWindow?.runAnimationIN?.(); } catch {}
-            return;
-          }
-          if (key === 'breaking_trigger') {
-            if (value === 'in') try { document.getElementById('breaking-frame')?.contentWindow?.runAnimationIN?.(); } catch {}
-            else try { document.getElementById('breaking-frame')?.contentWindow?.runAnimationOUT?.(); } catch {}
             return;
           }
           var cIframe = customFrameMap[key];
