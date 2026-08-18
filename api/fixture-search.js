@@ -80,13 +80,18 @@ export default async function handler(req, res) {
   if (!date) return res.status(400).json({ error: 'Mangler id eller date parameter' });
 
   try {
-    // Brug cachede filer hvis de findes — kald API per liga hvis ikke
     const AF = 'https://v3.football.api-sports.io';
     const afHeaders = { 'x-apisports-key': API_KEY };
 
+    // Sæsonen skifter 1. juli — en dato i efteråret hører til det års sæson,
+    // en dato i foråret til året før. Beregnes ud fra den søgte dato.
+    const d      = new Date(date + 'T12:00:00Z');
+    const season = (d.getUTCMonth() + 1) >= 7 ? d.getUTCFullYear() : d.getUTCFullYear() - 1;
+
+    // De lokale cache-filer dækker kun sæson 2024 — alle andre sæsoner spørges live
     const [slData, pkData] = await Promise.all([
-      (async () => loadCache('sl2024.json') || await fetch(`${AF}/fixtures?league=119&season=2024`, { headers: afHeaders }).then(r => r.json()).catch(() => ({ response: [] })))(),
-      (async () => loadCache('pk2024.json') || await fetch(`${AF}/fixtures?league=121&season=2024`, { headers: afHeaders }).then(r => r.json()).catch(() => ({ response: [] })))()
+      (async () => (season === 2024 && loadCache('sl2024.json')) || await fetch(`${AF}/fixtures?league=119&season=${season}`, { headers: afHeaders }).then(r => r.json()).catch(() => ({ response: [] })))(),
+      (async () => (season === 2024 && loadCache('pk2024.json')) || await fetch(`${AF}/fixtures?league=121&season=${season}`, { headers: afHeaders }).then(r => r.json()).catch(() => ({ response: [] })))()
     ]);
 
     const all = [...(slData.response || []), ...(pkData.response || [])];
@@ -94,6 +99,14 @@ export default async function handler(req, res) {
       .filter(f => f.fixture.date.startsWith(date))
       .sort((a, b) => a.fixture.timestamp - b.fixture.timestamp)
       .map(f => formatFixture(f, holdMap));
+
+    // Vis API-Football-fejl (fx sæson uden for abonnement) i stedet for tom liste
+    if (!fixtures.length) {
+      const apiError = [slData, pkData]
+        .map(x => x && x.errors && Object.values(x.errors)[0])
+        .find(Boolean);
+      if (apiError) return res.status(502).json({ error: 'API-Football: ' + apiError });
+    }
 
     return res.status(200).json({ fixtures });
   } catch (err) {

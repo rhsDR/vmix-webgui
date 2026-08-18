@@ -4,13 +4,17 @@ import { requireUser } from './_auth.js';
 const EAPI_BASE = 'https://eapi.enetpulse.com';
 
 // Kendte danske turneringer: { fk: 'Visningsnavn' }
+// OBS: Enetpulse udsteder NYE tournament_stageFK-numre hver sæson.
+// Numrene her er fra 2025/26. DANSK_NAVN-fallbacket nedenfor fanger nye
+// sæsoner på turneringsnavnet, så søgningen ikke dør ved sæsonskifte.
 const DANSKE_LIGAER = {
-  '923100': 'Superligaen',   // mesterskabsspillet
-  '923101': 'Superligaen',   // nedrykningsspillet
-  '916899': 'A-Liga',        // kvinder
+  '923100': 'Superligaen',   // mesterskabsspillet 2025/26
+  '923101': 'Superligaen',   // nedrykningsspillet 2025/26
+  '916899': 'A-Liga',        // kvinder 2025/26
   '901298': 'DBU Pokalen',
   '931466': '3F Superliga ECL Playoff',
 };
+const DANSK_NAVN = /superliga|a-liga|dbu|landspokal|danmark|denmark|danish/i;
 const SB_HEADERS = {
   'apikey': SB_ANON,
   'Authorization': 'Bearer ' + SB_ANON,
@@ -144,6 +148,7 @@ function normalizeFixtures(raw) {
   return evList
     .map(ev => {
       const fk = String(ev.tournament_stageFK || ev.tournament_templateFK || ev.tournamentFK || '');
+      const navn = String(ev.tournament_stage_name || ev.tournament_name || '');
       const { home, away } = getParticipants(ev);
       const startdate = ev.startdate || '';
       return {
@@ -152,13 +157,14 @@ function normalizeFixtures(raw) {
         startdate,
         home_enet:     participantName(home),
         away_enet:     participantName(away),
-        tournament:    DANSKE_LIGAER[fk] || ev.tournament_stage_name || ev.tournament_name || '',
+        tournament:    DANSKE_LIGAER[fk] || navn,
         tournament_fk: fk,
         status:        ev.status_type || 'not_started',
-        dansk:         danskeFK.has(fk)
+        // Kendt FK eller dansk-lignende turneringsnavn (dækker nye sæsoners FK'er)
+        dansk:         danskeFK.has(fk) || DANSK_NAVN.test(navn)
       };
     })
-    .filter(f => f.dansk)   // kun kendte danske ligaer returneres
+    .filter(f => f.dansk)
     .sort((a, b) => a.startdate.localeCompare(b.startdate));
 }
 

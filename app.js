@@ -778,6 +778,10 @@ async function searchFixtureByDate(i, div, date) {
   try {
     const res = await apiFetch('/api/fixture-search?date=' + encodeURIComponent(date));
     const data = await res.json();
+    if (data.error) {
+      resultsEl.innerHTML = `<span style="color:var(--red);font-size:12px;">${esc(data.error)}</span>`;
+      return;
+    }
     if (!data.fixtures || data.fixtures.length === 0) {
       resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Ingen kampe den dag</span>';
       return;
