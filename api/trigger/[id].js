@@ -112,6 +112,12 @@ async function runStep(pid, h, slotOverride) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  // Token-lås: alle kald (Companion m.fl.) skal medsende ?token= der matcher
+  // TRIGGER_TOKEN-miljøvariablen i Vercel. Uden env-var afvises alt (fail closed).
+  const TRIGGER_TOKEN = process.env.TRIGGER_TOKEN;
+  if (!TRIGGER_TOKEN) return res.status(503).json({ error: 'TRIGGER_TOKEN er ikke sat i Vercel' });
+  if (req.query.token !== TRIGGER_TOKEN) return res.status(401).json({ error: 'Ugyldig eller manglende token' });
+
   const { id } = req.query;
   if (!id) return res.status(400).json({ error: 'projekt id mangler' });
 

@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { SB_URL, SB_ANON } from './_supabase.js';
+import { requireUser } from './_auth.js';
 const SB_HEADERS = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON };
 
 async function getHoldMap() {
@@ -51,6 +52,7 @@ function loadCache(filename) {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  if (await requireUser(req, res)) return;
 
   const API_KEY = process.env.API_FOOTBALL_KEY;
   if (!API_KEY) return res.status(503).json({ error: 'API-nøgle ikke konfigureret' });

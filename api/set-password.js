@@ -11,7 +11,8 @@ export default async function handler(req, res) {
   const SERVICE_KEY    = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SERVICE_KEY) return res.status(503).json({ error: 'Service key ikke konfigureret' });
 
-  const DEFAULT_PASSWORD = 'DR35203040';
+  const DEFAULT_PASSWORD = process.env.DEFAULT_INVITE_PASSWORD;
+  if (!DEFAULT_PASSWORD) return res.status(503).json({ error: 'DEFAULT_INVITE_PASSWORD er ikke sat i Vercel' });
 
   try {
     const r = await fetch(`${SB_URL}/auth/v1/admin/users/${userId}`, {

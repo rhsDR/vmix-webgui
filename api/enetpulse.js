@@ -1,4 +1,5 @@
 import { SB_URL, SB_ANON } from './_supabase.js';
+import { requireUser } from './_auth.js';
 
 const EAPI_BASE = 'https://eapi.enetpulse.com';
 
@@ -381,6 +382,7 @@ function normalizeEventDetails(raw, statsRaw, id) {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  if (await requireUser(req, res)) return;
 
   const username = process.env.ENETPULSE_USERNAME;
   const token    = process.env.ENETPULSE_TOKEN;

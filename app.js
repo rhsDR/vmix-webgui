@@ -80,8 +80,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
     if (btn.dataset.tab === 'live')   startLivePolling();
     else                              stopLivePolling();
-    if (btn.dataset.tab === 'grafik') { Promise.all([loadKunstomGrafik(), loadMakroer()]).then(() => refreshGrafiktState()); fetchLineupDataForGrafik(); }
-    if (btn.dataset.tab === 'grafik-ops') { Promise.all([loadKunstomGrafik(), loadMakroer()]).then(() => { refreshGrafiktState(); renderGrafikOps(); }); }
+    if (btn.dataset.tab === 'grafik') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadCompanionToken()]).then(() => refreshGrafiktState()); fetchLineupDataForGrafik(); }
+    if (btn.dataset.tab === 'grafik-ops') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadCompanionToken()]).then(() => { refreshGrafiktState(); renderGrafikOps(); }); }
   });
 });
 
@@ -89,6 +89,25 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 // SB_HEADERS og sbHeaders() kommer fra js/auth.js
 const SB_HEADERS = sbHeaders();
 const SB_HEADERS_MINIMAL = { ...SB_HEADERS, 'Prefer': 'return=minimal' };
+
+// ── EGNE API-ENDPOINTS — kræver login ─────────────────────────
+// Datakilde-endpoints (/api/enetpulse m.fl.) afviser kald uden gyldig login-token.
+let _companionToken = ''; // trigger-token til de viste Companion-URLs (hentes efter login)
+
+async function apiFetch(url, opts = {}) {
+  const session = await getSession();
+  const headers = { ...(opts.headers || {}) };
+  if (session) headers['Authorization'] = 'Bearer ' + session.access_token;
+  return fetch(url, { ...opts, headers });
+}
+
+async function loadCompanionToken() {
+  if (_companionToken) return;
+  try {
+    const r = await apiFetch('/api/trigger-token');
+    if (r.ok) _companionToken = (await r.json()).token || '';
+  } catch { /* URLs vises uden token — serveren afviser dem alligevel */ }
+}
 
 const BROADCAST_TRIGGER_KEYS = new Set([
   'ticker_ovl_trigger','breaking_trigger','score_breaking_trigger','score_trigger',
@@ -757,7 +776,7 @@ async function searchFixtureByDate(i, div, date) {
   const resultsEl = div.querySelector('#efixresults-' + i);
   resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Henter kampe…</span>';
   try {
-    const res = await fetch('/api/fixture-search?date=' + encodeURIComponent(date));
+    const res = await apiFetch('/api/fixture-search?date=' + encodeURIComponent(date));
     const data = await res.json();
     if (!data.fixtures || data.fixtures.length === 0) {
       resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Ingen kampe den dag</span>';
@@ -798,7 +817,7 @@ async function searchEnetpulseByDate(i, div, date) {
   const resultsEl = div.querySelector('#enetresults-' + i);
   resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Henter kampe…</span>';
   try {
-    const res  = await fetch('/api/enetpulse?date=' + encodeURIComponent(date) + '&nocache=1');
+    const res  = await apiFetch('/api/enetpulse?date=' + encodeURIComponent(date) + '&nocache=1');
     const data = await res.json();
     if (data.error) { resultsEl.innerHTML = `<span style="color:var(--red);font-size:12px;">${esc(data.error)}</span>`; return; }
     const fixtures = data.fixtures || [];
@@ -1719,7 +1738,7 @@ async function fetchLineupDataForGrafik() {
   const enetIds = kampe.filter(k => k.enetpulseId).map(k => k.enetpulseId);
   if (!enetIds.length) return;
   try {
-    const data = await fetch('/api/enetpulse?ids=' + enetIds.join(',')).then(r => r.json());
+    const data = await apiFetch('/api/enetpulse?ids=' + enetIds.join(',')).then(r => r.json());
     (data.matches || []).forEach(m => {
       if (!m.id || m.error) return;
       const k = kampe.find(k2 => String(k2.enetpulseId) === String(m.id));
@@ -2117,7 +2136,7 @@ function renderGrafik() {
   if (!isAfvikling && g && g.type === 'lt') {
     const slotRows = subs.map((s, i) => {
       const slot = i + 1;
-      const url  = `${origin}/api/trigger/${pid}?key=lt_trigger&value=in&slot=${slot}`;
+      const url  = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=lt_trigger&value=in&slot=${slot}`;
       return `<div class="grafik-companion-row">
         <span class="grafik-companion-lbl">Sub ${slot}</span>
         <span class="grafik-companion-url" title="${url}">${url}</span>
@@ -2126,14 +2145,14 @@ function renderGrafik() {
     }).join('');
     const vmixRows = vmixCalls.map((c, i) => {
       const slot = i + 1;
-      const url  = `${origin}/api/trigger/${pid}?key=lt_trigger&value=vmixcall&slot=${slot}`;
+      const url  = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=lt_trigger&value=vmixcall&slot=${slot}`;
       return `<div class="grafik-companion-row">
         <span class="grafik-companion-lbl" style="color:#a855f7">VMC ${slot}</span>
         <span class="grafik-companion-url" title="${url}">${url}</span>
         <button class="copy-btn icon-btn" data-copy="${url}">⎘</button>
       </div>`;
     }).join('');
-    const afUrl = `${origin}/api/trigger/${pid}?key=lt_trigger&value=out`;
+    const afUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=lt_trigger&value=out`;
     const afRow = `<div class="grafik-companion-row">
       <span class="grafik-companion-lbl">AF</span>
       <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>
@@ -2143,8 +2162,8 @@ function renderGrafik() {
     companionRows = (slotRows ? `<div class="grafik-companion-subhead">SUBS</div>${slotRows}` : '') +
                    vmixHead + vmixRows + afRow;
   } else if (!isAfvikling && g && g.type === 'credits') {
-    const paUrl = `${origin}/api/trigger/${pid}?key=credits_trigger&value=in`;
-    const afUrl = `${origin}/api/trigger/${pid}?key=credits_trigger&value=out`;
+    const paUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=credits_trigger&value=in`;
+    const afUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=credits_trigger&value=out`;
     companionRows = `
       <div class="grafik-companion-row">
         <span class="grafik-companion-lbl">PÅ</span>
@@ -2157,15 +2176,15 @@ function renderGrafik() {
         <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
       </div>`;
   } else if (!isAfvikling && g && g.type === 'lineup') {
-    const afUrl = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=out`;
+    const afUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=lineup_trigger&value=out`;
     const lineupKampe = kampe.filter(k => k.enetpulseId);
     if (!lineupKampe.length) {
       companionRows = `<div style="color:#666;font-size:11px;padding:4px 0">Ingen kampe med Enetpulse ID</div>`;
     } else {
       const kampRows = lineupKampe.map(k => {
         const slot    = kampe.indexOf(k) + 1;
-        const hjemUrl = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=home&slot=${slot}`;
-        const udeUrl  = `${origin}/api/trigger/${pid}?key=lineup_trigger&value=away&slot=${slot}`;
+        const hjemUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=lineup_trigger&value=home&slot=${slot}`;
+        const udeUrl  = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=lineup_trigger&value=away&slot=${slot}`;
         const label   = k.hold1Kort && k.hold2Kort ? `${esc(k.hold1Kort)} vs ${esc(k.hold2Kort)}` : `Kamp ${slot}`;
         return `
         <div style="font-size:10px;color:#666;margin-top:6px;padding-top:6px;border-top:1px solid #222">${label}</div>
@@ -2189,14 +2208,14 @@ function renderGrafik() {
       </div>`;
     }
   } else if (!isAfvikling && g && g.type === 'ticker') {
-    const tPaUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=in`;
-    const tAfUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=out`;
-    const bPaUrl = `${origin}/api/trigger/${pid}?key=breaking_trigger&value=in`;
-    const bAfUrl = `${origin}/api/trigger/${pid}?key=breaking_trigger&value=out`;
-    const sPaUrl = `${origin}/api/trigger/${pid}?key=score_trigger&value=in`;
-    const sAfUrl = `${origin}/api/trigger/${pid}?key=score_trigger&value=out`;
-    const lPaUrl = `${origin}/api/trigger/${pid}?key=live_boks_trigger&value=in`;
-    const lAfUrl = `${origin}/api/trigger/${pid}?key=live_boks_trigger&value=out`;
+    const tPaUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${g.triggerKey}&value=in`;
+    const tAfUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${g.triggerKey}&value=out`;
+    const bPaUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=breaking_trigger&value=in`;
+    const bAfUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=breaking_trigger&value=out`;
+    const sPaUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=score_trigger&value=in`;
+    const sAfUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=score_trigger&value=out`;
+    const lPaUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=live_boks_trigger&value=in`;
+    const lAfUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=live_boks_trigger&value=out`;
     companionRows = `
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#aa66ff">T PÅ</span><span class="grafik-companion-url" title="${tPaUrl}">${tPaUrl}</span><button class="copy-btn icon-btn" data-copy="${tPaUrl}">⎘</button></div>
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#aa66ff">T AF</span><span class="grafik-companion-url" title="${tAfUrl}">${tAfUrl}</span><button class="copy-btn icon-btn" data-copy="${tAfUrl}">⎘</button></div>
@@ -2207,8 +2226,8 @@ function renderGrafik() {
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff2244">L PÅ</span><span class="grafik-companion-url" title="${lPaUrl}">${lPaUrl}</span><button class="copy-btn icon-btn" data-copy="${lPaUrl}">⎘</button></div>
       <div class="grafik-companion-row"><span class="grafik-companion-lbl" style="color:#ff2244">L AF</span><span class="grafik-companion-url" title="${lAfUrl}">${lAfUrl}</span><button class="copy-btn icon-btn" data-copy="${lAfUrl}">⎘</button></div>`;
   } else if (!isAfvikling && g && g.type === 'komm') {
-    const paUrl = `${origin}/api/trigger/${pid}?key=komm_alle&value=in`;
-    const afUrl = `${origin}/api/trigger/${pid}?key=komm_alle&value=out`;
+    const paUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=komm_alle&value=in`;
+    const afUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=komm_alle&value=out`;
     companionRows = `
       <div class="grafik-companion-row">
         <span class="grafik-companion-lbl">ALLE PÅ</span>
@@ -2221,8 +2240,8 @@ function renderGrafik() {
         <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
       </div>`;
   } else if (!isAfvikling && g) {
-    const paUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=in`;
-    const afUrl = `${origin}/api/trigger/${pid}?key=${g.triggerKey}&value=out`;
+    const paUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${g.triggerKey}&value=in`;
+    const afUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${g.triggerKey}&value=out`;
     companionRows = `
       <div class="grafik-companion-row">
         <span class="grafik-companion-lbl">PÅ</span>
@@ -2235,8 +2254,8 @@ function renderGrafik() {
         <button class="copy-btn icon-btn" data-copy="${afUrl}">⎘</button>
       </div>`;
   } else if (customEmbedActive) {
-    const paUrl = `${origin}/api/trigger/${pid}?key=${encodeURIComponent(customEmbedActive.trigger_key)}&value=in`;
-    const afUrl = `${origin}/api/trigger/${pid}?key=${encodeURIComponent(customEmbedActive.trigger_key)}&value=out`;
+    const paUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${encodeURIComponent(customEmbedActive.trigger_key)}&value=in`;
+    const afUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${encodeURIComponent(customEmbedActive.trigger_key)}&value=out`;
     companionRows = `
       <div class="grafik-companion-row">
         <span class="grafik-companion-lbl">PÅ</span>
@@ -2251,8 +2270,8 @@ function renderGrafik() {
   }
   if (customGrafik.length) {
     const customCompanionRows = customGrafik.map(cg => {
-      const paUrl = `${origin}/api/trigger/${pid}?key=${encodeURIComponent(cg.trigger_key)}&value=in`;
-      const afUrl = `${origin}/api/trigger/${pid}?key=${encodeURIComponent(cg.trigger_key)}&value=out`;
+      const paUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${encodeURIComponent(cg.trigger_key)}&value=in`;
+      const afUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${encodeURIComponent(cg.trigger_key)}&value=out`;
       return `
       <div class="grafik-companion-row">
         <span class="grafik-companion-lbl" style="color:${cg.color || '#888'}">${esc(cg.label.toUpperCase())}</span>
@@ -2275,8 +2294,8 @@ function renderGrafik() {
     const makroCompanionRows = makroer.map(m => {
       const hasLt = (m.handlinger || []).some(h => h.key === 'lt_trigger');
       const url = hasLt
-        ? `${origin}/api/trigger/${pid}?macro=${m.id}&slot=`
-        : `${origin}/api/trigger/${pid}?macro=${m.id}`;
+        ? `${origin}/api/trigger/${pid}?token=${_companionToken}&macro=${m.id}&slot=`
+        : `${origin}/api/trigger/${pid}?token=${_companionToken}&macro=${m.id}`;
       return `<div class="grafik-companion-row">
         <span class="grafik-companion-lbl" style="color:${m.farve || '#4a9eff'}">${esc(m.label.toUpperCase())}</span>
         <span class="grafik-companion-url" title="${url}">${url}</span>
@@ -3364,8 +3383,8 @@ function _egneGrafikShowConfirm(g) {
   const origin = location.origin;
   const pid = aktivProjektId;
   const fileUrlWithPid = isStandalone ? (g.file_url + '?p=' + pid) : null;
-  const onUrl  = `${origin}/api/trigger/${pid}?key=${encodeURIComponent(g.trigger_key)}&value=in`;
-  const offUrl = `${origin}/api/trigger/${pid}?key=${encodeURIComponent(g.trigger_key)}&value=out`;
+  const onUrl  = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${encodeURIComponent(g.trigger_key)}&value=in`;
+  const offUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${encodeURIComponent(g.trigger_key)}&value=out`;
 
   let html = `<div style="font-size:13px;color:#86efac;margin-bottom:12px;">&#10003; Grafik tilføjet!</div>`;
   if (isStandalone) {
@@ -3591,6 +3610,8 @@ async function init() {
   const session = await requireAuth();
   if (!session) return;
 
+  loadCompanionToken(); // trigger-token til Companion-URLs (fire-and-forget)
+
   // Header-knapper
   document.getElementById('backBtn').addEventListener('click', () => { window.location.href = 'projects.html'; });
   document.getElementById('logoutBtn').addEventListener('click', () => signOut());
@@ -3727,7 +3748,7 @@ async function fetchLiveMatches() {
   }
 
   try {
-    const enetData = await fetch('/api/enetpulse?ids=' + enetIds.join(',')).then(r => r.json()).catch(() => ({ matches: [] }));
+    const enetData = await apiFetch('/api/enetpulse?ids=' + enetIds.join(',')).then(r => r.json()).catch(() => ({ matches: [] }));
 
     const enetMap = {};
     (enetData.matches || []).forEach(m => { if (m.id) enetMap[String(m.id)] = m; });
@@ -3846,7 +3867,7 @@ async function fetchLiveMatches() {
         wrap.style.display = open ? 'none' : 'block';
         if (!open) {
           inner.innerHTML = '<div class="pm-loading">Henter…</div>';
-          const r = await fetch(`/api/standings?type=event_stats&object=event&objectFK=${encodeURIComponent(id)}`);
+          const r = await apiFetch(`/api/standings?type=event_stats&object=event&objectFK=${encodeURIComponent(id)}`);
           const j = await r.json();
           const statsHtml = j.ok ? renderEventStats(j.data, btn.closest('.live-card')) : '<div class="pm-empty">Kampstatistik ikke tilgængelig</div>';
           liveStatsCache.set(id, statsHtml);
@@ -3874,7 +3895,7 @@ async function fetchLiveMatches() {
           if (tab === 'topscorer') {
             if (liveTopScorerCache.has(id)) { inner.innerHTML = liveTopScorerCache.get(id); return; }
             inner.innerHTML = '<div class="pm-loading">Henter…</div>';
-            const r = await fetch(`/api/standings?type=topscorer&object=tournament_stage&objectFK=${encodeURIComponent(tfk)}`);
+            const r = await apiFetch(`/api/standings?type=topscorer&object=tournament_stage&objectFK=${encodeURIComponent(tfk)}`);
             const j = await r.json();
             const html = j.ok ? renderTopScorers(j.data, home, away) : '<div class="pm-empty">Topscorer ikke tilgængelig</div>';
             liveTopScorerCache.set(id, html);
@@ -3882,7 +3903,7 @@ async function fetchLiveMatches() {
           } else {
             if (liveTableCache.has(id)) { inner.innerHTML = liveTableCache.get(id); return; }
             inner.innerHTML = '<div class="pm-loading">Henter…</div>';
-            const r = await fetch(`/api/standings?type=leaguetable&object=tournament_stage&objectFK=${encodeURIComponent(tfk)}`);
+            const r = await apiFetch(`/api/standings?type=leaguetable&object=tournament_stage&objectFK=${encodeURIComponent(tfk)}`);
             const j = await r.json();
             const html = j.ok ? renderLeagueTable(j.data, home, away) : '<div class="pm-empty">Ligatable ikke tilgængelig</div>';
             liveTableCache.set(id, html);
@@ -3909,7 +3930,7 @@ async function fetchLiveMatches() {
           if (liveTopScorerCache.has(id)) { inner.innerHTML = liveTopScorerCache.get(id); return; }
           inner.innerHTML = '<div class="pm-loading">Henter…</div>';
           if (!tfk) { inner.innerHTML = '<div class="pm-empty">Ingen turnering-FK</div>'; return; }
-          const r = await fetch(`/api/standings?type=topscorer&object=tournament_stage&objectFK=${encodeURIComponent(tfk)}`);
+          const r = await apiFetch(`/api/standings?type=topscorer&object=tournament_stage&objectFK=${encodeURIComponent(tfk)}`);
           const j = await r.json();
           const html = j.ok ? renderTopScorers(j.data, home, away) : '<div class="pm-empty">Topscorer ikke tilgængelig</div>';
           liveTopScorerCache.set(id, html);
@@ -3918,7 +3939,7 @@ async function fetchLiveMatches() {
           if (liveTableCache.has(id)) { inner.innerHTML = liveTableCache.get(id); return; }
           inner.innerHTML = '<div class="pm-loading">Henter…</div>';
           if (!tfk) { inner.innerHTML = '<div class="pm-empty">Ingen turnering-FK</div>'; return; }
-          const r = await fetch(`/api/standings?type=leaguetable&object=tournament_stage&objectFK=${encodeURIComponent(tfk)}`);
+          const r = await apiFetch(`/api/standings?type=leaguetable&object=tournament_stage&objectFK=${encodeURIComponent(tfk)}`);
           const j = await r.json();
           const html = j.ok ? renderLeagueTable(j.data, home, away) : '<div class="pm-empty">Ligatable ikke tilgængelig</div>';
           liveTableCache.set(id, html);
@@ -3945,7 +3966,7 @@ async function fetchLiveMatches() {
           const home = btn.dataset.home;
           const away = btn.dataset.away;
           if (!p1 || !p2) { inner.innerHTML = '<div class="pm-empty">Mangler hold-FK</div>'; return; }
-          const r = await fetch(`/api/enetpulse?h2h=1&p1=${encodeURIComponent(p1)}&p2=${encodeURIComponent(p2)}`);
+          const r = await apiFetch(`/api/enetpulse?h2h=1&p1=${encodeURIComponent(p1)}&p2=${encodeURIComponent(p2)}`);
           const j = await r.json();
           const html = j.ok ? renderH2H(j.data, home, away) : '<div class="pm-empty">H2H ikke tilgængelig</div>';
           liveH2HCache.set(id, html);
@@ -3971,7 +3992,7 @@ async function fetchLiveMatches() {
       wrap.style.display = 'block';
       btn.textContent = 'STATISTIK ▴';
       if (!liveStatsCache.has(mid)) inner.innerHTML = '<div class="pm-loading">Henter…</div>';
-      fetch(`/api/standings?type=event_stats&object=event&objectFK=${encodeURIComponent(mid)}`)
+      apiFetch(`/api/standings?type=event_stats&object=event&objectFK=${encodeURIComponent(mid)}`)
         .then(r => r.json())
         .then(j => {
           const html = j.ok ? renderEventStats(j.data, card) : '<div class="pm-empty">Kampstatistik ikke tilgængelig</div>';
@@ -4747,9 +4768,9 @@ async function openPlayerModal(id, name, tournamentFk, matchId, teamPartFK) {
   playerModal.style.display = 'flex';
 
   try {
-    const fetches = [fetch(`/api/player?id=${encodeURIComponent(id)}`)];
-    if (tournamentFk) fetches.push(fetch(`/api/standings?type=participant_stats&object=tournament_stage&objectFK=${encodeURIComponent(tournamentFk)}`));
-    if (matchId)      fetches.push(fetch(`/api/standings?type=player_ratings&object=event&objectFK=${encodeURIComponent(matchId)}`));
+    const fetches = [apiFetch(`/api/player?id=${encodeURIComponent(id)}`)];
+    if (tournamentFk) fetches.push(apiFetch(`/api/standings?type=participant_stats&object=tournament_stage&objectFK=${encodeURIComponent(tournamentFk)}`));
+    if (matchId)      fetches.push(apiFetch(`/api/standings?type=player_ratings&object=event&objectFK=${encodeURIComponent(matchId)}`));
     const results = await Promise.all(fetches);
     const profileJson = await results[0].json();
     let statsJson  = null;
@@ -5010,8 +5031,8 @@ function renderGrafikOps() {
     const targetLabel = g.overlay_target === 'komm' ? 'Kommentator' : 'Hoved Overlay';
     const tilstand = g.overlay_mode === 'standalone' ? `Standalone${g.overlay_input ? ' · Input ' + g.overlay_input : ''}` : `Indlejret i ${targetLabel}`;
     const fileUrlWithPid = g.overlay_mode === 'standalone' ? (g.file_url + '?p=' + pid) : null;
-    const onUrl  = `${origin}/api/trigger/${pid}?key=${encodeURIComponent(g.trigger_key)}&value=in`;
-    const offUrl = `${origin}/api/trigger/${pid}?key=${encodeURIComponent(g.trigger_key)}&value=out`;
+    const onUrl  = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${encodeURIComponent(g.trigger_key)}&value=in`;
+    const offUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${encodeURIComponent(g.trigger_key)}&value=out`;
     const vMixUrlRow = fileUrlWithPid ? `
       <div style="margin:6px 0 4px;">
         <div style="font-size:10px;color:#666;letter-spacing:1px;margin-bottom:3px;">URL TIL VMIX</div>

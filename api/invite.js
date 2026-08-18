@@ -9,7 +9,8 @@ export default async function handler(req, res) {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email mangler' });
 
-  const DEFAULT_PASSWORD = 'DR35203040';
+  const DEFAULT_PASSWORD = process.env.DEFAULT_INVITE_PASSWORD;
+  if (!DEFAULT_PASSWORD) return res.status(503).json({ error: 'DEFAULT_INVITE_PASSWORD er ikke sat i Vercel' });
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseUrl = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
 

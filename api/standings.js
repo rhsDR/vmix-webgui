@@ -1,7 +1,10 @@
+import { requireUser } from './_auth.js';
+
 const EAPI_BASE = 'https://eapi.enetpulse.com';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  if (await requireUser(req, res)) return;
 
   const username = process.env.ENETPULSE_USERNAME;
   const token    = process.env.ENETPULSE_TOKEN;
