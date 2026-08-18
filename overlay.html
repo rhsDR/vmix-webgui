@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Overlay</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
@@ -29,10 +28,10 @@
   <iframe id="overlay-3-frame"   allowtransparency="true" src=""></iframe>
   <iframe id="credits-frame"     allowtransparency="true" src=""></iframe>
 
+  <script src="js/supabase-config.js"></script>
+  <script src="js/realtime-ws.js"></script>
   <script>
-    const SB_URL  = 'https://rxzxdcweqpbnvfkpnnrn.supabase.co';
-    const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4enhkY3dlcXBibnZma3BubnJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMzYzMTUsImV4cCI6MjA5MDgxMjMxNX0.e6DtMVskOwcMyJBFJDIEYsSZC0HAcD7AhNcg5PvlArU';
-    const SB_HDR  = { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + SB_ANON };
+    // SB_URL / SB_ANON / SB_HDR kommer fra js/supabase-config.js
     const customFrameMap = {};
     const customState    = {};
     const customStateTime = {};
@@ -122,52 +121,11 @@
       } catch {}
     }
 
-    // Opret broadcast-kanal med det samme — IKKE inde i loadCustomGrafik,
-    // så den er subscribed før custom grafik-frames er loadet.
-    if (pid) {
-      const _sbBc = window.supabase.createClient(SB_URL, SB_ANON);
-      _sbBc.channel('triggers-' + pid)
-        .on('broadcast', { event: 'trigger' }, function(msg) {
-          const p = msg.payload;
-          if (!p || p.projekt_id !== pid) return;
-          if (p.key === 'lt_trigger') {
-            try {
-              var ltFrame = document.getElementById('lower-third-frame');
-              if (ltFrame && ltFrame.contentWindow) {
-                ltFrame.contentWindow.postMessage(
-                  { type: 'sbTrigger', key: 'lt_trigger', value: p.value, slot: p.slot || '' }, '*'
-                );
-              }
-            } catch {}
-            return;
-          }
-          if (p.key === 'lineup_trigger') {
-            setTimeout(function() {
-              try { document.getElementById('overlay-3-frame')?.contentWindow?.pollTrigger?.(); } catch {}
-            }, 120);
-            return;
-          }
-          const iframe = customFrameMap[p.key];
-          if (!iframe) return;
-          const prevBc = customState[p.key];
-          if (prevBc === p.value) return;
-          customState[p.key] = p.value;
-          customStateTime[p.key] = Date.now();
-          try {
-            if (p.value === 'in') iframe.contentWindow?.runAnimationIN?.();
-            else if (p.value === 'out') {
-              if (prevBc === 'in') iframe.contentWindow?.runAnimationOUT?.();
-              else if (iframe.contentWindow?.__forceOut) iframe.contentWindow.__forceOut();
-            }
-          } catch {}
-        })
-        .subscribe();
-    }
-
-    // Raw WebSocket — postgres_changes for instant custom grafik + lineup_trigger + komm-triggers
+    // Fælles realtime-forbindelse (js/realtime-ws.js): broadcast-triggers og
+    // postgres_changes i ÉN WebSocket — SDK-klienten er droppet, så siden
+    // holder én realtime-forbindelse i stedet for to.
     if (pid) {
       (function() {
-        var _ws = null, _ref = 0, _hb = null;
         function _dispatch(key, value) {
           if (key === 'lineup_trigger') {
             setTimeout(function() {
@@ -198,56 +156,82 @@
             }
           } catch {}
         }
-        function _wsConnect() {
-          try {
-            _ws = new WebSocket('wss://rxzxdcweqpbnvfkpnnrn.supabase.co/realtime/v1/websocket?apikey=' + SB_ANON + '&vsn=1.0.0');
-            _ws.onopen = function() {
-              _ws.send(JSON.stringify({ topic: 'realtime:triggers-' + pid, event: 'phx_join',
-                payload: { config: { broadcast: { self: false, ack: false }, presence: { key: '' },
-                  postgres_changes: [
-                    { event: 'UPDATE', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + pid },
-                    { event: 'INSERT', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + pid }
-                  ] }, access_token: SB_ANON }, ref: String(++_ref) }));
-              _hb = setInterval(function() {
-                if (_ws && _ws.readyState === 1)
-                  _ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(++_ref) }));
-              }, 25000);
-            };
-            _ws.onmessage = function(e) {
+        createRealtimeWS({
+          topic: 'triggers-' + pid,
+          postgresChanges: [
+            { event: 'UPDATE', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + pid },
+            { event: 'INSERT', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + pid }
+          ],
+          // Ved (gen)forbindelse: hent aktuel custom-grafik-state, så triggers
+          // affyret mens forbindelsen var nede/åbnede ikke går tabt
+          onOpen: function() { fetchInitialCustomState(); },
+          onMessage: function(msg) {
+            // Broadcast-triggers (fra panelet og trigger-API'et)
+            if (msg.event === 'broadcast') {
+              if (msg.payload?.event !== 'trigger') return;
+              var p = msg.payload.payload;
+              if (!p || p.projekt_id !== pid) return;
+              if (p.key === 'lt_trigger') {
+                try {
+                  var ltFrame = document.getElementById('lower-third-frame');
+                  if (ltFrame && ltFrame.contentWindow) {
+                    ltFrame.contentWindow.postMessage(
+                      { type: 'sbTrigger', key: 'lt_trigger', value: p.value, slot: p.slot || '' }, '*'
+                    );
+                  }
+                } catch {}
+                return;
+              }
+              if (p.key === 'lineup_trigger') {
+                setTimeout(function() {
+                  try { document.getElementById('overlay-3-frame')?.contentWindow?.pollTrigger?.(); } catch {}
+                }, 120);
+                return;
+              }
+              var bIframe = customFrameMap[p.key];
+              if (!bIframe) return;
+              var prevBc = customState[p.key];
+              if (prevBc === p.value) return;
+              customState[p.key] = p.value;
+              customStateTime[p.key] = Date.now();
               try {
-                var msg = JSON.parse(e.data);
-                if (!msg || msg.event !== 'postgres_changes') return;
-                if (!msg.payload || !msg.payload.data) return;
-                var rec = msg.payload.data.record;
-                if (!rec || rec.projekt_id !== pid) return;
-                if (rec.key === 'overlay_lag_order') {
-                  mainOrder = rec.value ? rec.value.split(',').map(function(s){return s.trim();}).filter(Boolean) : [...DEFAULT_ORDER];
-                  if (!mainOrder.includes('ticker')) mainOrder = [...mainOrder, 'ticker'];
-                  applyOrder(mainOrder); return;
+                if (p.value === 'in') bIframe.contentWindow?.runAnimationIN?.();
+                else if (p.value === 'out') {
+                  if (prevBc === 'in') bIframe.contentWindow?.runAnimationOUT?.();
+                  else if (bIframe.contentWindow?.__forceOut) bIframe.contentWindow.__forceOut();
                 }
-                if (rec.key === 'ticker_lag_order') {
-                  tickerSubOrder = rec.value ? rec.value.split(',').map(function(s){return s.trim();}).filter(Boolean) : [...DEFAULT_TICKER_SUB_ORDER];
-                  applyOrder(mainOrder); return;
-                }
-                if (rec.key === 'grafik_overlay_map') {
-                  var gm = rec.value ? JSON.parse(rec.value) : {};
-                  GRAPHICS.forEach(function(g) {
-                    var frame = document.getElementById(g.id+'-frame');
-                    if (!frame) return;
-                    var target = gm[g.id] || 'hoved';
-                    if (target !== 'hoved') { if (frame.src !== 'about:blank') frame.src = 'about:blank'; }
-                    else { var exp = originalSrcs[g.id]; if (exp && frame.src === 'about:blank') frame.src = exp; }
-                  }); return;
-                }
-                if (rec.key === 'lt_trigger' || rec.key === 'lt_slot') return;
-                _dispatch(rec.key, rec.value);
               } catch {}
-            };
-            _ws.onclose = function() { clearInterval(_hb); _hb = null; setTimeout(_wsConnect, 3000); };
-            _ws.onerror = function() { try { _ws.close(); } catch {} };
-          } catch {}
-        }
-        _wsConnect();
+              return;
+            }
+            // Databaseændringer (settings) — Companion-triggers, lag-orden m.m.
+            if (msg.event !== 'postgres_changes') return;
+            if (!msg.payload || !msg.payload.data) return;
+            var rec = msg.payload.data.record;
+            if (!rec || rec.projekt_id !== pid) return;
+            if (rec.key === 'overlay_lag_order') {
+              mainOrder = rec.value ? rec.value.split(',').map(function(s){return s.trim();}).filter(Boolean) : [...DEFAULT_ORDER];
+              if (!mainOrder.includes('ticker')) mainOrder = [...mainOrder, 'ticker'];
+              applyOrder(mainOrder); return;
+            }
+            if (rec.key === 'ticker_lag_order') {
+              tickerSubOrder = rec.value ? rec.value.split(',').map(function(s){return s.trim();}).filter(Boolean) : [...DEFAULT_TICKER_SUB_ORDER];
+              applyOrder(mainOrder); return;
+            }
+            if (rec.key === 'grafik_overlay_map') {
+              var gm = {};
+              try { gm = rec.value ? JSON.parse(rec.value) : {}; } catch { return; }
+              GRAPHICS.forEach(function(g) {
+                var frame = document.getElementById(g.id+'-frame');
+                if (!frame) return;
+                var target = gm[g.id] || 'hoved';
+                if (target !== 'hoved') { if (frame.src !== 'about:blank') frame.src = 'about:blank'; }
+                else { var exp = originalSrcs[g.id]; if (exp && frame.src === 'about:blank') frame.src = exp; }
+              }); return;
+            }
+            if (rec.key === 'lt_trigger' || rec.key === 'lt_slot') return;
+            _dispatch(rec.key, rec.value);
+          }
+        });
       })();
     }
 
