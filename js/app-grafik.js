@@ -1460,6 +1460,11 @@ function _updateMakroGrouping() {
   });
 }
 
+// Grænse for server-kørte makroer (Companion via /api/trigger). Skal matche
+// MAX_MACRO_WAIT_MS i api/trigger/[id].js. Panelets ▶ KØR er browser-kørt og
+// har ingen timeout — derfor advarer vi kun, vi blokerer ikke gemning.
+const MAKRO_MAX_WAIT_MS = 25000;
+
 async function _confirmMakroModal() {
   const id    = document.getElementById('makro-modal-id').value;
   const label = document.getElementById('makro-label-inp').value.trim();
@@ -1500,7 +1505,16 @@ async function _confirmMakroModal() {
     _closeMakroModal();
     await loadMakroer();
     renderGrafik();
-    toast('Makro gemt', 'ok');
+    // Advar hvis makroens samlede ventetid gør den for lang til Companion. Den
+    // virker stadig fint fra panelets ▶ KØR (browser-kørt, ingen timeout).
+    const totalWaitMs = handlinger
+      .filter(h => h.key === 'wait')
+      .reduce((sum, h) => sum + Math.max(0, (parseFloat(h.value) || 0) * 1000), 0);
+    if (totalWaitMs > MAKRO_MAX_WAIT_MS) {
+      toast(`Makro gemt, men ${Math.round(totalWaitMs / 1000)}s ventetid er for langt til Companion (maks ${MAKRO_MAX_WAIT_MS / 1000}s) – kør den fra panelet`, 'err');
+    } else {
+      toast('Makro gemt', 'ok');
+    }
   } catch { toast('Fejl ved gem af makro', 'err'); }
 }
 

@@ -119,22 +119,36 @@ function toggleTickerCollapse(i) { tickers[i].collapsed = !tickers[i].collapsed;
 
 function toggleTickerOnAir(i) {
   if (!tickers[i].onAir && !tickerKlarTilOnAir(i)) return;
-  tickers[i].onAir = !tickers[i].onAir;
+  const prevOnAir = tickers[i].onAir;
+  tickers[i].onAir = !prevOnAir;
   tickers[i].onAirPending = true;
   rerenderTicker(i);
   sbPatch('tickers?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { on_air: tickers[i].onAir })
     .then(() => { tickers[i].onAirPending = false; })
-    .catch(() => { tickers[i].onAirPending = false; toast('Fejl ved ON AIR', 'err'); });
+    .catch(() => {
+      // DB-skrivning fejlede: rul knappen tilbage så panelet ikke lyver
+      tickers[i].onAir = prevOnAir;
+      tickers[i].onAirPending = false;
+      rerenderTicker(i);
+      toast('Fejl ved ON AIR – ikke gemt', 'err');
+    });
 }
 
 function toggleTickerBreaking(i) {
   if (!tickers[i].breaking && !tickerKlarTilOnAir(i)) return;
-  tickers[i].breaking = !tickers[i].breaking;
+  const prevBreaking = tickers[i].breaking;
+  tickers[i].breaking = !prevBreaking;
   tickers[i].breakingPending = true;
   rerenderTicker(i);
   sbPatch('tickers?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { breaking: tickers[i].breaking })
     .then(() => { tickers[i].breakingPending = false; })
-    .catch(() => { tickers[i].breakingPending = false; toast('Fejl ved BREAKING', 'err'); });
+    .catch(() => {
+      // DB-skrivning fejlede: rul knappen tilbage så panelet ikke lyver
+      tickers[i].breaking = prevBreaking;
+      tickers[i].breakingPending = false;
+      rerenderTicker(i);
+      toast('Fejl ved BREAKING – ikke gemt', 'err');
+    });
 }
 
 function enterTickerEdit(i) {

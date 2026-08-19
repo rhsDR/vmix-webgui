@@ -251,13 +251,22 @@ function toggleCollapse(i) {
 
 function toggleOnAir(i) {
   if (!kampe[i].onAir && !kampKlarTilOnAir(i)) return;
-  kampe[i].onAir = !kampe[i].onAir;
+  const prevOnAir = kampe[i].onAir;
+  kampe[i].onAir = !prevOnAir;
   kampe[i].onAirPending = true;
   _broadcastKampState(i);
   rerender(i);
   sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { on_air: kampe[i].onAir })
     .then(() => { kampe[i].onAirPending = false; })
-    .catch(() => { kampe[i].onAirPending = false; toast('Fejl ved ON AIR opdatering', 'err'); });
+    .catch(() => {
+      // DB-skrivning fejlede: rul knappen tilbage og send den gamle tilstand
+      // ud igen, så grafikken på skærmen matcher det der faktisk er gemt.
+      kampe[i].onAir = prevOnAir;
+      kampe[i].onAirPending = false;
+      _broadcastKampState(i);
+      rerender(i);
+      toast('Fejl ved ON AIR – ikke gemt', 'err');
+    });
 }
 
 function enterEdit(i) {

@@ -1,5 +1,16 @@
 import { SB_URL, SB_ANON, SB_SERVICE_ROLE } from '../_supabase.js';
 
+// Vercel: hæv funktionens tidsgrænse fra Hobby-standardens 10s til 30s, så
+// server-kørte makroer (fra Companion) med rimelige pauser kan nå at køre helt
+// færdigt i stedet for at blive dræbt midt i kæden.
+export const config = { maxDuration: 30 };
+
+// Sikkert ventetids-budget for server-kørte makroer. Skal ligge et stykke under
+// maxDuration ovenfor, så batch-kaldene (broadcast+upsert) og svaret også når at
+// blive færdige inden Vercel dræber funktionen.
+// BEMÆRK: hold i sync med MAKRO_MAX_WAIT_MS i js/app-grafik.js (advarsel ved gem).
+const MAX_MACRO_WAIT_MS = 25000;
+
 async function sbBroadcastRest(pid, key, value, extra) {
   const token = SB_SERVICE_ROLE || SB_ANON;
   const usingSR = !!SB_SERVICE_ROLE;
@@ -128,13 +139,27 @@ export default async function handler(req, res) {
       const rows = await sbGet(`projekt_makroer?id=eq.${encodeURIComponent(macroId)}&projekt_id=eq.${encodeURIComponent(id)}&limit=1`);
       const macro = rows[0];
       if (!macro) return res.status(404).json({ error: 'Makro ikke fundet' });
+      // Pre-flight: afvis hele makroen op front hvis den samlede ventetid over-
+      // stiger budgettet. Alternativet — at starte en makro vi ikke kan nå at
+      // gøre færdig — ville efterlade grafik i en halv tilstand når Vercel
+      // dræber funktionen. Bedre at intet fyres og operatøren får klar besked.
+      const totalWaitMs = (macro.handlinger || [])
+        .filter(h => h.key === 'wait')
+        .reduce((sum, h) => sum + Math.max(0, (parseFloat(h.value) || 0) * 1000), 0);
+      if (totalWaitMs > MAX_MACRO_WAIT_MS) {
+        return res.status(400).json({
+          error: `Makro for lang: ${(totalWaitMs / 1000).toFixed(1)}s ventetid overstiger grænsen på ${MAX_MACRO_WAIT_MS / 1000}s (Vercel-timeout). Del makroen op i flere Companion-knapper.`,
+          tooLong: true, totalWaitMs, maxWaitMs: MAX_MACRO_WAIT_MS
+        });
+      }
       // Group consecutive non-wait steps into batches; each batch runs in parallel
       const segments = [];
       let batch = [];
       for (const h of macro.handlinger || []) {
         if (h.key === 'wait') {
           if (batch.length) { segments.push({ type: 'batch', steps: batch }); batch = []; }
-          segments.push({ type: 'wait', ms: Math.round(parseFloat(h.value || '0') * 1000) });
+          // Klamp hver enkelt pause defensivt (mod negative/NaN/absurde værdier)
+          segments.push({ type: 'wait', ms: Math.max(0, Math.min(MAX_MACRO_WAIT_MS, Math.round((parseFloat(h.value) || 0) * 1000))) });
         } else {
           batch.push(h);
         }
