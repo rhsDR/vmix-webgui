@@ -58,17 +58,24 @@ function makeStamdataRow(item) {
       const newTitel    = titelInput ? titelInput.value.trim() : null;
       const newEnetNavn = enetInput  ? enetInput.value.trim()  : null;
       if (!newLang) return;
-      row.querySelector('.sd-save').disabled = true;
+      const saveBtn = row.querySelector('.sd-save');
+      saveBtn.disabled = true;
       const body = { lang: newLang };
       if (newKort     !== null) body.kort     = newKort;
       if (newTitel    !== null) body.titel    = newTitel;
       if (newEnetNavn !== null) body.enet_navn = newEnetNavn || null;
-      await sbPatch('dropdowns?id=eq.' + item.id, body);
-      item.label   = newLang;
-      if (newKort     !== null) item.kort     = newKort;
-      if (newTitel    !== null) item.titel    = newTitel;
-      if (newEnetNavn !== null) item.enetNavn = newEnetNavn;
-      await refreshDropdowns();
+      try {
+        await sbPatch('dropdowns?id=eq.' + item.id, body);
+        item.label   = newLang;
+        if (newKort     !== null) item.kort     = newKort;
+        if (newTitel    !== null) item.titel    = newTitel;
+        if (newEnetNavn !== null) item.enetNavn = newEnetNavn;
+        await refreshDropdowns();
+        toast('Gemt ✓', 'ok');
+      } catch {
+        saveBtn.disabled = false;
+        toast('Fejl ved gem — prøv igen', 'err');
+      }
     });
 
     row.querySelector('.sd-cancel').addEventListener('click', showView);

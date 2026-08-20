@@ -261,6 +261,25 @@
       });
     }
 
+    // Lille selvstændig toast — projects.html har ikke panelets toast()
+    let _toastT;
+    function toast(msg, ok) {
+      let el = document.getElementById('_toast');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = '_toast';
+        el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;transition:opacity .3s;box-shadow:0 4px 20px rgba(0,0,0,.5);pointer-events:none;';
+        document.body.appendChild(el);
+      }
+      el.textContent = msg;
+      el.style.background = ok ? '#123212' : '#321212';
+      el.style.color      = ok ? '#86efac' : '#fca5a5';
+      el.style.border     = '1px solid ' + (ok ? '#2d5a2d' : '#5a2d2d');
+      el.style.opacity = '1';
+      clearTimeout(_toastT);
+      _toastT = setTimeout(() => { el.style.opacity = '0'; }, 2500);
+    }
+
     async function loadProjects() {
       const res = await fetch(SB_URL + '/rest/v1/projekter?select=*&order=orden.asc', { headers: sbHeaders() });
       const projekter = await res.json();
@@ -296,12 +315,20 @@
           btn.textContent = erAktiv ? '● Aktiv' : '○ Inaktiv';
           btn.addEventListener('click', async e => {
             e.stopPropagation();
-            await fetch(SB_URL + '/rest/v1/projekter?id=eq.' + p.id, {
-              method: 'PATCH',
-              headers: { ...(await sbWriteHeaders()), 'Prefer': 'return=minimal' },
-              body: JSON.stringify({ aktiv: !erAktiv })
-            });
-            await loadProjects();
+            btn.disabled = true;
+            try {
+              const res = await fetch(SB_URL + '/rest/v1/projekter?id=eq.' + p.id, {
+                method: 'PATCH',
+                headers: { ...(await sbWriteHeaders()), 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ aktiv: !erAktiv })
+              });
+              if (!res.ok) throw new Error();
+              await loadProjects();
+              toast(!erAktiv ? 'Projekt aktiveret' : 'Projekt deaktiveret', true);
+            } catch {
+              btn.disabled = false;
+              toast('Kunne ikke ændre projekt', false);
+            }
           });
           card.appendChild(btn);
         }
@@ -347,12 +374,17 @@
         input.replaceWith(newEl);
 
         try {
-          await fetch(SB_URL + '/rest/v1/projekter?id=eq.' + id, {
+          const res = await fetch(SB_URL + '/rest/v1/projekter?id=eq.' + id, {
             method: 'PATCH',
             headers: { ...(await sbWriteHeaders()), 'Prefer': 'return=minimal' },
             body: JSON.stringify({ undertitel: val })
           });
-        } catch {}
+          if (!res.ok) throw new Error();
+          toast('Undertitel gemt', true);
+        } catch {
+          newEl.textContent = current;
+          toast('Kunne ikke gemme undertitel', false);
+        }
       }
 
       input.addEventListener('blur', save);
