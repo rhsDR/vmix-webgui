@@ -78,7 +78,7 @@
       text-align: center;
       border: 1px solid #333;
       background: transparent;
-      color: #666;
+      color: #a3a3a3;
       cursor: pointer;
       font-size: 12px;
       font-weight: 700;
@@ -86,7 +86,7 @@
       border-radius: 4px;
       transition: all 0.15s;
     }
-    .tab-btn:hover { color: #ccc; border-color: #555; }
+    .tab-btn:hover { color: #ccc; border-color: #979797; }
     .tab-btn[data-tab="live"] { width: 120px; }
     .tab-btn.active {
       background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
@@ -97,7 +97,7 @@
 
     .tab-pane { display: none; padding: 20px clamp(8px, 22vw, 340px); }
     .tab-pane.active { display: block; }
-    .coming-soon { padding: 60px; text-align: center; color: #333; font-size: 12px; letter-spacing: 3px; }
+    .coming-soon { padding: 60px; text-align: center; color: #6a6a6a; font-size: 12px; letter-spacing: 3px; }
 
     /* ── Live Dashboard ───────────────────────────────────── */
     .live-grid {
@@ -144,7 +144,7 @@
     .live-team-kort {
       font-size: 13px;
       font-weight: 600;
-      color: #555;
+      color: #979797;
       letter-spacing: 1px;
       text-transform: uppercase;
     }
@@ -168,7 +168,7 @@
     .live-status.playing { color: var(--green); }
     .live-status.ht      { color: var(--yellow); }
     .live-status.ft      { color: var(--muted); }
-    .live-status.ns      { color: #555; }
+    .live-status.ns      { color: #979797; }
     .live-periods {
       display: flex;
       justify-content: center;
@@ -183,7 +183,7 @@
     .live-league {
       text-align: center;
       font-size: 13px;
-      color: #444;
+      color: #868686;
       letter-spacing: 1px;
       margin-top: 3px;
       text-transform: uppercase;
@@ -208,7 +208,7 @@
     .live-event-min {
       font-size: 15px;
       font-weight: 700;
-      color: #555;
+      color: #979797;
       min-width: 32px;
       font-variant-numeric: tabular-nums;
     }
@@ -224,7 +224,7 @@
     .live-event-icon.vog::before { content: '⚽'; filter: grayscale(1); opacity: 0.45; }
     .live-event-icon.vog::after  { content: '✕'; position: absolute; font-size: 13px; font-weight: 900; color: var(--red); line-height: 1; }
     .live-event.cancelled { opacity: 0.55; }
-    .live-event.cancelled .live-event-name { text-decoration: line-through; color: #666; }
+    .live-event.cancelled .live-event-name { text-decoration: line-through; color: #a3a3a3; }
     .live-event-icon.og    { background: var(--red);   border-radius: 50%; }
     .live-event-icon.pen   { background: var(--blue);  border-radius: 50%; }
     .live-event-icon.yc    { background: var(--yellow); }
@@ -234,13 +234,13 @@
     .live-event-icon.sub::before { content: '▲'; font-size: 8px; color: var(--green); line-height: 1; }
     .live-event-icon.sub::after  { content: '▼'; font-size: 8px; color: var(--red);   line-height: 1; }
     .live-event-name { flex: 1; white-space: normal; word-break: break-word; font-size: 14px; }
-    .live-event-assist { color: #555; font-size: 14px; }
+    .live-event-assist { color: #979797; font-size: 14px; }
     .live-event.away { flex-direction: row-reverse; border-left: none; border-right: 3px solid rgba(59,130,246,0.5); }
     .live-event.away .live-event-name { text-align: right; }
     .live-no-fixtures {
       padding: 60px;
       text-align: center;
-      color: #333;
+      color: #6a6a6a;
       font-size: 12px;
       letter-spacing: 2px;
     }
@@ -309,7 +309,7 @@
     .lineup-tabs { display: flex; border-top: 1px solid #1e1e1e; }
     .lu-tab {
       flex: 1; background: #111; border: none;
-      color: #666; font-size: 11px; letter-spacing: 3px;
+      color: #a3a3a3; font-size: 11px; letter-spacing: 3px;
       padding: 8px; cursor: pointer; font-family: inherit;
     }
     .lu-tab:first-child { border-right: 1px solid #1e1e1e; }
@@ -441,21 +441,21 @@
       font-size: 14px;
       color: #ccc;
     }
-    .lu-sub { color: #555; font-size: 13px; }
+    .lu-sub { color: #979797; font-size: 13px; }
     .lu-shirt {
       font-size: 13px;
-      color: #444;
+      color: #868686;
       min-width: 20px;
       text-align: right;
       font-variant-numeric: tabular-nums;
       flex-shrink: 0;
     }
-    .lu-player:not(.lu-sub) .lu-shirt { color: #666; }
+    .lu-player:not(.lu-sub) .lu-shirt { color: #a3a3a3; }
     .lu-pos {
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.5px;
-      color: #444;
+      color: #868686;
       background: #1a1a1a;
       border-radius: 2px;
       padding: 1px 4px;
@@ -466,7 +466,7 @@
     .lu-sub-divider {
       font-size: 11px;
       letter-spacing: 2px;
-      color: #333;
+      color: #6a6a6a;
       text-transform: uppercase;
       margin: 10px 0 6px;
       padding-top: 8px;
@@ -507,13 +507,13 @@
       border-radius: 4px; padding: 5px 10px; cursor: pointer;
       text-transform: uppercase;
     }
-    .lu-preview-btn:hover { color: #ccc; border-color: #444; }
+    .lu-preview-btn:hover { color: #ccc; border-color: #868686; }
     .lu-vmix-btn {
       font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
       color: #888; background: #1a1a1a; border: 1px solid #333;
       border-radius: 4px; padding: 5px 10px; cursor: pointer;
     }
-    .lu-vmix-btn:hover { background: #2a2a2a; color: #ccc; border-color: #555; }
+    .lu-vmix-btn:hover { background: #2a2a2a; color: #ccc; border-color: #979797; }
     .lu-onair-badge {
       display: flex; align-items: center; gap: 5px;
       font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
@@ -532,7 +532,7 @@
 
     .live-updated {
       font-size: 11px;
-      color: #333;
+      color: #6a6a6a;
       text-align: right;
       margin-top: 12px;
       letter-spacing: 1px;
@@ -558,7 +558,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1px;
-      color: #666;
+      color: #a3a3a3;
       padding: 12px 14px 10px;
       border-bottom: 1px solid #2a2a2a;
     }
@@ -613,7 +613,7 @@
     .stamdata-section.hold .stamdata-item-alias {
       flex: 2;
       font-size: 11px;
-      color: #555;
+      color: #979797;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -629,9 +629,9 @@
       transition: color 0.15s;
       flex-shrink: 0;
     }
-    .stamdata-edit { color: #444; }
+    .stamdata-edit { color: #868686; }
     .stamdata-edit:hover { color: #f97316; }
-    .stamdata-del  { color: #444; }
+    .stamdata-del  { color: #868686; }
     .stamdata-del:hover  { color: #ef4444; }
 
     .stamdata-add-row {
@@ -721,7 +721,7 @@
       border-radius: 20px;
       border: 1px solid #444;
       background: transparent;
-      color: #666;
+      color: #a3a3a3;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 1.5px;
@@ -734,7 +734,7 @@
       color: #fff;
       animation: pulse-red 2s ease-in-out infinite;
     }
-    .on-air-btn:disabled { opacity: 1; background: #262626; color: #565656; border-color: #333; cursor: not-allowed; animation: none; }
+    .on-air-btn:disabled { opacity: 1; background: #262626; color: #565656; border-color: #6a6a6a; cursor: not-allowed; animation: none; }
 
 
     .fixture-result-item {
@@ -750,12 +750,12 @@
     }
     .fixture-result-item:hover { border-color: var(--orange); color: #fff; }
     .fixture-result-item .fix-teams { font-weight: 700; }
-    .fixture-result-item .fix-meta { color: #555; font-size: 11px; margin-top: 2px; }
+    .fixture-result-item .fix-meta { color: #979797; font-size: 11px; margin-top: 2px; }
 
     .kamp-label {
       font-size: 18px;
       font-weight: 700;
-      color: #555;
+      color: #979797;
       letter-spacing: 3px;
       text-transform: uppercase;
     }
@@ -763,7 +763,7 @@
     .icon-btn {
       background: none;
       border: none;
-      color: #555;
+      color: #979797;
       cursor: pointer;
       padding: 5px 7px;
       border-radius: 4px;
@@ -799,7 +799,7 @@
       font-size: 13px;
       color: #bbb;
     }
-    .info-icon { color: #555; font-size: 13px; min-width: 16px; text-align: center; }
+    .info-icon { color: #979797; font-size: 13px; min-width: 16px; text-align: center; }
     .kampstart-tid { font-size: 12px; color: #777; }
     .info-link-text {
       font-size: 12px;
@@ -812,7 +812,7 @@
     .copy-btn {
       background: none;
       border: none;
-      color: #555;
+      color: #979797;
       cursor: pointer;
       padding: 2px 5px;
       font-size: 14px;
@@ -852,7 +852,7 @@
     }
     .team-name-full {
       font-size: 11px;
-      color: #666;
+      color: #a3a3a3;
       margin-top: 3px;
       letter-spacing: 0;
       font-weight: 400;
@@ -877,7 +877,7 @@
       transition: all 0.15s;
       display: flex; align-items: center; justify-content: center;
     }
-    .score-btn:hover { background: #252525; color: #fff; border-color: #444; }
+    .score-btn:hover { background: #252525; color: #fff; border-color: #868686; }
     .score-val {
       font-size: 46px;
       font-weight: 800;
@@ -900,7 +900,7 @@
     .form-group { display: flex; flex-direction: column; gap: 4px; }
     .form-label {
       font-size: 11px;
-      color: #555;
+      color: #979797;
       letter-spacing: 1.5px;
       text-transform: uppercase;
       font-weight: 600;
@@ -941,7 +941,7 @@
     .btn-save:hover { filter: brightness(1.1); box-shadow: 0 2px 16px rgba(249,115,22,0.45); }
     .btn-cancel { background: #222; color: #888; border: 1px solid #333; }
     .btn-cancel:hover { color: #fff; }
-    .btn-reset  { background: transparent; color: #666; border: 1px solid #2e2e2e; margin-left: auto; }
+    .btn-reset  { background: transparent; color: #a3a3a3; border: 1px solid #2e2e2e; margin-left: auto; }
     .btn-reset:hover { color: var(--red); border-color: var(--red); }
 
     /* ── Toast ────────────────────────────────────────────── */
@@ -966,7 +966,7 @@
     .toast.err { border-color: var(--red);   color: var(--red); }
 
     /* ── Loading ──────────────────────────────────────────── */
-    .loading { padding: 40px; text-align: center; color: #444; font-size: 13px; letter-spacing: 1px; }
+    .loading { padding: 40px; text-align: center; color: #868686; font-size: 13px; letter-spacing: 1px; }
     .load-err { padding: 40px; text-align: center; color: var(--red); font-size: 13px; }
 
     /* ── Subs ─────────────────────────────────────────────── */
@@ -980,7 +980,7 @@
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 3px;
-      color: #444;
+      color: #868686;
       text-transform: uppercase;
       margin-bottom: 10px;
       padding-bottom: 6px;
@@ -1048,7 +1048,7 @@
       gap: 2px;
       overflow: hidden;
     }
-    .sub-text.empty { color: #333; font-style: italic; }
+    .sub-text.empty { color: #6a6a6a; font-style: italic; }
     .sub-row.no-data { border-left-color: #252525; }
     .sub-row.vmix-call-row.no-data { border-left-color: #252525; }
     .sub-row.no-data .sub-num { color: #2a2a2a; }
@@ -1058,7 +1058,7 @@
     .sub-link-row { display: flex; align-items: center; gap: 4px; }
     .sub-link {
       font-size: 13px;
-      color: #555;
+      color: #979797;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1067,7 +1067,7 @@
     .sub-uses-kamp {
       flex: 1;
       font-size: 20px;
-      color: #555;
+      color: #979797;
       letter-spacing: 1px;
       font-weight: 700;
     }
@@ -1110,9 +1110,9 @@
     }
     .btn-sm.save   { background: var(--orange); color: #fff; }
     .btn-sm.save:hover { filter: brightness(1.1); }
-    .btn-sm.cancel { background: #222; color: #666; border: 1px solid #333; }
+    .btn-sm.cancel { background: #222; color: #a3a3a3; border: 1px solid #333; }
     .btn-sm.cancel:hover { color: #fff; }
-    .btn-sm.reset  { background: transparent; color: #555; border: 1px solid #2a2a2a; }
+    .btn-sm.reset  { background: transparent; color: #979797; border: 1px solid #2a2a2a; }
     .btn-sm.reset:hover { color: var(--red); border-color: var(--red); }
 
     /* ── Ticker ───────────────────────────────────────────── */
@@ -1155,7 +1155,7 @@
     .ticker-num {
       font-size: 18px;
       font-weight: 700;
-      color: #555;
+      color: #979797;
       letter-spacing: 2px;
     }
 
@@ -1168,7 +1168,7 @@
       border-radius: 20px;
       border: 1px solid #444;
       background: transparent;
-      color: #666;
+      color: #a3a3a3;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 1.5px;
@@ -1176,7 +1176,7 @@
       transition: all 0.2s;
     }
     .breaking-btn.active { border-color: #eab308; background: #eab308; color: #000; animation: pulse-yellow 2s ease-in-out infinite; }
-    .breaking-btn:disabled { opacity: 1; background: #262626; color: #565656; border-color: #333; cursor: not-allowed; animation: none; }
+    .breaking-btn:disabled { opacity: 1; background: #262626; color: #565656; border-color: #6a6a6a; cursor: not-allowed; animation: none; }
 
     .ticker-body { padding: 4px 18px 18px 22px; }
     .ticker-block.collapsed .ticker-body { display: none; }
@@ -1200,7 +1200,7 @@
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: #555;
+      color: #979797;
       text-transform: uppercase;
       white-space: nowrap;
     }
@@ -1255,7 +1255,7 @@
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 3px;
-      color: #444;
+      color: #868686;
       text-transform: uppercase;
       margin-bottom: 12px;
       padding-bottom: 6px;
@@ -1288,7 +1288,7 @@
       background: transparent;
       border: 1px dashed #2e2e2e;
       border-radius: 6px;
-      color: #444;
+      color: #868686;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 2px;
@@ -1340,7 +1340,7 @@
     }
     .grafik-url > span {
       font-size: 11px;
-      color: #444;
+      color: #868686;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1363,7 +1363,7 @@
     .grafik-sub-row:hover { background: #111; }
     .grafik-sub-slot {
       font-size: 11px;
-      color: #444;
+      color: #868686;
       min-width: 18px;
       text-align: right;
       flex-shrink: 0;
@@ -1376,7 +1376,7 @@
     }
     .grafik-sub-titel {
       font-size: 12px;
-      color: #555;
+      color: #979797;
       flex: 1;
     }
     .grafik-lt-paa { flex-shrink: 0; }
@@ -1420,7 +1420,7 @@
     .lag-sub-toggle {
       margin-left: auto;
       font-size: 11px;
-      color: #555;
+      color: #979797;
       background: none;
       border: 1px solid #2a2a2a;
       border-radius: 4px;
@@ -1428,7 +1428,7 @@
       cursor: pointer;
       flex-shrink: 0;
     }
-    .lag-sub-toggle:hover, .lag-sub-toggle.open { color: #aaa; border-color: #444; }
+    .lag-sub-toggle:hover, .lag-sub-toggle.open { color: #aaa; border-color: #868686; }
     .lag-sub-toggle { pointer-events: auto; }
 
     /* Ticker undermenu-rækker */
@@ -1503,7 +1503,7 @@
       background: transparent;
       border: none;
       border-bottom: 2px solid transparent;
-      color: #555;
+      color: #979797;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 1.5px;
@@ -1527,10 +1527,10 @@
 
     /* Tab indhold */
     .grafik-v2-content { padding: 12px 20px 40px; }
-    .grafik-v2-empty { font-size: 12px; color: #444; padding: 8px 20px; }
+    .grafik-v2-empty { font-size: 12px; color: #868686; padding: 8px 20px; }
     .grafik-section-head {
       font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
-      color: #555; padding: 16px 0 8px; margin-top: 8px;
+      color: #979797; padding: 16px 0 8px; margin-top: 8px;
       border-top: 1px solid #1e1e1e;
     }
 
@@ -1567,7 +1567,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .grafik-block-name.muted { color: #333; }
+    .grafik-block-name.muted { color: #6a6a6a; }
     .grafik-block-sub {
       font-size: 14px;
       font-weight: 400;
@@ -1628,7 +1628,7 @@
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 1.5px;
-      color: #444;
+      color: #868686;
       margin-top: 6px;
       margin-bottom: 2px;
       text-transform: uppercase;
@@ -1637,7 +1637,7 @@
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 1.5px;
-      color: #444;
+      color: #868686;
       margin-bottom: 2px;
     }
     .grafik-companion-row {
@@ -1647,7 +1647,7 @@
     }
     .grafik-companion-lbl {
       font-size: 11px;
-      color: #555;
+      color: #979797;
       min-width: 80px;
       flex-shrink: 0;
     }
@@ -1667,7 +1667,7 @@
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 1.5px;
-      color: #444;
+      color: #868686;
       cursor: pointer;
       list-style: none;
       outline: none;
@@ -1755,7 +1755,7 @@
       right: 12px;
       background: none;
       border: none;
-      color: #555;
+      color: #979797;
       font-size: 16px;
       cursor: pointer;
       padding: 4px 8px;
@@ -1822,7 +1822,7 @@
     }
     .pm-loading, .pm-empty {
       font-size: 12px;
-      color: #444;
+      color: #868686;
       padding: 20px 0;
       text-align: center;
     }
@@ -1843,7 +1843,7 @@
       width: 100%;
       background: #111;
       border: none;
-      color: #555;
+      color: #979797;
       font-size: 11px;
       letter-spacing: 3px;
       padding: 8px;
@@ -1860,7 +1860,7 @@
       flex: 1;
       background: #0d0d0d;
       border: none;
-      color: #666;
+      color: #a3a3a3;
       font-size: 11px;
       letter-spacing: 2px;
       padding: 8px 4px;
@@ -1872,8 +1872,8 @@
     .table-subtab:last-child { border-right: none; }
     .table-subtab.active { color: #ccc; background: #161616; }
     .table-subtab:hover { color: #aaa; }
-    .ts-team { color: #555 !important; font-size: 11px; }
-    .ts-pen { color: #666; font-size: 11px; font-weight: 400; }
+    .ts-team { color: #979797 !important; font-size: 11px; }
+    .ts-pen { color: #a3a3a3; font-size: 11px; font-weight: 400; }
 
     /* ── H2H tabel ────────────────────────────────────────── */
     .h2h-table {
@@ -1883,7 +1883,7 @@
       margin: 4px 0 2px;
     }
     .h2h-table td { padding: 5px 6px; }
-    .h2h-date { color: #666; white-space: nowrap; font-size: 11px; }
+    .h2h-date { color: #a3a3a3; white-space: nowrap; font-size: 11px; }
     .h2h-team { color: #bbb; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .h2h-right { text-align: right; }
     .h2h-score { text-align: center; color: #888; font-weight: 600; white-space: nowrap; padding: 5px 8px; }
@@ -1898,7 +1898,7 @@
       border-top: 1px solid #1a1a1a;
     }
     .h2h-sum-home { color: var(--orange); }
-    .h2h-sum-draw { color: #666; }
+    .h2h-sum-draw { color: #a3a3a3; }
     .h2h-sum-away { color: #3b82f6; }
 
     /* ── Event stats tabel ────────────────────────────────── */
@@ -1910,7 +1910,7 @@
     }
     .event-stats-table td { padding: 4px 8px; }
     .event-stats-table .es-home { text-align: right; color: var(--orange); font-weight: 600; }
-    .event-stats-table .es-label { text-align: center; color: #555; font-size: 11px; letter-spacing: 1px; }
+    .event-stats-table .es-label { text-align: center; color: #979797; font-size: 11px; letter-spacing: 1px; }
     .event-stats-table .es-away { text-align: left; color: #3b82f6; font-weight: 600; }
 
     /* ── Ligatable ────────────────────────────────────────── */
@@ -1921,7 +1921,7 @@
       margin: 4px 0 8px;
     }
     .league-table th {
-      color: #666;
+      color: #a3a3a3;
       padding: 5px 6px;
       text-align: center;
       font-weight: 400;
@@ -1996,7 +1996,7 @@
       cursor: pointer; padding: 8px 0; list-style: none; user-select: none;
     }
     .gops-section > .gops-summary::-webkit-details-marker { display: none; }
-    .gops-section > .gops-summary::before { content: '\25B8'; color: #666; margin-right: 6px; }
+    .gops-section > .gops-summary::before { content: '\25B8'; color: #a3a3a3; margin-right: 6px; }
     .gops-section[open] > .gops-summary::before { content: '\25BE'; }
     .gops-summary:hover { color: #ccc; }
     .gops-summary-hint { font-size: 11px; font-weight: 400; color: #8c8c8c; letter-spacing: 0; }
