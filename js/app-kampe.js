@@ -257,7 +257,13 @@ function toggleOnAir(i) {
   _broadcastKampState(i);
   rerender(i);
   sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { on_air: kampe[i].onAir })
-    .then(() => { kampe[i].onAirPending = false; })
+    .then(() => {
+      kampe[i].onAirPending = false;
+      // Auto vis/skjul komm-boks (gatet af master) når on-air faktisk er gemt.
+      // Gøres her frem for i applyKampRow, fordi den optimistiske opdatering
+      // ovenfor skjuler on-air-transitionen for realtime-ekkoet.
+      syncKommBoks(i + 1, kampe[i].onAir);
+    })
     .catch(() => {
       // DB-skrivning fejlede: rul knappen tilbage og send den gamle tilstand
       // ud igen, så grafikken på skærmen matcher det der faktisk er gemt.

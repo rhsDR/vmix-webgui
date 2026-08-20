@@ -24,18 +24,10 @@ function applyKampRow(row) {
   }
   const enetChanged = prev.enetpulseId !== data.enetpulseId;
   kampe[i] = merged;
-  // Auto-trigger komm-boks IN kun hvis brugeren aktivt har trykket PÅ (_kommPaaMode)
-  if (data.onAir && !prev.onAir) {
-    const newBoks = KOMM_BOKSE.find(k => k.slot === row.slot);
-    if (_kommPaaMode && newBoks && (grafiktState[newBoks.triggerKey] || 'out') === 'out') {
-      setGrafiktTrigger(newBoks.triggerKey, 'in');
-    }
-  } else if (!data.onAir && prev.onAir) {
-    const boks = KOMM_BOKSE.find(k => k.slot === row.slot);
-    if (boks && (grafiktState[boks.triggerKey] || 'out') !== 'out') {
-      setGrafiktTrigger(boks.triggerKey, 'out');
-    }
-  }
+  // On-air ændret fra et ANDET panel: vis/skjul komm-boks via master.
+  // Lokale toggles håndteres i toggleOnAir — dér er prev.onAir allerede opdateret
+  // optimistisk, så transitionen ikke kan ses her (data.onAir === prev.onAir).
+  if (data.onAir !== prev.onAir) syncKommBoks(row.slot, data.onAir);
   rerender(i);
   if (enetChanged) fetchLiveMatches();
 }

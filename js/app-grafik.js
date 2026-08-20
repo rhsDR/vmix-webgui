@@ -132,6 +132,20 @@ async function setGrafiktTrigger(triggerKey, value) {
   } catch { toast('Fejl ved trigger', 'err'); }
 }
 
+// Vis/skjul komm-boks for en kamp-slot ud fra on-air, gatet af master-kontakten.
+// Kaldes fra toggleOnAir (lokal handling) og applyKampRow (ændring fra andet panel).
+// On air → vis KUN hvis master er på. Off air → skjul altid (hvis den er på).
+function syncKommBoks(slot, onAir) {
+  const boks = KOMM_BOKSE.find(k => k.slot === slot);
+  if (!boks) return;
+  const cur = grafiktState[boks.triggerKey] || 'out';
+  if (onAir) {
+    if (_kommPaaMode && cur === 'out') setGrafiktTrigger(boks.triggerKey, 'in');
+  } else {
+    if (cur !== 'out') setGrafiktTrigger(boks.triggerKey, 'out');
+  }
+}
+
 async function setBuiltinGrafikTarget(grafId, target) {
   grafikOverlayMap = { ...grafikOverlayMap, [grafId]: target };
   try {
