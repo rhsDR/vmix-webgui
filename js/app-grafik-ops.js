@@ -537,12 +537,11 @@ function renderGrafikOps() {
   const targetOpts = '<option value="hoved">Hoved Overlay</option><option value="komm">Kommentator</option><option value="overlay-3">Overlay 3</option>';
   const builtinRows = OVERLAY_GRAPHICS.filter(g => g.type !== 'komm' && g.type !== 'lineup').map(g => {
     const isLive = (grafiktState[g.triggerKey] || 'out') !== 'out';
-    const statusColor = isLive ? '#22c55e' : '#888';
     const curTarget = grafikOverlayMap[g.id] || 'hoved';
     const paBtn = g.triggerKey ? `<button data-trig="${g.triggerKey}" data-val="in" style="padding:4px 10px;background:#1a3a1a;border:1px solid #2d5a2d;color:#86efac;border-radius:5px;cursor:pointer;font-size:11px;">▶ PÅ</button>` : '';
     const afBtn = g.triggerKey ? `<button data-trig="${g.triggerKey}" data-val="out" style="padding:4px 10px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:5px;cursor:pointer;font-size:11px;">&#60; AF</button>` : '';
     return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #1a1a1a;">
-      <span style="font-size:11px;font-weight:700;color:${statusColor};min-width:38px;">${isLive ? '● LIVE' : '○ AF'}</span>
+      <span class="gops-status ${isLive ? 'live' : 'off'}">${isLive ? 'LIVE' : 'OFF'}</span>
       <span style="flex:1;font-size:11px;color:#ccc;">${g.label}</span>
       <select data-builtin-id="${g.id}" style="background:#111;border:1px solid #333;color:#aaa;padding:3px 7px;border-radius:5px;font-size:11px;">${targetOpts.replace(`value="${curTarget}"`, `value="${curTarget}" selected`)}</select>
       <div style="display:flex;gap:4px;">${afBtn}${paBtn}</div>
@@ -552,8 +551,6 @@ function renderGrafikOps() {
   // ─ Sektion: EGNE GRAFIKKER ─
   const grafikkort = (customGrafik || []).map(g => {
     const isLive = grafiktState[g.trigger_key] === 'in';
-    const statusDot = isLive ? '● LIVE' : '○ AF';
-    const statusColor = isLive ? '#22c55e' : '#888';
     const targetLabel = g.overlay_target === 'komm' ? 'Kommentator' : 'Hoved Overlay';
     const tilstand = g.overlay_mode === 'standalone' ? `Standalone${g.overlay_input ? ' · Input ' + g.overlay_input : ''}` : `Indlejret i ${targetLabel}`;
     const fileUrlWithPid = g.overlay_mode === 'standalone' ? (g.file_url + '?p=' + pid) : null;
@@ -571,7 +568,7 @@ function renderGrafikOps() {
     <div style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:12px;margin-bottom:10px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:11px;font-weight:700;color:${statusColor};">${statusDot}</span>
+          <span class="gops-status ${isLive ? 'live' : 'off'}">${isLive ? 'LIVE' : 'OFF'}</span>
           <span style="font-size:13px;color:#eee;font-weight:600;">${esc(g.label)}</span>
         </div>
         <div style="display:flex;gap:6px;">

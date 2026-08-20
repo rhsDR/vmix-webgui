@@ -2008,3 +2008,11 @@
     .gops-links > .gops-links-summary::before { content: '\25B8'; margin-right: 4px; }
     .gops-links[open] > .gops-links-summary::before { content: '\25BE'; }
     .gops-links-summary:hover { color: #bbb; }
+    .gops-status {
+      display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      padding: 2px 8px; border-radius: 10px; min-width: 44px; text-align: center;
+    }
+    .gops-status.live { color: #86efac; background: rgba(34,197,94,0.14); border: 1px solid rgba(34,197,94,0.45); }
+    .gops-status.off  { color: #9a9a9a; background: rgba(255,255,255,0.035); border: 1px solid #3a3a3a; }
+    .gops-status.live::before { content: '\25CF\00A0'; }
+    .gops-status.off::before  { content: '\25CB\00A0'; }
