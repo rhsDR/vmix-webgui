@@ -24,15 +24,6 @@ function renderSubs() {
   container.appendChild(grid);
 }
 
-async function toggleSubOnAir(slot) {
-  const newSlot = activeSubSlot === slot ? 0 : slot;
-  try {
-    await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.active_sub', { value: String(newSlot) });
-    activeSubSlot = newSlot;
-    subs.forEach((_, i) => rerenderSub(i));
-  } catch { toast('Fejl ved sub on air', 'err'); }
-}
-
 function rerenderSub(i) {
   const old = document.getElementById('sub-' + i);
   if (old) old.replaceWith(buildSubRow(i));
@@ -76,18 +67,12 @@ function buildSubRow(i) {
     const hasData = s.navn || s.titel;
     if (!hasData) row.classList.add('no-data');
     const slot = i + 1;
-    const isActive = activeSubSlot === slot;
-    const showOnBtn = aktivProjektId === '3ae7eb3e-db19-4285-9964-6c8382ea471f';
     row.innerHTML = `
       <span class="sub-num">${slot}</span>
       <span class="sub-text ${hasData ? '' : 'empty'}">${hasData
         ? `<span class="sub-navn">${esc(s.navn)}</span><span class="sub-titel">${esc(s.titel)}</span>`
         : '—'}</span>
-      ${showOnBtn ? `<button class="sub-on-btn ${isActive ? 'active' : ''}" id="son-${i}">${isActive ? 'OFF AIR' : 'ON AIR'}</button>` : ''}
       <button class="icon-btn" id="seb-${i}" title="Rediger">✏️</button>`;
-    if (showOnBtn) {
-      row.querySelector('#son-' + i).addEventListener('click', () => toggleSubOnAir(slot));
-    }
     row.querySelector('#seb-' + i).addEventListener('click', () => {
       s.buf = { navn: s.navn, titel: s.titel };
       s.editMode = true;
