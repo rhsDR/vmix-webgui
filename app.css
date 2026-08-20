@@ -1989,3 +1989,22 @@
       .ticker-normal { flex-direction: column; gap: 4px; }
       .ticker-overskrift, .ticker-tekst { white-space: normal; }
     }
+
+    /* ── GRAFIK OPS — foldbare sektioner (Niveau A) ────────────────── */
+    .gops-section > .gops-summary {
+      font-size: 12px; letter-spacing: 2px; color: #999; font-weight: 700;
+      cursor: pointer; padding: 8px 0; list-style: none; user-select: none;
+    }
+    .gops-section > .gops-summary::-webkit-details-marker { display: none; }
+    .gops-section > .gops-summary::before { content: '\25B8'; color: #666; margin-right: 6px; }
+    .gops-section[open] > .gops-summary::before { content: '\25BE'; }
+    .gops-summary:hover { color: #ccc; }
+    .gops-summary-hint { font-size: 11px; font-weight: 400; color: #555; letter-spacing: 0; }
+    .gops-links > .gops-links-summary {
+      font-size: 11px; letter-spacing: 1px; color: #888; cursor: pointer;
+      padding: 3px 0; list-style: none; user-select: none;
+    }
+    .gops-links > .gops-links-summary::-webkit-details-marker { display: none; }
+    .gops-links > .gops-links-summary::before { content: '\25B8'; margin-right: 4px; }
+    .gops-links[open] > .gops-links-summary::before { content: '\25BE'; }
+    .gops-links-summary:hover { color: #bbb; }
