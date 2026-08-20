@@ -134,7 +134,7 @@ function _egneGrafikRenderTemplateFields(type) {
   const el = document.getElementById('egn-tpl-fields');
   if (!el) return;
   const inp = (id, ph, val='') => `<input id="${id}" type="text" placeholder="${ph}" value="${val.replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">`;
-  const colorInp = (id, val='#4a9eff') => `<div style="display:flex;align-items:center;gap:8px;"><label style="font-size:11px;color:#666;letter-spacing:1px;">FARVE</label><input id="${id}" type="color" value="${val}" style="height:28px;width:50px;background:#111;border:1px solid #333;border-radius:4px;cursor:pointer;padding:2px;"></div>`;
+  const colorInp = (id, val='#4a9eff') => `<div style="display:flex;align-items:center;gap:8px;"><label style="font-size:11px;color:#9c9c9c;letter-spacing:1px;">FARVE</label><input id="${id}" type="color" value="${val}" style="height:28px;width:50px;background:#111;border:1px solid #333;border-radius:4px;cursor:pointer;padding:2px;"></div>`;
   if (type === 'lower_third') {
     el.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">${inp('egn-tpl-navn','Navn…')}${inp('egn-tpl-titel','Titel…')}${colorInp('egn-tpl-farve')}</div>`;
   } else if (type === 'bug') {
@@ -145,10 +145,10 @@ function _egneGrafikRenderTemplateFields(type) {
       </select></div>`;
   } else if (type === 'fullscreen') {
     el.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">${inp('egn-tpl-overskrift','Overskrift…')}${inp('egn-tpl-undertekst','Undertekst…')}
-      <div style="display:flex;align-items:center;gap:8px;"><label style="font-size:11px;color:#666;letter-spacing:1px;">BAGGRUND</label><input id="egn-tpl-bg" type="color" value="#000000" style="height:28px;width:50px;background:#111;border:1px solid #333;border-radius:4px;cursor:pointer;padding:2px;"></div></div>`;
+      <div style="display:flex;align-items:center;gap:8px;"><label style="font-size:11px;color:#9c9c9c;letter-spacing:1px;">BAGGRUND</label><input id="egn-tpl-bg" type="color" value="#000000" style="height:28px;width:50px;background:#111;border:1px solid #333;border-radius:4px;cursor:pointer;padding:2px;"></div></div>`;
   } else if (type === 'timer') {
     el.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">
-      <div style="display:flex;gap:8px;align-items:center;"><label style="font-size:11px;color:#666;letter-spacing:1px;min-width:50px;">START (sek)</label><input id="egn-tpl-fra" type="number" min="0" value="0" style="width:80px;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;"></div>
+      <div style="display:flex;gap:8px;align-items:center;"><label style="font-size:11px;color:#9c9c9c;letter-spacing:1px;min-width:50px;">START (sek)</label><input id="egn-tpl-fra" type="number" min="0" value="0" style="width:80px;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;"></div>
       <select id="egn-tpl-format" style="background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
         <option value="mm:ss">mm:ss</option><option value="ss">sekunder</option>
       </select></div>`;
@@ -294,14 +294,14 @@ function _egneGrafikShowConfirm(g) {
 
   let html = `<div style="font-size:13px;color:#86efac;margin-bottom:12px;">&#10003; Grafik tilføjet!</div>`;
   if (isStandalone) {
-    html += `<div style="margin-bottom:10px;"><div style="font-size:11px;color:#666;letter-spacing:1px;margin-bottom:4px;">INDSÆT I VMIX (Browser Input):</div>
+    html += `<div style="margin-bottom:10px;"><div style="font-size:11px;color:#9c9c9c;letter-spacing:1px;margin-bottom:4px;">INDSÆT I VMIX (Browser Input):</div>
       <div style="display:flex;align-items:center;gap:6px;"><span style="flex:1;font-size:11px;color:#aaa;background:#111;border:1px solid #333;padding:5px 8px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fileUrlWithPid}</span>
       <button onclick="navigator.clipboard.writeText(${JSON.stringify(fileUrlWithPid)});toast('Kopieret','ok')" style="padding:4px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button></div></div>`;
   } else {
     const tLabel = g.overlay_target === 'komm' ? 'Kommentator (overlay-komm.html)' : 'Hoved Overlay (overlay.html)';
-    html += `<div style="font-size:11px;color:#666;margin-bottom:10px;padding:8px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;">Indlejret i ${tLabel} — genindlæs overlayet i vMix for at aktivere grafikken.</div>`;
+    html += `<div style="font-size:11px;color:#9c9c9c;margin-bottom:10px;padding:8px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;">Indlejret i ${tLabel} — genindlæs overlayet i vMix for at aktivere grafikken.</div>`;
   }
-  html += `<div><div style="font-size:11px;color:#666;letter-spacing:1px;margin-bottom:6px;">COMPANION LINKS:</div>
+  html += `<div><div style="font-size:11px;color:#9c9c9c;letter-spacing:1px;margin-bottom:6px;">COMPANION LINKS:</div>
     <div style="display:flex;flex-direction:column;gap:4px;">
       <div style="display:flex;align-items:center;gap:6px;"><span style="width:24px;font-size:11px;color:#86efac;">PÅ</span><span style="flex:1;font-size:11px;color:#aaa;background:#111;border:1px solid #333;padding:5px 8px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${onUrl}</span><button onclick="navigator.clipboard.writeText(${JSON.stringify(onUrl)});toast('Kopieret','ok')" style="padding:4px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button></div>
       <div style="display:flex;align-items:center;gap:6px;"><span style="width:24px;font-size:11px;color:#ef4444;">AF</span><span style="flex:1;font-size:11px;color:#aaa;background:#111;border:1px solid #333;padding:5px 8px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${offUrl}</span><button onclick="navigator.clipboard.writeText(${JSON.stringify(offUrl)});toast('Kopieret','ok')" style="padding:4px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button></div>
@@ -529,7 +529,7 @@ function renderGrafikOps() {
   const overlayRows = builtinWindows.map(w => `
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1a1a1a;">
       <span style="flex:1;font-size:11px;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${w.url}">${w.label}</span>
-      <span style="font-size:11px;color:#555;flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${w.url}</span>
+      <span style="font-size:11px;color:#8c8c8c;flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${w.url}</span>
       <button class="copy-btn icon-btn" data-copy="${w.url}" style="padding:3px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button>
     </div>`).join('');
 
@@ -537,7 +537,7 @@ function renderGrafikOps() {
   const targetOpts = '<option value="hoved">Hoved Overlay</option><option value="komm">Kommentator</option><option value="overlay-3">Overlay 3</option>';
   const builtinRows = OVERLAY_GRAPHICS.filter(g => g.type !== 'komm' && g.type !== 'lineup').map(g => {
     const isLive = (grafiktState[g.triggerKey] || 'out') !== 'out';
-    const statusColor = isLive ? '#22c55e' : '#555';
+    const statusColor = isLive ? '#22c55e' : '#888';
     const curTarget = grafikOverlayMap[g.id] || 'hoved';
     const paBtn = g.triggerKey ? `<button data-trig="${g.triggerKey}" data-val="in" style="padding:4px 10px;background:#1a3a1a;border:1px solid #2d5a2d;color:#86efac;border-radius:5px;cursor:pointer;font-size:11px;">▶ PÅ</button>` : '';
     const afBtn = g.triggerKey ? `<button data-trig="${g.triggerKey}" data-val="out" style="padding:4px 10px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:5px;cursor:pointer;font-size:11px;">&#60; AF</button>` : '';
@@ -553,7 +553,7 @@ function renderGrafikOps() {
   const grafikkort = (customGrafik || []).map(g => {
     const isLive = grafiktState[g.trigger_key] === 'in';
     const statusDot = isLive ? '● LIVE' : '○ AF';
-    const statusColor = isLive ? '#22c55e' : '#555';
+    const statusColor = isLive ? '#22c55e' : '#888';
     const targetLabel = g.overlay_target === 'komm' ? 'Kommentator' : 'Hoved Overlay';
     const tilstand = g.overlay_mode === 'standalone' ? `Standalone${g.overlay_input ? ' · Input ' + g.overlay_input : ''}` : `Indlejret i ${targetLabel}`;
     const fileUrlWithPid = g.overlay_mode === 'standalone' ? (g.file_url + '?p=' + pid) : null;
@@ -561,7 +561,7 @@ function renderGrafikOps() {
     const offUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${encodeURIComponent(g.trigger_key)}&value=out`;
     const vMixUrlRow = fileUrlWithPid ? `
       <div style="margin:6px 0 4px;">
-        <div style="font-size:11px;color:#666;letter-spacing:1px;margin-bottom:3px;">URL TIL VMIX</div>
+        <div style="font-size:11px;color:#9c9c9c;letter-spacing:1px;margin-bottom:3px;">URL TIL VMIX</div>
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="flex:1;font-size:11px;color:#aaa;background:#0d0d0d;border:1px solid #2a2a2a;padding:4px 6px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fileUrlWithPid}</span>
           <button class="copy-btn icon-btn" data-copy="${fileUrlWithPid}" style="padding:3px 7px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button>
@@ -579,12 +579,12 @@ function renderGrafikOps() {
           <button data-del-id="${g.id}" data-del-path="${g.file_path || ''}" data-del-label="${esc(g.label)}" style="padding:3px 8px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:4px;cursor:pointer;font-size:11px;">🗑</button>
         </div>
       </div>
-      <div style="font-size:11px;color:#555;margin-bottom:4px;">${tilstand} · <span style="color:#4a9eff;">${esc(g.trigger_key)}</span>${g.auto_hide_seconds > 0 ? ` · auto-skjul ${g.auto_hide_seconds}s` : ''}</div>
+      <div style="font-size:11px;color:#8c8c8c;margin-bottom:4px;">${tilstand} · <span style="color:#4a9eff;">${esc(g.trigger_key)}</span>${g.auto_hide_seconds > 0 ? ` · auto-skjul ${g.auto_hide_seconds}s` : ''}</div>
       <details class="gops-links">
         <summary class="gops-links-summary">vMix-URL &amp; Companion-links</summary>
         <div style="margin-top:6px;">
           ${vMixUrlRow}
-          <div style="font-size:11px;color:#666;letter-spacing:1px;margin:6px 0 4px;">COMPANION LINKS</div>
+          <div style="font-size:11px;color:#9c9c9c;letter-spacing:1px;margin:6px 0 4px;">COMPANION LINKS</div>
           <div style="display:flex;flex-direction:column;gap:3px;">
             <div style="display:flex;align-items:center;gap:5px;">
               <span style="width:22px;font-size:11px;color:#86efac;">PÅ</span>
@@ -610,12 +610,12 @@ function renderGrafikOps() {
     <div style="max-width:800px;margin:0 auto;padding:16px;">
       <details class="gops-section" style="margin-bottom:14px;">
         <summary class="gops-summary">OVERLAY VINDUER <span class="gops-summary-hint">— vMix browser-inputs (engangs-setup)</span></summary>
-        <div style="font-size:11px;color:#444;margin:6px 0 8px;">Indsæt disse URLs i vMix som Browser-inputs. Standalone grafikker under EGNE GRAFIKKER dukker automatisk op her.</div>
+        <div style="font-size:11px;color:#8c8c8c;margin:6px 0 8px;">Indsæt disse URLs i vMix som Browser-inputs. Standalone grafikker under EGNE GRAFIKKER dukker automatisk op her.</div>
         <div style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 12px;">${overlayRows}</div>
       </details>
       <details open class="gops-section" style="margin-bottom:14px;">
         <summary class="gops-summary">BUILT-IN GRAFIKKER <span class="gops-summary-hint">— vælg overlay-vindue</span></summary>
-        <div style="font-size:11px;color:#444;margin:6px 0 8px;">Ændringer træder i kraft næste gang overlayene genindlæses i vMix.</div>
+        <div style="font-size:11px;color:#8c8c8c;margin:6px 0 8px;">Ændringer træder i kraft næste gang overlayene genindlæses i vMix.</div>
         <div style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:4px 12px;">${builtinRows}</div>
       </details>
       <details open class="gops-section">
@@ -623,7 +623,7 @@ function renderGrafikOps() {
         <div style="display:flex;justify-content:flex-end;margin:8px 0 10px;">
           <button id="gops-add-btn" style="padding:5px 12px;background:#1a2a3a;border:1px solid #1d4ed8;color:#93c5fd;border-radius:6px;cursor:pointer;font-size:11px;letter-spacing:1px;">＋ Tilføj ny grafik</button>
         </div>
-        ${grafikkort || '<div style="color:#555;font-size:12px;padding:16px 0;">Ingen grafikker endnu. Klik "＋ Tilføj ny grafik" for at starte.</div>'}
+        ${grafikkort || '<div style="color:#8c8c8c;font-size:12px;padding:16px 0;">Ingen grafikker endnu. Klik "＋ Tilføj ny grafik" for at starte.</div>'}
       </details>
     </div>`;
 

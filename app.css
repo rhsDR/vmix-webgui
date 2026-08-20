@@ -1992,16 +1992,16 @@
 
     /* ── GRAFIK OPS — foldbare sektioner (Niveau A) ────────────────── */
     .gops-section > .gops-summary {
-      font-size: 12px; letter-spacing: 2px; color: #999; font-weight: 700;
+      font-size: 12px; letter-spacing: 2px; color: #b0b0b0; font-weight: 700;
       cursor: pointer; padding: 8px 0; list-style: none; user-select: none;
     }
     .gops-section > .gops-summary::-webkit-details-marker { display: none; }
     .gops-section > .gops-summary::before { content: '\25B8'; color: #666; margin-right: 6px; }
     .gops-section[open] > .gops-summary::before { content: '\25BE'; }
     .gops-summary:hover { color: #ccc; }
-    .gops-summary-hint { font-size: 11px; font-weight: 400; color: #555; letter-spacing: 0; }
+    .gops-summary-hint { font-size: 11px; font-weight: 400; color: #8c8c8c; letter-spacing: 0; }
     .gops-links > .gops-links-summary {
-      font-size: 11px; letter-spacing: 1px; color: #888; cursor: pointer;
+      font-size: 11px; letter-spacing: 1px; color: #aaa; cursor: pointer;
       padding: 3px 0; list-style: none; user-select: none;
     }
     .gops-links > .gops-links-summary::-webkit-details-marker { display: none; }
