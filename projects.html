@@ -298,7 +298,7 @@
             e.stopPropagation();
             await fetch(SB_URL + '/rest/v1/projekter?id=eq.' + p.id, {
               method: 'PATCH',
-              headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+              headers: { ...(await sbWriteHeaders()), 'Prefer': 'return=minimal' },
               body: JSON.stringify({ aktiv: !erAktiv })
             });
             await loadProjects();
@@ -349,7 +349,7 @@
         try {
           await fetch(SB_URL + '/rest/v1/projekter?id=eq.' + id, {
             method: 'PATCH',
-            headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+            headers: { ...(await sbWriteHeaders()), 'Prefer': 'return=minimal' },
             body: JSON.stringify({ undertitel: val })
           });
         } catch {}
