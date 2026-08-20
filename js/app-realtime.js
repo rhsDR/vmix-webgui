@@ -107,6 +107,8 @@ sbClient.channel('db-changes')
           if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
         } else if (p.new.key === 'credits_speed') {
           refreshCredits();
+        } else if (p.new.key === 'komm_master') {
+          _kommPaaMode = (p.new.value === 'on'); // hold master i sync på tværs af faner/paneler
         }
         // Opdater grafik-tab hvis det er åbent og en trigger-key, lt_slot eller score_breaking_trigger ændrer sig
         if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot' || p.new.key === 'score_breaking_trigger' || customGrafik.some(g => g.trigger_key === p.new.key) || KOMM_BOKSE.some(k => k.triggerKey === p.new.key) || BROADCAST_TRIGGER_KEYS.has(p.new.key)) {

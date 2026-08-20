@@ -115,24 +115,8 @@ function _renderCards(g1,r1,g2,r2){
   if(targets.length) gsap.from(targets,{y:-5,opacity:0,scale:0.4,duration:0.4,ease:'back.out(1.5)',stagger:0.05});
   _prevCards={g1:g1,r1:r1,g2:g2,r2:r2};
 }
-function _autoOut(){
-  if(!_spxVisible)return;
-  runAnimationOUT();
-  fetch(_SB_URL+'/rest/v1/settings',{
-    method:'POST',
-    headers:Object.assign({},_SB_HDR,{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'}),
-    body:JSON.stringify({projekt_id:_pid,key:_trigKey,value:'out'})
-  }).catch(function(){});
-}
-function _autoIn(){
-  if(_spxVisible)return;
-  runAnimationIN();
-  fetch(_SB_URL+'/rest/v1/settings',{
-    method:'POST',
-    headers:Object.assign({},_SB_HDR,{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'}),
-    body:JSON.stringify({projekt_id:_pid,key:_trigKey,value:'in'})
-  }).catch(function(){});
-}
+// _autoIn/_autoOut fjernet: komm-boksen må ikke selv vise/skjule (eller skrive
+// sin trigger) ud fra on-air — det overtrumfede panelets master-kontakt.
 function runAnimationIN(){_spxVisible=true;
   if(_animTL){_animTL.kill();_animTL=null;}
   gsap.killTweensOf(['#el2','#el3','#el4','#el5','#el-cards']);
@@ -192,8 +176,8 @@ document.addEventListener('DOMContentLoaded',function(){
       var p=msg.payload;
       if(!p||p.slot!==_slot||p.projekt_id!==_pid)return;
       _applyKampRow(p);
-      if(p.on_air&&!_prevOnAir)_autoIn();
-      if(!p.on_air&&_prevOnAir)_autoOut();
+      // Kun indhold opdateres her. Synligheden styres af Komm_score-triggeren
+      // (sat af panelets master-kontakt PÅ/AF), ikke af on-air direkte.
       _prevOnAir=!!p.on_air;
     })
     .subscribe();

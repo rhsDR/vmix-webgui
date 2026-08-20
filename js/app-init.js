@@ -85,6 +85,15 @@ async function init() {
       initCreditsFromData(all.credits);
     }
 
+    // Robusthed: hent komm-master (grafik på/af) fra DB, så master-kontakten
+    // overlever en panel-genindlæsning uanset hvilken fane der er åben.
+    if (aktivProjektId) {
+      try {
+        const kmRows = await sbGet('settings?select=value&key=eq.komm_master&projekt_id=eq.' + aktivProjektId);
+        _kommPaaMode = (kmRows[0]?.value === 'on');
+      } catch {}
+    }
+
     document.getElementById('previewClose').addEventListener('click', () => {
       document.getElementById('previewModal').style.display = 'none';
       document.getElementById('previewFrame').src = '';

@@ -944,7 +944,11 @@ function renderGrafik() {
       const targets = KOMM_BOKSE.filter(k => kampe[k.slot - 1]?.onAir === true);
       targets.forEach(k => { grafiktState[k.triggerKey] = 'in'; });
       renderGrafik();
-      await Promise.all(targets.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k.triggerKey, value: 'in' }))).catch(() => toast('Fejl ved Komm PÅ', 'err'));
+      // Gem master-tilstanden så "grafik på" overlever reload og holder når kampe kommer/går
+      await Promise.all([
+        sbUpsert('settings', { projekt_id: aktivProjektId, key: 'komm_master', value: 'on' }),
+        ...targets.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k.triggerKey, value: 'in' }))
+      ]).catch(() => toast('Fejl ved Komm PÅ', 'err'));
     });
   });
   container.querySelectorAll('.komm-alle-af-btn').forEach(btn => {
@@ -953,7 +957,10 @@ function renderGrafik() {
       _kommPaaMode = false;
       KOMM_BOKSE.forEach(k => { grafiktState[k.triggerKey] = 'out'; });
       renderGrafik();
-      await Promise.all(KOMM_BOKSE.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k.triggerKey, value: 'out' }))).catch(() => toast('Fejl ved Komm AF', 'err'));
+      await Promise.all([
+        sbUpsert('settings', { projekt_id: aktivProjektId, key: 'komm_master', value: 'off' }),
+        ...KOMM_BOKSE.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k.triggerKey, value: 'out' }))
+      ]).catch(() => toast('Fejl ved Komm AF', 'err'));
     });
   });
 

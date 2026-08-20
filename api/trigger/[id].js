@@ -85,12 +85,14 @@ async function runStep(pid, h, slotOverride) {
                       'Komm_score_K-4','Komm_score_K-5','Komm_score_K-6'];
     if (h.value === 'out') {
       await Promise.all([
+        upsert(pid, 'komm_master', 'off'), // master AF — panelet holdes i sync via realtime
         ...kommKeys.map(k => sbBroadcastRest(pid, k, 'out')),
         ...kommKeys.map(k => upsert(pid, k, 'out')),
       ]);
     } else {
       const kampeRows = await sbGet(`kampe?projekt_id=eq.${encodeURIComponent(pid)}&on_air=eq.true&select=slot`);
       const activeSlots = kampeRows.map(r => r.slot).filter(s => s >= 1 && s <= 6);
+      await upsert(pid, 'komm_master', 'on'); // master PÅ, også hvis ingen kampe er on air endnu
       if (activeSlots.length) {
         await Promise.all([
           ...activeSlots.map(s => sbBroadcastRest(pid, `Komm_score_K-${s}`, 'in')),
@@ -198,11 +200,13 @@ export default async function handler(req, res) {
                        'Komm_score_K-4','Komm_score_K-5','Komm_score_K-6'];
       if (value === 'out') {
         await Promise.all([
+          upsert(id, 'komm_master', 'off'),
           ...allKeys.map(k => sbBroadcastRest(id, k, 'out')),
           ...allKeys.map(k => upsert(id, k, 'out')),
         ]);
         return res.status(200).json({ ok: true, key, value, count: allKeys.length });
       }
+      await upsert(id, 'komm_master', 'on');
       const kampeRows = await sbGet(
         `kampe?projekt_id=eq.${encodeURIComponent(id)}&on_air=eq.true&select=slot`
       );
