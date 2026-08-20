@@ -1,7 +1,6 @@
 // ── SUPABASE HELPERS ──────────────────────────────────────────
 // SB_HEADERS og sbHeaders() kommer fra js/auth.js
-const SB_HEADERS = sbHeaders();
-const SB_HEADERS_MINIMAL = { ...SB_HEADERS, 'Prefer': 'return=minimal' };
+const SB_HEADERS = sbHeaders(); // kun til reads — anon er fint at læse med under RLS
 
 // ── EGNE API-ENDPOINTS — kræver login ─────────────────────────
 // Datakilde-endpoints (/api/enetpulse m.fl.) afviser kald uden gyldig login-token.
@@ -81,7 +80,7 @@ async function sbGet(path) {
 
 async function sbPatch(path, body) {
   const res = await fetch(SB_URL + '/rest/v1/' + path, {
-    method: 'PATCH', headers: SB_HEADERS_MINIMAL, body: JSON.stringify(body)
+    method: 'PATCH', headers: await sbWriteHeaders({ 'Prefer': 'return=minimal' }), body: JSON.stringify(body)
   });
   if (!res.ok) throw new Error('HTTP ' + res.status);
 }
@@ -92,7 +91,7 @@ async function sbUpsert(table, body) {
   const { slot: _bcSlot, ...sbBody } = body;
   const res = await fetch(SB_URL + '/rest/v1/' + table, {
     method: 'POST',
-    headers: { ...SB_HEADERS_MINIMAL, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    headers: await sbWriteHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
     body: JSON.stringify(sbBody)
   });
   if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -100,14 +99,14 @@ async function sbUpsert(table, body) {
 
 async function sbDelete(path) {
   const res = await fetch(SB_URL + '/rest/v1/' + path, {
-    method: 'DELETE', headers: SB_HEADERS_MINIMAL
+    method: 'DELETE', headers: await sbWriteHeaders({ 'Prefer': 'return=minimal' })
   });
   if (!res.ok) throw new Error('HTTP ' + res.status);
 }
 
 async function sbPost(path, body) {
   const res = await fetch(SB_URL + '/rest/v1/' + path, {
-    method: 'POST', headers: SB_HEADERS_MINIMAL, body: JSON.stringify(body)
+    method: 'POST', headers: await sbWriteHeaders({ 'Prefer': 'return=minimal' }), body: JSON.stringify(body)
   });
   if (!res.ok) throw new Error('HTTP ' + res.status);
 }

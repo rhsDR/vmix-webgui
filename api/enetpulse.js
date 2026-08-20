@@ -1,4 +1,4 @@
-import { SB_URL, SB_ANON } from './_supabase.js';
+import { SB_URL, SB_ANON, SB_SERVICE_ROLE } from './_supabase.js';
 import { requireUser } from './_auth.js';
 
 const EAPI_BASE = 'https://eapi.enetpulse.com';
@@ -30,10 +30,12 @@ async function getCachedFixtures(date) {
 }
 
 async function saveFixturesCache(date, events) {
+  // Cache-skrivning fra serveren bruger service-role (går uden om RLS)
+  const svc = SB_SERVICE_ROLE || SB_ANON;
   try {
     await fetch(`${SB_URL}/rest/v1/enetpulse_cache`, {
       method:  'POST',
-      headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates' },
+      headers: { 'apikey': svc, 'Authorization': 'Bearer ' + svc, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
       body:    JSON.stringify({ date, events, updated_at: new Date().toISOString() })
     });
   } catch { /* ikke kritisk */ }

@@ -39,9 +39,12 @@ const ALLOWED_KEYS = [
   'komm_alle',
 ];
 
+// DB-writes fra serveren bruger service-role, så de går uden om RLS og kan
+// skrive alle settings-keys (fx lineup_data, lt_slot) — ikke kun trigger-keys.
+const _SVC = SB_SERVICE_ROLE || SB_ANON;
 const HEADERS = {
-  'apikey': SB_ANON,
-  'Authorization': 'Bearer ' + SB_ANON,
+  'apikey': _SVC,
+  'Authorization': 'Bearer ' + _SVC,
   'Content-Type': 'application/json',
   'Prefer': 'return=minimal,resolution=merge-duplicates'
 };

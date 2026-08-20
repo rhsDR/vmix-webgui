@@ -749,13 +749,13 @@
         if (currentRole === 'admin') {
           await fetch(SB_URL + '/rest/v1/user_roles?user_id=eq.' + userId, {
             method: 'PATCH',
-            headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
+            headers: { ...(await sbWriteHeaders()), 'Prefer': 'return=minimal' },
             body: JSON.stringify({ role: 'user' })
           });
         } else {
           await fetch(SB_URL + '/rest/v1/user_roles?user_id=eq.' + userId, {
             method: 'POST',
-            headers: { ...sbHeaders(), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+            headers: { ...(await sbWriteHeaders()), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
             body: JSON.stringify({ user_id: userId, role: 'admin' })
           });
         }

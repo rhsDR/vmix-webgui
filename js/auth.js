@@ -12,6 +12,19 @@ function sbHeaders() {
   };
 }
 
+// Skrive-headers til RLS: bruger den indloggede brugers JWT i Authorization,
+// så databasen kan håndhæve "skrivning kræver login". Falder tilbage til anon
+// hvis ingen session — så alt virker uændret FØR RLS tændes.
+async function sbWriteHeaders(extra) {
+  const session = await getSession();
+  const jwt = (session && session.access_token) ? session.access_token : SB_ANON;
+  return Object.assign({
+    'apikey': SB_ANON,
+    'Authorization': 'Bearer ' + jwt,
+    'Content-Type': 'application/json'
+  }, extra || {});
+}
+
 async function getSession() {
   const { data } = await sbClient.auth.getSession();
   return data?.session || null;
@@ -26,7 +39,7 @@ async function isAdmin(userId) {
   try {
     const res = await fetch(
       SB_URL + '/rest/v1/user_roles?user_id=eq.' + userId + '&select=role',
-      { headers: sbHeaders() }
+      { headers: await sbWriteHeaders() }
     );
     const rows = await res.json();
     return rows[0]?.role === 'admin';
