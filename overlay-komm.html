@@ -50,6 +50,49 @@
       { id: 'credits',     file: 'credits.html',         trigKey: 'credits_trigger' },
     ];
 
+    // Live-tilstand: cache af overlay_lag_order + grafik_overlay_map, så built-in grafik
+    // kan flyttes til/fra dette overlay LIVE (uden genindlæsning af browser-inputtet).
+    var _lagOrder = [];
+    var _grafMap  = {};
+    function _zForId(id) {
+      var idx = _lagOrder.indexOf(id);
+      return idx >= 0 ? String((_lagOrder.length - idx) * 1000) : '500';
+    }
+    function _syncKommBuiltins() {
+      // Komm-bokse: vis kun hvis 'komm' er tildelt komm-overlayet (default)
+      var kommTarget = _grafMap['komm'] || 'komm';
+      [1,2,3,4,5,6].forEach(function(n) {
+        var frame = document.getElementById('komm-k'+n+'-frame');
+        if (!frame) return;
+        var isBlank = !frame.src || frame.src.indexOf('about:blank') !== -1;
+        if (kommTarget === 'komm') {
+          if (isBlank) {
+            var src = 'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid + '&embed=1';
+            if (_testOt) src += '&test_ot=' + encodeURIComponent(_testOt);
+            frame.src = src;
+          }
+        } else if (!isBlank) {
+          frame.src = 'about:blank';
+        }
+      });
+      // Built-in grafik tildelt 'komm' → opret frame; ellers → fjern
+      BUILTIN_GRAPHICS.forEach(function(bg) {
+        var frameId = 'builtin-' + bg.id + '-frame';
+        var existing = document.getElementById(frameId);
+        var assigned = (_grafMap[bg.id] || 'hoved') === 'komm';
+        if (assigned && !existing) {
+          var iframe = document.createElement('iframe');
+          iframe.id = frameId;
+          iframe.allowTransparency = true;
+          iframe.src = bg.file + '?p=' + _pid;
+          iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;z-index:' + _zForId(bg.id) + ';';
+          document.body.appendChild(iframe);
+        } else if (!assigned && existing) {
+          existing.remove();
+        }
+      });
+    }
+
     // Raw WebSocket — postgres_changes for instant Companion-triggers på alle 6 komm-bokse + custom grafikker
     if (_pid) {
       (function() {
@@ -82,6 +125,11 @@
             if (ltFrame && ltFrame.contentWindow) {
               try { ltFrame.contentWindow.postMessage({ type: 'sbTrigger', key: 'lt_trigger', value: value, slot: slot || '' }, '*'); } catch {}
             }
+            return;
+          }
+          if (key === 'credits_trigger') {
+            // credits.html er forældre-drevet (selv-abonnerer ikke) — kald den direkte
+            if (value === 'in') try { document.getElementById('builtin-credits-frame')?.contentWindow?.runAnimationIN?.(); } catch {}
             return;
           }
           // Hardcodede komm-bokse — batches events inden for 60ms så alle bokse starter simultant
@@ -130,11 +178,17 @@
             if (!rec || rec.projekt_id !== _pid) return;
             if (rec.key === 'overlay_lag_order') {
               var order = rec.value ? rec.value.split(',').map(function(s){return s.trim();}).filter(Boolean) : [];
+              _lagOrder = order;
               document.body.querySelectorAll('iframe[id]').forEach(function(f) {
                 var id = f.id.replace('builtin-','').replace('-frame','').replace('custom-komm-','custom-');
                 var idx = order.indexOf(id);
                 if (idx >= 0) f.style.zIndex = String((order.length - idx) * 1000);
               });
+              return;
+            }
+            if (rec.key === 'grafik_overlay_map') {
+              try { _grafMap = rec.value ? JSON.parse(rec.value) : {}; } catch { return; }
+              _syncKommBuiltins();
               return;
             }
             _dispatch(rec.key, rec.value, rec.slot);
@@ -159,32 +213,10 @@
           return idx >= 0 ? String((lagOrder.length - idx) * 1000) : '500';
         }
 
-        // Komm bokse — kun i dette overlay hvis 'komm' er tildelt 'komm' (default)
-        const kommTarget = grafMap['komm'] || 'komm';
-        [1,2,3,4,5,6].forEach(function(n) {
-          const frame = document.getElementById('komm-k'+n+'-frame');
-          if (!frame) return;
-          if (kommTarget === 'komm') {
-            let src = 'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid + '&embed=1';
-            if (_testOt) src += '&test_ot=' + encodeURIComponent(_testOt);
-            if (frame.src !== src) frame.src = src;
-          } else {
-            frame.src = 'about:blank';
-          }
-        });
-
-        // Built-in grafikker tildelt 'komm'
-        for (const bg of BUILTIN_GRAPHICS) {
-          if ((grafMap[bg.id] || 'hoved') !== 'komm') continue;
-          const frameId = 'builtin-' + bg.id + '-frame';
-          if (document.getElementById(frameId)) continue;
-          const iframe = document.createElement('iframe');
-          iframe.id = frameId;
-          iframe.allowTransparency = true;
-          iframe.src = bg.file + '?p=' + _pid;
-          iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;z-index:' + zForId(bg.id) + ';';
-          document.body.appendChild(iframe);
-        }
+        // Cache til live sync + byg komm-bokse og tildelte built-in grafik
+        _grafMap  = grafMap;
+        _lagOrder = lagOrder;
+        _syncKommBuiltins();
 
         const allRows = await fetch(
           `${SB_URL}/rest/v1/projekt_grafik?projekt_id=eq.${encodeURIComponent(_pid)}&order=sort_order`,

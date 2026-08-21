@@ -484,12 +484,41 @@
       { id: 'credits',     file: 'credits.html',         trigKey: 'credits_trigger' },
     ];
 
+    // Live-tilstand: cache så built-in grafik kan flyttes til/fra Fullscreen LIVE.
+    var _OPlagOrder = [];
+    var _OPgrafMap  = {};
+    function _OPzForId(id) {
+      var idx = _OPlagOrder.indexOf(id);
+      return idx >= 0 ? String((_OPlagOrder.length - idx) * 1000) : '500';
+    }
+    function _OPsyncBuiltins() {
+      _OP_BUILTIN.forEach(function(bg) {
+        var fid = 'builtin-' + bg.id + '-frame';
+        var existing = document.getElementById(fid);
+        var assigned = (_OPgrafMap[bg.id] || 'hoved') === 'overlay-3';
+        if (assigned && !existing) {
+          var f = document.createElement('iframe');
+          f.id = fid; f.allowTransparency = true;
+          f.src = bg.file + '?p=' + projektId;
+          f.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;z-index:' + _OPzForId(bg.id) + ';';
+          document.body.appendChild(f);
+        } else if (!assigned && existing) {
+          existing.remove();
+        }
+      });
+    }
+
     function _OPdispatch(key, value, slot) {
       if (key === 'lt_trigger') {
         var ltFrame = document.getElementById('builtin-lower-third-frame');
         if (ltFrame && ltFrame.contentWindow) {
           try { ltFrame.contentWindow.postMessage({ type: 'sbTrigger', key: 'lt_trigger', value: value, slot: slot || '' }, '*'); } catch {}
         }
+        return;
+      }
+      if (key === 'credits_trigger') {
+        // credits.html er forældre-drevet (selv-abonnerer ikke) — kald den direkte
+        if (value === 'in') try { document.getElementById('builtin-credits-frame')?.contentWindow?.runAnimationIN?.(); } catch {}
         return;
       }
       var cIframe = _OPcustomFrameMap[key];
@@ -521,17 +550,10 @@
           return idx >= 0 ? String((lagOrder.length - idx) * 1000) : '500';
         }
 
-        // Built-in grafikker tildelt 'overlay-3'
-        for (const bg of _OP_BUILTIN) {
-          if ((grafMap[bg.id] || 'hoved') !== 'overlay-3') continue;
-          const fid = 'builtin-' + bg.id + '-frame';
-          if (document.getElementById(fid)) continue;
-          const f = document.createElement('iframe');
-          f.id = fid; f.allowTransparency = true;
-          f.src = bg.file + '?p=' + projektId;
-          f.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;z-index:' + zForId(bg.id) + ';';
-          document.body.appendChild(f);
-        }
+        // Cache til live sync + byg tildelte built-in grafik
+        _OPgrafMap  = grafMap;
+        _OPlagOrder = lagOrder;
+        _OPsyncBuiltins();
 
         // Custom grafikker tildelt 'overlay-3'
         const allRows = await fetch(
@@ -613,11 +635,17 @@
           }
           if (rec.key === 'overlay_lag_order') {
             var order = rec.value ? rec.value.split(',').map(function(s){return s.trim();}).filter(Boolean) : [];
+            _OPlagOrder = order;
             document.body.querySelectorAll('iframe[id]').forEach(function(f) {
               var id = f.id.replace('builtin-','').replace('-frame','').replace('custom-op-','custom-');
               var idx = order.indexOf(id);
               if (idx >= 0) f.style.zIndex = String((order.length - idx) * 1000);
             });
+            return;
+          }
+          if (rec.key === 'grafik_overlay_map') {
+            try { _OPgrafMap = rec.value ? JSON.parse(rec.value) : {}; } catch { return; }
+            _OPsyncBuiltins();
             return;
           }
           _OPdispatch(rec.key, rec.value, rec.slot);
