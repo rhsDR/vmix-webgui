@@ -105,13 +105,15 @@ async function fireMakro(id, slotOverride = '') {
 async function refreshGrafiktState() {
   const customKeys = customGrafik.map(g => g.trigger_key);
   const kommKeys = KOMM_BOKSE.map(k => k.triggerKey);
-  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey).filter(Boolean), ...customKeys, ...kommKeys, 'lt_slot', 'score_breaking_trigger', 'ticker_lag_order', 'lineup_slots', 'grafik_overlay_map'].join(',');
+  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey).filter(Boolean), ...customKeys, ...kommKeys, 'lt_slot', 'score_breaking_trigger', 'overlay_lag_order', 'ticker_lag_order', 'lineup_slots', 'grafik_overlay_map'].join(',');
   try {
     const rows = await sbGet('settings?select=key,value&key=in.(' + keys + ')&projekt_id=eq.' + aktivProjektId);
     rows.forEach(r => {
       if (r.key === 'ticker_lag_order') {
         tickerLagOrder = r.value ? r.value.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_TICKER_SUB_ORDER];
         DEFAULT_TICKER_SUB_ORDER.forEach(id => { if (!tickerLagOrder.includes(id)) tickerLagOrder.push(id); });
+      } else if (r.key === 'overlay_lag_order') {
+        if (r.value) overlayLagOrder = r.value.split(',').map(s => s.trim()).filter(Boolean);
       } else if (r.key === 'lineup_slots') {
         try { lineupSlots = JSON.parse(r.value); } catch { lineupSlots = {}; }
       } else if (r.key === 'grafik_overlay_map') {
@@ -120,6 +122,16 @@ async function refreshGrafiktState() {
         grafiktState[r.key] = r.value;
       }
     });
+    // Synk custom-grafik ind i lag-ordenen (overlay_lag_order er lige reloadet fra DB)
+    const _valid = new Set((customGrafik || []).map(g => 'custom-' + g.id.slice(0, 8)));
+    overlayLagOrder = overlayLagOrder.filter(id => !id.startsWith('custom-') || _valid.has(id));
+    tickerLagOrder  = tickerLagOrder.filter(id => !id.startsWith('custom-') || _valid.has(id));
+    (customGrafik || []).forEach(g => {
+      const sid = 'custom-' + g.id.slice(0, 8);
+      if (!overlayLagOrder.includes(sid) && !tickerLagOrder.includes(sid)) overlayLagOrder.push(sid);
+    });
+    // Engangs-flad-gøring af lag-ordenen (idempotent — se _migrateLagOrderToFlat)
+    if (typeof _migrateLagOrderToFlat === 'function') _migrateLagOrderToFlat();
   } catch {}
   renderGrafik();
 }
@@ -150,7 +162,7 @@ async function setBuiltinGrafikTarget(grafId, target) {
   grafikOverlayMap = { ...grafikOverlayMap, [grafId]: target };
   try {
     await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'grafik_overlay_map', value: JSON.stringify(grafikOverlayMap) });
-    toast('Overlay-vindue opdateret — genindlæs overlays i vMix', 'ok');
+    toast('Overlay-vindue opdateret', 'ok');
   } catch { toast('Fejl ved gem', 'err'); }
   renderGrafikOps();
 }
@@ -160,13 +172,6 @@ async function saveOverlayLagOrder() {
     await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'overlay_lag_order', value: overlayLagOrder.join(',') });
   } catch { toast('Fejl ved lag-gem', 'err'); }
 }
-
-async function saveTickerLagOrder() {
-  try {
-    await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'ticker_lag_order', value: tickerLagOrder.join(',') });
-  } catch { toast('Fejl ved ticker-lag-gem', 'err'); }
-}
-
 
 
 // ── GRAFIK TAB ────────────────────────────────────────────────
@@ -749,61 +754,8 @@ function renderGrafik() {
       </div>
     </details>`;
 
-  // ── HØJRE PANEL: LAG-RÆKKEFØLGE ─────────────────────────────────
-  const TICKER_SUB_META = {
-    'live-boks':       { label: 'Live Boks',              color: '#ff2244' },
-    'breaking':        { label: 'Breaking Ticker',        color: '#ff4444' },
-    'ticker-breaking': { label: 'Breaking Ticker Tekst',  color: '#ff4444' },
-    'score-breaking':  { label: 'Breaking Stillings Boks',color: '#ff4444' },
-    'ticker':          { label: 'Ticker',                 color: '#aa66ff' },
-    'score':           { label: 'Stillings Boks',         color: '#44cc88' },
-  };
-  const tickerSubCount = tickerLagOrder.length;
-  const tickerSubRows = tickerSubExpanded ? tickerLagOrder.map(subId => {
-    const cg = subId.startsWith('custom-')
-      ? customGrafik.find(g => 'custom-' + g.id.slice(0, 8) === subId) : null;
-    const m = cg
-      ? { label: cg.label.toUpperCase(), color: cg.color || '#888888' }
-      : (TICKER_SUB_META[subId] || { label: subId, color: '#888' });
-    return `<div class="lag-subrow" draggable="true" data-sublagid="${subId}">
-      <span class="lag-handle">⠿</span>
-      <span class="lag-label" style="color:${m.color}">${m.label}</span>
-      ${cg ? `<button class="lag-ticker-out-btn" data-customid="${subId}" style="margin-left:auto;font-size:9px;padding:1px 6px;background:none;border:1px solid #555;color:#aaa;border-radius:3px;cursor:pointer;">◂ Ud</button>` : ''}
-    </div>`;
-  }).join('') : '';
-  const lagRows = overlayLagOrder.map(id => {
-    const og = OVERLAY_GRAPHICS.find(x => x.id === id);
-    if (og) {
-      if (!og.file) return '';
-      if (id === 'ticker') {
-        return `<div class="lag-row" draggable="true" data-lagid="${id}">
-          <span class="lag-handle">⠿</span>
-          <span class="lag-label">${og.label}</span>
-          <button class="lag-sub-toggle${tickerSubExpanded ? ' open' : ''}" id="tickerSubToggle">${tickerSubExpanded ? '▾' : '▸'} ${tickerSubCount} lag</button>
-        </div>
-        ${tickerSubExpanded ? `<div class="lag-sublist" id="tickerSubLagList">${tickerSubRows}</div>` : ''}`;
-      }
-      return `<div class="lag-row" draggable="true" data-lagid="${id}">
-        <span class="lag-handle">⠿</span>
-        <span class="lag-label">${og.label}</span>
-      </div>`;
-    }
-    const cg = id.startsWith('custom-')
-      ? customGrafik.find(g => 'custom-' + g.id.slice(0, 8) === id)
-      : null;
-    if (!cg) return '';
-    return `<div class="lag-row" draggable="true" data-lagid="${id}">
-      <span class="lag-handle">⠿</span>
-      <span class="lag-label" style="color:${cg.color || '#888888'}">${esc(cg.label.toUpperCase())}</span>
-      <button class="lag-ticker-in-btn" data-customid="${id}" style="margin-left:auto;font-size:9px;padding:1px 6px;background:none;border:1px solid #555;color:#aaa;border-radius:3px;cursor:pointer;">Ticker ▸</button>
-    </div>`;
-  }).filter(Boolean).join('');
-  const lagHTML = `
-    <details class="grafik-lag-details">
-      <summary class="grafik-lag-summary">▸ LAG-RÆKKEFØLGE</summary>
-      <div style="font-size:11px;color:#444;margin:8px 0 10px;">Øverst = forrest i vMix overlay. Træk for at omsortere.</div>
-      <div id="overlayLagList" class="lag-list">${lagRows}</div>
-    </details>`;
+  // LAG-RÆKKEFØLGE er flyttet til OVERLAY-KOMPONISTEN (GRAFIK OPS) — lag-orden ét sted.
+  const lagHTML = '';
 
   // ── RENDER ───────────────────────────────────────────────────────
   const existingWrap = container.querySelector('.grafik-v2-wrap');
@@ -832,11 +784,6 @@ function renderGrafik() {
         <summary class="grafik-lag-summary">▸ COMPANION (HTTP POST)</summary>
         <div class="grafik-companion-section" style="border:none;padding:0;margin-top:8px;">${companionRows}</div>`;
       if (grafiktCompanionOpen) companionEl.open = true;
-    }
-    const lagListEl = existingWrap.querySelector('#overlayLagList');
-    if (lagListEl) {
-      lagListEl.innerHTML = lagRows;
-      delete lagListEl.dataset.dndInit;
     }
   }
 
@@ -1011,18 +958,6 @@ function renderGrafik() {
   const companionDetails = container.querySelector('#grafik-companion-details');
   if (companionDetails) {
     companionDetails.addEventListener('toggle', () => { grafiktCompanionOpen = companionDetails.open; });
-  }
-
-  initLagDragDrop();
-  initTickerSubLagDragDrop();
-
-  const tickerSubToggle = container.querySelector('#tickerSubToggle');
-  if (tickerSubToggle) {
-    tickerSubToggle.addEventListener('click', e => {
-      e.stopPropagation(); // undgå at trække ticker-rækken
-      tickerSubExpanded = !tickerSubExpanded;
-      renderGrafik();
-    });
   }
 
   // EGNE GRAFIK + MAKROER (alle faner)

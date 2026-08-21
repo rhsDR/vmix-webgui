@@ -326,109 +326,185 @@ async function deleteEgneGrafik(btn) {
   await deleteEgneGrafikById(id, path, label);
 }
 
-function initLagDragDrop() {
-  const list = document.getElementById('overlayLagList');
-  if (!list || list.dataset.dndInit) return;
-  list.dataset.dndInit = '1';
-  let dragSrcId = null;
+// ── OVERLAY-KOMPONIST ──────────────────────────────────────────
+// De tre vMix-overlay-vinduer (interne id'er = grafik_overlay_map-keys).
+const COMPOSER_OVERLAYS = [
+  { key: 'hoved',     label: 'Master',     hint: 'overlay.html' },
+  { key: 'komm',      label: 'Secondary',  hint: 'overlay-komm.html' },
+  { key: 'overlay-3', label: 'Fullscreen', hint: 'overlay-3.html' },
+];
 
-  list.querySelectorAll('.lag-row').forEach(row => {
-    row.addEventListener('dragstart', e => {
-      if (e.target.classList.contains('lag-sub-toggle')) { e.preventDefault(); return; }
-      dragSrcId = row.dataset.lagid;
-      e.dataTransfer.effectAllowed = 'move';
-      row.classList.add('dragging');
-    });
-    row.addEventListener('dragend', () => {
-      row.classList.remove('dragging');
-      list.querySelectorAll('.lag-row').forEach(r => r.classList.remove('drag-over'));
-    });
-    row.addEventListener('dragover', e => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      list.querySelectorAll('.lag-row').forEach(r => r.classList.remove('drag-over'));
-      if (row.dataset.lagid !== dragSrcId) row.classList.add('drag-over');
-    });
-    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
-    row.addEventListener('drop', e => {
-      e.stopPropagation();
-      row.classList.remove('drag-over');
-      if (!dragSrcId || dragSrcId === row.dataset.lagid) return;
-      const fromIdx = overlayLagOrder.indexOf(dragSrcId);
-      const toIdx   = overlayLagOrder.indexOf(row.dataset.lagid);
-      if (fromIdx < 0 || toIdx < 0) return;
-      const arr = [...overlayLagOrder];
-      arr.splice(fromIdx, 1);
-      arr.splice(toIdx, 0, dragSrcId);
-      overlayLagOrder = arr;
-      renderGrafik();
-      saveOverlayLagOrder();
-    });
-  });
-
-  list.querySelectorAll('.lag-ticker-in-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const id = btn.dataset.customid;
-      overlayLagOrder = overlayLagOrder.filter(x => x !== id);
-      if (!tickerLagOrder.includes(id)) tickerLagOrder.push(id);
-      tickerSubExpanded = true;
-      renderGrafik();
-      saveOverlayLagOrder();
-      saveTickerLagOrder();
-    });
-  });
+// Engangs-flad-gøring: flet gammel overlay_lag_order (hoved) + ticker_lag_order (nested
+// under-orden) til ÉN flad logisk liste. Ticker-frames (ticker-breaking/score-breaking)
+// collapses til det logiske 'breaking'-punkt (overlay.html ekspanderer det til frames).
+// Kaldes fra refreshGrafiktState når begge lister er friskt loadet fra DB. Idempotent.
+function _migrateLagOrderToFlat() {
+  // Allerede flad? (flad model har ticker-under-ids i selve hovedlisten)
+  if (overlayLagOrder.some(id => id === 'live-boks' || id === 'breaking' || id === 'score')) return;
+  const main = [...overlayLagOrder];
+  const sub  = [...tickerLagOrder];
+  const tIdx = main.indexOf('ticker');
+  let flat = tIdx >= 0 ? [...main.slice(0, tIdx), ...sub, ...main.slice(tIdx + 1)] : [...main, ...sub];
+  const hadBreakingFrame = flat.includes('ticker-breaking') || flat.includes('score-breaking');
+  flat = flat.filter(id => id !== 'ticker-breaking' && id !== 'score-breaking');
+  if (hadBreakingFrame && !flat.includes('breaking')) flat.push('breaking');
+  const seen = new Set();
+  flat = flat.filter(id => (seen.has(id) ? false : (seen.add(id), true)));
+  OVERLAY_GRAPHICS.forEach(g => { if (g.id !== 'komm' && !flat.includes(g.id)) flat.push(g.id); });
+  overlayLagOrder = flat;
+  tickerLagOrder  = [];
+  saveOverlayLagOrder();
+  // Ryd gammel ticker_lag_order i DB → overlay.html skifter til flad tilstand
+  try { sbUpsert('settings', { projekt_id: aktivProjektId, key: 'ticker_lag_order', value: '' }); } catch {}
 }
 
-function initTickerSubLagDragDrop() {
-  const list = document.getElementById('tickerSubLagList');
-  if (!list || list.dataset.dndInit) return;
-  list.dataset.dndInit = '1';
-  let dragSrcId = null;
+// Hvilket overlay en grafik ligger på. komm er låst til Secondary.
+function _composerTargetOf(id) {
+  if (id === 'komm') return 'komm';
+  if (id.startsWith('custom-')) {
+    const g = (customGrafik || []).find(x => 'custom-' + x.id.slice(0, 8) === id);
+    return (g && g.overlay_target) || 'hoved';
+  }
+  return grafikOverlayMap[id] || 'hoved';
+}
 
-  list.querySelectorAll('.lag-subrow').forEach(row => {
-    row.addEventListener('dragstart', e => {
-      dragSrcId = row.dataset.sublagid;
-      e.dataTransfer.effectAllowed = 'move';
-      row.classList.add('dragging');
-    });
-    row.addEventListener('dragend', () => {
-      row.classList.remove('dragging');
-      list.querySelectorAll('.lag-subrow').forEach(r => r.classList.remove('drag-over'));
-    });
-    row.addEventListener('dragover', e => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      list.querySelectorAll('.lag-subrow').forEach(r => r.classList.remove('drag-over'));
-      if (row.dataset.sublagid !== dragSrcId) row.classList.add('drag-over');
-    });
-    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
-    row.addEventListener('drop', e => {
-      e.stopPropagation();
-      row.classList.remove('drag-over');
-      if (!dragSrcId || dragSrcId === row.dataset.sublagid) return;
-      const fromIdx = tickerLagOrder.indexOf(dragSrcId);
-      const toIdx   = tickerLagOrder.indexOf(row.dataset.sublagid);
-      if (fromIdx < 0 || toIdx < 0) return;
-      const arr = [...tickerLagOrder];
-      arr.splice(fromIdx, 1);
-      arr.splice(toIdx, 0, dragSrcId);
-      tickerLagOrder = arr;
-      renderGrafik();
-      saveTickerLagOrder();
-    });
+// Hvilke grafikker hvert overlay-vindue faktisk kan vise (matcher overlay-sidernes
+// BUILTIN_GRAPHICS). breaking/score findes kun som frames på Master. Customs kan hostes
+// af alle tre. Bruges til at afvise flyt der ellers ville få grafikken til at forsvinde.
+const _COMPOSER_HOST = {
+  'hoved':     ['lower-third', 'ticker', 'breaking', 'score', 'live-boks', 'overlay-3', 'credits'],
+  'komm':      ['lower-third', 'ticker', 'live-boks', 'overlay-3', 'credits'],
+  'overlay-3': ['lower-third', 'ticker', 'live-boks', 'credits'],
+};
+function _composerCanHost(id, overlay) {
+  if (id.startsWith('custom-')) return ['hoved', 'komm', 'overlay-3'].includes(overlay);
+  return (_COMPOSER_HOST[overlay] || []).includes(id);
+}
+
+// Label/farve/live-status for et komponist-punkt. Standalone customs hører ikke til.
+function _composerItemMeta(id) {
+  if (id.startsWith('custom-')) {
+    const g = (customGrafik || []).find(x => 'custom-' + x.id.slice(0, 8) === id);
+    if (!g || g.overlay_mode === 'standalone') return null;
+    return { id, label: g.label, color: g.color || '#888888', live: (grafiktState[g.trigger_key] || 'out') !== 'out' };
+  }
+  const og = OVERLAY_GRAPHICS.find(x => x.id === id);
+  if (!og || og.id === 'komm') return null;
+  return { id, label: og.label, color: og.color, live: (grafiktState[og.triggerKey] || 'out') !== 'out' };
+}
+
+function _composerColumnItems(overlayKey) {
+  const items = [];
+  overlayLagOrder.forEach(id => {
+    if (id === 'komm') return;
+    if (_composerTargetOf(id) !== overlayKey) return;
+    const meta = _composerItemMeta(id);
+    if (meta) items.push(meta);
   });
+  if (overlayKey === 'komm') {
+    const kommLive = KOMM_BOKSE.some(k => (grafiktState[k.triggerKey] || 'out') !== 'out');
+    items.push({ id: 'komm', label: 'Kommentator-bokse', color: '#4a9eff', live: kommLive, locked: true });
+  }
+  return items;
+}
 
-  list.querySelectorAll('.lag-ticker-out-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const id = btn.dataset.customid;
-      tickerLagOrder = tickerLagOrder.filter(x => x !== id);
-      if (!overlayLagOrder.includes(id)) overlayLagOrder.push(id);
-      renderGrafik();
-      saveOverlayLagOrder();
-      saveTickerLagOrder();
-    });
+function _composerGridHTML() {
+  return COMPOSER_OVERLAYS.map(ov => {
+    const rows = _composerColumnItems(ov.key).map(m => `
+      <div class="comp-row${m.locked ? ' locked' : ''}" draggable="${m.locked ? 'false' : 'true'}" data-cid="${m.id}">
+        <span class="comp-handle">${m.locked ? '🔒' : '⠿'}</span>
+        <span class="gops-status ${m.live ? 'live' : 'off'}">${m.live ? 'LIVE' : 'OFF'}</span>
+        <span class="comp-label" style="color:${m.color || '#ccc'}">${esc(m.label)}</span>
+      </div>`).join('') || '<div class="comp-empty">Ingen grafik her</div>';
+    return `<div class="comp-col">
+        <div class="comp-col-head">${ov.label}<span class="comp-col-hint">${ov.hint}</span></div>
+        <div class="comp-col-list" data-overlay="${ov.key}">${rows}</div>
+      </div>`;
+  }).join('');
+}
+
+// Flyt en custom-grafik til et andet overlay (overlay_target på projekt_grafik-rækken).
+async function setCustomGrafikTarget(shortId, target) {
+  const g = (customGrafik || []).find(x => 'custom-' + x.id.slice(0, 8) === shortId);
+  if (!g) return;
+  g.overlay_target = target;
+  try { await sbPatch('projekt_grafik?id=eq.' + g.id, { overlay_target: target }); }
+  catch { toast('Fejl ved flyt', 'err'); }
+}
+
+function initComposerDnd() {
+  const grid = document.querySelector('.comp-grid');
+  if (!grid || grid.dataset.dndInit) return;
+  grid.dataset.dndInit = '1';
+  let dragId = null;
+
+  const clear = () => grid.querySelectorAll('.drag-over, .comp-col-list.drag-target')
+    .forEach(el => el.classList.remove('drag-over', 'drag-target'));
+
+  grid.addEventListener('dragstart', e => {
+    const row = e.target.closest('.comp-row');
+    if (!row || row.classList.contains('locked')) { e.preventDefault(); return; }
+    dragId = row.dataset.cid;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => row.classList.add('dragging'), 0);
+  });
+  grid.addEventListener('dragend', () => {
+    grid.querySelectorAll('.dragging').forEach(r => r.classList.remove('dragging'));
+    clear(); dragId = null;
+  });
+  grid.addEventListener('dragover', e => {
+    if (!dragId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    clear();
+    const row = e.target.closest('.comp-row');
+    const list = e.target.closest('.comp-col-list');
+    if (row && row.dataset.cid !== dragId) row.classList.add('drag-over');
+    else if (list) list.classList.add('drag-target');
+  });
+  grid.addEventListener('drop', async e => {
+    e.preventDefault();
+    const list = e.target.closest('.comp-col-list');
+    clear();
+    if (!dragId || !list) { dragId = null; return; }
+    const id = dragId; dragId = null;
+    const newOverlay = list.dataset.overlay;
+    const oldOverlay = _composerTargetOf(id);
+    if (newOverlay !== oldOverlay && !_composerCanHost(id, newOverlay)) {
+      const ovLabel = (COMPOSER_OVERLAYS.find(o => o.key === newOverlay) || {}).label || newOverlay;
+      toast((_composerItemMeta(id)?.label || 'Grafik') + ' kan ikke ligge på ' + ovLabel, 'err');
+      return;
+    }
+    const targetRow  = e.target.closest('.comp-row');
+
+    // Ny flad rækkefølge (øverst = forrest)
+    const arr = overlayLagOrder.filter(x => x !== id);
+    let insertIdx;
+    if (targetRow && targetRow.dataset.cid !== id && arr.includes(targetRow.dataset.cid)) {
+      const tIdx = arr.indexOf(targetRow.dataset.cid);
+      const rect = targetRow.getBoundingClientRect();
+      insertIdx = (e.clientY < rect.top + rect.height / 2) ? tIdx : tIdx + 1;
+    } else {
+      // Slip på tom kolonne-baggrund → nederst i den kolonne
+      let last = -1;
+      arr.forEach((x, i) => { if (_composerTargetOf(x) === newOverlay) last = i; });
+      insertIdx = last >= 0 ? last + 1 : arr.length;
+    }
+    arr.splice(insertIdx, 0, id);
+    overlayLagOrder = arr;
+
+    // Skift overlay hvis kolonne ændret
+    const tasks = [saveOverlayLagOrder()];
+    if (oldOverlay !== newOverlay) {
+      if (id.startsWith('custom-')) {
+        tasks.push(setCustomGrafikTarget(id, newOverlay));
+      } else {
+        grafikOverlayMap = { ...grafikOverlayMap, [id]: newOverlay };
+        tasks.push(sbUpsert('settings', { projekt_id: aktivProjektId, key: 'grafik_overlay_map', value: JSON.stringify(grafikOverlayMap) }));
+      }
+    }
+    renderGrafikOps();
+    try { await Promise.all(tasks); } catch { toast('Fejl ved gem', 'err'); }
   });
 }
 
@@ -533,20 +609,8 @@ function renderGrafikOps() {
       <button class="copy-btn icon-btn" data-copy="${w.url}" style="padding:3px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button>
     </div>`).join('');
 
-  // ─ Sektion: BUILT-IN GRAFIKKER ─
-  const targetOpts = '<option value="hoved">Hoved Overlay</option><option value="komm">Kommentator</option><option value="overlay-3">Overlay 3</option>';
-  const builtinRows = OVERLAY_GRAPHICS.filter(g => g.type !== 'komm' && g.type !== 'lineup').map(g => {
-    const isLive = (grafiktState[g.triggerKey] || 'out') !== 'out';
-    const curTarget = grafikOverlayMap[g.id] || 'hoved';
-    const paBtn = g.triggerKey ? `<button data-trig="${g.triggerKey}" data-val="in" style="padding:4px 10px;background:#1a3a1a;border:1px solid #2d5a2d;color:#86efac;border-radius:5px;cursor:pointer;font-size:11px;">▶ PÅ</button>` : '';
-    const afBtn = g.triggerKey ? `<button data-trig="${g.triggerKey}" data-val="out" style="padding:4px 10px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:5px;cursor:pointer;font-size:11px;">&#60; AF</button>` : '';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #1a1a1a;">
-      <span class="gops-status ${isLive ? 'live' : 'off'}">${isLive ? 'LIVE' : 'OFF'}</span>
-      <span style="flex:1;font-size:11px;color:#ccc;">${g.label}</span>
-      <select data-builtin-id="${g.id}" style="background:#111;border:1px solid #333;color:#aaa;padding:3px 7px;border-radius:5px;font-size:11px;">${targetOpts.replace(`value="${curTarget}"`, `value="${curTarget}" selected`)}</select>
-      <div style="display:flex;gap:4px;">${afBtn}${paBtn}</div>
-    </div>`;
-  }).join('');
+  // ─ Sektion: OVERLAY-KOMPONIST ─
+  const composerGrid = _composerGridHTML();
 
   // ─ Sektion: EGNE GRAFIKKER ─
   const grafikkort = (customGrafik || []).map(g => {
@@ -611,9 +675,9 @@ function renderGrafikOps() {
         <div style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 12px;">${overlayRows}</div>
       </details>
       <details open class="gops-section" style="margin-bottom:14px;">
-        <summary class="gops-summary">BUILT-IN GRAFIKKER <span class="gops-summary-hint">— vælg overlay-vindue</span></summary>
-        <div style="font-size:11px;color:#8c8c8c;margin:6px 0 8px;">Ændringer træder i kraft næste gang overlayene genindlæses i vMix.</div>
-        <div style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:4px 12px;">${builtinRows}</div>
+        <summary class="gops-summary">OVERLAY-KOMPONIST <span class="gops-summary-hint">— placér &amp; stabl grafik pr. overlay</span></summary>
+        <div style="font-size:11px;color:#8c8c8c;margin:6px 0 10px;">Øverst = forrest i vMix. Træk lodret for z-orden · træk mellem kolonner for at flytte til et andet overlay. Ændringer slår igennem live.</div>
+        <div class="comp-grid">${composerGrid}</div>
       </details>
       <details open class="gops-section">
         <summary class="gops-summary">EGNE GRAFIKKER</summary>
@@ -633,9 +697,8 @@ function renderGrafikOps() {
     btn.addEventListener('click', () => _grafikOpsDeleteConfirm(btn, btn.dataset.delId, btn.dataset.delPath, btn.dataset.delLabel)));
   el.querySelectorAll('[data-trig][data-val]').forEach(btn =>
     btn.addEventListener('click', () => { setGrafiktTrigger(btn.dataset.trig, btn.dataset.val); renderGrafikOps(); }));
-  el.querySelectorAll('[data-builtin-id]').forEach(sel =>
-    sel.addEventListener('change', () => setBuiltinGrafikTarget(sel.dataset.builtinId, sel.value)));
   el.querySelector('#gops-add-btn')?.addEventListener('click', () => openEgneGrafikModal());
+  initComposerDnd();
 }
 
 function _grafikOpsDeleteConfirm(btn, id, filePath, label) {

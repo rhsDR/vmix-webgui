@@ -92,11 +92,7 @@ sbClient.channel('db-changes')
           const raw = p.new.value || '';
           overlayLagOrder = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_LAG_ORDER];
           if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
-        } else if (p.new.key === 'ticker_lag_order') {
-          const raw = p.new.value || '';
-          tickerLagOrder = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_TICKER_SUB_ORDER];
-          DEFAULT_TICKER_SUB_ORDER.forEach(id => { if (!tickerLagOrder.includes(id)) tickerLagOrder.push(id); });
-          if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
+          if (document.getElementById('tab-grafik-ops')?.classList.contains('active')) _debouncedRenderGrafikOps();
         } else if (p.new.key === 'credits_speed') {
           refreshCredits();
         } else if (p.new.key === 'komm_master') {

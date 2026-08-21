@@ -50,6 +50,13 @@
     const DEFAULT_TICKER_SUB_ORDER = ['live-boks', 'ticker-breaking', 'score-breaking', 'ticker', 'score'];
     let tickerSubOrder = [...DEFAULT_TICKER_SUB_ORDER];
     let mainOrder = [...DEFAULT_ORDER];
+    // Flad lag-model (efter overlay-komponist-migrering): hvert id = selvstændigt punkt,
+    // z efter position. Detekteres ved at hovedlisten indeholder et tidligere ticker-under-id.
+    // 'breaking' ekspanderer til de to breaking-frames. Indtil et projekt er migreret bruges
+    // den gamle nested ticker-gruppe (legacy) — så live-overlays aldrig får forkert z i overgangen.
+    let _lagFlat = false;
+    const FRAME_EXPAND = { 'breaking': ['ticker-breaking', 'score-breaking'] };
+    function _detectFlat(raw) { return /(^|,)\s*(live-boks|breaking|score)\s*(,|$)/.test(raw || ''); }
 
     const params  = new URLSearchParams(window.location.search);
     const pid     = params.get('p') || '';
@@ -70,6 +77,20 @@
 
     function applyOrder(mainOrder) {
       const total = mainOrder.length;
+      if (_lagFlat) {
+        // Flad model: hvert id → sin(e) frame(s), z efter position. 'breaking' ekspanderer
+        // til ticker-breaking + score-breaking (naboliggende z, så de aldrig hænger fast).
+        mainOrder.forEach((id, idx) => {
+          const z = (total - idx) * 1000;
+          const frameIds = FRAME_EXPAND[id] || [id];
+          frameIds.forEach((fid, k) => {
+            const frame = document.getElementById(fid + '-frame');
+            if (frame) frame.style.zIndex = z - k;
+          });
+        });
+        return;
+      }
+      // Legacy: ticker som gruppe med nested sub-orden
       mainOrder.forEach((id, idx) => {
         const baseZ = (total - idx) * 1000;
         if (id === 'ticker') {
@@ -99,9 +120,10 @@
         const [mainRows, subRows, mapRows] = await Promise.all(fetches);
         const rawMain = mainRows[0]?.value || '';
         const rawSub  = subRows[0]?.value  || '';
+        _lagFlat = _detectFlat(rawMain);
         mainOrder = rawMain ? rawMain.split(',').map(s => s.trim()).filter(Boolean) : [...DEFAULT_ORDER];
         tickerSubOrder  = rawSub  ? rawSub.split(',').map(s => s.trim()).filter(Boolean)  : [...DEFAULT_TICKER_SUB_ORDER];
-        if (!mainOrder.includes('ticker')) mainOrder = [...mainOrder, 'ticker'];
+        if (!_lagFlat && !mainOrder.includes('ticker')) mainOrder = [...mainOrder, 'ticker'];
         applyOrder(mainOrder);
         // Respekter overlay_target: sæt 'komm'-tildelte iframes til about:blank
         const grafMap = (mapRows[0]?.value) ? JSON.parse(mapRows[0].value) : {};
@@ -194,8 +216,9 @@
             var rec = msg.payload.data.record;
             if (!rec || rec.projekt_id !== pid) return;
             if (rec.key === 'overlay_lag_order') {
+              _lagFlat = _detectFlat(rec.value);
               mainOrder = rec.value ? rec.value.split(',').map(function(s){return s.trim();}).filter(Boolean) : [...DEFAULT_ORDER];
-              if (!mainOrder.includes('ticker')) mainOrder = [...mainOrder, 'ticker'];
+              if (!_lagFlat && !mainOrder.includes('ticker')) mainOrder = [...mainOrder, 'ticker'];
               applyOrder(mainOrder); return;
             }
             if (rec.key === 'ticker_lag_order') {
@@ -229,7 +252,7 @@
           `${SB_URL}/rest/v1/projekt_grafik?projekt_id=eq.${encodeURIComponent(pid)}&order=sort_order`,
           { headers: SB_HDR }
         ).then(r => r.json());
-        const rows = Array.isArray(allRows) ? allRows.filter(g => g.overlay_mode !== 'standalone' && g.overlay_target !== 'komm') : [];
+        const rows = Array.isArray(allRows) ? allRows.filter(g => g.overlay_mode !== 'standalone' && g.overlay_target !== 'komm' && g.overlay_target !== 'overlay-3') : [];
         if (rows.length) {
           await Promise.all(rows.map(async g => {
             const frameId = 'custom-' + g.id.slice(0, 8) + '-frame';
