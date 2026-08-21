@@ -358,9 +358,11 @@ function _migrateLagOrderToFlat() {
   try { sbUpsert('settings', { projekt_id: aktivProjektId, key: 'ticker_lag_order', value: '' }); } catch {}
 }
 
-// Hvilket overlay en grafik ligger på. komm er låst til Secondary.
+// Hvilket overlay en grafik ligger på. komm er låst til Secondary; opstilling
+// (overlay-3) er selve Fullscreen-sidens indhold og er derfor låst til Fullscreen.
 function _composerTargetOf(id) {
   if (id === 'komm') return 'komm';
+  if (id === 'overlay-3') return 'overlay-3';
   if (id.startsWith('custom-')) {
     const g = (customGrafik || []).find(x => 'custom-' + x.id.slice(0, 8) === id);
     return (g && g.overlay_target) || 'hoved';
@@ -396,14 +398,19 @@ function _composerItemMeta(id) {
 function _composerColumnItems(overlayKey) {
   const items = [];
   overlayLagOrder.forEach(id => {
-    if (id === 'komm') return;
+    if (id === 'komm' || id === 'overlay-3') return; // låste punkter håndteres nedenfor
     if (_composerTargetOf(id) !== overlayKey) return;
     const meta = _composerItemMeta(id);
     if (meta) items.push(meta);
   });
   if (overlayKey === 'komm') {
     const kommLive = KOMM_BOKSE.some(k => (grafiktState[k.triggerKey] || 'out') !== 'out');
-    items.push({ id: 'komm', label: 'Kommentator-bokse', color: '#4a9eff', live: kommLive, locked: true });
+    items.push({ id: 'komm', label: 'Kommentator-bokse', color: '#4a9eff', live: kommLive, locked: true, lockHint: 'Kommentator-bokse vises altid på Secondary' });
+  }
+  if (overlayKey === 'overlay-3') {
+    const og = OVERLAY_GRAPHICS.find(x => x.id === 'overlay-3');
+    const live = (grafiktState['lineup_trigger'] || 'out') !== 'out';
+    items.push({ id: 'overlay-3', label: 'Opstilling', color: og ? og.color : '#ff8833', live, locked: true, lockHint: 'Opstillingen ER selve Fullscreen-overlayet' });
   }
   return items;
 }
@@ -411,7 +418,7 @@ function _composerColumnItems(overlayKey) {
 function _composerGridHTML() {
   return COMPOSER_OVERLAYS.map(ov => {
     const rows = _composerColumnItems(ov.key).map(m => `
-      <div class="comp-row${m.locked ? ' locked' : ''}" draggable="${m.locked ? 'false' : 'true'}" data-cid="${m.id}">
+      <div class="comp-row${m.locked ? ' locked' : ''}" draggable="${m.locked ? 'false' : 'true'}" data-cid="${m.id}"${m.lockHint ? ` title="${esc(m.lockHint)}"` : ''}>
         <span class="comp-handle">${m.locked ? '🔒' : '⠿'}</span>
         <span class="gops-status ${m.live ? 'live' : 'off'}">${m.live ? 'LIVE' : 'OFF'}</span>
         <span class="comp-label" style="color:${m.color || '#ccc'}">${esc(m.label)}</span>
