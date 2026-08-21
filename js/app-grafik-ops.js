@@ -298,7 +298,7 @@ function _egneGrafikShowConfirm(g) {
       <div style="display:flex;align-items:center;gap:6px;"><span style="flex:1;font-size:11px;color:#aaa;background:#111;border:1px solid #333;padding:5px 8px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fileUrlWithPid}</span>
       <button onclick="navigator.clipboard.writeText(${JSON.stringify(fileUrlWithPid)});toast('Kopieret','ok')" style="padding:4px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button></div></div>`;
   } else {
-    const tLabel = g.overlay_target === 'komm' ? 'Kommentator (overlay-komm.html)' : 'Hoved Overlay (overlay.html)';
+    const tLabel = g.overlay_target === 'komm' ? 'Secondary (secondary.html)' : 'Master (master.html)';
     html += `<div style="font-size:11px;color:#9c9c9c;margin-bottom:10px;padding:8px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;">Indlejret i ${tLabel} — genindlæs overlayet i vMix for at aktivere grafikken.</div>`;
   }
   html += `<div><div style="font-size:11px;color:#9c9c9c;letter-spacing:1px;margin-bottom:6px;">COMPANION LINKS:</div>
@@ -329,14 +329,14 @@ async function deleteEgneGrafik(btn) {
 // ── OVERLAY-KOMPONIST ──────────────────────────────────────────
 // De tre vMix-overlay-vinduer (interne id'er = grafik_overlay_map-keys).
 const COMPOSER_OVERLAYS = [
-  { key: 'hoved',     label: 'Master',     hint: 'overlay.html' },
-  { key: 'komm',      label: 'Secondary',  hint: 'overlay-komm.html' },
-  { key: 'overlay-3', label: 'Fullscreen', hint: 'overlay-3.html' },
+  { key: 'hoved',     label: 'Master',     hint: 'master.html' },
+  { key: 'komm',      label: 'Secondary',  hint: 'secondary.html' },
+  { key: 'overlay-3', label: 'Fullscreen', hint: 'fullscreen.html' },
 ];
 
 // Engangs-flad-gøring: flet gammel overlay_lag_order (hoved) + ticker_lag_order (nested
 // under-orden) til ÉN flad logisk liste. Ticker-frames (ticker-breaking/score-breaking)
-// collapses til det logiske 'breaking'-punkt (overlay.html ekspanderer det til frames).
+// collapses til det logiske 'breaking'-punkt (master.html ekspanderer det til frames).
 // Kaldes fra refreshGrafiktState når begge lister er friskt loadet fra DB. Idempotent.
 function _migrateLagOrderToFlat() {
   // Allerede flad? (flad model har ticker-under-ids i selve hovedlisten)
@@ -354,7 +354,7 @@ function _migrateLagOrderToFlat() {
   overlayLagOrder = flat;
   tickerLagOrder  = [];
   saveOverlayLagOrder();
-  // Ryd gammel ticker_lag_order i DB → overlay.html skifter til flad tilstand
+  // Ryd gammel ticker_lag_order i DB → master.html skifter til flad tilstand
   try { sbUpsert('settings', { projekt_id: aktivProjektId, key: 'ticker_lag_order', value: '' }); } catch {}
 }
 
@@ -601,9 +601,9 @@ function renderGrafikOps() {
 
   // ─ Sektion: OVERLAY VINDUER ─
   const builtinWindows = [
-    { label: 'Hoved Overlay', url: `${origin}/overlay.html?p=${pid}` },
-    { label: 'Kommentator', url: `${origin}/overlay-komm.html?p=${pid}` },
-    { label: 'Overlay 3', url: `${origin}/overlay-3.html?p=${pid}` },
+    { label: 'Master', url: `${origin}/master.html?p=${pid}` },
+    { label: 'Secondary', url: `${origin}/secondary.html?p=${pid}` },
+    { label: 'Fullscreen', url: `${origin}/fullscreen.html?p=${pid}` },
   ];
   (customGrafik || []).filter(g => g.overlay_mode === 'standalone').forEach(g => {
     const inputNr = g.overlay_input ? `Input ${g.overlay_input}  ` : '';
@@ -622,7 +622,7 @@ function renderGrafikOps() {
   // ─ Sektion: EGNE GRAFIKKER ─
   const grafikkort = (customGrafik || []).map(g => {
     const isLive = grafiktState[g.trigger_key] === 'in';
-    const targetLabel = g.overlay_target === 'komm' ? 'Kommentator' : 'Hoved Overlay';
+    const targetLabel = g.overlay_target === 'komm' ? 'Secondary' : 'Master';
     const tilstand = g.overlay_mode === 'standalone' ? `Standalone${g.overlay_input ? ' · Input ' + g.overlay_input : ''}` : `Indlejret i ${targetLabel}`;
     const fileUrlWithPid = g.overlay_mode === 'standalone' ? (g.file_url + '?p=' + pid) : null;
     const onUrl  = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${encodeURIComponent(g.trigger_key)}&value=in`;

@@ -44,7 +44,7 @@ const OVERLAY_GRAPHICS = [
   { id: 'breaking',    label: 'Breaking Ticker',  file: null,                  triggerKey: 'breaking_trigger',   type: 'simple',  color: '#ff4444', subOf: 'ticker' },
   { id: 'score',       label: 'Stillings',        file: null,                  triggerKey: 'score_trigger',      type: 'simple',  color: '#44cc88', subOf: 'ticker' },
   { id: 'live-boks',  label: 'Live Boks',        file: 'Graphics/LIve_bokse/Live_BOKS_gsap.html', triggerKey: 'live_boks_trigger', type: 'simple', color: '#ff2244', subOf: 'ticker' },
-  { id: 'overlay-3',   label: 'Overlay 3',        file: 'overlay-3.html',      triggerKey: 'lineup_trigger',     type: 'lineup',  color: '#ff8833' },
+  { id: 'overlay-3',   label: 'Opstilling',       file: 'fullscreen.html',      triggerKey: 'lineup_trigger',     type: 'lineup',  color: '#ff8833' },
   { id: 'credits',     label: 'Credits',          file: 'credits.html',        triggerKey: 'credits_trigger',    type: 'credits', color: '#ffcc44' },
   { id: 'komm',        label: 'Komm Boks',        file: null,                  triggerKey: null,                 type: 'komm',    color: '#4a9eff' },
 ];

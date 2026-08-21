@@ -2,7 +2,7 @@
 <html lang="da">
 <head>
   <meta charset="UTF-8">
-  <title>Komm Overlay</title>
+  <title>Secondary</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
@@ -46,7 +46,7 @@
       { id: 'lower-third', file: 'lower-third.html',    trigKey: 'lt_trigger' },
       { id: 'ticker',      file: 'Graphics/Ticker/Ticker_gsap.html', trigKey: 'ticker_ovl_trigger' },
       { id: 'live-boks',   file: 'Graphics/LIve_bokse/Live_BOKS_gsap.html', trigKey: 'live_boks_trigger' },
-      { id: 'overlay-3',   file: 'overlay-3.html',        trigKey: 'lineup_trigger' },
+      { id: 'overlay-3',   file: 'fullscreen.html',        trigKey: 'lineup_trigger' },
       { id: 'credits',     file: 'credits.html',         trigKey: 'credits_trigger' },
     ];
 
@@ -207,7 +207,7 @@
         const grafMap  = (Array.isArray(mapRows) && mapRows[0]?.value) ? JSON.parse(mapRows[0].value) : {};
         const lagOrder = lagRows[0]?.value ? lagRows[0].value.split(',').map(s => s.trim()).filter(Boolean) : [];
 
-        // z-index baseret på overlay_lag_order — samme formel som overlay.html's applyOrder
+        // z-index baseret på overlay_lag_order — samme formel som master.html's applyOrder
         function zForId(id) {
           const idx = lagOrder.indexOf(id);
           return idx >= 0 ? String((lagOrder.length - idx) * 1000) : '500';

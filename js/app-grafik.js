@@ -250,7 +250,7 @@ function renderGrafik() {
     : '';
 
   const overlayUrl       = g ? `${origin}/${g.file}?p=${pid}` : '';
-  const combinedUrl      = `${origin}/overlay.html?p=${pid}`;
+  const combinedUrl      = `${origin}/master.html?p=${pid}`;
   const previewIframeUrl = g ? `${origin}/${g.file}?p=${pid}&preview=1` : '';
 
   let contentHTML = '';
@@ -424,7 +424,7 @@ function renderGrafik() {
         const udeNavn    = k.hold2Lang || k.hold2Kort || '—';
         const prvHjemId  = `lu-${matchId}-home`;
         const prvUdeId   = `lu-${matchId}-away`;
-        const prvUrl     = `${origin}/overlay-3.html?p=${pid}`;
+        const prvUrl     = `${origin}/fullscreen.html?p=${pid}`;
         return `<div class="grafik-block${isActive ? ' active' : ''}" style="--g-color:${g.color}">
           <div class="grafik-block-info">
             <span class="grafik-block-name">${esc(hjemNavn)} <span class="muted">vs</span> ${esc(udeNavn)}</span>
@@ -456,7 +456,7 @@ function renderGrafik() {
       const matchTxt = (kamp && kamp.hold1Kort && kamp.hold2Kort)
         ? esc(kamp.hold1Kort) + ' vs ' + esc(kamp.hold2Kort)
         : '—';
-      const kommUrl = `${origin}/overlay-komm.html?p=${pid}`;
+      const kommUrl = `${origin}/secondary.html?p=${pid}`;
       return `<div class="grafik-block${isOn ? ' active' : ''}" style="--g-color:${g.color};opacity:${isActive ? 1 : 0.4}">
         <div class="grafik-block-info">
           <span class="grafik-block-name">K-${k.slot} &nbsp; ${matchTxt}</span>
@@ -559,12 +559,12 @@ function renderGrafik() {
     <div style="margin-top:10px;">
       <div class="grafik-companion-head" style="margin-bottom:6px;">KOMM OVERLAY</div>
       <div class="grafik-preview-box">
-        <iframe class="grafik-onair-iframe" src="${origin}/overlay-komm.html?p=${pid}"></iframe>
+        <iframe class="grafik-onair-iframe" src="${origin}/secondary.html?p=${pid}"></iframe>
       </div>
       <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
         <span class="grafik-companion-url" style="flex:1;font-size:10px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-          title="${origin}/overlay-komm.html?p=${pid}">${origin}/overlay-komm.html?p=${pid}</span>
-        <button class="copy-btn icon-btn" data-copy="${origin}/overlay-komm.html?p=${pid}">⎘</button>
+          title="${origin}/secondary.html?p=${pid}">${origin}/secondary.html?p=${pid}</span>
+        <button class="copy-btn icon-btn" data-copy="${origin}/secondary.html?p=${pid}">⎘</button>
       </div>
       <div style="display:flex;gap:6px;margin-top:6px;">
         <button class="grafik-btn-out komm-alle-af-btn" style="flex:1">&lt; AF</button>
@@ -641,7 +641,7 @@ function renderGrafik() {
         </div>`;
       }).join('');
       companionRows = kampRows + `
-      <div style="font-size:10px;color:#666;margin-top:6px;padding-top:6px;border-top:1px solid #222">Sluk Overlay 3</div>
+      <div style="font-size:10px;color:#666;margin-top:6px;padding-top:6px;border-top:1px solid #222">Sluk Opstilling</div>
       <div class="grafik-companion-row">
         <span class="grafik-companion-lbl">AF</span>
         <span class="grafik-companion-url" title="${afUrl}">${afUrl}</span>

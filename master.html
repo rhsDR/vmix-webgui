@@ -2,7 +2,7 @@
 <html lang="da">
 <head>
   <meta charset="UTF-8">
-  <title>Overlay</title>
+  <title>Master</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
@@ -43,7 +43,7 @@
       { id: 'ticker-breaking', file: 'Graphics/Ticker/Ticker_breaking_gsap.html' },
       { id: 'score',           file: 'Graphics/Stillings_boks/Stillings_boks_uden_live_boks_gsap.html' },
       { id: 'score-breaking',  file: 'Graphics/Stillings_boks/Stillings_boks_BREAKING_MASTER.html' },
-      { id: 'overlay-3',   file: 'overlay-3.html', embed: true },
+      { id: 'overlay-3',   file: 'fullscreen.html', embed: true },
       { id: 'credits',     file: 'credits.html'         },
     ];
     const DEFAULT_ORDER = GRAPHICS.map(g => g.id); // top→bund
@@ -147,7 +147,7 @@
     if (pid) {
       (function() {
         function _dispatch(key, value) {
-          // lineup_trigger håndteres af overlay-3.html selv via dens egen kanal
+          // lineup_trigger håndteres af fullscreen.html selv via dens egen kanal
           if (key === 'lineup_trigger') return;
           if (key === 'credits_trigger') {
             if (value === 'in') try { document.getElementById('credits-frame')?.contentWindow?.runAnimationIN?.(); } catch {}
@@ -193,7 +193,7 @@
                 } catch {}
                 return;
               }
-              // lineup_trigger håndteres af overlay-3.html selv via dens egen kanal
+              // lineup_trigger håndteres af fullscreen.html selv via dens egen kanal
               if (p.key === 'lineup_trigger') return;
               var bIframe = customFrameMap[p.key];
               if (!bIframe) return;
@@ -259,7 +259,7 @@
             if (document.getElementById(frameId)) return;
             let html;
             try { html = await fetch(g.file_url, { cache: 'no-store' }).then(r => r.text()); } catch { return; }
-            // Bloker Supabase realtime og fetch i iframen — overlay.html styrer al trigger-logik direkte
+            // Bloker Supabase realtime og fetch i iframen — master.html styrer al trigger-logik direkte
             const _ahs = (g.auto_hide_seconds > 0) ? Number(g.auto_hide_seconds) : 0;
             const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(pid)};window.__IS_PREVIEW=false;(function(){var _f=window.fetch;window.fetch=function(u,o){if(typeof u==='string'&&u.indexOf('supabase.co')!==-1)return Promise.resolve({ok:true,json:function(){return Promise.resolve([])}});return _f.apply(this,arguments);};})();window.__forceOut=function(){if(typeof window._spxVisible!=='undefined')window._spxVisible=false;if(window.gsap)window.gsap.killTweensOf('*');if(document.body)document.body.style.opacity='0';};document.addEventListener('DOMContentLoaded',function(){if(document.body)document.body.style.opacity='0';var _ahs=${_ahs};var _aht=null;var _o=window.runAnimationIN;if(typeof _o==='function')window.runAnimationIN=function(){if(document.body)document.body.style.opacity='';if(_aht){clearTimeout(_aht);_aht=null;}_o.apply(this,arguments);if(_ahs>0)_aht=setTimeout(function(){_aht=null;if(typeof window.runAnimationOUT==='function')window.runAnimationOUT();},_ahs*1000);};});Object.defineProperty(window,'supabase',{value:{createClient:()=>({channel:()=>({on:()=>({on:()=>({subscribe:()=>{}}),subscribe:()=>{}}),subscribe:()=>{}})})},writable:false,configurable:false});<\/script>`;
             const injectedHtml = html.replace(/(<html[^>]*>)/i, '$1' + inject);
