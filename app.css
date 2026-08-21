@@ -2048,3 +2048,37 @@
     .comp-label { flex: 1; font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .comp-empty { font-size: 11px; color: #6a6a6a; text-align: center; padding: 18px 6px; border: 1px dashed #2c2c2c; border-radius: 6px; }
     @media (max-width: 620px) { .comp-grid { grid-template-columns: 1fr; } }
+
+    /* ── GRAFIK-AGENT ──────────────────────────────────────────────── */
+    .ga-wrap { max-width: 760px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .ga-head .ga-title { font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #eee; }
+    .ga-head .ga-sub { font-size: 12px; color: #8c8c8c; margin-top: 4px; line-height: 1.5; }
+    .ga-messages { background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 8px; padding: 12px; min-height: 220px; max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+    .ga-empty { color: #6a6a6a; font-size: 12px; text-align: center; padding: 40px 12px; line-height: 1.6; }
+    .ga-empty em { color: #9a9a9a; font-style: italic; }
+    .ga-msg { max-width: 86%; padding: 8px 11px; border-radius: 10px; font-size: 12.5px; line-height: 1.5; word-wrap: break-word; }
+    .ga-user { align-self: flex-end; background: #1a2a3a; border: 1px solid #1d4ed8; color: #cfe2ff; }
+    .ga-agent { align-self: flex-start; background: #161616; border: 1px solid #2c2c2c; color: #ddd; }
+    .ga-typing { color: #8c8c8c; font-style: italic; }
+    .ga-error { color: #fca5a5; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.4); border-radius: 8px; padding: 9px 12px; font-size: 12px; }
+    .ga-saved { color: #86efac; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.4); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; }
+    .ga-config-card { background: #111; border: 1px solid #2d5a2d; border-radius: 8px; padding: 12px; }
+    .ga-config-title { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: #86efac; margin-bottom: 8px; }
+    .ga-config-grid { display: grid; grid-template-columns: 90px 1fr; gap: 4px 10px; font-size: 12px; margin-bottom: 12px; }
+    .ga-config-grid span { color: #8c8c8c; }
+    .ga-config-grid b { color: #eee; font-weight: 600; }
+    .ga-save-btn { width: 100%; padding: 9px; background: #1a3a1a; border: 1px solid #2d5a2d; color: #86efac; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+    .ga-save-btn:hover:not(:disabled) { background: #21501f; }
+    .ga-save-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .ga-attach { background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 8px; padding: 8px 12px; }
+    .ga-attach > summary { font-size: 11px; color: #9c9c9c; cursor: pointer; letter-spacing: .5px; list-style: none; }
+    .ga-attach > summary::-webkit-details-marker { display: none; }
+    .ga-attach-body { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .ga-attach-body input[type=file] { font-size: 11px; color: #aaa; }
+    .ga-or { font-size: 11px; color: #6a6a6a; }
+    .ga-attach-body textarea { width: 100%; background: #0a0a0a; border: 1px solid #2a2a2a; color: #ccc; border-radius: 6px; padding: 8px; font-size: 11px; font-family: monospace; resize: vertical; }
+    .ga-send-row { display: flex; gap: 8px; align-items: stretch; }
+    .ga-send-row textarea { flex: 1; background: #0d0d0d; border: 1px solid #2a2a2a; color: #eee; border-radius: 8px; padding: 10px; font-size: 13px; resize: vertical; font-family: inherit; }
+    .ga-send-btn { padding: 0 20px; background: #1a2a3a; border: 1px solid #1d4ed8; color: #93c5fd; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: 1px; white-space: nowrap; }
+    .ga-send-btn:hover:not(:disabled) { background: #1e3350; }
+    .ga-send-btn:disabled { opacity: .6; cursor: default; }
