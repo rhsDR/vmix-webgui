@@ -766,10 +766,10 @@
 
     async function resetPassword(userId, email) {
       if (!confirm('Nulstil kode for ' + email + ' til DR35203040?')) return;
-      const res = await fetch('/api/set-password', {
+      const res = await fetch('/api/user-admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ userId, action: 'reset' })
       });
       const data = await res.json();
       if (data.error) { toast(data.error, 'err'); return; }
@@ -778,10 +778,10 @@
 
     async function deleteUser(userId, email) {
       if (!confirm('Fjern ' + email + '?')) return;
-      const res = await fetch('/api/delete-user', {
+      const res = await fetch('/api/user-admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ userId, action: 'delete' })
       });
       const data = await res.json();
       if (data.error) { toast(data.error, 'err'); return; }
