@@ -2082,3 +2082,6 @@
     .ga-send-btn { padding: 0 20px; background: #1a2a3a; border: 1px solid #1d4ed8; color: #93c5fd; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: 1px; white-space: nowrap; }
     .ga-send-btn:hover:not(:disabled) { background: #1e3350; }
     .ga-send-btn:disabled { opacity: .6; cursor: default; }
+    .ga-revise-row { display: flex; align-items: center; gap: 8px; }
+    .ga-revise-lbl { font-size: 11px; color: #9c9c9c; letter-spacing: .5px; flex-shrink: 0; }
+    .ga-revise-row select { background: #0d0d0d; border: 1px solid #2a2a2a; color: #ddd; border-radius: 6px; padding: 6px 10px; font-size: 12px; flex: 1; max-width: 340px; cursor: pointer; }

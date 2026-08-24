@@ -9,7 +9,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     else                              stopLivePolling();
     if (btn.dataset.tab === 'grafik') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadCompanionToken()]).then(() => refreshGrafiktState()); fetchLineupDataForGrafik(); }
     if (btn.dataset.tab === 'grafik-ops') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadCompanionToken()]).then(async () => { await refreshGrafiktState(); renderGrafikOps(); }); }
-    if (btn.dataset.tab === 'graphics-agent') { loadCompanionToken(); renderGraphicsAgent(); }
+    if (btn.dataset.tab === 'graphics-agent') { loadCompanionToken(); loadKunstomGrafik().then(renderGraphicsAgent); }
   });
 });
 

@@ -1,13 +1,16 @@
 // ── GRAFIK-AGENT ───────────────────────────────────────────────
-// AI-assistent der interviewer operatøren og enten KONFIGURERER en uploadet HTML-grafik
-// eller GENERERER en ny, og gemmer den i projekt_grafik (samme sti som den manuelle modal).
-// Endpoint: /api/graphics-agent (Claude). State holdes pr. session.
+// AI-assistent der interviewer operatøren og enten KONFIGURERER en uploadet HTML-grafik,
+// GENERERER en ny, eller REVIDERER en eksisterende, og gemmer i projekt_grafik (samme sti
+// som den manuelle modal). Endpoint: /api/graphics-agent (Claude). State pr. session.
 
 let gaMessages      = [];    // API-samtale [{role, content}]
 let gaBusy          = false;
 let gaResult        = null;  // { config, html } fra seneste agent-svar
 let gaError         = '';
 let _gaAttachedHtml = '';    // vedhæftet HTML til næste besked
+let gaRevisionId      = null;  // projekt_grafik.id under revidering (null = ny grafik)
+let gaRevisionGrafik  = null;  // rækken der reviders (+ ._html cachet)
+let gaRevisionPending = false; // nuværende HTML endnu ikke lagt ind i samtalen
 
 function renderGraphicsAgent() {
   const el = document.getElementById('graphicsAgentApp');
@@ -18,7 +21,11 @@ function renderGraphicsAgent() {
       <div class="ga-wrap">
         <div class="ga-head">
           <div class="ga-title">✨ GRAFIK-AGENT</div>
-          <div class="ga-sub">Beskriv en grafik du vil have lavet — eller vedhæft en HTML-grafik du vil konfigurere. Agenten stiller nogle få spørgsmål og gemmer den færdige grafik i projektet.</div>
+          <div class="ga-sub">Beskriv en grafik du vil have lavet, vedhæft en HTML-grafik du vil konfigurere, eller vælg en eksisterende grafik og bed om en ændring. Agenten gemmer den færdige grafik i projektet.</div>
+        </div>
+        <div class="ga-revise-row">
+          <span class="ga-revise-lbl">Grafik:</span>
+          <select id="ga-revise-sel"></select>
         </div>
         <div class="ga-messages" id="ga-messages"></div>
         <div id="ga-config"></div>
@@ -39,6 +46,7 @@ function renderGraphicsAgent() {
     el.querySelector('#ga-input').addEventListener('keydown', e => {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); _gaOnSend(); }
     });
+    el.querySelector('#ga-revise-sel').addEventListener('change', e => _gaSetRevision(e.target.value));
     el.querySelector('#ga-file').addEventListener('change', async e => {
       const f = e.target.files[0]; if (!f) return;
       _gaAttachedHtml = await f.text();
@@ -48,17 +56,72 @@ function renderGraphicsAgent() {
     el.querySelector('#ga-paste').addEventListener('input', e => { _gaAttachedHtml = e.target.value; });
   }
 
+  _gaRenderReviseOptions();
   _gaRenderMessages();
   _gaRenderConfig();
   const sendBtn = el.querySelector('#ga-send');
   if (sendBtn) { sendBtn.disabled = gaBusy; sendBtn.textContent = gaBusy ? 'Agenten tænker…' : 'Send'; }
 }
 
+// Dropdown: "＋ Ny grafik" + alle eksisterende custom-grafikker (til revidering)
+function _gaRenderReviseOptions() {
+  const sel = document.getElementById('ga-revise-sel');
+  if (!sel) return;
+  const opts = ['<option value="">＋ Ny grafik</option>'];
+  (customGrafik || []).forEach(g => {
+    opts.push(`<option value="${g.id}">✎ ${esc(g.label || g.trigger_key)}</option>`);
+  });
+  sel.innerHTML = opts.join('');
+  sel.value = gaRevisionId || '';
+  sel.disabled = gaBusy;
+}
+
+// Vælg grafik til revidering (henter dens nuværende HTML som kontekst) — eller "" = ny grafik.
+async function _gaSetRevision(id) {
+  if (!id) {
+    gaRevisionId = null; gaRevisionGrafik = null; gaRevisionPending = false;
+    gaMessages = []; gaResult = null; gaError = '';
+    renderGraphicsAgent();
+    return;
+  }
+  const g = (customGrafik || []).find(x => x.id === id);
+  if (!g) return;
+  gaBusy = true; renderGraphicsAgent();
+  let html = '';
+  try {
+    const { data: blob, error } = await sbClient.storage.from('grafik').download(g.file_path);
+    if (error) throw error;
+    html = await blob.text();
+  } catch (err) {
+    gaBusy = false; gaRevisionId = null;
+    toast('Kunne ikke hente grafikkens HTML: ' + (err.message || err), 'err');
+    renderGraphicsAgent();
+    return;
+  }
+  gaRevisionId = g.id;
+  gaRevisionGrafik = { ...g, _html: html };
+  gaRevisionPending = true;
+  gaMessages = []; gaResult = null; gaError = ''; gaBusy = false;
+  renderGraphicsAgent();
+}
+
+function _gaRevisionContext(g) {
+  const ovLabel = { hoved: 'Master', komm: 'Secondary', 'overlay-3': 'Fullscreen' }[g.overlay_target] || 'Master';
+  return `Dette er en REVIDERING af en eksisterende grafik. Behold trigger_key "${g.trigger_key}". `
+    + `Nuværende opsætning: navn "${g.label || ''}", overlay ${ovLabel}, `
+    + `${g.overlay_mode === 'standalone' ? 'standalone' : 'indlejret'}, `
+    + `auto-skjul ${g.auto_hide_seconds ? g.auto_hide_seconds + 's' : 'nej'}, farve ${g.color || '#888888'}.\n`
+    + `Nuværende HTML:\n\`\`\`html\n${g._html}\n\`\`\`\n\nØnsket ændring: `;
+}
+
 function _gaRenderMessages() {
   const box = document.getElementById('ga-messages');
   if (!box) return;
   if (!gaMessages.length) {
-    box.innerHTML = `<div class="ga-empty">Fx: <em>"Lav en lower-third med navn og titel, blå accent"</em> — eller vedhæft en HTML-fil og skriv <em>"konfigurér denne"</em>.</div>`;
+    const txt = gaRevisionId && gaRevisionGrafik
+      ? `Reviderer <b>${esc(gaRevisionGrafik.label || gaRevisionGrafik.trigger_key)}</b> — skriv hvad der skal ændres (fx <em>"gør baggrunden mørkere"</em> eller <em>"skift teksten til …"</em>).`
+      : `Fx: <em>"Lav en lower-third med navn og titel, blå accent"</em> — eller vedhæft en HTML-fil og skriv <em>"konfigurér denne"</em>.`;
+    box.innerHTML = `<div class="ga-empty">${txt}</div>`;
     return;
   }
   let html = gaMessages.map(m => {
@@ -77,18 +140,19 @@ function _gaRenderConfig() {
   const c = gaResult && gaResult.config;
   if (!c) { box.innerHTML = gaError ? `<div class="ga-error">⚠️ ${esc(gaError)}</div>` : ''; return; }
   const ovLabel = { hoved: 'Master', komm: 'Secondary', 'overlay-3': 'Fullscreen' }[c.overlay_target] || c.overlay_target || '—';
-  const hasHtml = !!(gaResult.html || _gaLastUploadedHtml());
+  const hasHtml = !!(gaResult.html || _gaLastUploadedHtml() || (gaRevisionGrafik && gaRevisionGrafik._html));
+  const isRev = !!gaRevisionId;
   box.innerHTML = `
     <div class="ga-config-card">
-      <div class="ga-config-title">Klar til at gemme</div>
+      <div class="ga-config-title">${isRev ? 'Klar til at opdatere' : 'Klar til at gemme'}</div>
       <div class="ga-config-grid">
         <span>Navn</span><b>${esc(c.label || '—')}</b>
-        <span>Trigger</span><b>${esc(c.trigger_key || '—')}</b>
+        <span>Trigger</span><b>${esc(isRev ? gaRevisionGrafik.trigger_key : (c.trigger_key || '—'))}</b>
         <span>Overlay</span><b>${esc(ovLabel)} · ${c.overlay_mode === 'standalone' ? 'Standalone' : 'Indlejret'}</b>
         <span>Auto-skjul</span><b>${c.auto_hide_seconds ? esc(c.auto_hide_seconds) + ' sek' : 'nej'}</b>
-        <span>HTML</span><b>${gaResult.html ? 'genereret af agenten' : (hasHtml ? 'fra vedhæftet fil' : '⚠️ mangler')}</b>
+        <span>HTML</span><b>${gaResult.html ? 'genereret af agenten' : (isRev ? 'uændret (kun config)' : (hasHtml ? 'fra vedhæftet fil' : '⚠️ mangler'))}</b>
       </div>
-      <button id="ga-save" class="ga-save-btn"${hasHtml ? '' : ' disabled'}>Gem grafik</button>
+      <button id="ga-save" class="ga-save-btn"${hasHtml ? '' : ' disabled'}>${isRev ? 'Opdater grafik' : 'Gem grafik'}</button>
     </div>`;
   const btn = box.querySelector('#ga-save');
   if (btn && hasHtml) btn.addEventListener('click', _gaSaveGraphic);
@@ -130,15 +194,22 @@ async function _gaOnSend() {
   const inp = document.getElementById('ga-input');
   const text = (inp?.value || '').trim();
   const attached = _gaAttachedHtml.trim();
-  if (!text && !attached) { toast('Skriv en besked', 'err'); return; }
+  if (!text && !attached && !gaRevisionPending) { toast('Skriv en besked', 'err'); return; }
 
-  let content = text;
-  if (attached) {
-    content = (text ? text + '\n\n' : 'Konfigurér denne grafik:\n\n') + '```html\n' + attached + '\n```';
-    _gaAttachedHtml = '';
-    const p = document.getElementById('ga-paste'); if (p) p.value = '';
-    const f = document.getElementById('ga-file');  if (f) f.value = '';
-    const a = document.getElementById('ga-attach'); if (a) a.open = false;
+  let content;
+  if (gaRevisionPending && gaRevisionGrafik) {
+    // Første besked i en revidering: læg nuværende HTML + config ind som kontekst
+    content = _gaRevisionContext(gaRevisionGrafik) + (text || '(beskriv ændringen)');
+    gaRevisionPending = false;
+  } else {
+    content = text;
+    if (attached) {
+      content = (text ? text + '\n\n' : 'Konfigurér denne grafik:\n\n') + '```html\n' + attached + '\n```';
+      _gaAttachedHtml = '';
+      const p = document.getElementById('ga-paste'); if (p) p.value = '';
+      const f = document.getElementById('ga-file');  if (f) f.value = '';
+      const a = document.getElementById('ga-attach'); if (a) a.open = false;
+    }
   }
   gaMessages.push({ role: 'user', content });
   if (inp) inp.value = '';
@@ -177,12 +248,46 @@ async function _gaCallAgent() {
 async function _gaSaveGraphic() {
   const c = gaResult && gaResult.config;
   if (!c) return;
-  const html = gaResult.html || _gaLastUploadedHtml();
-  if (!html) { toast('Ingen HTML at gemme — bed agenten generere grafikken', 'err'); return; }
-
   const btn = document.getElementById('ga-save');
   if (btn) { btn.disabled = true; btn.textContent = 'Gemmer…'; }
   try {
+    // ── REVIDERING: overskriv samme fil + UPDATE rækken (behold trigger_key + file_path) ──
+    if (gaRevisionId && gaRevisionGrafik) {
+      const g = gaRevisionGrafik;
+      const html = gaResult.html || g._html;               // ny HTML fra agenten, ellers uændret
+      const mode = c.overlay_mode === 'standalone' ? 'standalone' : 'embed';
+      const target = mode === 'standalone' ? 'hoved'
+        : (['hoved', 'komm', 'overlay-3'].includes(c.overlay_target) ? c.overlay_target : (g.overlay_target || 'hoved'));
+      const autoHide = (c.auto_hide_seconds > 0) ? Number(c.auto_hide_seconds) : null;
+
+      let content = html;
+      if (mode === 'standalone' && typeof injectStandaloneTrigger === 'function') {
+        content = injectStandaloneTrigger(html, g.trigger_key, aktivProjektId, autoHide || 0);
+      }
+      const blob = new Blob([content], { type: 'text/html' });
+      const { error: upErr } = await sbClient.storage.from('grafik').upload(g.file_path, blob, { contentType: 'text/html', upsert: true });
+      if (upErr) { toast('Upload fejlede: ' + upErr.message, 'err'); return; }
+
+      const { error: dbErr } = await sbClient.from('projekt_grafik').update({
+        label: c.label || g.label, color: c.color || g.color || '#888888',
+        overlay_mode: mode, overlay_target: target, auto_hide_seconds: autoHide
+      }).eq('id', gaRevisionId);
+      if (dbErr) { toast('DB fejl: ' + dbErr.message, 'err'); return; }
+
+      if (typeof loadKunstomGrafik === 'function') await loadKunstomGrafik();
+      if (typeof renderGrafikOps === 'function') renderGrafikOps();
+      if (typeof renderGrafik === 'function') renderGrafik();
+      toast('Grafik opdateret ✓', 'ok');
+      gaRevisionGrafik._html = html; // videre revideringer bygger på den nye
+      gaResult = null;
+      const cfgBox = document.getElementById('ga-config');
+      if (cfgBox) cfgBox.innerHTML = `<div class="ga-saved">✅ "${esc(c.label || g.trigger_key)}" opdateret — genindlæs overlayet i vMix for at se ændringen.</div>`;
+      return;
+    }
+
+    // ── NY GRAFIK: upload + insert ──
+    const html = gaResult.html || _gaLastUploadedHtml();
+    if (!html) { toast('Ingen HTML at gemme — bed agenten generere grafikken', 'err'); return; }
     const trigKey = (c.trigger_key || ('grafik_' + Date.now())).trim();
     const mode = c.overlay_mode === 'standalone' ? 'standalone' : 'embed';
     const target = mode === 'standalone'
@@ -194,7 +299,6 @@ async function _gaSaveGraphic() {
     if (mode === 'standalone' && typeof injectStandaloneTrigger === 'function') {
       content = injectStandaloneTrigger(html, trigKey, aktivProjektId, autoHide || 0);
     }
-
     const filePath = aktivProjektId + '/' + trigKey + '.html';
     const blob = new Blob([content], { type: 'text/html' });
     const { error: upErr } = await sbClient.storage.from('grafik').upload(filePath, blob, { contentType: 'text/html', upsert: true });
@@ -217,6 +321,6 @@ async function _gaSaveGraphic() {
     const cfgBox = document.getElementById('ga-config');
     if (cfgBox) cfgBox.innerHTML = `<div class="ga-saved">✅ "${esc(c.label || trigKey)}" er gemt — se den i GRAFIK OPS → EGNE GRAFIKKER og i komponisten.</div>`;
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Gem grafik'; }
+    if (btn) { btn.disabled = false; btn.textContent = gaRevisionId ? 'Opdater grafik' : 'Gem grafik'; }
   }
 }
