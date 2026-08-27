@@ -8,6 +8,7 @@ let gaBusy          = false;
 let gaResult        = null;  // { config, html } fra seneste agent-svar
 let gaError         = '';
 let _gaAttachedHtml = '';    // vedhæftet HTML til næste besked
+let _gaAttachedImage = null; // vedhæftet billede { media_type, data, dataUrl } til næste besked
 let gaRevisionId      = null;  // projekt_grafik.id under revidering (null = ny grafik)
 let gaRevisionGrafik  = null;  // rækken der reviders (+ ._html cachet)
 let gaRevisionPending = false; // nuværende HTML endnu ikke lagt ind i samtalen
@@ -30,8 +31,12 @@ function renderGraphicsAgent() {
         <div class="ga-messages" id="ga-messages"></div>
         <div id="ga-config"></div>
         <details class="ga-attach" id="ga-attach">
-          <summary>📎 Vedhæft HTML (valgfrit)</summary>
+          <summary>📎 Vedhæft billede eller HTML (valgfrit)</summary>
           <div class="ga-attach-body">
+            <label class="ga-attach-lbl">Billede af grafikken (JPG/PNG) — agenten genskaber den:</label>
+            <input type="file" id="ga-img" accept="image/*">
+            <div id="ga-img-preview" class="ga-img-preview"></div>
+            <label class="ga-attach-lbl">…eller HTML-fil at konfigurere:</label>
             <input type="file" id="ga-file" accept=".html,.htm">
             <div class="ga-or">…eller indsæt HTML:</div>
             <textarea id="ga-paste" rows="4" placeholder="&lt;html&gt;…"></textarea>
@@ -54,6 +59,20 @@ function renderGraphicsAgent() {
       toast('HTML vedhæftet', 'ok');
     });
     el.querySelector('#ga-paste').addEventListener('input', e => { _gaAttachedHtml = e.target.value; });
+    el.querySelector('#ga-img').addEventListener('change', async e => {
+      const f = e.target.files[0]; if (!f) return;
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(f);
+        });
+        const m = /^data:(image\/[a-z]+);base64,(.+)$/i.exec(dataUrl);
+        if (!m) { toast('Kunne ikke læse billedet', 'err'); return; }
+        _gaAttachedImage = { media_type: m[1], data: m[2], dataUrl };
+        const prev = el.querySelector('#ga-img-preview');
+        if (prev) prev.innerHTML = `<img src="${dataUrl}" class="ga-img-thumb"><span class="ga-img-note">billede klar — skriv evt. en note og send</span>`;
+        toast('Billede vedhæftet', 'ok');
+      } catch { toast('Kunne ikke læse billedet', 'err'); }
+    });
   }
 
   _gaRenderReviseOptions();
@@ -167,7 +186,22 @@ function _gaStripBlocks(text) {
     .trim();
 }
 function _gaUserDisplay(content) {
+  if (Array.isArray(content)) {
+    const t = content.find(p => p.type === 'text');
+    const hasImg = content.some(p => p.type === 'image');
+    return (t ? t.text : '') + (hasImg ? '\n〔billede vedhæftet〕' : '');
+  }
   return String(content || '').replace(/```html[\s\S]*?```/gi, '〔HTML vedhæftet〕').trim();
+}
+
+// Ryd alle vedhæftninger (HTML + billede) + deres UI
+function _gaClearAttachments() {
+  _gaAttachedHtml = ''; _gaAttachedImage = null;
+  const p = document.getElementById('ga-paste'); if (p) p.value = '';
+  const f = document.getElementById('ga-file');  if (f) f.value = '';
+  const img = document.getElementById('ga-img'); if (img) img.value = '';
+  const prev = document.getElementById('ga-img-preview'); if (prev) prev.innerHTML = '';
+  const a = document.getElementById('ga-attach'); if (a) a.open = false;
 }
 
 function _gaParseResult(text) {
@@ -181,8 +215,9 @@ function _gaParseResult(text) {
 
 function _gaLastUploadedHtml() {
   for (let i = gaMessages.length - 1; i >= 0; i--) {
-    if (gaMessages[i].role === 'user') {
-      const m = gaMessages[i].content.match(/```html\s*([\s\S]*?)```/i);
+    const c = gaMessages[i];
+    if (c.role === 'user' && typeof c.content === 'string') {
+      const m = c.content.match(/```html\s*([\s\S]*?)```/i);
       if (m) return m[1].trim();
     }
   }
@@ -194,10 +229,18 @@ async function _gaOnSend() {
   const inp = document.getElementById('ga-input');
   const text = (inp?.value || '').trim();
   const attached = _gaAttachedHtml.trim();
-  if (!text && !attached && !gaRevisionPending) { toast('Skriv en besked', 'err'); return; }
+  const img = _gaAttachedImage;
+  if (!text && !attached && !img && !gaRevisionPending) { toast('Skriv en besked', 'err'); return; }
 
   let content;
-  if (gaRevisionPending && gaRevisionGrafik) {
+  if (img) {
+    // Billede vedhæftet → send som vision-besked (tekst + image-blok)
+    content = [
+      { type: 'text', text: text || 'Genskab denne grafik som selvstændig HTML til systemet (transparent, runAnimationIN/OUT).' },
+      { type: 'image', source: { type: 'base64', media_type: img.media_type, data: img.data } }
+    ];
+    _gaClearAttachments();
+  } else if (gaRevisionPending && gaRevisionGrafik) {
     // Første besked i en revidering: læg nuværende HTML + config ind som kontekst
     content = _gaRevisionContext(gaRevisionGrafik) + (text || '(beskriv ændringen)');
     gaRevisionPending = false;
@@ -205,10 +248,7 @@ async function _gaOnSend() {
     content = text;
     if (attached) {
       content = (text ? text + '\n\n' : 'Konfigurér denne grafik:\n\n') + '```html\n' + attached + '\n```';
-      _gaAttachedHtml = '';
-      const p = document.getElementById('ga-paste'); if (p) p.value = '';
-      const f = document.getElementById('ga-file');  if (f) f.value = '';
-      const a = document.getElementById('ga-attach'); if (a) a.open = false;
+      _gaClearAttachments();
     }
   }
   gaMessages.push({ role: 'user', content });

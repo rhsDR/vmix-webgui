@@ -2085,3 +2085,7 @@
     .ga-revise-row { display: flex; align-items: center; gap: 8px; }
     .ga-revise-lbl { font-size: 11px; color: #9c9c9c; letter-spacing: .5px; flex-shrink: 0; }
     .ga-revise-row select { background: #0d0d0d; border: 1px solid #2a2a2a; color: #ddd; border-radius: 6px; padding: 6px 10px; font-size: 12px; flex: 1; max-width: 340px; cursor: pointer; }
+    .ga-attach-lbl { font-size: 11px; color: #9c9c9c; margin-top: 2px; }
+    .ga-img-preview { display: flex; align-items: center; gap: 8px; }
+    .ga-img-thumb { max-height: 60px; max-width: 120px; border: 1px solid #333; border-radius: 4px; }
+    .ga-img-note { font-size: 11px; color: #86efac; }
