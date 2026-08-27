@@ -465,13 +465,15 @@ function initComposerDnd() {
     e.dataTransfer.dropEffect = 'move';
     clear();
     const row = e.target.closest('.comp-row');
-    const list = e.target.closest('.comp-col-list');
+    let list = e.target.closest('.comp-col-list');
+    if (!list) { const col = e.target.closest('.comp-col'); if (col) list = col.querySelector('.comp-col-list'); }
     if (row && row.dataset.cid !== dragId) row.classList.add('drag-over');
     else if (list) list.classList.add('drag-target');
   });
   grid.addEventListener('drop', async e => {
     e.preventDefault();
-    const list = e.target.closest('.comp-col-list');
+    let list = e.target.closest('.comp-col-list');
+    if (!list) { const col = e.target.closest('.comp-col'); if (col) list = col.querySelector('.comp-col-list'); }
     clear();
     if (!dragId || !list) { dragId = null; return; }
     const id = dragId; dragId = null;
