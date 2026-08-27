@@ -28,6 +28,10 @@ en grafik brugeren uploader/indsætter, ELLER ved at GENERERE grafik-HTML ud fra
 - INGEN blokerende eksterne ressourcer: GSAP fra CDN i <head> er OK. Brug IKKE Supabase-SDK og
   IKKE blokerende Google Fonts <link> (de blokerer visning i systemets iframes). Brug system-fonte
   (Arial/Segoe UI/sans-serif) eller ikke-blokerende @font-face.
+- INGEN SPX GC / CasparCG / template-motor-stilladser: brug ALDRIG spx_interface.js,
+  SPXGCTemplateDefinition, skjulte f0/f1-datafelter eller runTemplateUpdate. Grafikken skal være
+  100% selvstændig — det ENESTE tilladte eksterne script er GSAP fra et CDN. Al styring sker
+  UDELUKKENDE via window.runAnimationIN()/runAnimationOUT().
 - Ingen server-kald / ingen ekstern data-hentning — indhold skrives direkte i HTML'en.
 - Hold HTML'en fokuseret og kompakt (undgå unødig kode), men komplet og funktionel.
 
