@@ -22,7 +22,7 @@ function renderGraphicsAgent() {
       <div class="ga-wrap">
         <div class="ga-head">
           <div class="ga-title">✨ GRAFIK-AGENT</div>
-          <div class="ga-sub">Beskriv en grafik du vil have lavet, vedhæft en HTML-grafik du vil konfigurere, eller vælg en eksisterende grafik og bed om en ændring. Agenten gemmer den færdige grafik i projektet.</div>
+          <div class="ga-sub">Beskriv en grafik du vil have lavet, upload et billede (JPG/PNG) af en grafik du vil genskabe, vedhæft en HTML-fil du vil konfigurere, eller vælg en eksisterende grafik og bed om en ændring. Agenten gemmer den færdige grafik i projektet.</div>
         </div>
         <div class="ga-revise-row">
           <span class="ga-revise-lbl">Grafik:</span>
@@ -139,7 +139,7 @@ function _gaRenderMessages() {
   if (!gaMessages.length) {
     const txt = gaRevisionId && gaRevisionGrafik
       ? `Reviderer <b>${esc(gaRevisionGrafik.label || gaRevisionGrafik.trigger_key)}</b> — skriv hvad der skal ændres (fx <em>"gør baggrunden mørkere"</em> eller <em>"skift teksten til …"</em>).`
-      : `Fx: <em>"Lav en lower-third med navn og titel, blå accent"</em> — eller vedhæft en HTML-fil og skriv <em>"konfigurér denne"</em>.`;
+      : `Fx: <em>"Lav en lower-third med navn og titel, blå accent"</em> — eller upload et <b>billede (JPG/PNG)</b> el. en HTML-fil under 📎 og bed agenten genskabe/konfigurere den.`;
     box.innerHTML = `<div class="ga-empty">${txt}</div>`;
     return;
   }
