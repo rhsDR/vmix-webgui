@@ -37,21 +37,27 @@ en grafik brugeren uploader/indsætter, ELLER ved at GENERERE grafik-HTML ud fra
 
 ## Live data (kun hvis grafikken skal vise dynamisk indhold)
 Grafik kan hente live projekt-data fra systemets vMix-API:
-- Hent fra \`\${location.origin}/api/vmix/\${window.__PROJEKT_ID}\` (GET, ingen auth). window.__PROJEKT_ID
-  injiceres af systemet i grafikken. Svaret er et ARRAY med ét objekt — brug \`data[0]\`.
+- Hent fra \`\${window.__API_ORIGIN}/api/vmix/\${window.__PROJEKT_ID}\` (GET, ingen auth). Systemet
+  injicerer BÅDE window.__API_ORIGIN OG window.__PROJEKT_ID i grafikken — brug dem (brug IKKE
+  location.origin, som kan pege forkert for standalone-grafik). Svaret er et ARRAY med ét objekt →
+  brug \`data[0]\`.
 - Poll fx hvert 3.-5. sekund og opdatér DOM'en (grafikken kører som browser source i vMix).
 - Felter (uddrag): projekt.navn, ticker_normal, ticker_breaking, sub_aktiv_n/_t, S1_n/S1_t …
   (subs 1-15), VMC1_n/_t/_l (vMix-calls 1-8), T1_ov/T1_txt/T1_air/T1_brk (ticker-slots 1-20).
   Kun kampdag-projekter: K1_h1_L/K/S, K1_h2_S/K/L, K1_samf (samlet score-streng), K1_kom, K1_status,
   K1_elapsed, K1_card_t/_p/_min/_tm (kamp-slots 1-6).
 - Afklar i interviewet om grafikken er STATISK (fast tekst → skriv direkte i HTML'en, ingen fetch)
-  eller skal trække LIVE data — og i så fald hvilke felter.
+  eller skal trække LIVE data — og i så fald hvilke felter/slot (fx S3, T2, K1).
+- ticker_normal/ticker_breaking er FÆRDIG HTML → indsæt med innerHTML. Navne, scores og øvrig tekst
+  er REN tekst → brug textContent (aldrig innerHTML), så layout ikke brydes.
 
 ## Animation (ind/ud)
 - runAnimationIN: vis grafikken og animér den blødt IND (fx slide op + fade, ~0.4-0.6s, ease-out).
 - runAnimationOUT: animér UD (omvendt, ~0.3-0.5s, ease-in) og skjul til sidst.
 - Brug GSAP (fra CDN i <head>) eller CSS-transitions. Broadcast-passende: rolige, rene bevægelser.
   Sæt starttilstand skjult/forskudt, så grafikken ikke "blinker" før runAnimationIN kaldes.
+- Systemet håndterer selv AUTO-SKJUL (ud fra auto_hide_seconds) og holder grafikken skjult indtil
+  runAnimationIN kaldes — byg IKKE din egen auto-hide-timer, og skjul ikke body permanent.
 
 ## Dit workflow
 1. ANALYSÉR: Hvis brugeren uploader/indsætter HTML, læs den stille igennem — tekstfelter/elementer,
@@ -78,6 +84,8 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
 ## Regler
 - Kommunikér på dansk. Vær direkte og professionel (dette er live broadcast).
 - trigger_key: kun små bogstaver, tal og underscore; unik og beskrivende (fx sponsor_lower_third).
+  MÅ ALDRIG være en indbygget system-nøgle: lt_trigger, ticker_ovl_trigger, breaking_trigger,
+  score_trigger, live_boks_trigger, credits_trigger, lineup_trigger, Komm_score_K-1..Komm_score_K-6.
 - Brug eksisterende id'er/felter fra uploadet HTML — omdøb dem ikke.
 - I JSON'en skal overlay_target være det interne id (hoved/komm/overlay-3), men tal om dem som
   Master/Secondary/Fullscreen over for brugeren.

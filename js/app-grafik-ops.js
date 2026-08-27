@@ -6,7 +6,7 @@ let _egneGrafikEditId = null;
 function injectStandaloneTrigger(html, trigKey, pid, autoHideSec) {
   if (html.includes("var _trigKey='") && html.includes('runAnimationIN')) return html;
   const ahs = Math.max(0, parseInt(autoHideSec) || 0);
-  const script = `<script>document.addEventListener('DOMContentLoaded',function(){
+  const script = `<script>window.__PROJEKT_ID=${JSON.stringify(pid)};window.__API_ORIGIN=${JSON.stringify(location.origin)};document.addEventListener('DOMContentLoaded',function(){
 var _pid=${JSON.stringify(pid)},_key=${JSON.stringify(trigKey)},_ahs=${ahs},_aht=null;
 if(typeof window.runAnimationIN!=='function'){
   window.runAnimationIN=function(){if(document.body)document.body.classList.add('active');if(_ahs>0){clearTimeout(_aht);_aht=setTimeout(function(){window.runAnimationOUT();},_ahs*1000);}};

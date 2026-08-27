@@ -1093,7 +1093,7 @@ function renderEgneGrafik(leftPanel) {
         await sbUpsert('settings', { projekt_id: aktivProjektId, key: btn.dataset.prvKey + '_prv', value: 'in' });
         const fileUrl = btn.dataset.customFileUrl;
         const htmlContent = await fetch(fileUrl).then(r => r.text());
-        const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(aktivProjektId)};window.__IS_PREVIEW=true;<\/script>`;
+        const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(aktivProjektId)};window.__API_ORIGIN=${JSON.stringify(location.origin)};window.__IS_PREVIEW=true;<\/script>`;
         const content = htmlContent.replace(/(<html[^>]*>)/i, '$1' + inject);
         grafiktActivePrvKey = btn.dataset.prvId;
         grafiktActivePrvUrl = '';
