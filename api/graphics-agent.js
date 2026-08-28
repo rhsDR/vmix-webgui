@@ -87,6 +87,9 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   MÅ ALDRIG være en indbygget system-nøgle: lt_trigger, ticker_ovl_trigger, breaking_trigger,
   score_trigger, live_boks_trigger, credits_trigger, lineup_trigger, Komm_score_K-1..Komm_score_K-6.
 - Brug eksisterende id'er/felter fra uploadet HTML — omdøb dem ikke.
+- Ved HVER færdig grafik — også revideringer og rettelser — udskriv ALTID BÅDE den fulde
+  \`\`\`json-config OG den fulde \`\`\`html (også selvom kun en lille del er ændret), så systemet kan
+  vise preview og gemme korrekt.
 - I JSON'en skal overlay_target være det interne id (hoved/komm/overlay-3), men tal om dem som
   Master/Secondary/Fullscreen over for brugeren.
 

@@ -136,6 +136,18 @@ function _gaRevisionContext(g) {
     + `Nuværende HTML:\n\`\`\`html\n${g._html}\n\`\`\`\n\nØnsket ændring: `;
 }
 
+// Config afledt af den grafik der reviders (fallback så gem/preview virker selv når
+// agenten ikke gen-udskriver ```json ved en lille rettelse).
+function _gaRevisionBaseConfig() {
+  const g = gaRevisionGrafik;
+  if (!g) return null;
+  return {
+    label: g.label, trigger_key: g.trigger_key, color: g.color || '#888888',
+    overlay_target: g.overlay_target || 'hoved', overlay_mode: g.overlay_mode || 'embed',
+    auto_hide_seconds: g.auto_hide_seconds || null
+  };
+}
+
 function _gaRenderMessages() {
   const box = document.getElementById('ga-messages');
   if (!box) return;
@@ -186,8 +198,7 @@ function _gaRenderConfig() {
 function _gaRenderPreview() {
   const box = document.getElementById('ga-preview');
   if (!box) return;
-  const c = gaResult && gaResult.config;
-  const html = c ? (gaResult.html || _gaLastUploadedHtml() || (gaRevisionGrafik && gaRevisionGrafik._html)) : null;
+  const html = (gaResult && gaResult.html) || _gaLastUploadedHtml() || (gaRevisionGrafik && gaRevisionGrafik._html);
   if (!html) { box.innerHTML = ''; return; }
   const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(aktivProjektId || '')};window.__API_ORIGIN=${JSON.stringify(location.origin)};window.__IS_PREVIEW=true;window.addEventListener('load',function(){setTimeout(function(){try{window.runAnimationIN&&window.runAnimationIN();}catch(e){}},250);});<\/script>`;
   const doc = html.replace(/(<html[^>]*>)/i, '$1' + inject);
@@ -295,7 +306,7 @@ async function _gaOnSend() {
   }
   gaMessages.push({ role: 'user', content });
   if (inp) inp.value = '';
-  gaResult = null; gaError = ''; gaBusy = true;
+  gaError = ''; gaBusy = true;
   renderGraphicsAgent();
 
   await _gaCallAgent();
@@ -320,7 +331,14 @@ async function _gaCallAgent() {
     }
     const text = data.text || '(tomt svar)';
     gaMessages.push({ role: 'assistant', content: text });
-    gaResult = _gaParseResult(text);
+    const parsed = _gaParseResult(text);
+    // Bevar config/HTML på tværs af rettelser (agenten gen-udskriver ikke altid begge)
+    gaResult = {
+      html:   parsed.html   || (gaResult && gaResult.html)   || null,
+      config: parsed.config || (gaResult && gaResult.config) || null
+    };
+    // Revidering: ny HTML men ingen config → brug grafikkens egen config (så gem virker)
+    if (gaRevisionId && gaResult.html && !gaResult.config) gaResult.config = _gaRevisionBaseConfig();
   } catch (err) {
     gaError = 'Netværksfejl: ' + err.message;
     gaMessages.pop();
