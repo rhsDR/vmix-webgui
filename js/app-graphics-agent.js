@@ -29,6 +29,7 @@ function renderGraphicsAgent() {
           <select id="ga-revise-sel"></select>
         </div>
         <div class="ga-messages" id="ga-messages"></div>
+        <div id="ga-preview" class="ga-preview"></div>
         <div id="ga-config"></div>
         <details class="ga-attach" id="ga-attach">
           <summary>📎 Vedhæft billede eller HTML (valgfrit)</summary>
@@ -52,6 +53,7 @@ function renderGraphicsAgent() {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); _gaOnSend(); }
     });
     el.querySelector('#ga-revise-sel').addEventListener('change', e => _gaSetRevision(e.target.value));
+    window.addEventListener('resize', _gaScalePreview);
     el.querySelector('#ga-file').addEventListener('change', async e => {
       const f = e.target.files[0]; if (!f) return;
       _gaAttachedHtml = await f.text();
@@ -78,6 +80,7 @@ function renderGraphicsAgent() {
   _gaRenderReviseOptions();
   _gaRenderMessages();
   _gaRenderConfig();
+  _gaRenderPreview();
   const sendBtn = el.querySelector('#ga-send');
   if (sendBtn) { sendBtn.disabled = gaBusy; sendBtn.textContent = gaBusy ? 'Agenten tænker…' : 'Send'; }
 }
@@ -175,6 +178,45 @@ function _gaRenderConfig() {
     </div>`;
   const btn = box.querySelector('#ga-save');
   if (btn && hasHtml) btn.addEventListener('click', _gaSaveGraphic);
+}
+
+// Live-preview af agentens genererede HTML (kun når der ER genereret HTML).
+// Renderes i en iframe med samme injektion som systemet (__PROJEKT_ID/__API_ORIGIN),
+// og runAnimationIN kaldes så animationen afspilles. Skaleres fra 1920×1080.
+function _gaRenderPreview() {
+  const box = document.getElementById('ga-preview');
+  if (!box) return;
+  const c = gaResult && gaResult.config;
+  const html = c ? (gaResult.html || _gaLastUploadedHtml() || (gaRevisionGrafik && gaRevisionGrafik._html)) : null;
+  if (!html) { box.innerHTML = ''; return; }
+  const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(aktivProjektId || '')};window.__API_ORIGIN=${JSON.stringify(location.origin)};window.__IS_PREVIEW=true;window.addEventListener('load',function(){setTimeout(function(){try{window.runAnimationIN&&window.runAnimationIN();}catch(e){}},250);});<\/script>`;
+  const doc = html.replace(/(<html[^>]*>)/i, '$1' + inject);
+  if (!box.querySelector('.ga-preview-frame')) {
+    box.innerHTML = `
+      <div class="ga-preview-head"><span>PREVIEW <span style="color:#6a6a6a;font-weight:400">(over mørk baggrund)</span></span><button id="ga-preview-play" class="ga-preview-btn">▶ Afspil igen</button></div>
+      <div class="ga-preview-stage"><iframe class="ga-preview-frame" title="grafik-preview"></iframe></div>`;
+    box.querySelector('#ga-preview-play').addEventListener('click', _gaReplayPreview);
+  }
+  const frame = box.querySelector('.ga-preview-frame');
+  if (frame._doc !== doc) { frame._doc = doc; frame.srcdoc = doc; }
+  _gaScalePreview();
+}
+
+function _gaScalePreview() {
+  const stage = document.querySelector('#ga-preview .ga-preview-stage');
+  const frame = document.querySelector('#ga-preview .ga-preview-frame');
+  if (!stage || !frame) return;
+  const w = stage.clientWidth || 640;
+  stage.style.height = Math.round(w * 9 / 16) + 'px';
+  frame.style.transform = 'scale(' + (w / 1920) + ')';
+}
+
+function _gaReplayPreview() {
+  const frame = document.querySelector('#ga-preview .ga-preview-frame');
+  if (!frame || !frame._doc) return;
+  const doc = frame._doc;
+  frame.srcdoc = '';               // genindlæs → runAnimationIN spilles igen
+  setTimeout(() => { frame.srcdoc = doc; }, 50);
 }
 
 // Strip kodeblokke fra agent-tekst der vises i chatten (config/html surfaces i kort nedenfor)
