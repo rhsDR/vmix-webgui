@@ -42,12 +42,23 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   location.origin, som kan pege forkert for standalone-grafik). Svaret er et ARRAY med ét objekt →
   brug \`data[0]\`.
 - Poll fx hvert 3.-5. sekund og opdatér DOM'en (grafikken kører som browser source i vMix).
-- Felter (uddrag): projekt.navn, ticker_normal, ticker_breaking, sub_aktiv_n/_t, S1_n/S1_t …
-  (subs 1-15), VMC1_n/_t/_l (vMix-calls 1-8), T1_ov/T1_txt/T1_air/T1_brk (ticker-slots 1-20).
-  Kun kampdag-projekter: K1_h1_L/K/S, K1_h2_S/K/L, K1_samf (samlet score-streng), K1_kom, K1_status,
-  K1_elapsed, K1_card_t/_p/_min/_tm (kamp-slots 1-6).
-- Afklar i interviewet om grafikken er STATISK (fast tekst → skriv direkte i HTML'en, ingen fetch)
-  eller skal trække LIVE data — og i så fald hvilke felter/slot (fx S3, T2, K1).
+- Felter (kode = hvad det ER — men TAL om dem i ALMINDELIGT SPROG over for operatøren, ikke koderne):
+  · projekt.navn = projektets navn.
+  · sub_aktiv_n / sub_aktiv_t = navn / titel på den AKTIVE sub (det aktuelle navneskilt).
+  · S1_n/S1_t … S15 = navn / titel for sub nr. 1-15 (navneskilte/lower-thirds).
+  · VMC1_n/_t/_l … (1-8) = navn / titel / link for vMix-opkald.
+  · T1_ov/T1_txt/T1_air/T1_brk … (1-20) = ticker-slot: overskrift / tekst / on-air / breaking.
+  · ticker_normal, ticker_breaking = hele den samlede rulletekst (FÆRDIG HTML).
+  · (kun kampdag) K1 … K6 = kamp nr. 1-6: K{n}_h1_L/K = hjemmeholdets lange/korte navn,
+    K{n}_h2_L/K = udeholdet, K{n}_h1_S / K{n}_h2_S = mål, K{n}_samf = samlet stilling som færdig streng
+    (fx "FCK 2 - 1 BIF"), K{n}_kom = kommentator, K{n}_lok = lokation, K{n}_status / K{n}_elapsed =
+    kampstatus / spilletid, K{n}_card_t/_p/_min/_tm = seneste kort (type/spiller/minut/hold).
+- Afklar i interviewet om grafikken er STATISK (fast tekst → direkte i HTML'en, ingen fetch) eller skal
+  vise LIVE data. Spørg om data i HVERDAGSSPROG — fx "Skal den vise navnet på den aktive sub?",
+  "Kommentatoren for hvilken kamp?", "Stillingen for kamp 1?", "Ticker-tekst nr. 3?" — og oversæt SELV
+  operatørens svar til den rigtige feltkode i HTML'en (nævn kun koden hvis operatøren spørger).
+  Foreslå gerne relevante felter ud fra grafiktypen (score-bug → K{n}_samf eller holdnavne + mål;
+  navneskilt → sub_aktiv_n/_t).
 - ticker_normal/ticker_breaking er FÆRDIG HTML → indsæt med innerHTML. Navne, scores og øvrig tekst
   er REN tekst → brug textContent (aldrig innerHTML), så layout ikke brydes.
 
