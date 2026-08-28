@@ -2062,6 +2062,7 @@
     .ga-typing { color: #8c8c8c; font-style: italic; }
     .ga-error { color: #fca5a5; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.4); border-radius: 8px; padding: 9px 12px; font-size: 12px; }
     .ga-saved { color: #86efac; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.4); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; }
+    .ga-warn { color: #fde68a; background: rgba(234,179,8,0.10); border: 1px solid rgba(234,179,8,0.45); border-radius: 8px; padding: 9px 12px; font-size: 12px; margin-bottom: 8px; }
     .ga-config-card { background: #111; border: 1px solid #2d5a2d; border-radius: 8px; padding: 12px; }
     .ga-config-title { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: #86efac; margin-bottom: 8px; }
     .ga-config-grid { display: grid; grid-template-columns: 90px 1fr; gap: 4px 10px; font-size: 12px; margin-bottom: 12px; }

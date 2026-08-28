@@ -12,6 +12,7 @@ let _gaAttachedImage = null; // vedhæftet billede { media_type, data, dataUrl }
 let gaRevisionId      = null;  // projekt_grafik.id under revidering (null = ny grafik)
 let gaRevisionGrafik  = null;  // rækken der reviders (+ ._html cachet)
 let gaRevisionPending = false; // nuværende HTML endnu ikke lagt ind i samtalen
+let gaTruncated       = false; // seneste agent-svar ramte token-loftet (afkortet HTML)
 
 function renderGraphicsAgent() {
   const el = document.getElementById('graphicsAgentApp');
@@ -172,12 +173,13 @@ function _gaRenderMessages() {
 function _gaRenderConfig() {
   const box = document.getElementById('ga-config');
   if (!box) return;
+  const warn = gaTruncated ? `<div class="ga-warn">⚠️ Svaret blev afkortet — grafikken kan mangle den sidste del. Bed agenten om en <b>enklere/kortere</b> version (eller skriv “fortsæt”).</div>` : '';
   const c = gaResult && gaResult.config;
-  if (!c) { box.innerHTML = gaError ? `<div class="ga-error">⚠️ ${esc(gaError)}</div>` : ''; return; }
+  if (!c) { box.innerHTML = warn + (gaError ? `<div class="ga-error">⚠️ ${esc(gaError)}</div>` : ''); return; }
   const ovLabel = { hoved: 'Master', komm: 'Secondary', 'overlay-3': 'Fullscreen' }[c.overlay_target] || c.overlay_target || '—';
   const hasHtml = !!(gaResult.html || _gaLastUploadedHtml() || (gaRevisionGrafik && gaRevisionGrafik._html));
   const isRev = !!gaRevisionId;
-  box.innerHTML = `
+  box.innerHTML = warn + `
     <div class="ga-config-card">
       <div class="ga-config-title">${isRev ? 'Klar til at opdatere' : 'Klar til at gemme'}</div>
       <div class="ga-config-grid">
@@ -236,6 +238,7 @@ function _gaStripBlocks(text) {
   return String(text || '')
     .replace(/```json[\s\S]*?```/gi, '')
     .replace(/```html[\s\S]*?```/gi, '〔grafik-HTML genereret ↓〕')
+    .replace(/```(?:json|html)[\s\S]*$/gi, '〔grafik-HTML genereret ↓〕') // ulukket (afkortet) fence
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
@@ -260,10 +263,12 @@ function _gaClearAttachments() {
 
 function _gaParseResult(text) {
   let config = null, html = null;
-  const jsonM = String(text).match(/```json\s*([\s\S]*?)```/i);
+  const s = String(text);
+  const jsonM = s.match(/```json\s*([\s\S]*?)```/i);
   if (jsonM) { try { config = JSON.parse(jsonM[1].trim()); } catch { config = null; } }
-  const htmlM = String(text).match(/```html\s*([\s\S]*?)```/i);
+  const htmlM = s.match(/```html\s*([\s\S]*?)```/i);
   if (htmlM) html = htmlM[1].trim();
+  else { const open = s.match(/```html\s*([\s\S]*)$/i); if (open) html = open[1].trim(); } // afkortet svar: ulukket fence → tag resten
   return { config, html };
 }
 
@@ -280,6 +285,7 @@ function _gaLastUploadedHtml() {
 
 async function _gaOnSend() {
   if (gaBusy) return;
+  gaTruncated = false;
   const _vb = document.getElementById('ga-validate'); if (_vb) _vb.innerHTML = '';
   const inp = document.getElementById('ga-input');
   const text = (inp?.value || '').trim();
@@ -319,6 +325,7 @@ async function _gaOnSend() {
 }
 
 async function _gaCallAgent() {
+  gaTruncated = false;
   try {
     const r = await apiFetch('/api/graphics-agent', {
       method: 'POST',
@@ -341,6 +348,7 @@ async function _gaCallAgent() {
     };
     // Revidering: ny HTML men ingen config → brug grafikkens egen config (så gem virker)
     if (gaRevisionId && gaResult.html && !gaResult.config) gaResult.config = _gaRevisionBaseConfig();
+    gaTruncated = !!data.truncated;
   } catch (err) {
     gaError = 'Netværksfejl: ' + err.message;
     gaMessages.pop();

@@ -127,6 +127,8 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
 - Ved HVER færdig grafik — også revideringer og rettelser — udskriv ALTID BÅDE den fulde
   \`\`\`json-config OG den fulde \`\`\`html (også selvom kun en lille del er ændret), så systemet kan
   vise preview og gemme korrekt.
+- Prioritér en KOMPLET, fungerende fil frem for ekstra pynt: hold HTML'en så kompakt at HELE svaret
+  (config + html) kan afgives uden at blive afkortet.
 - I JSON'en skal overlay_target være det interne id (hoved/komm/overlay-3), men tal om dem som
   Master/Secondary/Fullscreen over for brugeren.
 
@@ -175,7 +177,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
+        max_tokens: 8192,
         system: buildSystemPrompt(cfg),
         messages
       })
@@ -185,7 +187,8 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: data?.error?.message || 'Anthropic API-fejl' });
     }
     const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
-    return res.status(200).json({ text });
+    // Signalér hvis svaret ramte token-loftet (frontend advarer + tolererer ulukket ```html)
+    return res.status(200).json({ text, truncated: data.stop_reason === 'max_tokens' });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
