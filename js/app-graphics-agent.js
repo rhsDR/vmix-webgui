@@ -116,7 +116,7 @@ async function _gaSetRevision(id) {
     if (error) throw error;
     html = await blob.text();
   } catch (err) {
-    gaBusy = false; gaRevisionId = null;
+    gaBusy = false; gaRevisionId = null; gaRevisionGrafik = null; gaRevisionPending = false;
     toast('Kunne ikke hente grafikkens HTML: ' + (err.message || err), 'err');
     renderGraphicsAgent();
     return;
@@ -353,8 +353,12 @@ async function _gaSaveGraphic() {
   if (!c) return;
   const html = _gaCurrentHtml();
   if (!html) { toast('Ingen HTML at gemme — bed agenten generere grafikken', 'err'); return; }
-  const v = _gaValidateHtml(html);
-  if (v.errors.length || v.warnings.length) { _gaShowValidate(v); return; }
+  // Ren config-revidering (agenten leverede ingen ny HTML) → HTML'en er uændret og allerede i drift → spring validering over
+  const configOnlyRevision = !!gaRevisionId && !(gaResult && gaResult.html);
+  if (!configOnlyRevision) {
+    const v = _gaValidateHtml(html);
+    if (v.errors.length || v.warnings.length) { _gaShowValidate(v); return; }
+  }
   await _gaDoSave();
 }
 
