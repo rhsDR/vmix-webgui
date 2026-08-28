@@ -31,6 +31,7 @@ function renderGraphicsAgent() {
         <div class="ga-messages" id="ga-messages"></div>
         <div id="ga-preview" class="ga-preview"></div>
         <div id="ga-config"></div>
+        <div id="ga-validate"></div>
         <details class="ga-attach" id="ga-attach">
           <summary>📎 Vedhæft billede eller HTML (valgfrit)</summary>
           <div class="ga-attach-body">
@@ -279,6 +280,7 @@ function _gaLastUploadedHtml() {
 
 async function _gaOnSend() {
   if (gaBusy) return;
+  const _vb = document.getElementById('ga-validate'); if (_vb) _vb.innerHTML = '';
   const inp = document.getElementById('ga-input');
   const text = (inp?.value || '').trim();
   const attached = _gaAttachedHtml.trim();
@@ -345,7 +347,64 @@ async function _gaCallAgent() {
   }
 }
 
+// Validér HTML før gem; ved problemer → vis panel med "Bed agenten rette" / "Gem alligevel".
 async function _gaSaveGraphic() {
+  const c = gaResult && gaResult.config;
+  if (!c) return;
+  const html = _gaCurrentHtml();
+  if (!html) { toast('Ingen HTML at gemme — bed agenten generere grafikken', 'err'); return; }
+  const v = _gaValidateHtml(html);
+  if (v.errors.length || v.warnings.length) { _gaShowValidate(v); return; }
+  await _gaDoSave();
+}
+
+function _gaCurrentHtml() {
+  return (gaResult && gaResult.html) || _gaLastUploadedHtml() || (gaRevisionGrafik && gaRevisionGrafik._html) || null;
+}
+
+function _gaValidateHtml(html) {
+  const errors = [], warnings = [];
+  const h = String(html || '');
+  if (!/runAnimationIN/.test(h))  errors.push('Mangler window.runAnimationIN() — systemet kan ikke vise grafikken.');
+  if (!/runAnimationOUT/.test(h)) errors.push('Mangler window.runAnimationOUT() — systemet kan ikke skjule grafikken.');
+  if (/spx_interface\.js|SPXGCTemplateDefinition/i.test(h)) errors.push('Bruger SPX/CasparCG-stillads (spx_interface.js) — findes ikke i systemet.');
+  if (/<script[^>]+src=["'][^"']*supabase/i.test(h)) warnings.push('Indlæser Supabase-SDK — blokeres i systemets iframes.');
+  if (/<link[^>]+fonts\.googleapis\.com/i.test(h)) warnings.push('Blokerende Google Fonts <link> — kan forsinke visning; brug system-fonte el. @font-face.');
+  if (!/background\s*:\s*transparent|background-color\s*:\s*transparent/i.test(h)) warnings.push('Fandt ikke "background: transparent" — tjek at baggrunden er gennemsigtig.');
+  return { errors, warnings };
+}
+
+function _gaShowValidate(v) {
+  const box = document.getElementById('ga-validate');
+  if (!box) return;
+  const err  = v.errors.map(e => `<li>${esc(e)}</li>`).join('');
+  const warn = v.warnings.map(w => `<li>${esc(w)}</li>`).join('');
+  box.innerHTML = `
+    <div class="ga-validate-card ${v.errors.length ? 'has-err' : 'has-warn'}">
+      <div class="ga-validate-title">${v.errors.length ? '⚠️ Grafikken opfylder ikke systemkravene' : '⚠️ Tjek lige dette før du gemmer'}</div>
+      ${err  ? `<div class="ga-validate-sub err">Fejl:</div><ul>${err}</ul>` : ''}
+      ${warn ? `<div class="ga-validate-sub warn">Advarsler:</div><ul>${warn}</ul>` : ''}
+      <div class="ga-validate-btns">
+        <button id="ga-validate-fix" class="ga-validate-btn fix">Bed agenten rette</button>
+        <button id="ga-validate-save" class="ga-validate-btn save">${v.errors.length ? 'Gem alligevel' : 'Gem'}</button>
+      </div>
+    </div>`;
+  box.querySelector('#ga-validate-fix').addEventListener('click', () => _gaAskFix(v));
+  box.querySelector('#ga-validate-save').addEventListener('click', () => { box.innerHTML = ''; _gaDoSave(); });
+}
+
+async function _gaAskFix(v) {
+  const box = document.getElementById('ga-validate'); if (box) box.innerHTML = '';
+  const issues = [...v.errors, ...v.warnings].map(x => '- ' + x).join('\n');
+  gaMessages.push({ role: 'user', content: 'Grafikken har følgende problemer:\n' + issues + '\n\nRet HTML\'en så den overholder systemkravene, og udskriv den fulde ```json-config + ```html igen.' });
+  gaError = ''; gaBusy = true;
+  renderGraphicsAgent();
+  await _gaCallAgent();
+  gaBusy = false;
+  renderGraphicsAgent();
+}
+
+async function _gaDoSave() {
   const c = gaResult && gaResult.config;
   if (!c) return;
   const btn = document.getElementById('ga-save');

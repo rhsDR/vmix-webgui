@@ -35,6 +35,28 @@ en grafik brugeren uploader/indsætter, ELLER ved at GENERERE grafik-HTML ud fra
 - Ingen server-kald / ingen ekstern data-hentning — indhold skrives direkte i HTML'en.
 - Hold HTML'en fokuseret og kompakt (undgå unødig kode), men komplet og funktionel.
 
+## Eksempel — FØLG denne struktur (kanonisk lower-third)
+\`\`\`html
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+  html,body{margin:0;width:1920px;height:1080px;background:transparent;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;}
+  #lt{position:absolute;bottom:120px;left:80px;opacity:0;transform:translateY(24px);transition:opacity .45s ease,transform .45s cubic-bezier(.16,1,.3,1);}
+  #lt.in{opacity:1;transform:translateY(0);}
+  #bar{width:5px;height:64px;background:#4a9eff;display:inline-block;vertical-align:middle;margin-right:14px;}
+  #navn{font-size:38px;font-weight:700;color:#fff;text-shadow:1px 1px 4px rgba(0,0,0,.8);}
+  #titel{font-size:22px;color:#4a9eff;margin-top:4px;}
+</style></head><body>
+  <div id="lt"><span id="bar"></span><span style="display:inline-block;vertical-align:middle;"><div id="navn">Navn Navnesen</div><div id="titel">Titel / rolle</div></span></div>
+  <script>
+    window.runAnimationIN  = function(){ document.getElementById('lt').classList.add('in'); };
+    window.runAnimationOUT = function(){ document.getElementById('lt').classList.remove('in'); };
+  </script>
+</body></html>
+\`\`\`
+Princip (følg det i ALLE grafikker): transparent body; elementet starter SKJULT (opacity:0 + forskudt);
+blød CSS- eller GSAP-transition; runAnimationIN viser + animerer IND; runAnimationOUT animerer UD.
+Tilpas layout/indhold til opgaven, men behold denne struktur.
+
 ## Live data (kun hvis grafikken skal vise dynamisk indhold)
 Grafik kan hente live projekt-data fra systemets vMix-API:
 - Hent fra \`\${window.__API_ORIGIN}/api/vmix/\${window.__PROJEKT_ID}\` (GET, ingen auth). Systemet
@@ -61,6 +83,10 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   navneskilt → sub_aktiv_n/_t).
 - ticker_normal/ticker_breaking er FÆRDIG HTML → indsæt med innerHTML. Navne, scores og øvrig tekst
   er REN tekst → brug textContent (aldrig innerHTML), så layout ikke brydes.
+- Data-drevne grafikker skal have PÆNE demo/fallback-værdier bagt ind i HTML'en (fx "Navn Navnesen",
+  "HOLD A 2 - 1 HOLD B"), så de ser rigtige ud i preview + FØR live-data er der. Brug
+  window.__IS_PREVIEW: er den true → vis KUN demo-data (fetch IKKE); ellers hent live og overskriv.
+  Hvis en live-værdi mangler → behold demo/sidste værdi (blank aldrig ud til tomt).
 
 ## Animation (ind/ud)
 - runAnimationIN: vis grafikken og animér den blødt IND (fx slide op + fade, ~0.4-0.6s, ease-out).

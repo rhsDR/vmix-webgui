@@ -2099,3 +2099,18 @@
       background-size: 24px 24px; background-position: 0 0,0 12px,12px -12px,-12px 0;
     }
     .ga-preview-frame { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; border: none; transform-origin: top left; background: transparent; pointer-events: none; }
+    .ga-validate-card { border-radius: 8px; padding: 12px; font-size: 12px; }
+    .ga-validate-card.has-err { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.45); }
+    .ga-validate-card.has-warn { background: rgba(234,179,8,0.08); border: 1px solid rgba(234,179,8,0.45); }
+    .ga-validate-title { font-weight: 700; letter-spacing: .5px; margin-bottom: 6px; color: #eee; }
+    .ga-validate-sub { font-size: 11px; letter-spacing: 1px; margin: 6px 0 2px; }
+    .ga-validate-sub.err { color: #fca5a5; }
+    .ga-validate-sub.warn { color: #fde68a; }
+    .ga-validate-card ul { margin: 0 0 4px; padding-left: 18px; color: #ccc; }
+    .ga-validate-card li { margin: 2px 0; }
+    .ga-validate-btns { display: flex; gap: 8px; margin-top: 8px; }
+    .ga-validate-btn { padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .ga-validate-btn.fix { background: #1a2a3a; border: 1px solid #1d4ed8; color: #93c5fd; }
+    .ga-validate-btn.fix:hover { background: #1e3350; }
+    .ga-validate-btn.save { background: #1a3a1a; border: 1px solid #2d5a2d; color: #86efac; }
+    .ga-validate-btn.save:hover { background: #21501f; }
