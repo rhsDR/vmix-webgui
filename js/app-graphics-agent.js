@@ -66,14 +66,9 @@ function renderGraphicsAgent() {
     el.querySelector('#ga-img').addEventListener('change', async e => {
       const f = e.target.files[0]; if (!f) return;
       try {
-        const dataUrl = await new Promise((resolve, reject) => {
-          const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(f);
-        });
-        const m = /^data:(image\/[a-z]+);base64,(.+)$/i.exec(dataUrl);
-        if (!m) { toast('Kunne ikke læse billedet', 'err'); return; }
-        _gaAttachedImage = { media_type: m[1], data: m[2], dataUrl };
+        _gaAttachedImage = await _gaLoadImageScaled(f);
         const prev = el.querySelector('#ga-img-preview');
-        if (prev) prev.innerHTML = `<img src="${dataUrl}" class="ga-img-thumb"><span class="ga-img-note">billede klar — skriv evt. en note og send</span>`;
+        if (prev) prev.innerHTML = `<img src="${_gaAttachedImage.dataUrl}" class="ga-img-thumb"><span class="ga-img-note">billede klar — skriv evt. en note og send</span>`;
         toast('Billede vedhæftet', 'ok');
       } catch { toast('Kunne ikke læse billedet', 'err'); }
     });
@@ -261,6 +256,40 @@ function _gaClearAttachments() {
   const a = document.getElementById('ga-attach'); if (a) a.open = false;
 }
 
+// Indlæs billede; nedskalér til max 1568px (Anthropics anbefaling) hvis større → mindre base64,
+// så store telefonfotos ikke sprænger Vercel/Anthropic-grænserne. Små PNG'er sendes uændret.
+function _gaLoadImageScaled(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onerror = () => reject(new Error('kunne ikke læse filen'));
+    r.onload = () => {
+      const dataUrl = r.result;
+      const img = new Image();
+      img.onerror = () => reject(new Error('kunne ikke indlæse billedet'));
+      img.onload = () => {
+        const MAX = 1568;
+        const big = Math.max(img.width, img.height);
+        if (big <= MAX && file.size <= 3.5 * 1024 * 1024) {
+          const m = /^data:(image\/[a-z]+);base64,(.+)$/i.exec(dataUrl);
+          if (m) return resolve({ media_type: m[1], data: m[2], dataUrl });
+        }
+        const scale = big > MAX ? MAX / big : 1;
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const out = canvas.toDataURL('image/jpeg', 0.85);
+        const m2 = /^data:(image\/[a-z]+);base64,(.+)$/i.exec(out);
+        if (!m2) return reject(new Error('kunne ikke kode billedet'));
+        resolve({ media_type: m2[1], data: m2[2], dataUrl: out });
+      };
+      img.src = dataUrl;
+    };
+    r.readAsDataURL(file);
+  });
+}
+
 function _gaParseResult(text) {
   let config = null, html = null;
   const s = String(text);
@@ -416,6 +445,15 @@ async function _gaAskFix(v) {
   renderGraphicsAgent();
 }
 
+// Gør trigger_key unik mod eksisterende custom-grafikker (agenten kender dem ikke) → ingen overskrivning/dubletter
+function _gaUniqueTrigKey(base) {
+  const taken = new Set((customGrafik || []).map(g => g.trigger_key));
+  if (!taken.has(base)) return base;
+  let n = 2;
+  while (taken.has(base + '_' + n)) n++;
+  return base + '_' + n;
+}
+
 async function _gaDoSave() {
   const c = gaResult && gaResult.config;
   if (!c) return;
@@ -459,7 +497,9 @@ async function _gaDoSave() {
     // ── NY GRAFIK: upload + insert ──
     const html = gaResult.html || _gaLastUploadedHtml();
     if (!html) { toast('Ingen HTML at gemme — bed agenten generere grafikken', 'err'); return; }
-    const trigKey = (c.trigger_key || ('grafik_' + Date.now())).trim();
+    const baseKey = (c.trigger_key || ('grafik_' + Date.now())).trim();
+    const trigKey = _gaUniqueTrigKey(baseKey);
+    if (trigKey !== baseKey) toast('Trigger-nøgle “' + baseKey + '” var optaget — gemt som “' + trigKey + '”', 'ok');
     const mode = c.overlay_mode === 'standalone' ? 'standalone' : 'embed';
     const target = mode === 'standalone'
       ? 'hoved'
