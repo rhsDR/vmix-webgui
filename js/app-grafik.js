@@ -613,9 +613,9 @@ function renderGrafik() {
     const listeBar = `
       <div class="afv-liste-bar">
         <select id="afv-liste-sel" class="afv-liste-sel" title="Vælg afviklingsliste"${hasLister ? '' : ' disabled'}>${listeOpts}</select>
-        <button class="afv-liste-btn" id="afv-liste-ny" title="Ny liste">＋ Ny liste</button>
-        ${hasLister ? `<button class="afv-liste-btn" id="afv-liste-omdoeb" title="Omdøb liste">✎</button>
-        <button class="afv-liste-btn" id="afv-liste-slet" title="Slet liste">🗑</button>` : ''}
+        <button class="grafik-btn-prw" id="afv-liste-ny" title="Ny liste">＋ Ny liste</button>
+        ${hasLister ? `<button class="grafik-btn-prw" id="afv-liste-omdoeb" title="Omdøb liste">✎ Omdøb</button>
+        <button class="grafik-btn-prw" id="afv-liste-slet" title="Slet liste">🗑 Slet</button>` : ''}
       </div>`;
     contentHTML = `${listeBar}
       <div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 6px;">
