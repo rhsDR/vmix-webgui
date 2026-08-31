@@ -39,8 +39,7 @@
   <button class="tab-btn" data-tab="ticker">TICKER</button>
   <button class="tab-btn" data-tab="credits">CREDITS</button>
   <button class="tab-btn" data-tab="grafik">GRAFIK</button>
-  <button class="tab-btn" data-tab="grafik-ops">GRAFIK OPS</button>
-  <button class="tab-btn" data-tab="graphics-agent">GRAFIK-AGENT</button>
+  <button class="tab-btn" data-tab="grafik-ops">GRAFIK SETUP</button>
 </nav>
 
 <!-- TAB: KAMPE -->
@@ -107,14 +106,14 @@
   <div id="grafikList"><div class="loading">Henter data…</div></div>
 </div>
 
-<!-- TAB: GRAFIK OPS -->
+<!-- TAB: GRAFIK SETUP (værktøjer + grafik-agent samlet) -->
 <div id="tab-grafik-ops" class="tab-pane">
+  <div class="gops-subtabs">
+    <button class="gops-subtab active" data-gops="tools">VÆRKTØJER</button>
+    <button class="gops-subtab" data-gops="agent">GRAFIK-AGENT</button>
+  </div>
   <div id="grafikOpsList"><div class="loading">Henter data…</div></div>
-</div>
-
-<!-- TAB: GRAFIK-AGENT -->
-<div id="tab-graphics-agent" class="tab-pane">
-  <div id="graphicsAgentApp"></div>
+  <div id="graphicsAgentApp" style="display:none"></div>
 </div>
 
 <!-- TAB: LIVE -->
@@ -296,6 +295,11 @@
         <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">FARVE</label>
         <input id="makro-color-inp" type="color" value="#4a9eff"
           style="height:32px;width:60px;background:#111;border:1px solid #333;border-radius:6px;cursor:pointer;padding:2px;">
+      </div>
+      <div>
+        <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">LISTE</label>
+        <select id="makro-liste-sel"
+          style="width:100%;box-sizing:border-box;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:12px;"></select>
       </div>
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">

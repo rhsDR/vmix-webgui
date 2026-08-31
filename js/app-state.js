@@ -70,6 +70,8 @@ function _debouncedRenderGrafikOps() { clearTimeout(_rgoDebounceTimer); _rgoDebo
 let customGrafik        = []; // rækker fra projekt_grafik-tabellen
 let grafikOverlayMap    = {}; // { grafik-id: 'hoved'|'komm' } for built-in grafikker
 let makroer             = []; // rækker fra projekt_makroer-tabellen
+let afviklingslister    = []; // rækker fra projekt_afviklingslister-tabellen
+let aktivListeId        = null; // valgt afviklingsliste (persisteres i settings.aktiv_afviklingsliste)
 let grafiktActiveSubTab = 'lower-third';
 let grafiktActivePrvKey = '';
 let grafiktActivePrvUrl = '';

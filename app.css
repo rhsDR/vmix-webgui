@@ -1516,6 +1516,14 @@
     }
     .grafik-v2-tab:hover { color: #aaa; }
     .grafik-v2-tab.active { color: var(--tab-color, #fff); border-bottom-color: var(--tab-color, var(--orange)); }
+    .gops-subtabs { display: flex; gap: 4px; border-bottom: 1px solid #242424; margin-bottom: 12px; }
+    .gops-subtab { background: transparent; border: none; border-bottom: 2px solid transparent; color: #979797; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; padding: 8px 14px; cursor: pointer; transition: color 0.15s; }
+    .gops-subtab:hover { color: #aaa; }
+    .gops-subtab.active { color: #fff; border-bottom-color: var(--orange); }
+    .afv-liste-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .afv-liste-sel { flex: 0 1 auto; min-width: 140px; background: #111; border: 1px solid #333; color: #ddd; padding: 6px 8px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+    .afv-liste-btn { background: #161616; border: 1px solid #333; color: #aaa; padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+    .afv-liste-btn:hover { background: #1f1f1f; color: #ddd; }
     .grafik-v2-onair {
       width: 6px; height: 6px;
       border-radius: 50%;

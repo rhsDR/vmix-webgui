@@ -530,7 +530,7 @@ async function _gaDoSave() {
     toast('Grafik gemt ✓', 'ok');
     gaResult = null;
     const cfgBox = document.getElementById('ga-config');
-    if (cfgBox) cfgBox.innerHTML = `<div class="ga-saved">✅ "${esc(c.label || trigKey)}" er gemt — se den i GRAFIK OPS → EGNE GRAFIKKER og i komponisten.</div>`;
+    if (cfgBox) cfgBox.innerHTML = `<div class="ga-saved">✅ "${esc(c.label || trigKey)}" er gemt — se den i GRAFIK SETUP → VÆRKTØJER → EGNE GRAFIKKER og i komponisten.</div>`;
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = gaRevisionId ? 'Opdater grafik' : 'Gem grafik'; }
   }

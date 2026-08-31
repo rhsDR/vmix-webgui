@@ -7,9 +7,22 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
     if (btn.dataset.tab === 'live')   startLivePolling();
     else                              stopLivePolling();
-    if (btn.dataset.tab === 'grafik') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadCompanionToken()]).then(() => refreshGrafiktState()); fetchLineupDataForGrafik(); }
-    if (btn.dataset.tab === 'grafik-ops') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadCompanionToken()]).then(async () => { await refreshGrafiktState(); renderGrafikOps(); }); }
-    if (btn.dataset.tab === 'graphics-agent') { loadCompanionToken(); loadKunstomGrafik().then(renderGraphicsAgent); }
+    if (btn.dataset.tab === 'grafik') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadAfviklingslister(), loadCompanionToken()]).then(() => refreshGrafiktState()); fetchLineupDataForGrafik(); }
+    if (btn.dataset.tab === 'grafik-ops') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadAfviklingslister(), loadCompanionToken()]).then(async () => { await refreshGrafiktState(); renderGrafikOps(); renderGraphicsAgent(); }); }
+  });
+});
+
+// ── GRAFIK SETUP under-faner (Værktøjer / Grafik-agent) ──
+document.querySelectorAll('.gops-subtab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.gops-subtab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const showAgent = btn.dataset.gops === 'agent';
+    const tools = document.getElementById('grafikOpsList');
+    const agent = document.getElementById('graphicsAgentApp');
+    if (tools) tools.style.display = showAgent ? 'none' : '';
+    if (agent) agent.style.display = showAgent ? '' : 'none';
+    if (showAgent) renderGraphicsAgent();
   });
 });
 

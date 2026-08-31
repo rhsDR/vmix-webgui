@@ -24,6 +24,79 @@ async function loadMakroer() {
   } catch { makroer = []; }
 }
 
+async function loadAfviklingslister() {
+  if (!aktivProjektId) return;
+  try {
+    afviklingslister = await sbGet('projekt_afviklingslister?projekt_id=eq.' + aktivProjektId + '&order=sort_order');
+  } catch { afviklingslister = []; }
+  // Sikr mindst én liste findes (fx nyt projekt uden migrering)
+  if (!afviklingslister.length) {
+    try {
+      const id = crypto.randomUUID();
+      await sbPost('projekt_afviklingslister', { id, projekt_id: aktivProjektId, navn: 'Afvikling 1', sort_order: 0 });
+      afviklingslister = [{ id, projekt_id: aktivProjektId, navn: 'Afvikling 1', sort_order: 0 }];
+    } catch {}
+  }
+  // Vælg aktiv liste: gemt valg hvis gyldigt, ellers første
+  if (!aktivListeId || !afviklingslister.some(l => l.id === aktivListeId)) {
+    let saved = null;
+    try {
+      const rows = await sbGet('settings?select=value&key=eq.aktiv_afviklingsliste&projekt_id=eq.' + aktivProjektId);
+      saved = rows[0]?.value || null;
+    } catch {}
+    aktivListeId = (saved && afviklingslister.some(l => l.id === saved)) ? saved : (afviklingslister[0]?.id || null);
+  }
+}
+
+async function _setAktivListe(id) {
+  aktivListeId = id;
+  try { await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'aktiv_afviklingsliste', value: id }); } catch {}
+  renderGrafik();
+}
+
+async function createAfviklingsliste() {
+  const navn = (prompt('Navn på ny afviklingsliste:') || '').trim();
+  if (!navn) return;
+  const id = crypto.randomUUID();
+  const sort_order = afviklingslister.length ? Math.max(...afviklingslister.map(l => l.sort_order || 0)) + 1 : 0;
+  try {
+    await sbPost('projekt_afviklingslister', { id, projekt_id: aktivProjektId, navn, sort_order });
+    await loadAfviklingslister();
+    await _setAktivListe(id);
+    toast('Liste oprettet', 'ok');
+  } catch { toast('Kunne ikke oprette liste', 'err'); }
+}
+
+async function renameAktivListe() {
+  const l = afviklingslister.find(x => x.id === aktivListeId);
+  if (!l) return;
+  const navn = (prompt('Nyt navn til listen:', l.navn) || '').trim();
+  if (!navn || navn === l.navn) return;
+  try {
+    await sbPatch('projekt_afviklingslister?id=eq.' + aktivListeId, { navn });
+    await loadAfviklingslister();
+    renderGrafik();
+    toast('Liste omdøbt', 'ok');
+  } catch { toast('Kunne ikke omdøbe', 'err'); }
+}
+
+async function deleteAktivListe() {
+  if (afviklingslister.length <= 1) { toast('Kan ikke slette den sidste liste', 'err'); return; }
+  const l = afviklingslister.find(x => x.id === aktivListeId);
+  if (!l) return;
+  const fallback = afviklingslister.find(x => x.id !== aktivListeId);
+  const antal = makroer.filter(m => m.liste_id === aktivListeId).length;
+  if (!confirm(`Slet listen "${l.navn}"?` + (antal ? `\n${antal} makro(er) flyttes til "${fallback.navn}".` : ''))) return;
+  try {
+    if (antal) await sbPatch('projekt_makroer?liste_id=eq.' + aktivListeId, { liste_id: fallback.id });
+    await sbDelete('projekt_afviklingslister?id=eq.' + aktivListeId);
+    aktivListeId = fallback.id;
+    await Promise.all([loadAfviklingslister(), loadMakroer()]);
+    await _setAktivListe(fallback.id);
+    toast('Liste slettet', 'ok');
+  } catch { toast('Kunne ikke slette', 'err'); }
+}
+
 async function _fireOneHandling(h, slotOverride) {
   if (h.key === 'lt_trigger') {
     const raw = slotOverride || (h.value === 'vmixcall' ? 'v' + (h.slot || '') : (h.slot || ''));
@@ -492,8 +565,9 @@ function renderGrafik() {
   }
 
   if (isAfvikling) {
-    const makroRows = makroer.length
-      ? makroer.map(m => {
+    const listeMakroer = makroer.filter(m => m.liste_id === aktivListeId);
+    const makroRows = listeMakroer.length
+      ? listeMakroer.map(m => {
           const summary = (m.handlinger || []).map(h => {
             if (h.key === 'wait') return `⏱ ${h.value}s`;
             if (h.key === 'alle_af') return '■ ALLE AF';
@@ -525,9 +599,17 @@ function renderGrafik() {
             </div>
           </div>`;
         }).join('')
-      : `<div class="grafik-v2-empty">Ingen makroer — opret dem via ＋ Tilføj</div>`;
+      : `<div class="grafik-v2-empty">Ingen makroer i denne liste — opret en via ＋ Tilføj</div>`;
+    const listeOpts = afviklingslister.map(l =>
+      `<option value="${l.id}"${l.id === aktivListeId ? ' selected' : ''}>${esc(l.navn)}</option>`).join('');
     contentHTML = `
-      <div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="afv-liste-bar">
+        <select id="afv-liste-sel" class="afv-liste-sel" title="Vælg afviklingsliste">${listeOpts}</select>
+        <button class="afv-liste-btn" id="afv-liste-ny" title="Ny liste">＋ Ny liste</button>
+        <button class="afv-liste-btn" id="afv-liste-omdoeb" title="Omdøb liste">✎</button>
+        <button class="afv-liste-btn" id="afv-liste-slet" title="Slet liste">🗑</button>
+      </div>
+      <div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 6px;">
         MAKROER
         <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;" onclick="openMakroModal()">＋ Tilføj</button>
       </div>
@@ -967,6 +1049,15 @@ function renderGrafik() {
 
   // ── AFVIKLING DnD ────────────────────────────────────────────────
   if (isAfvikling) {
+    const listeSel = container.querySelector('#afv-liste-sel');
+    if (listeSel) listeSel.addEventListener('change', e => _setAktivListe(e.target.value));
+    const nyBtn = container.querySelector('#afv-liste-ny');
+    if (nyBtn) nyBtn.addEventListener('click', createAfviklingsliste);
+    const omdBtn = container.querySelector('#afv-liste-omdoeb');
+    if (omdBtn) omdBtn.addEventListener('click', renameAktivListe);
+    const sletBtn = container.querySelector('#afv-liste-slet');
+    if (sletBtn) sletBtn.addEventListener('click', deleteAktivListe);
+
     container.querySelectorAll('.afv-fire-btn').forEach(btn =>
       btn.addEventListener('click', () => {
         const row = btn.closest('.afv-makro-row');
@@ -1145,10 +1236,11 @@ function renderMakroer(leftPanel) {
       <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;float:right;margin-top:-22px;position:relative;z-index:1;"
         onclick="openMakroModal()">＋ Tilføj</button>`;
 
-  if (!makroer.length) {
-    html += `<div class="grafik-v2-empty">Ingen makroer — klik ＋ Tilføj for at oprette en</div>`;
+  const listeMakroer = makroer.filter(m => m.liste_id === aktivListeId);
+  if (!listeMakroer.length) {
+    html += `<div class="grafik-v2-empty">Ingen makroer i denne liste — klik ＋ Tilføj</div>`;
   } else {
-    makroer.forEach(m => {
+    listeMakroer.forEach(m => {
       const _grps = [], _cur = [];
       for (const h of m.handlinger || []) {
         if (h.key === 'wait' || h.key === 'alle_af') {
@@ -1228,6 +1320,11 @@ function openMakroModal(id, prefillHandlinger) {
   document.getElementById('makro-modal-id').value = id || '';
   document.getElementById('makro-label-inp').value = m ? m.label : '';
   document.getElementById('makro-color-inp').value = m ? (m.farve || '#4a9eff') : '#4a9eff';
+  const listeSel = document.getElementById('makro-liste-sel');
+  if (listeSel) {
+    listeSel.innerHTML = afviklingslister.map(l => `<option value="${l.id}">${esc(l.navn)}</option>`).join('');
+    listeSel.value = (m && m.liste_id) ? m.liste_id : (aktivListeId || (afviklingslister[0]?.id || ''));
+  }
   const list = document.getElementById('makro-handlinger-list');
   list.innerHTML = '';
   const src = m?.handlinger?.length ? m.handlinger
@@ -1453,7 +1550,8 @@ async function _confirmMakroModal() {
     ? (makroer.find(x => x.id === id)?.sort_order ?? 0)
     : (makroer.length ? Math.max(...makroer.map(x => x.sort_order || 0)) + 1 : 0);
 
-  const body = { projekt_id: aktivProjektId, label, farve, handlinger, sort_order };
+  const liste_id = document.getElementById('makro-liste-sel')?.value || aktivListeId || null;
+  const body = { projekt_id: aktivProjektId, label, farve, handlinger, sort_order, liste_id };
   if (id) body.id = id;
 
   try {
