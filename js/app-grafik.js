@@ -64,7 +64,7 @@ async function createAfviklingsliste() {
     await loadAfviklingslister();
     await _setAktivListe(id);
     toast('Liste oprettet', 'ok');
-  } catch { toast('Kunne ikke oprette liste', 'err'); }
+  } catch { toast('Kunne ikke oprette liste — er migrationen kørt i Supabase?', 'err'); }
 }
 
 async function renameAktivListe() {
@@ -604,15 +604,19 @@ function renderGrafik() {
           </div>`;
         }).join('')
       : `<div class="grafik-v2-empty">Ingen makroer i denne liste — opret en via ＋ Tilføj</div>`;
-    const listeOpts = afviklingslister.map(l =>
-      `<option value="${l.id}"${l.id === aktivListeId ? ' selected' : ''}>${esc(l.navn)}</option>`).join('');
-    const listeBar = afviklingslister.length ? `
+    // Liste-baren vises ALTID (så "＋ Ny liste" altid er tilgængelig). Uden lister
+    // (fx migration ikke kørt endnu) er vælgeren tom/deaktiveret, men opret virker.
+    const hasLister = afviklingslister.length > 0;
+    const listeOpts = hasLister
+      ? afviklingslister.map(l => `<option value="${l.id}"${l.id === aktivListeId ? ' selected' : ''}>${esc(l.navn)}</option>`).join('')
+      : `<option value="">(ingen lister endnu)</option>`;
+    const listeBar = `
       <div class="afv-liste-bar">
-        <select id="afv-liste-sel" class="afv-liste-sel" title="Vælg afviklingsliste">${listeOpts}</select>
+        <select id="afv-liste-sel" class="afv-liste-sel" title="Vælg afviklingsliste"${hasLister ? '' : ' disabled'}>${listeOpts}</select>
         <button class="afv-liste-btn" id="afv-liste-ny" title="Ny liste">＋ Ny liste</button>
-        <button class="afv-liste-btn" id="afv-liste-omdoeb" title="Omdøb liste">✎</button>
-        <button class="afv-liste-btn" id="afv-liste-slet" title="Slet liste">🗑</button>
-      </div>` : '';
+        ${hasLister ? `<button class="afv-liste-btn" id="afv-liste-omdoeb" title="Omdøb liste">✎</button>
+        <button class="afv-liste-btn" id="afv-liste-slet" title="Slet liste">🗑</button>` : ''}
+      </div>`;
     contentHTML = `${listeBar}
       <div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 6px;">
         MAKROER
