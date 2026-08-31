@@ -565,7 +565,11 @@ function renderGrafik() {
   }
 
   if (isAfvikling) {
-    const listeMakroer = makroer.filter(m => m.liste_id === aktivListeId);
+    // Fald tilbage til ALLE makroer hvis lister ikke findes endnu (migration ikke kørt),
+    // og vis altid makroer uden liste_id (så intet forsvinder). Efter migrering har alle en liste.
+    const listeMakroer = afviklingslister.length
+      ? makroer.filter(m => m.liste_id === aktivListeId || !m.liste_id)
+      : makroer;
     const makroRows = listeMakroer.length
       ? listeMakroer.map(m => {
           const summary = (m.handlinger || []).map(h => {
@@ -602,13 +606,14 @@ function renderGrafik() {
       : `<div class="grafik-v2-empty">Ingen makroer i denne liste — opret en via ＋ Tilføj</div>`;
     const listeOpts = afviklingslister.map(l =>
       `<option value="${l.id}"${l.id === aktivListeId ? ' selected' : ''}>${esc(l.navn)}</option>`).join('');
-    contentHTML = `
+    const listeBar = afviklingslister.length ? `
       <div class="afv-liste-bar">
         <select id="afv-liste-sel" class="afv-liste-sel" title="Vælg afviklingsliste">${listeOpts}</select>
         <button class="afv-liste-btn" id="afv-liste-ny" title="Ny liste">＋ Ny liste</button>
         <button class="afv-liste-btn" id="afv-liste-omdoeb" title="Omdøb liste">✎</button>
         <button class="afv-liste-btn" id="afv-liste-slet" title="Slet liste">🗑</button>
-      </div>
+      </div>` : '';
+    contentHTML = `${listeBar}
       <div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 6px;">
         MAKROER
         <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;" onclick="openMakroModal()">＋ Tilføj</button>
@@ -1236,7 +1241,9 @@ function renderMakroer(leftPanel) {
       <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;float:right;margin-top:-22px;position:relative;z-index:1;"
         onclick="openMakroModal()">＋ Tilføj</button>`;
 
-  const listeMakroer = makroer.filter(m => m.liste_id === aktivListeId);
+  const listeMakroer = afviklingslister.length
+    ? makroer.filter(m => m.liste_id === aktivListeId || !m.liste_id)
+    : makroer;
   if (!listeMakroer.length) {
     html += `<div class="grafik-v2-empty">Ingen makroer i denne liste — klik ＋ Tilføj</div>`;
   } else {
