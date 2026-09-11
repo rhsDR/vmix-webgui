@@ -37,20 +37,18 @@ async function loadAfviklingslister() {
       afviklingslister = [{ id, projekt_id: aktivProjektId, navn: 'Afvikling 1', sort_order: 0 }];
     } catch {}
   }
-  // Vælg aktiv liste: gemt valg hvis gyldigt, ellers første
+  // Vælg aktiv liste: gemt valg pr. browser (localStorage — så flere operatører
+  // på samme projekt ikke overskriver hinandens valg), ellers første liste.
   if (!aktivListeId || !afviklingslister.some(l => l.id === aktivListeId)) {
     let saved = null;
-    try {
-      const rows = await sbGet('settings?select=value&key=eq.aktiv_afviklingsliste&projekt_id=eq.' + aktivProjektId);
-      saved = rows[0]?.value || null;
-    } catch {}
+    try { saved = localStorage.getItem('vmix_aktivliste_' + aktivProjektId); } catch {}
     aktivListeId = (saved && afviklingslister.some(l => l.id === saved)) ? saved : (afviklingslister[0]?.id || null);
   }
 }
 
-async function _setAktivListe(id) {
+function _setAktivListe(id) {
   aktivListeId = id;
-  try { await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'aktiv_afviklingsliste', value: id }); } catch {}
+  try { localStorage.setItem('vmix_aktivliste_' + aktivProjektId, id); } catch {}
   renderGrafik();
 }
 
