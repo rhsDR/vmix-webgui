@@ -333,9 +333,9 @@
           card.appendChild(btn);
         }
 
-        // Klik på kort → åbn projekt (blokér hvis inaktivt)
+        // Klik på kort → åbn projekt (inaktive kan KUN åbnes af admins)
         card.addEventListener('click', e => {
-          if (!erAktiv) return;
+          if (!erAktiv && !userIsAdmin) return;
           if (e.target.classList.contains('project-undertitel') || e.target.classList.contains('project-undertitel-input') || e.target.classList.contains('toggle-btn')) return;
           window.location.href = 'app.html?p=' + p.id;
         });
