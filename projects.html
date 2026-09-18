@@ -290,9 +290,9 @@
       const grid = document.getElementById('projectGrid');
       grid.innerHTML = '';
 
-      const visible = userIsAdmin
-        ? projekter
-        : projekter.filter(p => p.aktiv !== false || p.type === 'kampdag');
+      // Alle brugere ser ALLE projekter. (aktiv-flaget styrer stadig åbning +
+      // vMix-feed, men skjuler ikke længere projekter for ikke-admins.)
+      const visible = projekter;
 
       visible.forEach(p => {
         const erAktiv = p.aktiv !== false || p.type === 'kampdag';
