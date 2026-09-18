@@ -141,7 +141,7 @@
       const { error } = await sbClient.auth.signInWithPassword({ email, password });
 
       if (error) {
-        err.textContent = 'Forkert email eller adgangskode.';
+        err.textContent = loginErrorText(error);
         err.style.display = 'block';
         btn.disabled = false;
         btn.textContent = 'Log ind';
@@ -149,6 +149,21 @@
         window.location.href = 'projects.html';
       }
     });
+
+    // Oversæt Supabase-auth-fejl til en forklarende dansk besked (i stedet for altid
+    // "forkert email/kode"), så login-problemer er lettere at diagnosticere. Forkert
+    // kode / ukendt bruger holdes bevidst generisk (afslører ikke om en mail findes).
+    function loginErrorText(error) {
+      const code = (error.code || '').toLowerCase();
+      const msg  = (error.message || '').toLowerCase();
+      if (code === 'email_not_confirmed' || msg.includes('not confirmed'))
+        return 'Din e-mail er ikke bekræftet endnu. Kontakt administratoren, så aktiverer de din konto.';
+      if (error.status === 429 || msg.includes('rate limit'))
+        return 'For mange forsøg. Vent et minut og prøv igen.';
+      if (code === 'invalid_credentials' || msg.includes('invalid login credentials'))
+        return 'Forkert email eller adgangskode.';
+      return 'Login-fejl: ' + (error.message || 'ukendt') + '. Kontakt administratoren hvis det fortsætter.';
+    }
   </script>
 </body>
 </html>
