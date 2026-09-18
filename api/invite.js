@@ -32,7 +32,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: data.message || data.msg || 'Fejl ved invitation' });
     }
 
-    // Sæt default kode så brugeren kan logge ind med det samme
+    // Sæt default kode OG bekræft e-mailen, så brugeren kan logge ind med det samme
+    // (uden email_confirm ender inviterede brugere i "e-mail ikke bekræftet" og kan ikke logge ind)
     await fetch(`${supabaseUrl}/auth/v1/admin/users/${data.id}`, {
       method: 'PUT',
       headers: {
@@ -40,7 +41,7 @@ export default async function handler(req, res) {
         'Authorization': 'Bearer ' + serviceKey,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ password: DEFAULT_PASSWORD })
+      body: JSON.stringify({ password: DEFAULT_PASSWORD, email_confirm: true })
     });
 
     return res.status(200).json({ id: data.id, email: data.email });
