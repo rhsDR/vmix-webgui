@@ -137,6 +137,18 @@ export default async function handler(req, res) {
   const { id } = req.query;
   if (!id) return res.status(400).json({ error: 'projekt id mangler' });
 
+  // Inaktive projekter må IKKE modtage data (triggers). Fail closed. service-role
+  // læser status uden om RLS, så tjekket er uafhængigt af politikker.
+  try {
+    const pr = await fetch(`${SB_URL}/rest/v1/projekter?id=eq.${encodeURIComponent(id)}&select=aktiv&limit=1`,
+      { headers: { apikey: _SVC, Authorization: 'Bearer ' + _SVC } });
+    const projRows = await pr.json();
+    if (!projRows[0]) return res.status(404).json({ error: 'Projekt ikke fundet' });
+    if (projRows[0].aktiv === false) return res.status(403).json({ error: 'Projektet er inaktivt — triggers afvist' });
+  } catch {
+    return res.status(502).json({ error: 'Kunne ikke tjekke projekt-status' });
+  }
+
   const macroId      = req.query.macro;
   const slotOverride = req.query.slot || '';
   if (macroId) {
