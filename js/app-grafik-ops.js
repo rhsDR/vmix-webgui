@@ -390,6 +390,8 @@ function _composerItemMeta(id) {
     if (!g || g.overlay_mode === 'standalone') return null;
     return { id, label: g.label, color: g.color || '#888888', live: (grafiktState[g.trigger_key] || 'out') !== 'out' };
   }
+  // Indbyggede kampdag-grafikker (SUB/ticker/credits/score/…) vises KUN i kampdag-projekter
+  if (projektType !== 'kampdag') return null;
   const og = OVERLAY_GRAPHICS.find(x => x.id === id);
   if (!og || og.id === 'komm') return null;
   return { id, label: og.label, color: og.color, live: (grafiktState[og.triggerKey] || 'out') !== 'out' };
@@ -403,11 +405,11 @@ function _composerColumnItems(overlayKey) {
     const meta = _composerItemMeta(id);
     if (meta) items.push(meta);
   });
-  if (overlayKey === 'komm') {
+  if (projektType === 'kampdag' && overlayKey === 'komm') {
     const kommLive = KOMM_BOKSE.some(k => (grafiktState[k.triggerKey] || 'out') !== 'out');
     items.push({ id: 'komm', label: 'Kommentator-bokse', color: '#4a9eff', live: kommLive, locked: true, lockHint: 'Kommentator-bokse vises altid på Secondary' });
   }
-  if (overlayKey === 'overlay-3') {
+  if (projektType === 'kampdag' && overlayKey === 'overlay-3') {
     const og = OVERLAY_GRAPHICS.find(x => x.id === 'overlay-3');
     const live = (grafiktState['lineup_trigger'] || 'out') !== 'out';
     items.push({ id: 'overlay-3', label: 'Opstilling', color: og ? og.color : '#ff8833', live, locked: true, lockHint: 'Opstillingen ER selve Fullscreen-overlayet' });
