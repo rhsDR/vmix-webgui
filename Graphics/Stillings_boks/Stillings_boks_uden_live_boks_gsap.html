@@ -44,10 +44,16 @@ function _showMatch(m,animate){
   var el=document.getElementById('el17');if(!el)return;
   var txt=_fmtMatch(m);
   if(animate&&_vis){
-    gsap.timeline()
-      .to(el,{opacity:0,duration:0.3,ease:'power2.in'})
-      .call(function(){el.textContent=txt;})
-      .to(el,{opacity:1,duration:0.22,ease:'power3.out'},'+=0.06');
+    // CSS-transition (compositor-traad) i stedet for GSAP (hovedtraad hver frame) —
+    // undgaar at kamp-skiftet staller frame-produktionen og fryser tickeren.
+    el.style.willChange='opacity';
+    el.style.transition='opacity 0.3s ease';
+    el.style.opacity='0';
+    setTimeout(function(){
+      el.textContent=txt;
+      el.style.transition='opacity 0.22s ease';
+      el.style.opacity='1';
+    },300);
   }else{el.textContent=txt;}
 }
 function _nextMatch(){
