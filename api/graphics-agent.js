@@ -91,10 +91,28 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
 ## Animation (ind/ud)
 - runAnimationIN: vis grafikken og animér den blødt IND (fx slide op + fade, ~0.4-0.6s, ease-out).
 - runAnimationOUT: animér UD (omvendt, ~0.3-0.5s, ease-in) og skjul til sidst.
-- Brug GSAP (fra CDN i <head>) eller CSS-transitions. Broadcast-passende: rolige, rene bevægelser.
+- FORETRÆK CSS-transitions/@keyframes på transform + opacity (se YDELSE nedenfor). GSAP er OK til
+  korte ind/ud, men KUN til transform/opacity. Broadcast-passende: rolige, rene bevægelser.
   Sæt starttilstand skjult/forskudt, så grafikken ikke "blinker" før runAnimationIN kaldes.
 - Systemet håndterer selv AUTO-SKJUL (ud fra auto_hide_seconds) og holder grafikken skjult indtil
   runAnimationIN kaldes — byg IKKE din egen auto-hide-timer, og skjul ikke body permanent.
+
+## YDELSE i vMix (KRITISK — ellers hakker/fryser grafikken on air)
+Grafikken kører som en browser source i vMix, der FANGER færdige frames i fast takt. Alt hovedtråds-
+arbejde pr. frame, der forsinker et frame, bliver et SYNLIGT hak/frys (værre end i en alm. browser —
+derfor: det der ser glat ud i browseren kan fryse i vMix). Regler:
+- Animér KUN transform og opacity for alt der skal være glat — de kan køre på compositor-tråden,
+  uafhængigt af hovedtråden. UNDGÅ at animere clip-path, width, height, top, left, box-shadow,
+  filter, background-position (de gen-tegner på hovedtråden hver frame og kan stalle hele kilden).
+- Kontinuerlig bevægelse (fx en rullende ticker) SKAL laves med en CSS @keyframes-animation på
+  transform — ALDRIG en requestAnimationFrame-løkke der sætter position i JS hver frame (det kører
+  på hovedtråden og fryser i vMix).
+- Brug ALDRIG en CSS-variabel eller calc(var(...)) i en animations-VÆRDI (fx translateX(var(--x))):
+  det slår compositing fra, så animationen falder tilbage på hovedtråden. Bag den konkrete px-værdi ind
+  (regenerér evt. @keyframes med den målte bredde).
+- Sæt will-change: transform (eller opacity) på det element der animeres kontinuerligt.
+- Foretræk CSS-transition frem for GSAP til fades/reveals: GSAP driver animationen fra JS på
+  hovedtråden hver frame og kan stalle vMix' frame-produktion. Hold GSAP til kort, let transform/opacity.
 
 ## Dit workflow
 1. ANALYSÉR: Hvis brugeren uploader/indsætter HTML, læs den stille igennem — tekstfelter/elementer,
