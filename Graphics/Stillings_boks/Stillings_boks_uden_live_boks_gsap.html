@@ -95,16 +95,18 @@ function _animIN(){
   _vis=true;_cols(_br);
   if(_matches.length)document.getElementById('el17').textContent=_fmtMatch(_matches[_matchIdx]);
   if(_matches.length>1)_startCycle();
-  var tl=gsap.timeline();
-  tl.fromTo('#el2',{clipPath:'inset(100% 0% 0% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.48,ease:'power2.inOut'},0);
-  tl.fromTo('#el17',{opacity:0,immediateRender:true},{opacity:1,duration:0.28,ease:'power3.out'},0.48);
+  // CSS-transitions i stedet for GSAP (ingen per-frame hovedtraads-JS) — #el2 er en
+  // ensfarvet bar (billig clip-repaint), #el17 opacity gøres komposit via will-change.
+  var e2=document.getElementById('el2'),e17=document.getElementById('el17');
+  if(e2){e2.style.transition='none';e2.style.clipPath='inset(100% 0% 0% 0%)';void e2.offsetWidth;e2.style.transition='clip-path 0.48s ease';e2.style.clipPath='inset(0% 0% 0% 0%)';}
+  if(e17){e17.style.willChange='opacity';e17.style.transition='none';e17.style.opacity='0';void e17.offsetWidth;setTimeout(function(){e17.style.transition='opacity 0.28s ease';e17.style.opacity='1';},480);}
 }
 function _animOUT(){
   _vis=false;
   if(_cycleTimer){clearInterval(_cycleTimer);_cycleTimer=null;}
-  var tl=gsap.timeline();
-  tl.to('#el2',{clipPath:'inset(100% 0% 0% 0%)',duration:0.34,ease:'power2.in'},0.881);
-  tl.to('#el17',{opacity:0,duration:0.32,ease:'power2.in'},0.802);
+  var e2=document.getElementById('el2'),e17=document.getElementById('el17');
+  if(e17){setTimeout(function(){e17.style.transition='opacity 0.32s ease';e17.style.opacity='0';},802);}
+  if(e2){setTimeout(function(){e2.style.transition='clip-path 0.34s ease';e2.style.clipPath='inset(100% 0% 0% 0%)';},881);}
 }
 document.addEventListener('DOMContentLoaded',function(){
   _cols(false);
