@@ -299,8 +299,10 @@
     }
 
     applyOrder(DEFAULT_ORDER);
-    pollLagOrder();
-    loadCustomGrafik().then(fetchInitialCustomState);
+    // Opret custom-iframes FØRST, anvend så den gemte lag-rækkefølge bagefter — ellers
+    // overskrev applyOrder(DEFAULT_ORDER) inde i loadCustomGrafik den gemte rækkefølge
+    // og lagde custom-grafik bagerst (lavest z) uanset komponistens orden.
+    loadCustomGrafik().then(function(){ pollLagOrder(); fetchInitialCustomState(); });
 
   </script>
 </body>
