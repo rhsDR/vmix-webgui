@@ -229,41 +229,37 @@
           const duration = speed * 1000;
           let startTime  = null;
 
+          // Rul via CSS-transition paa transform (compositor-traad) i stedet for en
+          // requestAnimationFrame-loop paa hovedtraaden -> ruller glat selv naar andre
+          // overlays belaster hovedtraaden (fx stillings-boksen ved kamp-skift).
+          wrapper.style.transition = 'none';
           wrapper.style.transform = `translateY(${startY}px)`;
+          void wrapper.offsetWidth; // reflow saa start-pos saettes foer transitionen
+          wrapper.style.transition = `transform ${duration}ms linear`;
+          wrapper.style.transform = `translateY(${endY}px)`;
 
-          function animate(ts) {
-            if (!startTime) startTime = ts;
-            const progress = Math.min((ts - startTime) / duration, 1);
-            const y = startY + (endY - startY) * progress;
-            wrapper.style.transform = `translateY(${y}px)`;
-
-            if (progress < 1) {
-              requestAnimationFrame(animate);
-            } else {
-              // Fase 3: Fade boks ud
-              clip.style.transition = 'opacity 0.6s ease-out';
-              clip.style.opacity = '0';
+          setTimeout(() => {
+            // Fase 3: Fade boks ud
+            clip.style.transition = 'opacity 0.6s ease-out';
+            clip.style.opacity = '0';
+            setTimeout(() => {
+              clip.style.display = 'none';
+              // Fase 4: Vent 0.5 sek, vis logo-video
               setTimeout(() => {
-                clip.style.display = 'none';
-                // Fase 4: Vent 0.5 sek, vis logo-video
-                setTimeout(() => {
-                  video.style.display = 'block';
-                  const playPromise = video.play();
-                  if (playPromise !== undefined) {
-                    playPromise.catch(err => console.error('Video play fejl:', err));
-                  }
-                  // Fase 5: Når video er færdig → reset og sæt trigger tilbage til 0
-                  video.onended = async () => {
-                    await resetTrigger();
-                    resetState();
-                    setTimeout(pollTrigger, 2000);
-                  };
-                }, 500);
-              }, 600);
-            }
-          }
-
-          requestAnimationFrame(animate);
+                video.style.display = 'block';
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                  playPromise.catch(err => console.error('Video play fejl:', err));
+                }
+                // Fase 5: Når video er færdig → reset og sæt trigger tilbage til 0
+                video.onended = async () => {
+                  await resetTrigger();
+                  resetState();
+                  setTimeout(pollTrigger, 2000);
+                };
+              }, 500);
+            }, 600);
+          }, duration);
         });
       });
     }
