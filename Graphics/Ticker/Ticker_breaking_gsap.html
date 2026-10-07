@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{width:1920px;height:1080px;overflow:hidden;background:transparent;}
@@ -37,15 +36,14 @@ document.addEventListener('DOMContentLoaded',function(){
 (function(){var wrap=document.getElementById('el19');var inner=document.getElementById('el19-inner');if(!inner||!wrap)return;var speed=120;var _lastSet='';var pending=null;var _st=document.createElement('style');document.head.appendChild(_st);function _startScroll(){var half=inner.scrollWidth/2;if(half<=0)return;_st.textContent='@keyframes _tScroll{from{transform:translateX(0)}to{transform:translateX(-'+half+'px)}}';inner.style.animation='none';void inner.offsetWidth;inner.style.animation='_tScroll '+(half/speed)+'s linear infinite';}inner.addEventListener('animationiteration',function(){if(pending!==null){inner.innerHTML=pending;_lastSet=pending;pending=null;_startScroll();}});wrap._tickerUpdate=function(t){if(!inner.innerHTML||!_lastSet){inner.innerHTML=t;_lastSet=t;_startScroll();if(document.fonts&&document.fonts.ready){document.fonts.ready.then(_startScroll);}}else if(t!==_lastSet){pending=t;}};})();
 });
 function runAnimationIN(){_spxVisible=true;
-  gsap.set('#el2',{scaleY:0,transformOrigin:'center center'});
-  var tl=gsap.timeline();
-  tl.to('#el2',{scaleY:1,duration:0.48,ease:'power2.inOut'},0);
-  tl.fromTo('#el19',{opacity:0,immediateRender:true},{opacity:1,duration:0.45,ease:'power3.out'},0.398);
+  var e2=document.getElementById('el2'),e19=document.getElementById('el19');
+  if(e2){e2.style.transformOrigin='center center';e2.style.willChange='transform';e2.style.transition='none';e2.style.transform='scaleY(0)';void e2.offsetWidth;e2.style.transition='transform 0.48s ease';e2.style.transform='scaleY(1)';}
+  if(e19){e19.style.willChange='opacity';e19.style.transition='none';e19.style.opacity='0';void e19.offsetWidth;setTimeout(function(){e19.style.transition='opacity 0.45s ease';e19.style.opacity='1';},398);}
 }
 function runAnimationOUT(){_spxVisible=false;
-  var tl=gsap.timeline();
-  tl.to('#el2',{scaleY:0,transformOrigin:'center center',duration:0.34,ease:'power2.in'},0.881);
-  tl.to('#el19',{opacity:0,duration:0.18,ease:'power2.in'},0.889);
+  var e2=document.getElementById('el2'),e19=document.getElementById('el19');
+  if(e19){setTimeout(function(){e19.style.transition='opacity 0.18s ease';e19.style.opacity='0';},889);}
+  if(e2){setTimeout(function(){e2.style.transition='transform 0.34s ease';e2.style.transform='scaleY(0)';},881);}
 }
 
 // ── SUPABASE INTEGRATION ──
