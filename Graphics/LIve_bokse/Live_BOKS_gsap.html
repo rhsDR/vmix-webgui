@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="/templates/softpix/Template_Pack_1.3/js/spx_interface.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -44,16 +43,15 @@ window.onSpxUpdate=function(data){_updateContent(data);};
 function runAnimationIN(){
   if(_spxVisible)return;
   _spxVisible=true;
-  var tl=gsap.timeline();
-  tl.fromTo('#el15',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.401);
-  tl.fromTo('#el16',{clipPath:'inset(50% 0% 50% 0%)',immediateRender:true},{clipPath:'inset(0% 0% 0% 0%)',duration:0.28,ease:'power2.inOut'},0.401);
+  var e15=document.getElementById('el15'),e16=document.getElementById('el16');
+  [e15,e16].forEach(function(e){if(!e)return;e.style.transition='none';e.style.clipPath='inset(50% 0% 50% 0%)';void e.offsetWidth;});
+  setTimeout(function(){[e15,e16].forEach(function(e){if(e){e.style.transition='clip-path 0.28s ease';e.style.clipPath='inset(0% 0% 0% 0%)';}});},401);
 }
 function runAnimationOUT(){
   if(!_spxVisible)return;
   _spxVisible=false;
-  var tl=gsap.timeline();
-  tl.to('#el15',{clipPath:'inset(50% 0% 50% 0%)',duration:0.20,ease:'power2.in'},0.683);
-  tl.to('#el16',{clipPath:'inset(50% 0% 50% 0%)',duration:0.20,ease:'power2.in'},0.683);
+  var e15=document.getElementById('el15'),e16=document.getElementById('el16');
+  setTimeout(function(){[e15,e16].forEach(function(e){if(e){e.style.transition='clip-path 0.20s ease';e.style.clipPath='inset(50% 0% 50% 0%)';}});},683);
 }
 window.SPXGCTemplateDefinition = {
   "description": "Lower Third",
