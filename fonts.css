@@ -1,0 +1,16 @@
+/* Self-hostet DM Sans (erstatter blokerende Google Fonts-link).
+   DRPublik (DR-husfont) er embedded direkte i de enkelte grafikker som base64. */
+@font-face{
+  font-family:'DM Sans';
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+  src:url('/fonts/dmsans-400.woff2') format('woff2');
+}
+@font-face{
+  font-family:'DM Sans';
+  font-style:normal;
+  font-weight:700;
+  font-display:swap;
+  src:url('/fonts/dmsans-700.woff2') format('woff2');
+}
