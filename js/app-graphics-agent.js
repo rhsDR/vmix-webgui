@@ -202,9 +202,14 @@ function _gaRenderPreview() {
   const doc = html.replace(/(<html[^>]*>)/i, '$1' + inject);
   if (!box.querySelector('.ga-preview-frame')) {
     box.innerHTML = `
-      <div class="ga-preview-head"><span>PREVIEW <span style="color:#6a6a6a;font-weight:400">(over mørk baggrund)</span></span><button id="ga-preview-play" class="ga-preview-btn">▶ Afspil igen</button></div>
-      <div class="ga-preview-stage"><iframe class="ga-preview-frame" title="grafik-preview"></iframe></div>`;
+      <div class="ga-preview-head"><span>PREVIEW <span style="color:#6a6a6a;font-weight:400">(over mørk baggrund)</span></span><span style="display:flex;gap:6px;"><button id="ga-safe-toggle" class="ga-preview-btn" title="Vis title-safe (5%) + action-safe (3,5%)">⊡ Safe-areas</button><button id="ga-preview-play" class="ga-preview-btn">▶ Afspil igen</button></span></div>
+      <div class="ga-preview-stage"><iframe class="ga-preview-frame" title="grafik-preview"></iframe><div class="ga-safe-guides" hidden><div class="ga-safe action"></div><div class="ga-safe title"></div></div></div>`;
     box.querySelector('#ga-preview-play').addEventListener('click', _gaReplayPreview);
+    box.querySelector('#ga-safe-toggle').addEventListener('click', function(){
+      const g = box.querySelector('.ga-safe-guides'); const show = g.hasAttribute('hidden');
+      if (show) g.removeAttribute('hidden'); else g.setAttribute('hidden', '');
+      this.classList.toggle('active', show);
+    });
   }
   const frame = box.querySelector('.ga-preview-frame');
   if (frame._doc !== doc) { frame._doc = doc; frame.srcdoc = doc; }
@@ -419,6 +424,8 @@ function _gaValidateHtml(html) {
     warnings.push('GSAP til kontinuerlig/gentagende bevægelse — brug CSS-compositor; GSAP kun til korte diskrete ind/ud-reveals.');
   if (/transform\s*:[^;}]*var\(|translate[XYZ]?\([^)]*var\(/i.test(h))
     warnings.push('CSS-variabel i en transform-/animations-værdi slår GPU-compositing fra (falder tilbage på hovedtråden) — bag den konkrete px-værdi ind.');
+  if (/background(-color)?\s*:\s*(#fff(fff)?\b|white\b|rgb\(\s*255\s*,\s*255\s*,\s*255)/i.test(h))
+    warnings.push('Ren hvid baggrundsflade (#fff/white) — undgå store super-white flader på broadcast (brug fx #f0f0f0); husk at vMix-overlay skal være transparent.');
   return { errors, warnings };
 }
 
