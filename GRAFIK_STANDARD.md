@@ -10,6 +10,18 @@ styret direkte af systemet; se §1 + §9.)
 
 ---
 
+## 0. Arkitektur-princip (afvikling)
+Grafik afvikles som **ÉT samlet output pr. PGM-signal** — alle lag komponeres i én browser source
+(`master.html` for hoved-overlayet; `secondary.html`/`fullscreen.html` er egne outputs KUN fordi de
+går til andre signaler). Vi fragmenterer **ikke** grafik til ét output pr. element.
+
+Konsekvens: ét samlet output = **én delt renderer-hovedtråd**. Derfor er compositor-ren animation
+(§2) ikke valgfri — det er dét der holder flere *samtidige* grafikker glatte i samme output:
+- **Kontinuerlig/samtidig bevægelse** (ticker, rul, score der cykler mens andet kører) → CSS-
+  compositor (`transform`/`opacity`), ALDRIG per-frame hovedtråds-drivning (rAF/GSAP-tween).
+- **Diskrete ind/ud-reveals** → GSAP (industristandard) er fint, hvis det kun er transform/opacity
+  og kortvarigt.
+
 ## 1. Lifecycle-kontrakt (systemets egen — IKKE SPX)
 Hver grafik SKAL eksponere disse to globale funktioner (master.html/systemet kalder dem):
 - `window.runAnimationIN()` — vis + animér IND.
