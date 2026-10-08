@@ -96,6 +96,22 @@ arbejde der forsinker et frame = synligt hak/frys. Derfor:
 4. Ingen per-frame hovedtråds-animation (tjek: ingen `requestAnimationFrame`-scroll, ingen GSAP til
    kontinuerlig bevægelse, ingen `var()` i anim-værdi).
 
+## 11. Review-checkliste (hånd-lavet grafik)
+Agent-grafik tjekkes automatisk af validatoren. Grafik lavet eller ændret **i hånden** køres igennem
+denne liste før brug:
+- [ ] Transparent baggrund (`html,body{background:transparent}`)
+- [ ] `window.runAnimationIN()` + `window.runAnimationOUT()` findes og virker
+- [ ] Starter skjult (ingen flash før IN)
+- [ ] Kontinuerlig bevægelse = CSS `@keyframes`/transition på `transform` — INGEN `requestAnimationFrame`-scroll
+- [ ] GSAP kun til korte diskrete reveals (transform/opacity), ikke til kontinuerlig/gentagende bevægelse
+- [ ] INGEN `var()`/`calc(var())` i en animations-værdi
+- [ ] Ingen blokerende CDN (Google Fonts-`<link>`, Supabase-SDK); fonte self-hostet/`@font-face`
+- [ ] Ingen SPX-stillads (`spx_interface.js`, `SPXGCTemplateDefinition`, `f0/f1`)
+- [ ] 1920×1080; vigtigt indhold inden for title-safe (~5%)
+- [ ] Live-data via `window.__API_ORIGIN`/`__PROJEKT_ID`; demo-data når `window.__IS_PREVIEW`
+- [ ] **TESTET I vMix** — glat IN/OUT/opdatering mens andre overlays kører (ikke kun i browser)
+
 ---
 *Grafik-agentens system-prompt (`api/graphics-agent.js`) og validatoren (`_gaValidateHtml` i
-`js/app-graphics-agent.js`) håndhæver §2 og §7-9 automatisk.*
+`js/app-graphics-agent.js`) håndhæver §0/§2 + §7-9 automatisk. Checklisten (§11) er den manuelle
+udgave af samme regler til hånd-lavet grafik.*

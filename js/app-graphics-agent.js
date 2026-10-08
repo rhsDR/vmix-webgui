@@ -412,6 +412,13 @@ function _gaValidateHtml(html) {
   if (/<script[^>]+src=["'][^"']*supabase/i.test(h)) warnings.push('Indlæser Supabase-SDK — blokeres i systemets iframes.');
   if (/<link[^>]+fonts\.googleapis\.com/i.test(h)) warnings.push('Blokerende Google Fonts <link> — kan forsinke visning; brug system-fonte el. @font-face.');
   if (!/background\s*:\s*transparent|background-color\s*:\s*transparent/i.test(h)) warnings.push('Fandt ikke "background: transparent" — tjek at baggrunden er gennemsigtig.');
+  // §0/§2 ydelse: kontinuerlig bevægelse skal være CSS-compositor (ellers hakker den i vMix' samlede output)
+  if (/requestAnimationFrame/.test(h) && /style\.transform|translate[XY]\(|\.scrollLeft|\.scrollTop/i.test(h))
+    warnings.push('requestAnimationFrame der driver bevægelse — brug en CSS @keyframes/transition på transform (compositor) til kontinuerlig scroll, ikke en rAF-løkke på hovedtråden.');
+  if (/repeat\s*:\s*-1|repeat\s*:\s*Infinity|gsap\.ticker/i.test(h))
+    warnings.push('GSAP til kontinuerlig/gentagende bevægelse — brug CSS-compositor; GSAP kun til korte diskrete ind/ud-reveals.');
+  if (/transform\s*:[^;}]*var\(|translate[XYZ]?\([^)]*var\(/i.test(h))
+    warnings.push('CSS-variabel i en transform-/animations-værdi slår GPU-compositing fra (falder tilbage på hovedtråden) — bag den konkrete px-værdi ind.');
   return { errors, warnings };
 }
 
