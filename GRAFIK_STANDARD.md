@@ -62,10 +62,16 @@ arbejde der forsinker et frame = synligt hak/frys. Derfor:
   til bund-fyld); undgå fuldmættede farver der "bløder" på SDI.
 - Sørg for læsbar kontrast mellem tekst og baggrund (skygge/plade bag tekst over levende video).
 
-## 6. Fonte
-- Brug **embeddede/self-hostede fonte** (`@font-face` med lokal/base64-kilde) eller system-fonte
-  (Arial/Segoe UI). Ingen **blokerende** `<link>` til Google Fonts — de forsinker/blokerer visning i
-  iframes og kræver internet.
+## 6. Fonte (frit valg — men self-hostet)
+Du må bruge ENHVER font. Den skal bare **self-hostes** — aldrig et blokerende CDN-`<link>` (Google
+Fonts), som fejler på et låst netværk.
+- **Font-bibliotek:** `/fonts/` (woff2) + `/fonts.css` (`@font-face`). Tilføj en font = læg woff2 i
+  `/fonts/` + én `@font-face`-linje i `/fonts.css`. Så er den tilgængelig for alle grafikker.
+- **Indbyggede grafikker** (Vercel-origin): `<link href="/fonts.css">`.
+- **Agent/custom-grafikker** (blob/Supabase-origin): master.html injicerer automatisk `/fonts.css`
+  (crossorigin) → brug bare fontens family-navn. Alternativt embed fonten som base64 `@font-face` i
+  selve grafikken (fuldt selvstændig), eller brug system-fonte (Arial/Segoe UI).
+- **ALDRIG** et Google Fonts/CDN-`<link>` (blokerer visning + fejler offline/på låst netværk).
 - Mål tekstbredde FØRST når fonten er klar (`document.fonts.ready`) hvis layout afhænger af den.
 
 ## 7. Afhængigheder (offline-sikkerhed)

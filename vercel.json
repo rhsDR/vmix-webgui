@@ -7,6 +7,18 @@
       "headers": [
         { "key": "Cache-Control", "value": "no-store" }
       ]
+    },
+    {
+      "source": "/fonts/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    },
+    {
+      "source": "/fonts.css",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
     }
   ]
 }

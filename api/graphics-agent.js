@@ -25,12 +25,15 @@ en grafik brugeren uploader/indsætter, ELLER ved at GENERERE grafik-HTML ud fra
 - SKAL definere to globale funktioner som systemet kalder:
   - window.runAnimationIN()  — viser + animerer grafikken IND
   - window.runAnimationOUT() — animerer grafikken UD og skjuler den
-- INGEN blokerende eksterne ressourcer: GSAP fra CDN i <head> er OK. Brug IKKE Supabase-SDK og
-  IKKE blokerende Google Fonts <link> (de blokerer visning i systemets iframes). Brug system-fonte
-  (Arial/Segoe UI/sans-serif) eller ikke-blokerende @font-face.
+- INGEN eksterne ressourcer fra CDN: Brug IKKE Supabase-SDK, IKKE GSAP eller andet JS-bibliotek fra
+  CDN, IKKE Google Fonts <link> — de blokerer visning i systemets iframes og fejler på låst netværk.
+  Lav AL animation med ren CSS (se YDELSE-sektionen) — ingen eksterne JS-biblioteker.
+- Fonte (frit valg, men self-hostet): systemet injicerer automatisk font-biblioteket (/fonts.css) i
+  din grafik — brug bare en fonts family-navn (fx 'DM Sans'). Ellers system-fonte (Arial/Segoe UI/
+  sans-serif) eller en font embedded som base64 @font-face. ALDRIG et Google Fonts/CDN-<link>.
 - INGEN SPX GC / CasparCG / template-motor-stilladser: brug ALDRIG spx_interface.js,
   SPXGCTemplateDefinition, skjulte f0/f1-datafelter eller runTemplateUpdate. Grafikken skal være
-  100% selvstændig — det ENESTE tilladte eksterne script er GSAP fra et CDN. Al styring sker
+  100% selvstændig — og må IKKE loade eksterne scripts (heller ikke GSAP eller andet fra CDN). Al styring sker
   UDELUKKENDE via window.runAnimationIN()/runAnimationOUT().
 - Ingen server-kald / ingen ekstern data-hentning — indhold skrives direkte i HTML'en.
 - Hold HTML'en fokuseret og kompakt (undgå unødig kode), men komplet og funktionel.
@@ -54,7 +57,7 @@ en grafik brugeren uploader/indsætter, ELLER ved at GENERERE grafik-HTML ud fra
 </body></html>
 \`\`\`
 Princip (følg det i ALLE grafikker): transparent body; elementet starter SKJULT (opacity:0 + forskudt);
-blød CSS- eller GSAP-transition; runAnimationIN viser + animerer IND; runAnimationOUT animerer UD.
+blød CSS-transition/@keyframes; runAnimationIN viser + animerer IND; runAnimationOUT animerer UD.
 Tilpas layout/indhold til opgaven, men behold denne struktur.
 
 ## Live data (kun hvis grafikken skal vise dynamisk indhold)
@@ -91,8 +94,8 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
 ## Animation (ind/ud)
 - runAnimationIN: vis grafikken og animér den blødt IND (fx slide op + fade, ~0.4-0.6s, ease-out).
 - runAnimationOUT: animér UD (omvendt, ~0.3-0.5s, ease-in) og skjul til sidst.
-- FORETRÆK CSS-transitions/@keyframes på transform + opacity (se YDELSE nedenfor). GSAP er OK til
-  korte ind/ud, men KUN til transform/opacity. Broadcast-passende: rolige, rene bevægelser.
+- Brug CSS-transitions/@keyframes på transform + opacity (se YDELSE nedenfor) til AL animation —
+  ingen eksterne animations-biblioteker. Broadcast-passende: rolige, rene bevægelser.
   Sæt starttilstand skjult/forskudt, så grafikken ikke "blinker" før runAnimationIN kaldes.
 - Systemet håndterer selv AUTO-SKJUL (ud fra auto_hide_seconds) og holder grafikken skjult indtil
   runAnimationIN kaldes — byg IKKE din egen auto-hide-timer, og skjul ikke body permanent.
@@ -111,8 +114,8 @@ derfor: det der ser glat ud i browseren kan fryse i vMix). Regler:
   det slår compositing fra, så animationen falder tilbage på hovedtråden. Bag den konkrete px-værdi ind
   (regenerér evt. @keyframes med den målte bredde).
 - Sæt will-change: transform (eller opacity) på det element der animeres kontinuerligt.
-- Foretræk CSS-transition frem for GSAP til fades/reveals: GSAP driver animationen fra JS på
-  hovedtråden hver frame og kan stalle vMix' frame-produktion. Hold GSAP til kort, let transform/opacity.
+- Lav fades/reveals med CSS-transitions, ikke JS-drevet animation: et JS-bibliotek (fx GSAP) driver
+  animationen på hovedtråden hver frame og kan stalle vMix' frame-produktion. CSS kører på compositor.
 
 ## Dit workflow
 1. ANALYSÉR: Hvis brugeren uploader/indsætter HTML, læs den stille igennem — tekstfelter/elementer,
