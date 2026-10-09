@@ -317,7 +317,28 @@
     // Opret custom-iframes FØRST, anvend så den gemte lag-rækkefølge bagefter — ellers
     // overskrev applyOrder(DEFAULT_ORDER) inde i loadCustomGrafik den gemte rækkefølge
     // og lagde custom-grafik bagerst (lavest z) uanset komponistens orden.
+    // INFO-boks: vis info.html i DETTE overlay (Master) hvis panelet har valgt output=hoved.
+    // Poller saa output-skift i panelet slaar igennem uden ny vMix-reload.
+    var _infoFrame = null;
+    async function syncInfoBox() {
+      try {
+        if (pid) {
+          var rows = await fetch(`${SB_URL}/rest/v1/settings?key=eq.info_output&projekt_id=eq.${encodeURIComponent(pid)}&select=value`, { headers: SB_HDR }).then(r => r.json());
+          var show = (rows && rows[0] ? rows[0].value : '') === 'hoved';
+          if (show && !_infoFrame) {
+            _infoFrame = document.createElement('iframe');
+            _infoFrame.src = 'info.html?p=' + encodeURIComponent(pid);
+            _infoFrame.allowTransparency = true;
+            _infoFrame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;z-index:99999;';
+            document.body.appendChild(_infoFrame);
+          } else if (!show && _infoFrame) { _infoFrame.remove(); _infoFrame = null; }
+        }
+      } catch {}
+      setTimeout(syncInfoBox, 3000);
+    }
+
     loadCustomGrafik().then(function(){ pollLagOrder(); fetchInitialCustomState(); });
+    syncInfoBox();
 
   </script>
 </body>

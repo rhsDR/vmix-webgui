@@ -292,7 +292,27 @@
       } catch {}
     }
 
+    // INFO-boks: vis info.html i DETTE overlay (Secondary) hvis panelet har valgt output=komm.
+    var _infoFrame = null;
+    async function syncInfoBox() {
+      try {
+        if (_pid) {
+          var rows = await fetch(`${SB_URL}/rest/v1/settings?key=eq.info_output&projekt_id=eq.${encodeURIComponent(_pid)}&select=value`, { headers: SB_HDR }).then(r => r.json());
+          var show = (rows && rows[0] ? rows[0].value : '') === 'komm';
+          if (show && !_infoFrame) {
+            _infoFrame = document.createElement('iframe');
+            _infoFrame.src = 'info.html?p=' + encodeURIComponent(_pid);
+            _infoFrame.allowTransparency = true;
+            _infoFrame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;z-index:99999;';
+            document.body.appendChild(_infoFrame);
+          } else if (!show && _infoFrame) { _infoFrame.remove(); _infoFrame = null; }
+        }
+      } catch {}
+      setTimeout(syncInfoBox, 3000);
+    }
+
     loadCustomGrafik().then(fetchInitialCustomState);
+    syncInfoBox();
   </script>
 </body>
 </html>

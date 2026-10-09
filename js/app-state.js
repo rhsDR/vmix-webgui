@@ -73,7 +73,7 @@ let makroer             = []; // rækker fra projekt_makroer-tabellen
 let afviklingslister    = []; // rækker fra projekt_afviklingslister-tabellen
 let aktivListeId        = null; // valgt afviklingsliste (persisteres i settings.aktiv_afviklingsliste)
 let fontLib             = []; // globalt font-bibliotek (custom_fonts) — brugeruploadede fonte
-let infoData            = { overskrift: '', indhold: '' }; // INFO-fane (kun Projekt 2)
+let infoData            = { overskrift: '', indhold: '', output: 'hoved' }; // INFO-fane (kun Projekt 2); output = hoved|komm|overlay-3
 let grafiktActiveSubTab = 'lower-third';
 let grafiktActivePrvKey = '';
 let grafiktActivePrvUrl = '';

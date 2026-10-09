@@ -667,6 +667,28 @@
         }
       });
 
+      // INFO-boks: vis info.html i DETTE overlay (Fullscreen) hvis panelet har valgt output=overlay-3.
+      (function(){
+        var _infoFrame = null;
+        async function syncInfoBox() {
+          try {
+            if (projektId) {
+              var rows = await fetch(`${SB_URL}/rest/v1/settings?key=eq.info_output&projekt_id=eq.${encodeURIComponent(projektId)}&select=value`, { headers: SB_HDR }).then(r => r.json());
+              var show = (rows && rows[0] ? rows[0].value : '') === 'overlay-3';
+              if (show && !_infoFrame) {
+                _infoFrame = document.createElement('iframe');
+                _infoFrame.src = 'info.html?p=' + encodeURIComponent(projektId);
+                _infoFrame.allowTransparency = true;
+                _infoFrame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;z-index:99999;';
+                document.body.appendChild(_infoFrame);
+              } else if (!show && _infoFrame) { _infoFrame.remove(); _infoFrame = null; }
+            }
+          } catch {}
+          setTimeout(syncInfoBox, 3000);
+        }
+        syncInfoBox();
+      })();
+
       _OPloadGrafikker().then(async function() {
         const keys = Object.keys(_OPcustomFrameMap);
         if (!keys.length) return;

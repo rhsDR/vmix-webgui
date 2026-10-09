@@ -1,9 +1,12 @@
 // ── INFO (on-air info-boks) ───────────────────────────────────
-// Helt enkel fane: skriv overskrift + indhold og gem. Grafikken (info.html) viser teksten
-// og opdaterer den live. VISNINGEN on/off styres i vMix (browser-kilden lægges på/tages af
-// som et almindeligt overlay) — ingen ON AIR-knap i panelet.
-// Data i settings-tabellen (info_overskrift / info_indhold), pr. projekt.
+// Enkel fane: skriv overskrift + indhold, vælg hvilket overlay-vindue boksen skal ligge i.
+// INFO-boksen rider med i det valgte overlay-vindue (Master/Secondary/Fullscreen) — ingen
+// separat vMix-kilde. Vis/skjul styres i vMix ved at vise/skjule det overlay.
+// Data i settings-tabellen (info_overskrift / info_indhold / info_output), pr. projekt.
 // Fanen er kun synlig i Projekt 2 (gating i app-init.js).
+
+// overlay-mål -> label (matcher composer/projekt_grafik: hoved=Master, komm=Secondary, overlay-3=Fullscreen)
+const INFO_OUTPUTS = [['hoved', 'Master'], ['komm', 'Secondary'], ['overlay-3', 'Fullscreen']];
 
 async function refreshInfo() {
   try {
@@ -11,6 +14,7 @@ async function refreshInfo() {
     const get = k => { const r = rows.find(x => x.key === k); return r ? (r.value || '') : ''; };
     infoData.overskrift = get('info_overskrift');
     infoData.indhold    = get('info_indhold');
+    infoData.output     = get('info_output') || 'hoved';
   } catch { /* stille */ }
   renderInfo();
 }
@@ -19,16 +23,14 @@ function renderInfo() {
   const list = document.getElementById('infoList');
   if (!list) return;
   const d = infoData;
-  const url = 'https://vmix-control.vercel.app/info.html?p=' + aktivProjektId;
+  const opts = INFO_OUTPUTS.map(([v, t]) => `<option value="${v}"${d.output === v ? ' selected' : ''}>${t}</option>`).join('');
 
   list.innerHTML = `
     <div class="credits-speed-bar">
-      <span style="font-size:12px;color:#8c8c8c;">Læg URL'en i vMix som Browser-input. Vis/skjul styres i vMix.</span>
+      <label class="form-label" style="margin:0 6px 0 0;">Output</label>
+      <select class="form-input" id="infoOutput" style="width:auto;min-width:150px;">${opts}</select>
+      <span style="font-size:11px;color:#8c8c8c;max-width:360px;">Boksen vises i dette overlay-vindue. Vis/skjul styres i vMix. Genindlæs overlay-kilden i vMix første gang.</span>
       <button class="btn btn-cancel" id="infoPreviewBtn" style="margin-left:auto;">▶ PREVIEW</button>
-      <div style="display:flex;align-items:center;gap:6px;background:#0d0d0d;border:1px solid #2e2e2e;border-radius:6px;padding:5px 10px;max-width:360px;overflow:hidden;">
-        <span style="font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${url}</span>
-        <button class="copy-btn icon-btn" id="infoUrlCopy" title="Kopiér link">⎘</button>
-      </div>
     </div>
     <div class="ticker-block" style="margin-top:14px;">
       <div class="ticker-body" style="display:block;">
@@ -48,10 +50,10 @@ function renderInfo() {
       </div>
     </div>`;
 
+  list.querySelector('#infoOutput').addEventListener('change', e => saveInfoOutput(e.target.value));
   list.querySelector('#infoOverskrift').addEventListener('input', e => { infoData.overskrift = e.target.value; });
   list.querySelector('#infoIndhold').addEventListener('input', e => { infoData.indhold = e.target.value; });
   list.querySelector('#infoGem').addEventListener('click', saveInfo);
-  list.querySelector('#infoUrlCopy').addEventListener('click', () => copyText(url));
   list.querySelector('#infoPreviewBtn').addEventListener('click', () => {
     const modal = document.getElementById('previewModal');
     const frame = document.getElementById('previewFrame');
@@ -73,4 +75,13 @@ async function saveInfo() {
     ]);
     toast('Gemt ✓', 'ok');
   } catch { toast('Fejl ved gem', 'err'); }
+}
+
+async function saveInfoOutput(val) {
+  infoData.output = val;
+  const label = (INFO_OUTPUTS.find(o => o[0] === val) || [, val])[1];
+  try {
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'info_output', value: val });
+    toast('Output: ' + label, 'ok');
+  } catch { toast('Fejl ved gem af output', 'err'); }
 }
