@@ -10,7 +10,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
     if (btn.dataset.tab === 'live')   startLivePolling();
     else                              stopLivePolling();
-    if (btn.dataset.tab === 'grafik') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadAfviklingslister(), loadCompanionToken()]).then(() => refreshGrafiktState()); fetchLineupDataForGrafik(); }
+    if (btn.dataset.tab === 'grafik') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadAfviklingslister(), loadInfoBokse(), loadCompanionToken()]).then(() => refreshGrafiktState()); fetchLineupDataForGrafik(); }
     if (btn.dataset.tab === 'grafik-ops') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadAfviklingslister(), loadFontLib(), loadInfoBokse(), loadCompanionToken()]).then(async () => { await refreshGrafiktState(); renderGrafikOps(); renderGraphicsAgent(); }); }
     if (btn.dataset.tab === 'info') refreshInfo();
   });
@@ -77,7 +77,8 @@ async function init() {
           if (kampeBtn)     kampeBtn.style.display     = 'none';
           if (stamdataBtn)  stamdataBtn.style.display  = 'none';
           if (dashboardBtn) dashboardBtn.style.display = 'none';
-          if (grafikBtn)    grafikBtn.style.display    = 'none';
+          // GRAFIK-fanen (afvikling: preview + PÅ/AF + makroer) vises nu i ALLE projekter.
+          void grafikBtn;
           // Skjul også STAMDATA-knappen i headeren
           const headerStamdataBtn = document.querySelector('header .tab-btn[data-tab="admin"]');
           if (headerStamdataBtn) headerStamdataBtn.style.display = 'none';

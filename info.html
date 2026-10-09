@@ -53,14 +53,19 @@
 
     async function load() {
       try {
-        const rows = await fetch(SB_URL + '/rest/v1/settings?select=value&key=eq.info_bokse' + pidFilter, { headers: SB_HEADERS }).then(r => r.json());
+        const rows = await fetch(SB_URL + '/rest/v1/settings?select=key,value' + pidFilter, { headers: SB_HEADERS }).then(r => r.json());
+        const map = {};
+        (Array.isArray(rows) ? rows : []).forEach(r => { map[r.key] = r.value; });
         let arr = [];
-        try { arr = (rows && rows[0] && rows[0].value) ? JSON.parse(rows[0].value) : []; } catch {}
+        try { arr = map['info_bokse'] ? JSON.parse(map['info_bokse']) : []; } catch {}
         if (!Array.isArray(arr)) arr = [];
         let boxes;
-        if (boxFilter)         boxes = arr.filter(b => b.id === boxFilter);
-        else if (outputFilter) boxes = arr.filter(b => b.output === outputFilter);
-        else                   boxes = arr;               // ingen filter -> vis alt (debug/standalone)
+        if (boxFilter) {
+          boxes = arr.filter(b => b.id === boxFilter);   // preview: vis uanset PÅ/AF
+        } else {
+          // Vis kun bokse der er sat PÅ i afviklingen (trigger info_<id> = 'in') og hører til dette overlay.
+          boxes = arr.filter(b => map['info_' + b.id] === 'in' && (!outputFilter || b.output === outputFilter));
+        }
         render(boxes);
       } catch {}
     }
