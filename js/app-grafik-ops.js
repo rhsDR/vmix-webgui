@@ -38,7 +38,7 @@ function openEgneGrafikModal(editId) {
   _egneGrafikData = {};
   if (editId) {
     const g = (customGrafik || []).find(x => x.id === editId);
-    if (g) _egneGrafikData = { label: g.label, trigKey: g.trigger_key, color: g.color || '#888888', overlay_mode: g.overlay_mode || 'embed', overlay_input: g.overlay_input || '', overlay_target: g.overlay_target || 'hoved', auto_hide_seconds: g.auto_hide_seconds || '' };
+    if (g) _egneGrafikData = { label: g.label, trigKey: g.trigger_key, color: g.color || '#888888', kategori: g.kategori || 'custom', overlay_mode: g.overlay_mode || 'embed', overlay_input: g.overlay_input || '', overlay_target: g.overlay_target || 'hoved', auto_hide_seconds: g.auto_hide_seconds || '' };
   }
   _egneGrafikGoStep(1);
   document.getElementById('egne-grafik-modal').style.display = 'flex';
@@ -63,6 +63,7 @@ function _egneGrafikRenderStep1() {
   document.getElementById('egn-step1-title').textContent = isEdit ? 'REDIGÉR GRAFIK (1/3)' : 'TILFØJ GRAFIK (1/3)';
   document.getElementById('egn-label-inp').value = d.label || '';
   document.getElementById('egn-color-inp').value = d.color || '#888888';
+  const _katSel = document.getElementById('egn-kategori-sel'); if (_katSel) _katSel.value = d.kategori || 'custom';
   document.getElementById('egn-auto-hide-check').checked = !!(d.auto_hide_seconds > 0);
   document.getElementById('egn-auto-hide-secs').value = d.auto_hide_seconds || '';
   document.getElementById('egn-auto-hide-secs').style.display = (d.auto_hide_seconds > 0) ? 'inline-block' : 'none';
@@ -195,6 +196,7 @@ async function _egneGrafikNextStep() {
       label,
       trigKey,
       color: document.getElementById('egn-color-inp').value,
+      kategori: document.getElementById('egn-kategori-sel')?.value || 'custom',
       auto_hide_seconds: autoHideSecs > 0 ? autoHideSecs : null,
       useTemplate,
       templateType: useTemplate ? document.getElementById('egn-tpl-type').value : null,
@@ -252,7 +254,8 @@ async function _egneGrafikSave() {
         file_url: fileUrl, file_path: filePath, color: d.color,
         overlay_mode: d.overlay_mode, overlay_input: d.overlay_input,
         overlay_target: d.overlay_target || 'hoved',
-        auto_hide_seconds: d.auto_hide_seconds, template_type: d.templateType
+        auto_hide_seconds: d.auto_hide_seconds, template_type: d.templateType,
+        kategori: d.kategori || 'custom'
       });
       if (dbErr) { toast('DB fejl: ' + dbErr.message, 'err'); return; }
 
@@ -269,7 +272,8 @@ async function _egneGrafikSave() {
         label: d.label, color: d.color, trigger_key: d.trigKey,
         overlay_mode: d.overlay_mode, overlay_input: d.overlay_input,
         overlay_target: d.overlay_target || 'hoved',
-        auto_hide_seconds: d.auto_hide_seconds
+        auto_hide_seconds: d.auto_hide_seconds,
+        kategori: d.kategori || 'custom'
       }).eq('id', _egneGrafikEditId);
       if (dbErr) { toast('DB fejl: ' + dbErr.message, 'err'); return; }
       await loadKunstomGrafik();

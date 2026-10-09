@@ -1145,25 +1145,30 @@ function renderGrafikTV(container) {
   const origin = window.location.origin;
   const pid = aktivProjektId;
 
-  // Custom-grafik (indlejret) — hver er sin egen kategori/fane med én række.
-  const customItems = (customGrafik || []).filter(cg => cg.overlay_mode === 'embed').map(cg => ({
-    tabId: 'custom-' + cg.trigger_key, trig: cg.trigger_key, name: cg.label,
-    sub: 'Indlejret · ' + cg.trigger_key, color: cg.color || '#888',
-    prv: cg.file_url + '?p=' + encodeURIComponent(pid) + '&preview=1'
+  const CATS = [['sub', 'SUB'], ['info', 'INFO'], ['ticker', 'TICKER'], ['credit', 'CREDIT'], ['custom', 'CUSTOM']];
+  const CAT_COLOR = { sub: '#4a9eff', info: '#00b894', ticker: '#aa66ff', credit: '#ffcc44', custom: '#888888' };
+  const VALID_CAT = new Set(['sub', 'info', 'ticker', 'credit', 'custom']);
+
+  // Custom-grafik (indlejret) grupperet efter kategori (sub/info/ticker/credit/custom).
+  const customRows = (customGrafik || []).filter(cg => cg.overlay_mode === 'embed').map(cg => ({
+    cat: VALID_CAT.has(cg.kategori) ? cg.kategori : 'custom',
+    trig: cg.trigger_key, name: cg.label, sub: 'Indlejret · ' + cg.trigger_key,
+    color: cg.color || '#888888', prv: cg.file_url + '?p=' + encodeURIComponent(pid) + '&preview=1'
   }));
-  // Info-bokse (kun med tekst) — samlet under én INFO-kategori, én række pr. boks.
-  const infoItems = (infoBokse || [])
+  // Info-bokse (kun med tekst) hører under INFO.
+  const infoRows = (infoBokse || [])
     .map((b, i) => ({ b, i }))
     .filter(({ b }) => (b.overskrift || '').trim() || (b.indhold || '').trim())
     .map(({ b, i }) => ({
-      trig: 'info_' + b.id, name: b.overskrift || ('Info ' + (i + 1)), sub: b.indhold || '',
+      cat: 'info', trig: 'info_' + b.id, name: b.overskrift || ('Info ' + (i + 1)), sub: b.indhold || '',
       color: '#00b894', prv: origin + '/info.html?p=' + encodeURIComponent(pid) + '&box=' + encodeURIComponent(b.id) + '&preview=1'
     }));
 
-  // Sub-faner = de grafik-kategorier der findes i projektet (+ AFVIKLING).
-  const tabs = [];
-  if (infoItems.length) tabs.push({ id: 'info', label: 'INFO', color: '#00b894' });
-  customItems.forEach(ci => tabs.push({ id: ci.tabId, label: ci.name, color: ci.color }));
+  const catItems = cat => (cat === 'info' ? infoRows.slice() : []).concat(customRows.filter(r => r.cat === cat));
+  const allItems = [...infoRows, ...customRows];
+
+  // Sub-faner = kun de kategorier der har mindst én grafik (+ AFVIKLING).
+  const tabs = CATS.filter(([id]) => catItems(id).length > 0).map(([id, label]) => ({ id, label }));
 
   let active = grafiktActiveSubTab;
   const validIds = new Set([...tabs.map(t => t.id), 'afvikling']);
@@ -1172,11 +1177,9 @@ function renderGrafikTV(container) {
   const isAfv = active === 'afvikling';
 
   const subTabsHTML = tabs.map(t => {
-    const live = t.id === 'info'
-      ? infoItems.some(it => (grafiktState[it.trig] || 'out') !== 'out')
-      : (() => { const ci = customItems.find(c => c.tabId === t.id); return ci && (grafiktState[ci.trig] || 'out') !== 'out'; })();
+    const live = catItems(t.id).some(it => (grafiktState[it.trig] || 'out') !== 'out');
     const dot = live ? '<span class="grafik-v2-onair"></span>' : '';
-    return `<button class="grafik-v2-tab${active === t.id ? ' active' : ''}" data-gtab="${t.id}" style="--tab-color:${t.color}">${esc(t.label.toUpperCase())}${dot}</button>`;
+    return `<button class="grafik-v2-tab${active === t.id ? ' active' : ''}" data-gtab="${t.id}" style="--tab-color:${CAT_COLOR[t.id]}">${esc(t.label)}${dot}</button>`;
   }).join('') + `<button class="grafik-v2-tab${isAfv ? ' active' : ''}" data-gtab="afvikling" style="--tab-color:#ff8c00">AFVIKLING</button>`;
 
   // Kampdag-stil række med ＋(makro)/PRW/< OUT/> IN.
@@ -1199,11 +1202,8 @@ function renderGrafikTV(container) {
   let contentHTML;
   if (isAfv) {
     contentHTML = _afvMakroViewHTML();
-  } else if (active === 'info') {
-    contentHTML = infoItems.map(rowHTML).join('') || '<div class="grafik-v2-empty">Ingen info-bokse med tekst endnu.</div>';
   } else {
-    const ci = customItems.find(c => c.tabId === active);
-    contentHTML = ci ? rowHTML(ci) : '<div class="grafik-v2-empty">Ingen grafik endnu. Opret info-bokse i INFO-fanen eller grafik i GRAFIK SETUP.</div>';
+    contentHTML = catItems(active).map(rowHTML).join('') || '<div class="grafik-v2-empty">Ingen grafik i denne kategori.</div>';
   }
 
   const onairBlock = (title, url) => `
@@ -1246,7 +1246,7 @@ function renderGrafikTV(container) {
 
   const alleAf = container.querySelector('#grafik-alle-af');
   if (alleAf) alleAf.addEventListener('click', async () => {
-    const keys = [...customItems.map(x => x.trig), ...infoItems.map(x => x.trig)];
+    const keys = allItems.map(x => x.trig);
     keys.forEach(k => { grafiktState[k] = 'out'; });
     renderGrafikTV(container);
     try { await Promise.all(keys.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k, value: 'out' }))); }
