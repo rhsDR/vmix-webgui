@@ -1155,40 +1155,13 @@ function renderGrafikTV(container) {
     trig: cg.trigger_key, name: cg.label, sub: 'Indlejret · ' + cg.trigger_key,
     color: cg.color || '#888888', prv: cg.file_url + '?p=' + encodeURIComponent(pid) + '&preview=1'
   }));
-  // Info-bokse (kun med tekst) hører under INFO.
-  const infoRows = (infoBokse || [])
-    .map((b, i) => ({ b, i }))
-    .filter(({ b }) => (b.overskrift || '').trim() || (b.indhold || '').trim())
-    .map(({ b, i }) => ({
-      cat: 'info', trig: 'info_' + b.id, name: b.overskrift || ('Info ' + (i + 1)), sub: b.indhold || '',
-      color: '#00b894', prv: origin + '/info.html?p=' + encodeURIComponent(pid) + '&box=' + encodeURIComponent(b.id) + '&preview=1'
-    }));
-  // Indbyggede SUBS (nedre tredjedel) fra SUBS-fanen — hører under SUB. Styres via lt_trigger+lt_slot.
-  const subBuiltin = (typeof subs !== 'undefined' ? subs : []).map((s, i) => ({ s, slot: i + 1 }))
-    .filter(({ s }) => (s.navn || '').trim() || (s.titel || '').trim())
-    .map(({ s, slot }) => ({
-      cat: 'sub', ltSlot: slot, trig: 'lt_trigger', name: s.navn || ('Sub ' + slot), sub: s.titel || '',
-      color: '#4a9eff', prv: origin + '/lower-third.html?p=' + encodeURIComponent(pid) + '&preview=1'
-    }));
-  // Indbygget TICKER (fra TICKER-fanen) — én række hvis noget er udfyldt.
-  const tickerBuiltin = (typeof tickers !== 'undefined' && tickers.some(t => (t.overskrift || '').trim() || (t.tekst || '').trim()))
-    ? [{ cat: 'ticker', trig: 'ticker_ovl_trigger', name: 'Ticker', sub: 'Rullende ticker',
-         color: '#aa66ff', prv: origin + '/Graphics/Ticker/Ticker_gsap.html?p=' + encodeURIComponent(pid) + '&preview=1' }]
-    : [];
-  // Indbyggede CREDITS (fra CREDITS-fanen) — én række hvis der er indhold.
-  const creditsBuiltin = (typeof creditsData !== 'undefined' && creditsData.items && creditsData.items.length)
-    ? [{ cat: 'credit', trig: 'credits_trigger', name: 'Credits', sub: 'Rulletekster',
-         color: '#ffcc44', prv: origin + '/credits.html?p=' + encodeURIComponent(pid) + '&preview=1' }]
-    : [];
-
-  const builtinByCat = { sub: subBuiltin, info: infoRows, ticker: tickerBuiltin, credit: creditsBuiltin, custom: [] };
-  const catItems = cat => (builtinByCat[cat] || []).concat(customRows.filter(r => r.cat === cat));
-  const allItems = [...subBuiltin, ...infoRows, ...tickerBuiltin, ...creditsBuiltin, ...customRows];
-
-  // Live-tjek: indbyggede subs matcher både lt_trigger OG lt_slot; resten på egen trigger.
-  const _isLive = it => it.ltSlot != null
-    ? (grafiktState['lt_trigger'] === 'in' && String(grafiktState['lt_slot']) === String(it.ltSlot))
-    : (grafiktState[it.trig] || 'out') !== 'out';
+  // KUN projekt-specifikke grafikker (lavet til projektet) vises — grupperet efter den
+  // kategori/datakilde de er parret med (sub/info/ticker/credit/custom). Indbyggede
+  // subs/ticker/credits + info-bokse vises IKKE her; de er datakilder som en projekt-grafik
+  // parres med (via Kategori-valget). Er intet parret, står kategorien tom ("klar").
+  const catItems = cat => customRows.filter(r => r.cat === cat);
+  const allItems = customRows.slice();
+  const _isLive = it => (grafiktState[it.trig] || 'out') !== 'out';
 
   // Sub-faner = ALLE kategorier (vises altid, også tomme) + AFVIKLING.
   const tabs = CATS.map(([id, label]) => ({ id, label }));
@@ -1211,25 +1184,16 @@ function renderGrafikTV(container) {
   // Kampdag-stil række med ＋(makro)/PRW/< OUT/> IN. Indbyggede subs bruger lt_trigger+slot.
   const rowHTML = it => {
     const live = _isLive(it);
-    const isLt = it.ltSlot != null;
-    const mk = isLt ? `data-mk-trig="lt_trigger" data-mk-slot="${it.ltSlot}"` : `data-mk-trig="${esc(it.trig)}"`;
-    const prw = isLt ? `data-prw-url="${it.prv}" data-prw-lt-slot="${it.ltSlot}"` : `data-prw-url="${it.prv}"`;
-    const outBtn = isLt
-      ? `<button class="grafik-btn-out tv-lt-out"${!live ? ' disabled' : ''}>&lt; OUT</button>`
-      : `<button class="grafik-btn-out" data-trig="${esc(it.trig)}" data-val="out"${!live ? ' disabled' : ''}>&lt; OUT</button>`;
-    const inBtn = isLt
-      ? `<button class="grafik-btn-in tv-lt-in" data-lt-slot="${it.ltSlot}"${live ? ' disabled' : ''}>&gt; IN</button>`
-      : `<button class="grafik-btn-in" data-trig="${esc(it.trig)}" data-val="in"${live ? ' disabled' : ''}>&gt; IN</button>`;
     return `<div class="grafik-block" style="--g-color:${it.color}">
       <div class="grafik-block-info">
         <span class="grafik-block-name">${esc(it.name)}</span>
         ${it.sub ? `<span class="grafik-block-sub">${esc(it.sub)}</span>` : ''}
       </div>
       <div class="grafik-block-actions">
-        <button class="grafik-btn-prw tv-makro-add" ${mk} title="Opret makro">＋</button>
-        <button class="grafik-btn-prw tv-prw" ${prw} title="Preview">PRW</button>
-        ${outBtn}
-        ${inBtn}
+        <button class="grafik-btn-prw tv-makro-add" data-mk-trig="${esc(it.trig)}" title="Opret makro">＋</button>
+        <button class="grafik-btn-prw tv-prw" data-prw-url="${it.prv}" title="Preview">PRW</button>
+        <button class="grafik-btn-out" data-trig="${esc(it.trig)}" data-val="out"${!live ? ' disabled' : ''}>&lt; OUT</button>
+        <button class="grafik-btn-in" data-trig="${esc(it.trig)}" data-val="in"${live ? ' disabled' : ''}>&gt; IN</button>
       </div>
     </div>`;
   };
@@ -1283,53 +1247,23 @@ function renderGrafikTV(container) {
   if (alleAf) alleAf.addEventListener('click', async () => {
     const keys = [...new Set(allItems.map(x => x.trig))];
     keys.forEach(k => { grafiktState[k] = 'out'; });
-    grafiktState['lt_slot'] = '';
     renderGrafikTV(container);
-    try {
-      await Promise.all([
-        ...keys.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k, value: 'out' })),
-        sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: '' })
-      ]);
-    } catch { toast('Fejl ved ALLE AF', 'err'); }
+    try { await Promise.all(keys.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k, value: 'out' }))); }
+    catch { toast('Fejl ved ALLE AF', 'err'); }
   });
 
   container.querySelectorAll('[data-trig][data-val]').forEach(btn =>
     btn.addEventListener('click', () => { if (btn.disabled) return; setGrafiktTrigger(btn.dataset.trig, btn.dataset.val); }));
 
-  // Indbyggede subs: IN sætter lt_slot + lt_trigger; OUT slukker lt_trigger.
-  container.querySelectorAll('.tv-lt-in').forEach(btn =>
-    btn.addEventListener('click', async () => {
-      if (btn.disabled) return;
-      const slot = btn.dataset.ltSlot;
-      grafiktState['lt_slot'] = slot; grafiktState['lt_trigger'] = 'in';
-      renderGrafikTV(container);
-      try {
-        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot', value: String(slot) });
-        await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger', value: 'in', slot: String(slot) });
-      } catch { toast('Fejl ved SUB PÅ', 'err'); }
-    }));
-  container.querySelectorAll('.tv-lt-out').forEach(btn =>
-    btn.addEventListener('click', () => { if (btn.disabled) return; setGrafiktTrigger('lt_trigger', 'out'); }));
-
   container.querySelectorAll('.tv-prw').forEach(btn =>
-    btn.addEventListener('click', async () => {
-      if (btn.dataset.prwLtSlot !== undefined) {
-        try {
-          await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_slot_prv', value: String(btn.dataset.prwLtSlot) });
-          await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'lt_trigger_prv', value: 'in' });
-        } catch {}
-      }
+    btn.addEventListener('click', () => {
       grafiktActivePrvUrl = btn.dataset.prwUrl;
       const f = container.querySelector('.grafik-preview-iframe');
       if (f) f.src = grafiktActivePrvUrl;
     }));
 
   container.querySelectorAll('.tv-makro-add').forEach(btn =>
-    btn.addEventListener('click', () => {
-      const h = { key: btn.dataset.mkTrig, value: 'in' };
-      if (btn.dataset.mkSlot) h.slot = btn.dataset.mkSlot;
-      openMakroModal(null, [h]);
-    }));
+    btn.addEventListener('click', () => openMakroModal(null, [{ key: btn.dataset.mkTrig, value: 'in' }])));
 
   container.querySelectorAll('[data-copy]').forEach(btn => {
     if (btn.dataset.bound) return; btn.dataset.bound = '1';   // højre panel persisterer -> undgå dobbelt-listeners
