@@ -1167,12 +1167,15 @@ function renderGrafikTV(container) {
   const catItems = cat => (cat === 'info' ? infoRows.slice() : []).concat(customRows.filter(r => r.cat === cat));
   const allItems = [...infoRows, ...customRows];
 
-  // Sub-faner = kun de kategorier der har mindst én grafik (+ AFVIKLING).
-  const tabs = CATS.filter(([id]) => catItems(id).length > 0).map(([id, label]) => ({ id, label }));
+  // Sub-faner = ALLE kategorier (vises altid, også tomme) + AFVIKLING.
+  const tabs = CATS.map(([id, label]) => ({ id, label }));
 
   let active = grafiktActiveSubTab;
   const validIds = new Set([...tabs.map(t => t.id), 'afvikling']);
-  if (!validIds.has(active)) active = tabs.length ? tabs[0].id : 'afvikling';
+  if (!validIds.has(active)) {
+    const firstWithContent = CATS.find(([id]) => catItems(id).length > 0);
+    active = firstWithContent ? firstWithContent[0] : 'sub';
+  }
   grafiktActiveSubTab = active;
   const isAfv = active === 'afvikling';
 
