@@ -1148,10 +1148,14 @@ function renderGrafikTV(container) {
     id: 'custom-' + cg.trigger_key, label: cg.label, trig: cg.trigger_key,
     color: cg.color || '#888', prv: cg.file_url + '?p=' + encodeURIComponent(pid) + '&preview=1'
   }));
-  const infoItems = (infoBokse || []).map((b, i) => ({
-    id: 'info-' + b.id, label: b.overskrift || ('Info ' + (i + 1)), trig: 'info_' + b.id,
-    color: '#00b894', prv: origin + '/info.html?p=' + encodeURIComponent(pid) + '&box=' + encodeURIComponent(b.id) + '&preview=1'
-  }));
+  // Vis kun info-bokse der har tekst (tomme bokse optræder ikke i afviklingen).
+  const infoItems = (infoBokse || [])
+    .map((b, i) => ({ b, i }))
+    .filter(({ b }) => (b.overskrift || '').trim() || (b.indhold || '').trim())
+    .map(({ b, i }) => ({
+      id: 'info-' + b.id, label: b.overskrift || ('Info ' + (i + 1)), trig: 'info_' + b.id,
+      color: '#00b894', prv: origin + '/info.html?p=' + encodeURIComponent(pid) + '&box=' + encodeURIComponent(b.id) + '&preview=1'
+    }));
   const items = [...customItems, ...infoItems];
 
   let active = grafiktActiveSubTab;
