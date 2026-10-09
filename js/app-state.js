@@ -72,6 +72,7 @@ let grafikOverlayMap    = {}; // { grafik-id: 'hoved'|'komm' } for built-in graf
 let makroer             = []; // rækker fra projekt_makroer-tabellen
 let afviklingslister    = []; // rækker fra projekt_afviklingslister-tabellen
 let aktivListeId        = null; // valgt afviklingsliste (persisteres i settings.aktiv_afviklingsliste)
+let fontLib             = []; // globalt font-bibliotek (custom_fonts) — brugeruploadede fonte
 let grafiktActiveSubTab = 'lower-third';
 let grafiktActivePrvKey = '';
 let grafiktActivePrvUrl = '';

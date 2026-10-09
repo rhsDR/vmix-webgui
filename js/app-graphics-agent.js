@@ -198,7 +198,7 @@ function _gaRenderPreview() {
   if (!box) return;
   const html = (gaResult && gaResult.html) || _gaLastUploadedHtml() || (gaRevisionGrafik && gaRevisionGrafik._html);
   if (!html) { box.innerHTML = ''; return; }
-  const inject = `<script>window.__PROJEKT_ID=${JSON.stringify(aktivProjektId || '')};window.__API_ORIGIN=${JSON.stringify(location.origin)};window.__IS_PREVIEW=true;window.addEventListener('load',function(){setTimeout(function(){try{window.runAnimationIN&&window.runAnimationIN();}catch(e){}},250);});<\/script>`;
+  const inject = `<link rel="stylesheet" href="${location.origin}/fonts.css"><link rel="stylesheet" href="${location.origin}/api/custom-fonts"><script>window.__PROJEKT_ID=${JSON.stringify(aktivProjektId || '')};window.__API_ORIGIN=${JSON.stringify(location.origin)};window.__IS_PREVIEW=true;window.addEventListener('load',function(){setTimeout(function(){try{window.runAnimationIN&&window.runAnimationIN();}catch(e){}},250);});<\/script>`;
   const doc = html.replace(/(<html[^>]*>)/i, '$1' + inject);
   if (!box.querySelector('.ga-preview-frame')) {
     box.innerHTML = `
@@ -364,7 +364,7 @@ async function _gaCallAgent() {
     const r = await apiFetch('/api/graphics-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: gaMessages, projekt_id: aktivProjektId })
+      body: JSON.stringify({ messages: gaMessages, projekt_id: aktivProjektId, custom_fonts: (fontLib || []).map(f => f.family) })
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {

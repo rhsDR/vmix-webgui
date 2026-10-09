@@ -5,7 +5,10 @@ import { requireUser } from './_auth.js';
 // hurtige endpoints. (Sænk til 30 hvis Vercel-planen ikke tillader 60.)
 export const config = { maxDuration: 60 };
 
-function buildSystemPrompt(cfg) {
+function buildSystemPrompt(cfg, customFonts) {
+  const LIB_FAMILIES = 'DM Sans, Inter, Lato, Poppins, Nunito, Source Sans 3, PT Sans, Barlow, Barlow Condensed, Oswald, Roboto Condensed, Montserrat, Raleway, Exo 2, Kanit, Rajdhani, Teko, Bebas Neue, Anton, Playfair Display, DM Mono';
+  const _cf = Array.isArray(customFonts) ? [...new Set(customFonts.filter(Boolean))] : [];
+  const CUSTOM_FONTS_LINE = _cf.length ? `\n  Brugeruploadede fonte (også self-hostede — brug frit ved navn): ${_cf.join(', ')}.` : '';
   return `Du er en broadcast grafik-konfigurationsassistent i et vMix live-produktionssystem (vmix-webgui).
 Din opgave: hjælpe operatøren med at TILFØJE en HTML-grafik til systemet — enten ved at KONFIGURERE
 en grafik brugeren uploader/indsætter, ELLER ved at GENERERE grafik-HTML ud fra en beskrivelse.
@@ -28,9 +31,11 @@ en grafik brugeren uploader/indsætter, ELLER ved at GENERERE grafik-HTML ud fra
 - INGEN eksterne ressourcer fra CDN: Brug IKKE Supabase-SDK, IKKE GSAP eller andet JS-bibliotek fra
   CDN, IKKE Google Fonts <link> — de blokerer visning i systemets iframes og fejler på låst netværk.
   Lav AL animation med ren CSS (se YDELSE-sektionen) — ingen eksterne JS-biblioteker.
-- Fonte (frit valg, men self-hostet): systemet injicerer automatisk font-biblioteket (/fonts.css) i
-  din grafik — brug bare en fonts family-navn (fx 'DM Sans'). Ellers system-fonte (Arial/Segoe UI/
-  sans-serif) eller en font embedded som base64 @font-face. ALDRIG et Google Fonts/CDN-<link>.
+- Fonte (frit valg, men self-hostet): systemet injicerer automatisk font-biblioteket (/fonts.css +
+  brugeruploadede fonte) i din grafik — brug bare family-navnet. Tilgængelige biblioteks-fonte:
+  ${LIB_FAMILIES}.${CUSTOM_FONTS_LINE}
+  Ellers system-fonte (Arial/Segoe UI/sans-serif) eller en font embedded som base64 @font-face.
+  ALDRIG et Google Fonts/CDN-<link>.
 - INGEN SPX GC / CasparCG / template-motor-stilladser: brug ALDRIG spx_interface.js,
   SPXGCTemplateDefinition, skjulte f0/f1-datafelter eller runTemplateUpdate. Grafikken skal være
   100% selvstændig — og må IKKE loade eksterne scripts (heller ikke GSAP eller andet fra CDN). Al styring sker
@@ -170,7 +175,7 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'SUPABASE_SERVICE_ROLE_KEY er ikke sat i Vercel' });
   }
 
-  const { messages, projekt_id } = req.body || {};
+  const { messages, projekt_id, custom_fonts } = req.body || {};
   if (!projekt_id || !Array.isArray(messages) || !messages.length) {
     return res.status(400).json({ error: 'Mangler projekt_id eller messages' });
   }
@@ -199,7 +204,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 8192,
-        system: buildSystemPrompt(cfg),
+        system: buildSystemPrompt(cfg, custom_fonts),
         messages
       })
     });

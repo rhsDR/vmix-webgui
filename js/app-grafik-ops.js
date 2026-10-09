@@ -697,6 +697,7 @@ function renderGrafikOps() {
         </div>
         ${grafikkort || '<div style="color:#8c8c8c;font-size:12px;padding:16px 0;">Ingen grafikker endnu. Klik "＋ Tilføj ny grafik" for at starte.</div>'}
       </details>
+      ${_fontLibSectionHTML()}
     </div>`;
 
   // Event delegation — ingen inline onclick (undgår JSON.stringify HTML-escaping-bug)
@@ -709,6 +710,12 @@ function renderGrafikOps() {
   el.querySelectorAll('[data-trig][data-val]').forEach(btn =>
     btn.addEventListener('click', () => { setGrafiktTrigger(btn.dataset.trig, btn.dataset.val); renderGrafikOps(); }));
   el.querySelector('#gops-add-btn')?.addEventListener('click', () => openEgneGrafikModal());
+  // FONTE-sektion
+  el.querySelector('#font-pick-btn')?.addEventListener('click', _fontPick);
+  el.querySelector('#font-file-inp')?.addEventListener('change', e => _fontFileChosen(e.target));
+  el.querySelector('#font-upload-btn')?.addEventListener('click', uploadFont);
+  el.querySelectorAll('[data-del-font]').forEach(btn =>
+    btn.addEventListener('click', () => deleteFontById(btn.dataset.delFont, btn.dataset.delFontPath, btn.dataset.delFontFam)));
   initComposerDnd();
 }
 
@@ -724,4 +731,132 @@ function _grafikOpsDeleteConfirm(btn, id, filePath, label) {
     <button id="_gops_ann" style="padding:3px 9px;background:#222;border:1px solid #444;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">Annuller</button>`;
   wrap.querySelector('#_gops_ja').onclick = () => deleteEgneGrafikById(id, filePath, label);
   wrap.querySelector('#_gops_ann').onclick = () => { delete wrap.dataset.confirming; wrap.innerHTML = origHTML; };
+}
+
+// ── FONT-BIBLIOTEK (brugeruploadede fonte, custom_fonts) ─────────────────────
+// Globalt: fonte deles på tværs af alle projekter. Filerne ligger i 'grafik'-bucketen
+// under fonts/-prefix (genbruger grafik-storage-politikkerne). Leveres til playout +
+// agent-preview via /api/custom-fonts (dynamisk @font-face-stylesheet).
+const FONT_EXT_FORMAT = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' };
+const FONT_ALLOWED_EXT = ['woff2', 'woff', 'ttf', 'otf'];
+let _fontUploadFile = null;
+
+async function loadFontLib() {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/custom_fonts?select=*&order=family.asc`, { headers: SB_HDR });
+    fontLib = r.ok ? await r.json() : [];
+  } catch { fontLib = []; }
+}
+
+function _fontCssFamily(f) { return String(f.family || '').replace(/["'\\<>]/g, '').trim(); }
+
+function _fontFaceCss(f) {
+  const ext = String(f.file_url || '').split('.').pop().toLowerCase().split(/[?#]/)[0];
+  const fmt = FONT_EXT_FORMAT[ext] || 'woff2';
+  const fam = _fontCssFamily(f);
+  const url = String(f.file_url || '').replace(/["'\\]/g, '');
+  if (!fam || !url) return '';
+  return `@font-face{font-family:'${fam}';font-style:${f.style === 'italic' ? 'italic' : 'normal'};font-weight:${parseInt(f.weight) || 400};font-display:swap;src:url('${url}') format('${fmt}');}`;
+}
+
+function _fontLibSectionHTML() {
+  const faces = (fontLib || []).map(_fontFaceCss).filter(Boolean).join('');
+  const weightOpts = [100, 200, 300, 400, 500, 600, 700, 800, 900].map(w => `<option value="${w}"${w === 400 ? ' selected' : ''}>${w}</option>`).join('');
+  const rows = (fontLib || []).length ? (fontLib || []).map(f => {
+    const fam = esc(f.family), cssFam = _fontCssFamily(f), w = parseInt(f.weight) || 400, it = f.style === 'italic';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1a1a1a;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;color:#eee;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fam} <span style="font-size:10px;color:#8c8c8c;font-weight:400;">· ${w}${it ? ' italic' : ''}</span></div>
+        <div style="font-family:'${cssFam}',sans-serif;font-weight:${w};font-style:${it ? 'italic' : 'normal'};font-size:20px;color:#cbd5e1;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">AaBbCc Æ Ø Å 0123</div>
+      </div>
+      <button data-del-font="${f.id}" data-del-font-path="${esc(f.file_path || '')}" data-del-font-fam="${fam}" style="padding:3px 8px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:4px;cursor:pointer;font-size:11px;flex:none;">🗑</button>
+    </div>`;
+  }).join('') : '<div style="color:#8c8c8c;font-size:12px;padding:12px 0;">Ingen uploadede fonte endnu.</div>';
+
+  return `
+    <details class="gops-section" style="margin-top:14px;">
+      <summary class="gops-summary">FONTE <span class="gops-summary-hint">— upload egne fonte til alle grafikker</span></summary>
+      <style>${faces}</style>
+      <div style="font-size:11px;color:#8c8c8c;margin:6px 0 10px;">Uploadede fonte er tilgængelige i <b>alle projekter</b> og i grafik-agenten. Skriv font-navnet i din grafiks CSS (fx <span style="color:#4a9eff;">font-family:'Mit Navn'</span>). Anbefalet format: <b>.woff2</b> (mindst). Også .woff/.ttf/.otf.</div>
+      <div style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:12px;">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+          <div style="flex:2;min-width:150px;">
+            <div style="font-size:10px;color:#9c9c9c;letter-spacing:1px;margin-bottom:3px;">FONT-NAVN (family)</div>
+            <input id="font-family-inp" placeholder="fx Akkurat Pro" style="width:100%;background:#0d0d0d;border:1px solid #333;color:#ddd;border-radius:4px;padding:5px 8px;font-size:12px;outline:none;">
+          </div>
+          <div style="min-width:80px;">
+            <div style="font-size:10px;color:#9c9c9c;letter-spacing:1px;margin-bottom:3px;">VÆGT</div>
+            <select id="font-weight-sel" style="width:100%;background:#0d0d0d;border:1px solid #333;color:#ddd;border-radius:4px;padding:5px 6px;font-size:12px;outline:none;">${weightOpts}</select>
+          </div>
+          <div style="min-width:90px;">
+            <div style="font-size:10px;color:#9c9c9c;letter-spacing:1px;margin-bottom:3px;">STIL</div>
+            <select id="font-style-sel" style="width:100%;background:#0d0d0d;border:1px solid #333;color:#ddd;border-radius:4px;padding:5px 6px;font-size:12px;outline:none;"><option value="normal">normal</option><option value="italic">italic</option></select>
+          </div>
+          <input type="file" id="font-file-inp" accept=".woff2,.woff,.ttf,.otf" style="display:none;">
+          <button id="font-pick-btn" style="padding:6px 12px;background:#222;border:1px solid #333;color:#aaa;border-radius:6px;cursor:pointer;font-size:11px;">Vælg fil…</button>
+          <button id="font-upload-btn" disabled style="padding:6px 14px;background:#1a2a3a;border:1px solid #1d4ed8;color:#93c5fd;border-radius:6px;cursor:pointer;font-size:11px;letter-spacing:1px;opacity:.5;">Upload</button>
+        </div>
+        <div id="font-file-name" style="font-size:11px;color:#8c8c8c;margin-top:7px;min-height:14px;"></div>
+        <div id="font-lib-list" style="margin-top:6px;">${rows}</div>
+      </div>
+    </details>`;
+}
+
+function _fontPick() { document.getElementById('font-file-inp')?.click(); }
+
+function _fontFileChosen(input) {
+  const f = input.files && input.files[0];
+  _fontUploadFile = null;
+  const nameEl = document.getElementById('font-file-name');
+  const famInp = document.getElementById('font-family-inp');
+  const upBtn = document.getElementById('font-upload-btn');
+  const reset = () => { if (upBtn) { upBtn.disabled = true; upBtn.style.opacity = '.5'; } };
+  if (!f) { if (nameEl) nameEl.textContent = ''; reset(); return; }
+  const ext = f.name.split('.').pop().toLowerCase();
+  if (!FONT_ALLOWED_EXT.includes(ext)) { toast('Ugyldigt format — brug .woff2/.woff/.ttf/.otf', 'err'); input.value = ''; reset(); return; }
+  _fontUploadFile = f;
+  if (nameEl) nameEl.textContent = f.name + ' · ' + Math.round(f.size / 1024) + ' KB';
+  if (famInp && !famInp.value.trim()) famInp.value = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+  if (upBtn) { upBtn.disabled = false; upBtn.style.opacity = '1'; }
+}
+
+async function uploadFont() {
+  const file = _fontUploadFile;
+  if (!file) { toast('Vælg en fil først', 'err'); return; }
+  const famRaw = (document.getElementById('font-family-inp')?.value || '').replace(/["'\\<>]/g, '').trim();
+  if (!famRaw) { toast('Skriv et font-navn', 'err'); return; }
+  const weight = parseInt(document.getElementById('font-weight-sel')?.value) || 400;
+  const style = document.getElementById('font-style-sel')?.value === 'italic' ? 'italic' : 'normal';
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!FONT_ALLOWED_EXT.includes(ext)) { toast('Ugyldigt format', 'err'); return; }
+  const upBtn = document.getElementById('font-upload-btn');
+  if (upBtn) { upBtn.disabled = true; upBtn.textContent = 'Uploader…'; }
+  try {
+    const safe = famRaw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'font';
+    const filePath = `fonts/${safe}-${weight}${style === 'italic' ? 'i' : ''}-${Date.now()}.${ext}`;
+    const ct = ext === 'woff2' ? 'font/woff2' : ext === 'woff' ? 'font/woff' : ext === 'ttf' ? 'font/ttf' : 'font/otf';
+    const { error: upErr } = await sbClient.storage.from('grafik').upload(filePath, file, { contentType: ct, upsert: true });
+    if (upErr) { toast('Upload fejlede: ' + upErr.message, 'err'); return; }
+    const { data: urlData } = sbClient.storage.from('grafik').getPublicUrl(filePath);
+    const { error: dbErr } = await sbClient.from('custom_fonts').insert({ family: famRaw, weight, style, file_url: urlData.publicUrl, file_path: filePath });
+    if (dbErr) { toast('DB fejl: ' + dbErr.message, 'err'); return; }
+    _fontUploadFile = null;
+    await loadFontLib();
+    renderGrafikOps();
+    toast('Font uploadet: ' + famRaw, 'ok');
+  } finally {
+    if (upBtn) upBtn.textContent = 'Upload';
+  }
+}
+
+async function deleteFontById(id, path, fam) {
+  if (!confirm('Slet fonten "' + (fam || '') + '"? Grafikker der bruger den falder tilbage til en standardfont.')) return;
+  if (path) { try { await sbClient.storage.from('grafik').remove([path]); } catch {} }
+  try {
+    const { error } = await sbClient.from('custom_fonts').delete().eq('id', id);
+    if (error) throw error;
+  } catch { toast('Fejl ved slet', 'err'); return; }
+  await loadFontLib();
+  renderGrafikOps();
+  toast('Font slettet');
 }
