@@ -48,6 +48,10 @@ let _collapsedSections=new Set();
 
 const FONTS=['DM Sans','Inter','Lato','Poppins','Nunito','Source Sans 3','PT Sans','Barlow','Barlow Condensed','Oswald','Roboto Condensed','Montserrat','Raleway','Exo 2','Kanit','Rajdhani','Teko','Bebas Neue','Anton','Playfair Display','Georgia','Courier New'];
 const LOCAL_FONTS=['AXIS Extra Bold','Alibaba','Barlow','Barlow Condensed','Bauer Bodoni Std','Bungee Inline','DR Mono LB','DR Mono LL','DR Mono LM','DR Mono LR','DR Mono MI','DR Mono RI','DR Publik','DR Publik Condensed','Enreal','Euclid Circular A','Futura Std','Gotham Narrow','HUHEJ FONT','Helvetica','Isidora','Kapra Neue','Kunstuff','Lin Libertine','Noto Sans JP','Roboto','Streamster','Tungsten','World Athletics','World Athletics Headline'];
+// Self-hostet font-bibliotek (erstatter Google Fonts-CDN i eksporteret HTML). Indeholder alle
+// FONTS-familierne. Absolut URL så standalone-eksport (CasparCG) også virker uden for vMix-webgui;
+// for vmix-webgui-target injicerer master.html desuden fonts.css fra samme origin.
+const FONT_LIB_URL='https://vmix-control.vercel.app/fonts.css';
 function _allFonts(){const custom=[...new Set(customFonts.map(f=>f.name))];return[...new Set([...custom,...LOCAL_FONTS,...FONTS])].sort((a,b)=>a.localeCompare(b,'da'));}
 const FWFS=[['300-normal','Light'],['300-italic','Light Italic'],['400-normal','Regular'],['400-italic','Italic'],['500-normal','Medium'],['500-italic','Medium Italic'],['600-normal','Semibold'],['600-italic','Semibold Italic'],['700-normal','Bold'],['700-italic','Bold Italic']];
 function fwfsOpts(el){const cur=(el.fontWeight||'400')+'-'+(el.fontStyle||'normal');return FWFS.map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`).join('');}
@@ -3440,7 +3444,7 @@ function exportSPX_CSS(){
   const fieldDefs=fieldDefsArr.join(',\n');
   const _customFontNames=new Set(customFonts.map(f=>f.name));
   const fonts=[...new Set(elements.map(e=>e.fontFamily||'DM Sans'))].filter(f=>!_customFontNames.has(f));
-  const fontUrl=fonts.length?`https://fonts.googleapis.com/css2?${fonts.map(f=>`family=${f.replace(/ /g,'+')}`).join('&')}&display=swap`:'';
+  const fontUrl=fonts.length?FONT_LIB_URL:'';
   let css='',playLines=[],stopLines=[],updateLines=[],elHtml={},htmlLines=[],hiddenDivLines=[];let fIdx=0;let extraHead='';
   const _grpAnimElIds=new Set(elements.filter(e=>e.groupId&&groupAnimations[e.groupId]?.animation&&groupAnimations[e.groupId].animation!=='none').map(e=>e.id));
   elements.forEach(el=>{
@@ -3626,7 +3630,7 @@ function exportSPX_GSAP(sbMode=null,prodConfig=null,vmixMode=false,vmixGuiConfig
   const fieldDefs=fieldDefsArr.join(',\n');
   const _gCustomFontNames=new Set(customFonts.map(f=>f.name));
   const fonts=[...new Set(elements.map(e=>e.fontFamily||'DM Sans'))].filter(f=>!_gCustomFontNames.has(f));
-  const fontUrl=fonts.length?`https://fonts.googleapis.com/css2?${fonts.map(f=>`family=${f.replace(/ /g,'+')}`).join('&')}&display=swap`:'';
+  const fontUrl=fonts.length?FONT_LIB_URL:'';
   const _grpAnimElIds=new Set(elements.filter(e=>e.groupId&&groupAnimations[e.groupId]?.animation&&groupAnimations[e.groupId].animation!=='none').map(e=>e.id));
   let css='',elHtml={},htmlLines=[],updateLines=[],hiddenDivLines=[];let fIdx=0;let extraHeadG='';
   elements.forEach(el=>{
@@ -4461,8 +4465,7 @@ function exportSmartTicker(){
   if(elements.length<4){toast('Indlæs Smart Ticker preset først');return;}
   const [bar,labelBg,labelEl,tickerEl]=elements;
   const s=smartTickerSettings;
-  const ff=[...new Set([labelEl.fontFamily,tickerEl.fontFamily])].map(f=>encodeURIComponent(f)+':wght@300;400;500;600;700').join('&family=');
-  const fontUrl=`https://fonts.googleapis.com/css2?family=${ff}&display=swap`;
+  const fontUrl=FONT_LIB_URL;
   const sep=JSON.stringify(tickerEl.tickerSep||'  \u2022  ');
   const html=`<!DOCTYPE html>
 <html>

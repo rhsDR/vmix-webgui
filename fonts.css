@@ -1,16 +1,84 @@
-/* Self-hostet DM Sans (erstatter blokerende Google Fonts-link).
-   DRPublik (DR-husfont) er embedded direkte i de enkelte grafikker som base64. */
-@font-face{
-  font-family:'DM Sans';
-  font-style:normal;
-  font-weight:400;
-  font-display:swap;
-  src:url('/fonts/dmsans-400.woff2') format('woff2');
-}
-@font-face{
-  font-family:'DM Sans';
-  font-style:normal;
-  font-weight:700;
-  font-display:swap;
-  src:url('/fonts/dmsans-700.woff2') format('woff2');
-}
+/* Self-hostet font-bibliotek — ERSTATTER alle blokerende Google Fonts-CDN-links.
+   Serveres fra Vercel (samme origin som grafikkerne via master.html-injektion, eller
+   absolut https://vmix-control.vercel.app/fonts.css for standalone-eksport).
+
+   Indhold:
+   - Alle ~20 Google-familier editoren tilbyder (latin-subset woff2, dækker æøå + typografisk
+     tegnsætning), hentet lokalt til /fonts/google/.
+   - DR-husfonte (DR Publik m.fl.) ligger i spx-fonts.css (/fonts/*.ttf|otf), som editoren
+     også loader. DRPublik embeddes desuden som base64 direkte i de enkelte playout-grafikker.
+
+   Opdateres via node _dl-google-fonts.mjs (genskaber /fonts/google/ + CSS herunder). */
+
+@font-face{font-family:'Anton';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/anton-400.woff2') format('woff2');}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:300;font-display:swap;src:url('/fonts/google/barlow-300.woff2') format('woff2');}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/barlow-400.woff2') format('woff2');}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/google/barlow-500.woff2') format('woff2');}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/google/barlow-600.woff2') format('woff2');}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/barlow-700.woff2') format('woff2');}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:300;font-display:swap;src:url('/fonts/google/barlowcondensed-300.woff2') format('woff2');}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/barlowcondensed-400.woff2') format('woff2');}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/google/barlowcondensed-600.woff2') format('woff2');}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/barlowcondensed-700.woff2') format('woff2');}
+@font-face{font-family:'Bebas Neue';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/bebasneue-400.woff2') format('woff2');}
+@font-face{font-family:'DM Mono';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/dmmono-400.woff2') format('woff2');}
+@font-face{font-family:'DM Mono';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/google/dmmono-500.woff2') format('woff2');}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:300;font-display:swap;src:url('/fonts/google/dmsans-300.woff2') format('woff2');}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/dmsans-400.woff2') format('woff2');}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/google/dmsans-500.woff2') format('woff2');}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/google/dmsans-600.woff2') format('woff2');}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/dmsans-700.woff2') format('woff2');}
+@font-face{font-family:'Exo 2';font-style:normal;font-weight:300;font-display:swap;src:url('/fonts/google/exo2-300.woff2') format('woff2');}
+@font-face{font-family:'Exo 2';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/exo2-400.woff2') format('woff2');}
+@font-face{font-family:'Exo 2';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/google/exo2-600.woff2') format('woff2');}
+@font-face{font-family:'Exo 2';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/exo2-700.woff2') format('woff2');}
+@font-face{font-family:'Inter';font-style:normal;font-weight:300;font-display:swap;src:url('/fonts/google/inter-300.woff2') format('woff2');}
+@font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/inter-400.woff2') format('woff2');}
+@font-face{font-family:'Inter';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/google/inter-500.woff2') format('woff2');}
+@font-face{font-family:'Inter';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/google/inter-600.woff2') format('woff2');}
+@font-face{font-family:'Inter';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/inter-700.woff2') format('woff2');}
+@font-face{font-family:'Kanit';font-style:normal;font-weight:300;font-display:swap;src:url('/fonts/google/kanit-300.woff2') format('woff2');}
+@font-face{font-family:'Kanit';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/kanit-400.woff2') format('woff2');}
+@font-face{font-family:'Kanit';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/google/kanit-500.woff2') format('woff2');}
+@font-face{font-family:'Kanit';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/kanit-700.woff2') format('woff2');}
+@font-face{font-family:'Lato';font-style:normal;font-weight:300;font-display:swap;src:url('/fonts/google/lato-300.woff2') format('woff2');}
+@font-face{font-family:'Lato';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/lato-400.woff2') format('woff2');}
+@font-face{font-family:'Lato';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/lato-700.woff2') format('woff2');}
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:300;font-display:swap;src:url('/fonts/google/montserrat-300.woff2') format('woff2');}
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/montserrat-400.woff2') format('woff2');}
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/google/montserrat-600.woff2') format('woff2');}
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/montserrat-700.woff2') format('woff2');}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:300;font-display:swap;src:url('/fonts/google/nunito-300.woff2') format('woff2');}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/nunito-400.woff2') format('woff2');}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/google/nunito-600.woff2') format('woff2');}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/nunito-700.woff2') format('woff2');}
+@font-face{font-family:'Oswald';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/oswald-400.woff2') format('woff2');}
+@font-face{font-family:'Oswald';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/google/oswald-600.woff2') format('woff2');}
+@font-face{font-family:'Oswald';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/oswald-700.woff2') format('woff2');}
+@font-face{font-family:'PT Sans';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/ptsans-400.woff2') format('woff2');}
+@font-face{font-family:'PT Sans';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/ptsans-700.woff2') format('woff2');}
+@font-face{font-family:'Playfair Display';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/playfairdisplay-400.woff2') format('woff2');}
+@font-face{font-family:'Playfair Display';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/playfairdisplay-700.woff2') format('woff2');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:300;font-display:swap;src:url('/fonts/google/poppins-300.woff2') format('woff2');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/poppins-400.woff2') format('woff2');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/google/poppins-500.woff2') format('woff2');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/google/poppins-600.woff2') format('woff2');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/poppins-700.woff2') format('woff2');}
+@font-face{font-family:'Rajdhani';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/rajdhani-400.woff2') format('woff2');}
+@font-face{font-family:'Rajdhani';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/google/rajdhani-500.woff2') format('woff2');}
+@font-face{font-family:'Rajdhani';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/google/rajdhani-600.woff2') format('woff2');}
+@font-face{font-family:'Rajdhani';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/rajdhani-700.woff2') format('woff2');}
+@font-face{font-family:'Raleway';font-style:normal;font-weight:300;font-display:swap;src:url('/fonts/google/raleway-300.woff2') format('woff2');}
+@font-face{font-family:'Raleway';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/raleway-400.woff2') format('woff2');}
+@font-face{font-family:'Raleway';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/google/raleway-600.woff2') format('woff2');}
+@font-face{font-family:'Raleway';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/raleway-700.woff2') format('woff2');}
+@font-face{font-family:'Roboto Condensed';font-style:normal;font-weight:300;font-display:swap;src:url('/fonts/google/robotocondensed-300.woff2') format('woff2');}
+@font-face{font-family:'Roboto Condensed';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/robotocondensed-400.woff2') format('woff2');}
+@font-face{font-family:'Roboto Condensed';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/robotocondensed-700.woff2') format('woff2');}
+@font-face{font-family:'Source Sans 3';font-style:normal;font-weight:300;font-display:swap;src:url('/fonts/google/sourcesans3-300.woff2') format('woff2');}
+@font-face{font-family:'Source Sans 3';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/sourcesans3-400.woff2') format('woff2');}
+@font-face{font-family:'Source Sans 3';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/google/sourcesans3-600.woff2') format('woff2');}
+@font-face{font-family:'Source Sans 3';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/google/sourcesans3-700.woff2') format('woff2');}
+@font-face{font-family:'Teko';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/teko-400.woff2') format('woff2');}
+@font-face{font-family:'Teko';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/google/teko-500.woff2') format('woff2');}
+@font-face{font-family:'Teko';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/google/teko-600.woff2') format('woff2');}
