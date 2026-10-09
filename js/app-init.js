@@ -1,6 +1,3 @@
-// INFO-fanen er låst til ét projekt (Projekt 2). Skjult i alle andre projekter + Kampdag.
-const INFO_PROJEKT_ID = 'b8c98a0b-97bb-4089-8c1a-19074b476a16';
-
 // ── TABS ──────────────────────────────────────────────────────
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -61,8 +58,9 @@ async function init() {
           document.getElementById('projectUndertitel').textContent = rows[0].undertitel;
         }
         projektType = rows[0].type;
-        // INFO-fane: kun i Projekt 2 (uanset type-gating ovenfor).
-        if (aktivProjektId === INFO_PROJEKT_ID) {
+        // INFO-fane: individuel i HVERT TV-projekt (egne info-bokse, isoleret pr. projekt_id).
+        // Ikke i kampdag. Opret/rediger/slet sker her; output i GRAFIK SETUP; PÅ/AF i afvikling.
+        if (projektType === 'tv') {
           const infoBtn = document.querySelector('.tab-btn[data-tab="info"]');
           if (infoBtn) infoBtn.style.display = '';
           refreshInfo();
