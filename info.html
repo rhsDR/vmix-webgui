@@ -10,71 +10,80 @@
     html, body { width: 1920px; height: 1080px; background: transparent; overflow: hidden;
       font-family: 'DM Sans', 'Segoe UI', Arial, sans-serif; }
 
-    /* Nederste info-boks. Kun transform/opacity animeres (compositor-tråd) -> glat i vMix. */
-    #info-box {
-      position: absolute;
-      left: 120px;
-      bottom: 90px;
-      max-width: 1400px;
+    /* Stak af info-bokse, forankret nederst til venstre. Vokser opad når der er flere. */
+    #info-stack {
+      position: fixed; left: 120px; bottom: 90px; max-width: 1400px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+
+    /* Kun transform/opacity animeres (compositor-tråd) -> glat i vMix. */
+    .info-box {
       background: linear-gradient(135deg, rgba(0,0,75,0.96), rgba(0,0,38,0.96));
       border-left: 8px solid #e8593c;
       border-radius: 6px;
-      padding: 26px 40px 28px;
+      padding: 22px 36px 24px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.45);
-      transform: translateY(170%);
+      transform: translateY(40px);
       opacity: 0;
+      transition: transform 0.5s cubic-bezier(.2,.7,.2,1), opacity 0.4s ease;
       will-change: transform, opacity;
     }
-    #info-box.in  { transform: translateY(0);    opacity: 1;
-      transition: transform 0.6s cubic-bezier(.2,.7,.2,1), opacity 0.4s ease; }
-    #info-box.out { transform: translateY(170%); opacity: 0;
-      transition: transform 0.5s cubic-bezier(.6,0,.8,.3), opacity 0.45s ease; }
+    .info-box.in { transform: translateY(0); opacity: 1; }
 
-    #info-overskrift {
-      font-size: 46px; font-weight: 700; line-height: 1.08;
-      letter-spacing: 0.5px; text-transform: uppercase; color: #fff;
-    }
-    #info-indhold {
-      font-size: 30px; font-weight: 400; line-height: 1.35; margin-top: 10px;
-      color: rgba(255,255,255,0.9); white-space: pre-line;
-    }
-    #info-overskrift:empty { display: none; }
-    #info-indhold:empty   { display: none; margin-top: 0; }
+    .info-overskrift { font-size: 42px; font-weight: 700; line-height: 1.08;
+      letter-spacing: 0.5px; text-transform: uppercase; color: #fff; }
+    .info-indhold { font-size: 28px; font-weight: 400; line-height: 1.35; margin-top: 8px;
+      color: rgba(255,255,255,0.9); white-space: pre-line; }
+    .info-overskrift:empty { display: none; }
+    .info-indhold:empty   { display: none; margin-top: 0; }
   </style>
 </head>
 <body>
-  <div id="info-box">
-    <div id="info-overskrift"></div>
-    <div id="info-indhold"></div>
-  </div>
+  <div id="info-stack"></div>
 
   <script src="js/supabase-config.js"></script>
   <script>
-    const projektId = new URLSearchParams(location.search).get('p') || '';
+    const params = new URLSearchParams(location.search);
+    const projektId = params.get('p') || '';
+    const outputFilter = params.get('output') || '';   // vis alle bokse med dette output (overlay-vindue)
+    const boxFilter    = params.get('box') || '';       // vis kun denne ene boks (panel-preview)
     const pidFilter = projektId ? '&projekt_id=eq.' + projektId : '';
-    const box = document.getElementById('info-box');
+    const stack = document.getElementById('info-stack');
+    let _sig = '';
 
-    async function loadContent() {
+    async function load() {
       try {
-        const rows = await fetch(SB_URL + '/rest/v1/settings?select=key,value' + pidFilter, { headers: SB_HEADERS }).then(r => r.json());
-        const get = k => { const r = Array.isArray(rows) ? rows.find(x => x.key === k) : null; return r ? (r.value || '') : ''; };
-        document.getElementById('info-overskrift').textContent = get('info_overskrift');
-        document.getElementById('info-indhold').textContent   = get('info_indhold');
+        const rows = await fetch(SB_URL + '/rest/v1/settings?select=value&key=eq.info_bokse' + pidFilter, { headers: SB_HEADERS }).then(r => r.json());
+        let arr = [];
+        try { arr = (rows && rows[0] && rows[0].value) ? JSON.parse(rows[0].value) : []; } catch {}
+        if (!Array.isArray(arr)) arr = [];
+        let boxes;
+        if (boxFilter)         boxes = arr.filter(b => b.id === boxFilter);
+        else if (outputFilter) boxes = arr.filter(b => b.output === outputFilter);
+        else                   boxes = arr;               // ingen filter -> vis alt (debug/standalone)
+        render(boxes);
       } catch {}
     }
 
-    // Vis/skjul styres i vMix (overlay on/off). Her viser vi bare boksen og holder
-    // teksten opdateret live, så redigering i panelet slår igennem uden reload.
-    // runAnimationIN/OUT bevares som globale (hvis den en dag indlejres som master-overlay).
-    window.runAnimationIN  = function () { box.classList.remove('out'); box.classList.add('in'); };
-    window.runAnimationOUT = function () { box.classList.remove('in');  box.classList.add('out'); };
-
-    async function init() {
-      await loadContent();
-      box.classList.add('in');         // animerer ind når kilden lægges på i vMix
-      setInterval(loadContent, 2000);  // live-opdatering af tekst
+    function render(boxes) {
+      // Undgå at genstarte animationen når intet relevant er ændret.
+      const sig = JSON.stringify(boxes.map(b => [b.id, b.overskrift, b.indhold]));
+      if (sig === _sig) return;
+      _sig = sig;
+      stack.innerHTML = '';
+      boxes.forEach(b => {
+        const el = document.createElement('div');
+        el.className = 'info-box';
+        const h = document.createElement('div'); h.className = 'info-overskrift'; h.textContent = b.overskrift || '';
+        const c = document.createElement('div'); c.className = 'info-indhold';    c.textContent = b.indhold || '';
+        el.appendChild(h); el.appendChild(c);
+        stack.appendChild(el);
+        requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in')));
+      });
     }
-    init();
+
+    load();
+    setInterval(load, 2000);   // live-opdatering af bokse/tekst
   </script>
 </body>
 </html>

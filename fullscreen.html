@@ -673,11 +673,12 @@
         async function syncInfoBox() {
           try {
             if (projektId) {
-              var rows = await fetch(`${SB_URL}/rest/v1/settings?key=eq.info_output&projekt_id=eq.${encodeURIComponent(projektId)}&select=value`, { headers: SB_HDR }).then(r => r.json());
-              var show = (rows && rows[0] ? rows[0].value : '') === 'overlay-3';
+              var rows = await fetch(`${SB_URL}/rest/v1/settings?key=eq.info_bokse&projekt_id=eq.${encodeURIComponent(projektId)}&select=value`, { headers: SB_HDR }).then(r => r.json());
+              var arr = []; try { arr = (rows && rows[0] && rows[0].value) ? JSON.parse(rows[0].value) : []; } catch (e) {}
+              var show = Array.isArray(arr) && arr.some(function (b) { return b.output === 'overlay-3'; });
               if (show && !_infoFrame) {
                 _infoFrame = document.createElement('iframe');
-                _infoFrame.src = 'info.html?p=' + encodeURIComponent(projektId);
+                _infoFrame.src = 'info.html?p=' + encodeURIComponent(projektId) + '&output=overlay-3';
                 _infoFrame.allowTransparency = true;
                 _infoFrame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;background:transparent;pointer-events:none;z-index:99999;';
                 document.body.appendChild(_infoFrame);
