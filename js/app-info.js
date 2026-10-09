@@ -5,14 +5,20 @@
 // Hver boks rider med i sit valgte overlay-vindue; flere på samme overlay stables.
 // Vis/skjul styres i vMix. Fanen er kun synlig i Projekt 2 (gating i app-init.js).
 
-// output-mål: '' = Ingen (skjult). hoved=Master, komm=Secondary, overlay-3=Fullscreen.
-const INFO_OUTPUTS = [['', 'Ingen'], ['hoved', 'Master'], ['komm', 'Secondary'], ['overlay-3', 'Fullscreen']];
+// output-mål (overlay-vindue): hoved=Master, komm=Secondary, overlay-3=Fullscreen.
+// Ingen på/af i panelet — boksen ligger altid på et overlay, og vMix styrer vis/skjul.
+const INFO_OUTPUTS = [['hoved', 'Master'], ['komm', 'Secondary'], ['overlay-3', 'Fullscreen']];
+const INFO_OUTPUT_IDS = INFO_OUTPUTS.map(o => o[0]);
 
 async function loadInfoBokse() {
   try {
     const rows = await sbGet('settings?select=value&key=eq.info_bokse&projekt_id=eq.' + aktivProjektId);
     const v = rows[0] && rows[0].value ? JSON.parse(rows[0].value) : [];
     infoBokse = Array.isArray(v) ? v : [];
+    // Normalisér: hver boks ligger altid på et gyldigt overlay (default Master).
+    let changed = false;
+    infoBokse.forEach(b => { if (!INFO_OUTPUT_IDS.includes(b.output)) { b.output = 'hoved'; changed = true; } });
+    if (changed) { try { await saveInfoBokse(); } catch {} }
   } catch { infoBokse = []; }
 }
 
@@ -81,7 +87,7 @@ function renderInfo() {
 
 async function addInfoBox() {
   const id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'b' + Date.now();
-  infoBokse.push({ id, overskrift: '', indhold: '', output: '' });
+  infoBokse.push({ id, overskrift: '', indhold: '', output: 'hoved' });
   try { await saveInfoBokse(); } catch { toast('Fejl ved gem', 'err'); }
   renderInfo();
 }

@@ -12,8 +12,8 @@
 
     /* Stak af info-bokse, forankret nederst til venstre. Vokser opad når der er flere. */
     #info-stack {
-      position: fixed; left: 120px; bottom: 90px; max-width: 1400px;
-      display: flex; flex-direction: column; gap: 16px;
+      position: fixed; left: 120px; bottom: 90px; max-width: 1600px;
+      display: flex; flex-direction: column; gap: 22px;
     }
 
     /* Kun transform/opacity animeres (compositor-tråd) -> glat i vMix. */
@@ -21,7 +21,7 @@
       background: linear-gradient(135deg, rgba(0,0,75,0.96), rgba(0,0,38,0.96));
       border-left: 8px solid #e8593c;
       border-radius: 6px;
-      padding: 22px 36px 24px;
+      padding: 30px 54px 34px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.45);
       transform: translateY(40px);
       opacity: 0;
@@ -30,9 +30,9 @@
     }
     .info-box.in { transform: translateY(0); opacity: 1; }
 
-    .info-overskrift { font-size: 42px; font-weight: 700; line-height: 1.08;
+    .info-overskrift { font-size: 86px; font-weight: 700; line-height: 1.05;
       letter-spacing: 0.5px; text-transform: uppercase; color: #fff; }
-    .info-indhold { font-size: 28px; font-weight: 400; line-height: 1.35; margin-top: 8px;
+    .info-indhold { font-size: 52px; font-weight: 400; line-height: 1.3; margin-top: 14px;
       color: rgba(255,255,255,0.9); white-space: pre-line; }
     .info-overskrift:empty { display: none; }
     .info-indhold:empty   { display: none; margin-top: 0; }
@@ -66,6 +66,8 @@
     }
 
     function render(boxes) {
+      // Skjul tomme bokse (ingen overskrift og intet indhold) -> ingen blank kasse.
+      boxes = (boxes || []).filter(b => (b.overskrift || '').trim() || (b.indhold || '').trim());
       // Undgå at genstarte animationen når intet relevant er ændret.
       const sig = JSON.stringify(boxes.map(b => [b.id, b.overskrift, b.indhold]));
       if (sig === _sig) return;
