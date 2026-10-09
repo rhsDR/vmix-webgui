@@ -37,7 +37,7 @@ function _infoBoxCard(b, idx) {
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
           <span class="ticker-num">INFO ${idx + 1}</span>
           <button class="btn btn-cancel" data-act="preview" title="Preview" style="margin-left:auto;">▶ PREVIEW</button>
-          <button class="icon-btn" data-act="del" title="Slet info-boks">🗑</button>
+          <button class="btn" data-act="del" title="Slet info-boks" style="background:#2a1010;border:1px solid #4a2020;color:#ef4444;">✕ Slet</button>
         </div>
         <div class="edit-grid" style="margin-bottom:10px;">
           <div class="form-group span2">
@@ -61,11 +61,13 @@ function renderInfo() {
   list.innerHTML = `
     <div class="credits-speed-bar">
       <button class="btn btn-save" id="infoAdd">＋ Tilføj info-boks</button>
+      ${infoBokse.length ? '<button class="btn" id="infoDelAll" style="background:#2a1010;border:1px solid #4a2020;color:#ef4444;margin-left:8px;">✕ Slet alle</button>' : ''}
       <span style="font-size:11px;color:#8c8c8c;margin-left:10px;max-width:520px;">Skriv overskrift + indhold. <b>Output (hvilket overlay boksen ligger på) vælges under GRAFIK SETUP → INFO-BOKSE.</b> Vis/skjul styres i vMix.</span>
     </div>
     <div id="infoCards" style="margin-top:14px;">${cards || '<div style="color:#8c8c8c;font-size:12px;padding:12px 0;">Ingen info-bokse endnu. Klik “＋ Tilføj info-boks”.</div>'}</div>`;
 
   list.querySelector('#infoAdd').addEventListener('click', addInfoBox);
+  list.querySelector('#infoDelAll')?.addEventListener('click', deleteAllInfoBokse);
   list.querySelectorAll('[data-box]').forEach(card => {
     const id = card.dataset.box;
     const box = infoBokse.find(b => b.id === id);
@@ -83,6 +85,14 @@ function renderInfo() {
     });
     card.querySelector('[data-act="preview"]').addEventListener('click', () => _infoPreview(id));
   });
+}
+
+async function deleteAllInfoBokse() {
+  if (!infoBokse.length) return;
+  if (!confirm('Slet ALLE ' + infoBokse.length + ' info-bokse i dette projekt? Dette kan ikke fortrydes.')) return;
+  infoBokse = [];
+  try { await saveInfoBokse('Alle info-bokse slettet'); } catch { toast('Fejl ved slet', 'err'); }
+  renderInfo();
 }
 
 async function addInfoBox() {
