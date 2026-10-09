@@ -1,3 +1,6 @@
+// INFO-fanen er låst til ét projekt (Projekt 2). Skjult i alle andre projekter + Kampdag.
+const INFO_PROJEKT_ID = 'b8c98a0b-97bb-4089-8c1a-19074b476a16';
+
 // ── TABS ──────────────────────────────────────────────────────
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -9,6 +12,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     else                              stopLivePolling();
     if (btn.dataset.tab === 'grafik') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadAfviklingslister(), loadCompanionToken()]).then(() => refreshGrafiktState()); fetchLineupDataForGrafik(); }
     if (btn.dataset.tab === 'grafik-ops') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadAfviklingslister(), loadFontLib(), loadCompanionToken()]).then(async () => { await refreshGrafiktState(); renderGrafikOps(); renderGraphicsAgent(); }); }
+    if (btn.dataset.tab === 'info') refreshInfo();
   });
 });
 
@@ -57,6 +61,12 @@ async function init() {
           document.getElementById('projectUndertitel').textContent = rows[0].undertitel;
         }
         projektType = rows[0].type;
+        // INFO-fane: kun i Projekt 2 (uanset type-gating ovenfor).
+        if (aktivProjektId === INFO_PROJEKT_ID) {
+          const infoBtn = document.querySelector('.tab-btn[data-tab="info"]');
+          if (infoBtn) infoBtn.style.display = '';
+          refreshInfo();
+        }
         if (rows[0].type === 'tv') {
           // Skjul KAMPE, STAMDATA, GRAFIK og DASHBOARD — aktiver SUBS som standard
           const kampeBtn     = document.querySelector('.tab-btn[data-tab="kampe"]');

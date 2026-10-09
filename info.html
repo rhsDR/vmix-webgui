@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <title>Info</title>
+  <link href="/fonts.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 1920px; height: 1080px; background: transparent; overflow: hidden;
+      font-family: 'DM Sans', 'Segoe UI', Arial, sans-serif; }
+
+    /* Nederste info-boks. Kun transform/opacity animeres (compositor-tråd) -> glat i vMix. */
+    #info-box {
+      position: absolute;
+      left: 120px;
+      bottom: 90px;
+      max-width: 1400px;
+      background: linear-gradient(135deg, rgba(0,0,75,0.96), rgba(0,0,38,0.96));
+      border-left: 8px solid #e8593c;
+      border-radius: 6px;
+      padding: 26px 40px 28px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.45);
+      transform: translateY(170%);
+      opacity: 0;
+      will-change: transform, opacity;
+    }
+    #info-box.in  { transform: translateY(0);    opacity: 1;
+      transition: transform 0.6s cubic-bezier(.2,.7,.2,1), opacity 0.4s ease; }
+    #info-box.out { transform: translateY(170%); opacity: 0;
+      transition: transform 0.5s cubic-bezier(.6,0,.8,.3), opacity 0.45s ease; }
+
+    #info-overskrift {
+      font-size: 46px; font-weight: 700; line-height: 1.08;
+      letter-spacing: 0.5px; text-transform: uppercase; color: #fff;
+    }
+    #info-indhold {
+      font-size: 30px; font-weight: 400; line-height: 1.35; margin-top: 10px;
+      color: rgba(255,255,255,0.9); white-space: pre-line;
+    }
+    #info-overskrift:empty { display: none; }
+    #info-indhold:empty   { display: none; margin-top: 0; }
+  </style>
+</head>
+<body>
+  <div id="info-box">
+    <div id="info-overskrift"></div>
+    <div id="info-indhold"></div>
+  </div>
+
+  <script src="js/supabase-config.js"></script>
+  <script>
+    const projektId = new URLSearchParams(location.search).get('p') || '';
+    const pidFilter = projektId ? '&projekt_id=eq.' + projektId : '';
+    const box = document.getElementById('info-box');
+
+    async function loadContent() {
+      try {
+        const rows = await fetch(SB_URL + '/rest/v1/settings?select=key,value' + pidFilter, { headers: SB_HEADERS }).then(r => r.json());
+        const get = k => { const r = Array.isArray(rows) ? rows.find(x => x.key === k) : null; return r ? (r.value || '') : ''; };
+        document.getElementById('info-overskrift').textContent = get('info_overskrift');
+        document.getElementById('info-indhold').textContent   = get('info_indhold');
+      } catch {}
+    }
+
+    // Vis/skjul styres i vMix (overlay on/off). Her viser vi bare boksen og holder
+    // teksten opdateret live, så redigering i panelet slår igennem uden reload.
+    // runAnimationIN/OUT bevares som globale (hvis den en dag indlejres som master-overlay).
+    window.runAnimationIN  = function () { box.classList.remove('out'); box.classList.add('in'); };
+    window.runAnimationOUT = function () { box.classList.remove('in');  box.classList.add('out'); };
+
+    async function init() {
+      await loadContent();
+      box.classList.add('in');         // animerer ind når kilden lægges på i vMix
+      setInterval(loadContent, 2000);  // live-opdatering af tekst
+    }
+    init();
+  </script>
+</body>
+</html>
