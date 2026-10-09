@@ -1135,62 +1135,75 @@ function renderGrafik() {
 }
 
 // ── TV-AFVIKLING (isoleret fra kampdag renderGrafik) ─────────────────────────
-// Afviklings-menu for TV-projekter: sub-faner for custom-grafik + info-bokse, hver med
-// preview + PÅ/AF, plus AFVIKLING-view med makroer. Info-bokse styres via trigger info_<id>
-// (output vælges i GRAFIK SETUP, tekst i INFO-fanen).
+// Afviklings-menu for TV-projekter, bygget som Kampdags GRAFIK: sub-faner pr. grafik-kategori
+// der findes i projektet (INFO + hver custom-grafik), hver med rækker med ＋(makro)/PRW/
+// < OUT/> IN, plus AFVIKLING med makroer. Preview vises i højre panel. Kun projektets egne
+// grafikker. Info-bokse styres via trigger info_<id> (output i GRAFIK SETUP, tekst i INFO).
 function renderGrafikTV(container) {
   container = container || document.getElementById('grafikList');
   if (!container) return;
   const origin = window.location.origin;
   const pid = aktivProjektId;
 
+  // Custom-grafik (indlejret) — hver er sin egen kategori/fane med én række.
   const customItems = (customGrafik || []).filter(cg => cg.overlay_mode === 'embed').map(cg => ({
-    id: 'custom-' + cg.trigger_key, label: cg.label, trig: cg.trigger_key,
-    color: cg.color || '#888', prv: cg.file_url + '?p=' + encodeURIComponent(pid) + '&preview=1'
+    tabId: 'custom-' + cg.trigger_key, trig: cg.trigger_key, name: cg.label,
+    sub: 'Indlejret · ' + cg.trigger_key, color: cg.color || '#888',
+    prv: cg.file_url + '?p=' + encodeURIComponent(pid) + '&preview=1'
   }));
-  // Vis kun info-bokse der har tekst (tomme bokse optræder ikke i afviklingen).
+  // Info-bokse (kun med tekst) — samlet under én INFO-kategori, én række pr. boks.
   const infoItems = (infoBokse || [])
     .map((b, i) => ({ b, i }))
     .filter(({ b }) => (b.overskrift || '').trim() || (b.indhold || '').trim())
     .map(({ b, i }) => ({
-      id: 'info-' + b.id, label: b.overskrift || ('Info ' + (i + 1)), trig: 'info_' + b.id,
+      trig: 'info_' + b.id, name: b.overskrift || ('Info ' + (i + 1)), sub: b.indhold || '',
       color: '#00b894', prv: origin + '/info.html?p=' + encodeURIComponent(pid) + '&box=' + encodeURIComponent(b.id) + '&preview=1'
     }));
-  const items = [...customItems, ...infoItems];
+
+  // Sub-faner = de grafik-kategorier der findes i projektet (+ AFVIKLING).
+  const tabs = [];
+  if (infoItems.length) tabs.push({ id: 'info', label: 'INFO', color: '#00b894' });
+  customItems.forEach(ci => tabs.push({ id: ci.tabId, label: ci.name, color: ci.color }));
 
   let active = grafiktActiveSubTab;
-  const validIds = new Set([...items.map(x => x.id), 'afvikling']);
-  if (!validIds.has(active)) active = items.length ? items[0].id : 'afvikling';
+  const validIds = new Set([...tabs.map(t => t.id), 'afvikling']);
+  if (!validIds.has(active)) active = tabs.length ? tabs[0].id : 'afvikling';
   grafiktActiveSubTab = active;
   const isAfv = active === 'afvikling';
-  const activeItem = items.find(x => x.id === active);
 
-  const subTabsHTML = items.map(it => {
-    const live = (grafiktState[it.trig] || 'out') !== 'out';
+  const subTabsHTML = tabs.map(t => {
+    const live = t.id === 'info'
+      ? infoItems.some(it => (grafiktState[it.trig] || 'out') !== 'out')
+      : (() => { const ci = customItems.find(c => c.tabId === t.id); return ci && (grafiktState[ci.trig] || 'out') !== 'out'; })();
     const dot = live ? '<span class="grafik-v2-onair"></span>' : '';
-    return `<button class="grafik-v2-tab${active === it.id ? ' active' : ''}" data-gtab="${it.id}" style="--tab-color:${it.color}">${esc(it.label.toUpperCase())}${dot}</button>`;
+    return `<button class="grafik-v2-tab${active === t.id ? ' active' : ''}" data-gtab="${t.id}" style="--tab-color:${t.color}">${esc(t.label.toUpperCase())}${dot}</button>`;
   }).join('') + `<button class="grafik-v2-tab${isAfv ? ' active' : ''}" data-gtab="afvikling" style="--tab-color:#ff8c00">AFVIKLING</button>`;
+
+  // Kampdag-stil række med ＋(makro)/PRW/< OUT/> IN.
+  const rowHTML = it => {
+    const live = (grafiktState[it.trig] || 'out') !== 'out';
+    return `<div class="grafik-block" style="--g-color:${it.color}">
+      <div class="grafik-block-info">
+        <span class="grafik-block-name">${esc(it.name)}</span>
+        ${it.sub ? `<span class="grafik-block-sub">${esc(it.sub)}</span>` : ''}
+      </div>
+      <div class="grafik-block-actions">
+        <button class="grafik-btn-prw tv-makro-add" data-mk-trig="${esc(it.trig)}" title="Opret makro">＋</button>
+        <button class="grafik-btn-prw tv-prw" data-prw-url="${it.prv}" title="Preview">PRW</button>
+        <button class="grafik-btn-out" data-trig="${esc(it.trig)}" data-val="out"${!live ? ' disabled' : ''}>&lt; OUT</button>
+        <button class="grafik-btn-in" data-trig="${esc(it.trig)}" data-val="in"${live ? ' disabled' : ''}>&gt; IN</button>
+      </div>
+    </div>`;
+  };
 
   let contentHTML;
   if (isAfv) {
     contentHTML = _afvMakroViewHTML();
-  } else if (activeItem) {
-    const live = (grafiktState[activeItem.trig] || 'out') !== 'out';
-    contentHTML = `
-      <div class="grafik-companion-head" style="margin-bottom:6px;">PREVIEW</div>
-      <div class="grafik-preview-box"><iframe class="grafik-preview-iframe" src="${activeItem.prv}"></iframe></div>
-      <div class="grafik-block" style="--g-color:${activeItem.color};margin-top:10px;">
-        <div class="grafik-block-info">
-          <span class="grafik-block-name">${esc(activeItem.label)}</span>
-          <span class="grafik-block-sub">${esc(activeItem.trig)}</span>
-        </div>
-        <div class="grafik-block-actions">
-          <button class="grafik-btn-out" data-trig="${esc(activeItem.trig)}" data-val="out"${!live ? ' disabled' : ''}>&lt; AF</button>
-          <button class="grafik-btn-in" data-trig="${esc(activeItem.trig)}" data-val="in"${live ? ' disabled' : ''}>▶ PÅ</button>
-        </div>
-      </div>`;
+  } else if (active === 'info') {
+    contentHTML = infoItems.map(rowHTML).join('') || '<div class="grafik-v2-empty">Ingen info-bokse med tekst endnu.</div>';
   } else {
-    contentHTML = '<div class="grafik-v2-empty">Ingen grafik endnu. Opret info-bokse i INFO-fanen eller grafik i GRAFIK SETUP.</div>';
+    const ci = customItems.find(c => c.tabId === active);
+    contentHTML = ci ? rowHTML(ci) : '<div class="grafik-v2-empty">Ingen grafik endnu. Opret info-bokse i INFO-fanen eller grafik i GRAFIK SETUP.</div>';
   }
 
   const onairBlock = (title, url) => `
@@ -1202,8 +1215,13 @@ function renderGrafikTV(container) {
         <button class="copy-btn icon-btn" data-copy="${url}">⎘</button>
       </div>
     </div>`;
+  const prvUrl = grafiktActivePrvUrl || 'about:blank';
   const rightHTML = `
-    ${onairBlock('ON AIR — MASTER', origin + '/master.html?p=' + pid).replace('margin-top:10px', 'margin-top:0')}
+    <div>
+      <div class="grafik-companion-head" style="margin-bottom:6px;">PREVIEW</div>
+      <div class="grafik-preview-box"><iframe class="grafik-preview-iframe" src="${prvUrl}"></iframe></div>
+    </div>
+    ${onairBlock('ON AIR — MASTER', origin + '/master.html?p=' + pid)}
     ${onairBlock('ON AIR — SECONDARY', origin + '/secondary.html?p=' + pid)}
     ${onairBlock('ON AIR — FULLSCREEN', origin + '/fullscreen.html?p=' + pid)}`;
 
@@ -1228,15 +1246,25 @@ function renderGrafikTV(container) {
 
   const alleAf = container.querySelector('#grafik-alle-af');
   if (alleAf) alleAf.addEventListener('click', async () => {
-    const keys = items.map(x => x.trig);
+    const keys = [...customItems.map(x => x.trig), ...infoItems.map(x => x.trig)];
     keys.forEach(k => { grafiktState[k] = 'out'; });
     renderGrafikTV(container);
     try { await Promise.all(keys.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k, value: 'out' }))); }
     catch { toast('Fejl ved ALLE AF', 'err'); }
   });
 
-  container.querySelectorAll('[data-trig]').forEach(btn =>
+  container.querySelectorAll('[data-trig][data-val]').forEach(btn =>
     btn.addEventListener('click', () => { if (btn.disabled) return; setGrafiktTrigger(btn.dataset.trig, btn.dataset.val); }));
+
+  container.querySelectorAll('.tv-prw').forEach(btn =>
+    btn.addEventListener('click', () => {
+      grafiktActivePrvUrl = btn.dataset.prwUrl;
+      const f = container.querySelector('.grafik-preview-iframe');
+      if (f) f.src = grafiktActivePrvUrl;
+    }));
+
+  container.querySelectorAll('.tv-makro-add').forEach(btn =>
+    btn.addEventListener('click', () => openMakroModal(null, [{ key: btn.dataset.mkTrig, value: 'in' }])));
 
   container.querySelectorAll('[data-copy]').forEach(btn => {
     if (btn.dataset.bound) return; btn.dataset.bound = '1';   // højre panel persisterer -> undgå dobbelt-listeners
