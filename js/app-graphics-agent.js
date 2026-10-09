@@ -365,7 +365,7 @@ async function _gaCallAgent() {
     const r = await apiFetch('/api/graphics-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: gaMessages, projekt_id: aktivProjektId, custom_fonts: (fontLib || []).map(f => f.family) })
+      body: JSON.stringify({ messages: gaMessages, projekt_id: aktivProjektId, custom_fonts: (fontLib || []).map(f => f.family), data_sources: (typeof _egneGrafikDataSources === 'function' ? _egneGrafikDataSources().filter(([v]) => v !== 'custom').map(([, label]) => label) : []) })
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {

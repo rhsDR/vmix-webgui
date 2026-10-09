@@ -194,16 +194,11 @@
           <input id="egn-label-inp" type="text" placeholder="Min grafik…"
             style="width:100%;box-sizing:border-box;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:12px;">
         </div>
-        <!-- Kategori (gruppering i afviklingen) -->
+        <!-- Datakilde = parring + gruppering i afviklingen. Options fyldes dynamisk (med antal). -->
         <div>
-          <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">KATEGORI (afvikling)</label>
-          <select id="egn-kategori-sel" style="width:100%;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
-            <option value="custom">Custom</option>
-            <option value="sub">Sub</option>
-            <option value="info">Info</option>
-            <option value="ticker">Ticker</option>
-            <option value="credit">Credit</option>
-          </select>
+          <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">DATAKILDE (hvad grafikken henter)</label>
+          <select id="egn-kategori-sel" style="width:100%;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;"></select>
+          <div style="font-size:10px;color:#555;margin-top:3px;">Grafikken parres med denne datakilde og vises under den i afviklingen.</div>
         </div>
         <!-- Trigger-nøgle -->
         <div>

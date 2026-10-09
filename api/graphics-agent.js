@@ -5,13 +5,24 @@ import { requireUser } from './_auth.js';
 // hurtige endpoints. (Sænk til 30 hvis Vercel-planen ikke tillader 60.)
 export const config = { maxDuration: 60 };
 
-function buildSystemPrompt(cfg, customFonts) {
+function buildSystemPrompt(cfg, customFonts, dataSources) {
   const LIB_FAMILIES = 'DM Sans, Inter, Lato, Poppins, Nunito, Source Sans 3, PT Sans, Barlow, Barlow Condensed, Oswald, Roboto Condensed, Montserrat, Raleway, Exo 2, Kanit, Rajdhani, Teko, Bebas Neue, Anton, Playfair Display, DM Mono';
   const _cf = Array.isArray(customFonts) ? [...new Set(customFonts.filter(Boolean))] : [];
   const CUSTOM_FONTS_LINE = _cf.length ? `\n  Brugeruploadede fonte (også self-hostede — brug frit ved navn): ${_cf.join(', ')}.` : '';
+  const _ds = Array.isArray(dataSources) ? dataSources.filter(Boolean) : [];
+  const DATA_SOURCES_LINE = _ds.length
+    ? `Projektets tilgængelige datakilder: ${_ds.join('; ')}.`
+    : 'Projektet har endnu ingen udfyldte datakilder.';
   return `Du er en broadcast grafik-konfigurationsassistent i et vMix live-produktionssystem (vmix-webgui).
 Din opgave: hjælpe operatøren med at TILFØJE en HTML-grafik til systemet — enten ved at KONFIGURERE
 en grafik brugeren uploader/indsætter, ELLER ved at GENERERE grafik-HTML ud fra en beskrivelse.
+
+## DATAKILDE (spørg tidligt)
+Spørg ALTID operatøren hvilken datakilde grafikken skal hente sit indhold fra, og foreslå projektets
+tilgængelige. ${DATA_SOURCES_LINE}
+Live-data hentes via window.__API_ORIGIN + '/api/vmix/' + window.__PROJEKT_ID (se datakilde-sektionen
+nedenfor). Grafikken bør så "parres" med den valgte datakilde (operatøren sætter grafikkens Kategori =
+Sub/Info/Ticker/Credit i GRAFIK SETUP). Vælges "ingen/custom", skrives indholdet direkte i grafikken.
 
 ## Systemet grafikken skal virke i
 - Tre overlay-vinduer (vMix browser-inputs): "Master" (internt id: hoved), "Secondary" (komm) og
@@ -175,7 +186,7 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'SUPABASE_SERVICE_ROLE_KEY er ikke sat i Vercel' });
   }
 
-  const { messages, projekt_id, custom_fonts } = req.body || {};
+  const { messages, projekt_id, custom_fonts, data_sources } = req.body || {};
   if (!projekt_id || !Array.isArray(messages) || !messages.length) {
     return res.status(400).json({ error: 'Mangler projekt_id eller messages' });
   }
@@ -204,7 +215,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 8192,
-        system: buildSystemPrompt(cfg, custom_fonts),
+        system: buildSystemPrompt(cfg, custom_fonts, data_sources),
         messages
       })
     });

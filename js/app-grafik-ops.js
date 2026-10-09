@@ -33,6 +33,23 @@ function _egneGrafikAutoSuggestTrigKey(type) {
   return type + '_' + (existing.length + 1);
 }
 
+// Datakilder grafikken kan parres med + hvor meget data projektet har (forslag).
+function _egneGrafikDataSources() {
+  const cnt = (arr, pred) => (Array.isArray(arr) ? arr.filter(pred).length : 0);
+  const subsN = cnt(typeof subs !== 'undefined' ? subs : [], s => (s.navn || '').trim() || (s.titel || '').trim());
+  const tickN = cnt(typeof tickers !== 'undefined' ? tickers : [], t => (t.overskrift || '').trim() || (t.tekst || '').trim());
+  const credN = (typeof creditsData !== 'undefined' && creditsData.items) ? creditsData.items.length : 0;
+  const infoN = cnt(typeof infoBokse !== 'undefined' ? infoBokse : [], b => (b.overskrift || '').trim() || (b.indhold || '').trim());
+  const hint = c => c > 0 ? ` (${c} i projektet)` : ' (tom)';
+  return [
+    ['custom', 'Ingen / Custom — henter ikke projektdata'],
+    ['sub',    'Subs' + hint(subsN)],
+    ['info',   'Info' + hint(infoN)],
+    ['ticker', 'Ticker' + hint(tickN)],
+    ['credit', 'Credits' + hint(credN)],
+  ];
+}
+
 function openEgneGrafikModal(editId) {
   _egneGrafikEditId = editId || null;
   _egneGrafikData = {};
@@ -63,7 +80,11 @@ function _egneGrafikRenderStep1() {
   document.getElementById('egn-step1-title').textContent = isEdit ? 'REDIGÉR GRAFIK (1/3)' : 'TILFØJ GRAFIK (1/3)';
   document.getElementById('egn-label-inp').value = d.label || '';
   document.getElementById('egn-color-inp').value = d.color || '#888888';
-  const _katSel = document.getElementById('egn-kategori-sel'); if (_katSel) _katSel.value = d.kategori || 'custom';
+  const _katSel = document.getElementById('egn-kategori-sel');
+  if (_katSel) {
+    _katSel.innerHTML = _egneGrafikDataSources().map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join('');
+    _katSel.value = d.kategori || 'custom';
+  }
   document.getElementById('egn-auto-hide-check').checked = !!(d.auto_hide_seconds > 0);
   document.getElementById('egn-auto-hide-secs').value = d.auto_hide_seconds || '';
   document.getElementById('egn-auto-hide-secs').style.display = (d.auto_hide_seconds > 0) ? 'inline-block' : 'none';
