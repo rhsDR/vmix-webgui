@@ -735,8 +735,9 @@ function _grafikOpsDeleteConfirm(btn, id, filePath, label) {
 
 // ── FONT-BIBLIOTEK (brugeruploadede fonte, custom_fonts) ─────────────────────
 // Globalt: fonte deles på tværs af alle projekter. Filerne ligger i 'grafik'-bucketen
-// under fonts/-prefix (genbruger grafik-storage-politikkerne). Leveres til playout +
-// agent-preview via /api/custom-fonts (dynamisk @font-face-stylesheet).
+// under fonts/-prefix (genbruger grafik-storage-politikkerne). @font-face injiceres
+// klient-side i playout (master/secondary/fullscreen) + agent-preview — IKKE via en
+// serverless-funktion (Vercel Hobby-grænse = 12 functions).
 const FONT_EXT_FORMAT = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' };
 const FONT_ALLOWED_EXT = ['woff2', 'woff', 'ttf', 'otf'];
 let _fontUploadFile = null;
