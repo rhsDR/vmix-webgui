@@ -99,10 +99,15 @@ sbClient.channel('db-changes')
           _kommPaaMode = (p.new.value === 'on'); // hold master i sync på tværs af faner/paneler
         } else if (p.new.key === 'info_bokse') {
           // INFO synker på tværs af stationer: parse direkte fra event-payload (ingen DB-genhentning).
+          // Spring over hvis den lokale operatør er midt i at redigere en info-boks (undgå at rive input væk).
           if (p.new.projekt_id === aktivProjektId) {
-            try { const v = JSON.parse(p.new.value || '[]'); infoBokse = Array.isArray(v) ? v : []; } catch {}
-            if (typeof renderInfo === 'function' && document.getElementById('tab-info')?.classList.contains('active')) renderInfo();
-            if (document.getElementById('tab-grafik-ops')?.classList.contains('active')) _debouncedRenderGrafikOps();
+            const _ae = document.activeElement;
+            const _editingInfo = _ae && document.getElementById('infoList')?.contains(_ae);
+            if (!_editingInfo) {
+              try { const v = JSON.parse(p.new.value || '[]'); infoBokse = Array.isArray(v) ? v : []; } catch {}
+              if (typeof renderInfo === 'function' && document.getElementById('tab-info')?.classList.contains('active')) renderInfo();
+              if (document.getElementById('tab-grafik-ops')?.classList.contains('active')) _debouncedRenderGrafikOps();
+            }
           }
         }
         // Opdater grafik-tab hvis det er åbent og en trigger-key, lt_slot eller score_breaking_trigger ændrer sig
