@@ -180,10 +180,18 @@
           <div>
             <label style="font-size:10px;color:#666;display:block;margin-bottom:4px;letter-spacing:1px;">TYPE</label>
             <select id="egn-tpl-type" style="width:100%;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
-              <option value="lower_third">Nedre tredjedel</option>
-              <option value="bug">Hjørne-bug</option>
-              <option value="fullscreen">Fuld skærm</option>
-              <option value="timer">Tæller</option>
+              <optgroup label="Statisk (fast tekst)">
+                <option value="lower_third">Nedre tredjedel</option>
+                <option value="bug">Hjørne-bug</option>
+                <option value="fullscreen">Fuld skærm</option>
+                <option value="timer">Tæller</option>
+              </optgroup>
+              <optgroup label="Henter live data fra projektet">
+                <option value="data_sub">Navneskilt — henter subs</option>
+                <option value="data_ticker">Ticker — henter ticker</option>
+                <option value="data_credits">Credits-rulle — henter credits</option>
+                <option value="data_info">Info-boks — henter info</option>
+              </optgroup>
             </select>
           </div>
           <div id="egn-tpl-fields"></div>

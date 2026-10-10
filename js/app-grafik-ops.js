@@ -150,6 +150,10 @@ function _egneGrafikSuggestTemplateKey() {
   customInp.style.display = 'inline-block';
   customInp.value = _egneGrafikAutoSuggestTrigKey(type);
   _egneGrafikRenderTemplateFields(type);
+  // Data-skabeloner parres automatisk med deres datakilde (sætter grafikkens Kategori).
+  const katMap = { data_sub: 'sub', data_ticker: 'ticker', data_credits: 'credit', data_info: 'info' };
+  const katSel = document.getElementById('egn-kategori-sel');
+  if (katSel && katMap[type]) katSel.value = katMap[type];
 }
 
 function _egneGrafikRenderTemplateFields(type) {
@@ -174,6 +178,10 @@ function _egneGrafikRenderTemplateFields(type) {
       <select id="egn-tpl-format" style="background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
         <option value="mm:ss">mm:ss</option><option value="ss">sekunder</option>
       </select></div>`;
+  } else if (type.indexOf('data_') === 0) {
+    const srcLabel = { data_sub: 'det aktive navneskilt (subs)', data_ticker: 'ticker-teksten', data_credits: 'credits-rulleteksten', data_info: 'info-boksene' }[type] || type;
+    const needColor = type === 'data_sub' || type === 'data_info';
+    el.innerHTML = `<div style="font-size:11px;color:#8c8c8c;line-height:1.5;">Henter <b style="color:#aaa">${srcLabel}</b> live fra projektet — ingen felter nødvendige. Du kan redigere HTML'en bagefter.</div>${needColor ? '<div style="margin-top:8px;">' + colorInp('egn-tpl-farve') + '</div>' : ''}`;
   } else {
     el.innerHTML = '';
   }
@@ -240,6 +248,7 @@ function _egneGrafikGetTemplateFields() {
   if (type === 'bug') return { tekst: document.getElementById('egn-tpl-tekst')?.value || '', position: document.getElementById('egn-tpl-pos')?.value || 'tl' };
   if (type === 'fullscreen') return { overskrift: document.getElementById('egn-tpl-overskrift')?.value || '', undertekst: document.getElementById('egn-tpl-undertekst')?.value || '', baggrund: document.getElementById('egn-tpl-bg')?.value || '#000000' };
   if (type === 'timer') return { fra: parseInt(document.getElementById('egn-tpl-fra')?.value) || 0, format: document.getElementById('egn-tpl-format')?.value || 'mm:ss' };
+  if (type.indexOf('data_') === 0) return { farve: document.getElementById('egn-tpl-farve')?.value || '#4a9eff' };
   return {};
 }
 
@@ -546,6 +555,90 @@ function initComposerDnd() {
 
 
 // ── GRAFIK OPS — skabelon-generator ───────────────────────────
+// Data-drevne skabeloner: henter live fra /api/vmix/<projekt> (latin1-sikkert) og opdaterer DOM.
+// Returnerer {css, bodyHtml, animIn, animOut} som _buildTemplateHtml pakker ind (runAnimationIN/OUT + trigger-WS).
+function _buildDataTemplate(type, f, pid) {
+  const c = (f && f.farve) || '#4a9eff';
+  const FONT = `font-family:'DM Sans','Segoe UI',Arial,sans-serif;`;
+  const base = `var _pid=window.__PROJEKT_ID||${JSON.stringify(pid)};var _origin=window.__API_ORIGIN||location.origin;var _isPrev=window.__IS_PREVIEW||new URLSearchParams(location.search).has('preview');var _pollT=null;async function _fetchData(){try{var r=await fetch(_origin+'/api/vmix/'+_pid);var b=await r.arrayBuffer();var a=JSON.parse(new TextDecoder('iso-8859-1').decode(b));return (Array.isArray(a)&&a[0])?a[0]:null;}catch(e){return null;}}`;
+  const anim = { animIn: `window._dShow&&window._dShow();`, animOut: `window._dHide&&window._dHide();` };
+
+  if (type === 'data_sub') {
+    return Object.assign({
+      css: `body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transparent;${FONT}}
+#lt{position:absolute;bottom:120px;left:80px;opacity:0;transform:translateY(24px);transition:opacity .4s,transform .4s;will-change:transform,opacity;}
+#lt.in{opacity:1;transform:translateY(0);}
+#lt .bar{width:6px;height:66px;background:${c};display:inline-block;vertical-align:middle;margin-right:16px;border-radius:2px;}
+#lt .tx{display:inline-block;vertical-align:middle;}
+#lt .navn{font-size:42px;font-weight:700;color:#fff;text-shadow:1px 1px 3px rgba(0,0,0,.8);}
+#lt .titel{font-size:24px;color:${c};margin-top:4px;}`,
+      bodyHtml: `<div id="lt"><span class="bar"></span><div class="tx"><div class="navn" id="d-navn">Navn Navnesen</div><div class="titel" id="d-titel">Titel / rolle</div></div></div>
+<script>(function(){${base}
+function _apply(d){if(!d)return;var n=document.getElementById('d-navn'),t=document.getElementById('d-titel');if(n)n.textContent=d.sub_aktiv_n||'';if(t)t.textContent=d.sub_aktiv_t||'';}
+async function _poll(){var d=await _fetchData();if(d)_apply(d);_pollT=setTimeout(_poll,4000);}
+window._dShow=function(){document.getElementById('lt').classList.add('in');if(!_isPrev){clearTimeout(_pollT);_poll();}};
+window._dHide=function(){document.getElementById('lt').classList.remove('in');clearTimeout(_pollT);_pollT=null;};
+})();<\/script>`
+    }, anim);
+  }
+
+  if (type === 'data_info') {
+    return Object.assign({
+      css: `body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transparent;${FONT}}
+#ib{position:absolute;bottom:90px;left:120px;max-width:1500px;background:linear-gradient(135deg,rgba(0,0,75,.96),rgba(0,0,38,.96));border-left:8px solid ${c};border-radius:6px;padding:28px 44px 30px;box-shadow:0 10px 40px rgba(0,0,0,.45);opacity:0;transform:translateY(40px);transition:opacity .4s,transform .5s cubic-bezier(.2,.7,.2,1);will-change:transform,opacity;}
+#ib.in{opacity:1;transform:translateY(0);}
+#ib .o{font-size:60px;font-weight:700;line-height:1.08;text-transform:uppercase;color:#fff;}
+#ib .i{font-size:36px;color:rgba(255,255,255,.9);line-height:1.3;margin-top:12px;white-space:pre-line;}
+#ib .o:empty,#ib .i:empty{display:none;}`,
+      bodyHtml: `<div id="ib"><div class="o" id="d-o">Overskrift</div><div class="i" id="d-i">Indhold står her.</div></div>
+<script>(function(){${base}
+function _apply(d){if(!d||!d.info)return;var b=(d.info||[]).find(function(x){return (x.overskrift||'').trim()||(x.indhold||'').trim();})||{};var o=document.getElementById('d-o'),i=document.getElementById('d-i');if(o)o.textContent=b.overskrift||'';if(i)i.textContent=b.indhold||'';}
+async function _poll(){var d=await _fetchData();if(d)_apply(d);_pollT=setTimeout(_poll,4000);}
+window._dShow=function(){document.getElementById('ib').classList.add('in');if(!_isPrev){clearTimeout(_pollT);_poll();}};
+window._dHide=function(){document.getElementById('ib').classList.remove('in');clearTimeout(_pollT);_pollT=null;};
+})();<\/script>`
+    }, anim);
+  }
+
+  if (type === 'data_ticker') {
+    return Object.assign({
+      css: `body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transparent;${FONT}}
+#tk{position:absolute;bottom:60px;left:0;width:1920px;height:66px;overflow:hidden;background:rgba(0,0,40,.92);display:flex;align-items:center;transform:translateY(120%);transition:transform .5s cubic-bezier(.2,.7,.2,1);will-change:transform;}
+#tk.in{transform:translateY(0);}
+#tk .inner{white-space:nowrap;font-size:30px;color:#fff;padding-left:1920px;will-change:transform;animation:_tkscroll 22s linear infinite;}
+@keyframes _tkscroll{from{transform:translateX(0);}to{transform:translateX(-100%);}}`,
+      bodyHtml: `<div id="tk"><div class="inner" id="d-tk">Ticker-tekst ruller her &nbsp;&bull;&nbsp; endnu en nyhed</div></div>
+<script>(function(){${base}
+function _apply(d){if(!d)return;var e=document.getElementById('d-tk');if(e&&(d.ticker_normal||'').trim())e.innerHTML=d.ticker_normal;}
+async function _poll(){var d=await _fetchData();if(d)_apply(d);_pollT=setTimeout(_poll,5000);}
+window._dShow=function(){document.getElementById('tk').classList.add('in');if(!_isPrev){clearTimeout(_pollT);_poll();}};
+window._dHide=function(){document.getElementById('tk').classList.remove('in');clearTimeout(_pollT);_pollT=null;};
+})();<\/script>`
+    }, anim);
+  }
+
+  // data_credits
+  return Object.assign({
+    css: `body{margin:0;width:1920px;height:1080px;overflow:hidden;background:transparent;${FONT}}
+#cr{position:absolute;inset:0;overflow:hidden;opacity:0;transition:opacity .5s;}
+#cr.in{opacity:1;}
+#cr .roll{position:absolute;left:0;right:0;top:0;padding:0 25%;will-change:transform;transform:translateY(1080px);}
+#cr .roll.go{animation:_crroll 28s linear infinite;}
+@keyframes _crroll{from{transform:translateY(1080px);}to{transform:translateY(-100%);}}
+#cr .sec{text-align:center;margin-bottom:34px;}
+#cr .t{font-size:30px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${c};}
+#cr .n{font-size:26px;color:#fff;line-height:1.5;}`,
+    bodyHtml: `<div id="cr"><div class="roll" id="d-cr"><div class="sec"><div class="t">Sektion</div><div class="n">Navn Navnesen</div></div></div></div>
+<script>(function(){${base}
+function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function _apply(d){if(!d||!d.credits)return;var arr=(d.credits||[]).slice().sort(function(a,b){return (a.orden||0)-(b.orden||0);});if(!arr.length)return;var html=arr.map(function(s){var navne=String(s.navne||'').split(/[\\n,]/).map(function(x){return x.trim();}).filter(Boolean).map(function(x){return '<div>'+_esc(x)+'</div>';}).join('');return '<div class="sec"><div class="t">'+_esc(s.titel)+'</div><div class="n">'+navne+'</div></div>';}).join('');var e=document.getElementById('d-cr');if(e)e.innerHTML=html;}
+async function _poll(){var d=await _fetchData();if(d)_apply(d);_pollT=setTimeout(_poll,8000);}
+window._dShow=function(){var cr=document.getElementById('cr'),roll=document.getElementById('d-cr');cr.classList.add('in');roll.classList.remove('go');void roll.offsetWidth;roll.classList.add('go');if(!_isPrev){clearTimeout(_pollT);_poll();}};
+window._dHide=function(){document.getElementById('cr').classList.remove('in');document.getElementById('d-cr').classList.remove('go');clearTimeout(_pollT);_pollT=null;};
+})();<\/script>`
+  }, anim);
+}
+
 function _buildTemplateHtml(type, trigKey, fields, autoHideSec) {
   const ahs = Math.max(0, parseInt(autoHideSec) || 0);
   const f = fields || {};
@@ -597,6 +690,9 @@ function _buildTemplateHtml(type, trigKey, fields, autoHideSec) {
     animOut = `document.getElementById('timer').classList.remove('in');clearInterval(_tInt);`;
     css = css + `\n/* timer vars */`;
     bodyHtml = bodyHtml + `<script>var _tSec=0,_tEl,_tInt;${fmtFn}<\/script>`;
+  } else if (type.indexOf('data_') === 0) {
+    const built = _buildDataTemplate(type, f, pid);
+    css = built.css; bodyHtml = built.bodyHtml; animIn = built.animIn; animOut = built.animOut;
   }
 
   const autoHideJs = ahs > 0 ? `var _aht=null;var _origIN=window.runAnimationIN;window.runAnimationIN=function(){clearTimeout(_aht);_aht=null;_origIN.apply(this,arguments);_aht=setTimeout(function(){_aht=null;window.runAnimationOUT();},${ahs}*1000);};` : '';
