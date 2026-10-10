@@ -560,7 +560,8 @@ function initComposerDnd() {
 function _buildDataTemplate(type, f, pid) {
   const c = (f && f.farve) || '#4a9eff';
   const FONT = `font-family:'DM Sans','Segoe UI',Arial,sans-serif;`;
-  const base = `var _pid=window.__PROJEKT_ID||${JSON.stringify(pid)};var _origin=window.__API_ORIGIN||location.origin;var _isPrev=window.__IS_PREVIEW||new URLSearchParams(location.search).has('preview');var _pollT=null;async function _fetchData(){try{var r=await fetch(_origin+'/api/vmix/'+_pid);var b=await r.arrayBuffer();var a=JSON.parse(new TextDecoder('iso-8859-1').decode(b));return (Array.isArray(a)&&a[0])?a[0]:null;}catch(e){return null;}}`;
+  // Henter data ÉN gang når grafikken går IND (ingen løbende polling — minimal trafik til Vercel/Supabase).
+  const base = `var _pid=window.__PROJEKT_ID||${JSON.stringify(pid)};var _origin=window.__API_ORIGIN||location.origin;var _isPrev=window.__IS_PREVIEW||new URLSearchParams(location.search).has('preview');async function _fetchData(){try{var r=await fetch(_origin+'/api/vmix/'+_pid);var b=await r.arrayBuffer();var a=JSON.parse(new TextDecoder('iso-8859-1').decode(b));return (Array.isArray(a)&&a[0])?a[0]:null;}catch(e){return null;}}`;
   const anim = { animIn: `window._dShow&&window._dShow();`, animOut: `window._dHide&&window._dHide();` };
 
   if (type === 'data_sub') {
@@ -575,9 +576,8 @@ function _buildDataTemplate(type, f, pid) {
       bodyHtml: `<div id="lt"><span class="bar"></span><div class="tx"><div class="navn" id="d-navn">Navn Navnesen</div><div class="titel" id="d-titel">Titel / rolle</div></div></div>
 <script>(function(){${base}
 function _apply(d){if(!d)return;var n=document.getElementById('d-navn'),t=document.getElementById('d-titel');if(n)n.textContent=d.sub_aktiv_n||'';if(t)t.textContent=d.sub_aktiv_t||'';}
-async function _poll(){var d=await _fetchData();if(d)_apply(d);_pollT=setTimeout(_poll,4000);}
-window._dShow=function(){document.getElementById('lt').classList.add('in');if(!_isPrev){clearTimeout(_pollT);_poll();}};
-window._dHide=function(){document.getElementById('lt').classList.remove('in');clearTimeout(_pollT);_pollT=null;};
+window._dShow=function(){document.getElementById('lt').classList.add('in');if(!_isPrev)_fetchData().then(function(d){if(d)_apply(d);});};
+window._dHide=function(){document.getElementById('lt').classList.remove('in');};
 })();<\/script>`
     }, anim);
   }
@@ -593,9 +593,8 @@ window._dHide=function(){document.getElementById('lt').classList.remove('in');cl
       bodyHtml: `<div id="ib"><div class="o" id="d-o">Overskrift</div><div class="i" id="d-i">Indhold står her.</div></div>
 <script>(function(){${base}
 function _apply(d){if(!d||!d.info)return;var b=(d.info||[]).find(function(x){return (x.overskrift||'').trim()||(x.indhold||'').trim();})||{};var o=document.getElementById('d-o'),i=document.getElementById('d-i');if(o)o.textContent=b.overskrift||'';if(i)i.textContent=b.indhold||'';}
-async function _poll(){var d=await _fetchData();if(d)_apply(d);_pollT=setTimeout(_poll,4000);}
-window._dShow=function(){document.getElementById('ib').classList.add('in');if(!_isPrev){clearTimeout(_pollT);_poll();}};
-window._dHide=function(){document.getElementById('ib').classList.remove('in');clearTimeout(_pollT);_pollT=null;};
+window._dShow=function(){document.getElementById('ib').classList.add('in');if(!_isPrev)_fetchData().then(function(d){if(d)_apply(d);});};
+window._dHide=function(){document.getElementById('ib').classList.remove('in');};
 })();<\/script>`
     }, anim);
   }
@@ -610,9 +609,8 @@ window._dHide=function(){document.getElementById('ib').classList.remove('in');cl
       bodyHtml: `<div id="tk"><div class="inner" id="d-tk">Ticker-tekst ruller her &nbsp;&bull;&nbsp; endnu en nyhed</div></div>
 <script>(function(){${base}
 function _apply(d){if(!d)return;var e=document.getElementById('d-tk');if(e&&(d.ticker_normal||'').trim())e.innerHTML=d.ticker_normal;}
-async function _poll(){var d=await _fetchData();if(d)_apply(d);_pollT=setTimeout(_poll,5000);}
-window._dShow=function(){document.getElementById('tk').classList.add('in');if(!_isPrev){clearTimeout(_pollT);_poll();}};
-window._dHide=function(){document.getElementById('tk').classList.remove('in');clearTimeout(_pollT);_pollT=null;};
+window._dShow=function(){document.getElementById('tk').classList.add('in');if(!_isPrev)_fetchData().then(function(d){if(d)_apply(d);});};
+window._dHide=function(){document.getElementById('tk').classList.remove('in');};
 })();<\/script>`
     }, anim);
   }
@@ -632,9 +630,8 @@ window._dHide=function(){document.getElementById('tk').classList.remove('in');cl
 <script>(function(){${base}
 function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function _apply(d){if(!d||!d.credits)return;var arr=(d.credits||[]).slice().sort(function(a,b){return (a.orden||0)-(b.orden||0);});if(!arr.length)return;var html=arr.map(function(s){var navne=String(s.navne||'').split(/[\\n,]/).map(function(x){return x.trim();}).filter(Boolean).map(function(x){return '<div>'+_esc(x)+'</div>';}).join('');return '<div class="sec"><div class="t">'+_esc(s.titel)+'</div><div class="n">'+navne+'</div></div>';}).join('');var e=document.getElementById('d-cr');if(e)e.innerHTML=html;}
-async function _poll(){var d=await _fetchData();if(d)_apply(d);_pollT=setTimeout(_poll,8000);}
-window._dShow=function(){var cr=document.getElementById('cr'),roll=document.getElementById('d-cr');cr.classList.add('in');roll.classList.remove('go');void roll.offsetWidth;roll.classList.add('go');if(!_isPrev){clearTimeout(_pollT);_poll();}};
-window._dHide=function(){document.getElementById('cr').classList.remove('in');document.getElementById('d-cr').classList.remove('go');clearTimeout(_pollT);_pollT=null;};
+window._dShow=function(){var cr=document.getElementById('cr'),roll=document.getElementById('d-cr');cr.classList.add('in');roll.classList.remove('go');void roll.offsetWidth;roll.classList.add('go');if(!_isPrev)_fetchData().then(function(d){if(d)_apply(d);});};
+window._dHide=function(){document.getElementById('cr').classList.remove('in');document.getElementById('d-cr').classList.remove('go');};
 })();<\/script>`
   }, anim);
 }

@@ -82,7 +82,11 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   injicerer BÅDE window.__API_ORIGIN OG window.__PROJEKT_ID i grafikken — brug dem (brug IKKE
   location.origin, som kan pege forkert for standalone-grafik). Svaret er et ARRAY med ét objekt →
   brug \`data[0]\`.
-- Poll fx hvert 3.-5. sekund og opdatér DOM'en (grafikken kører som browser source i vMix).
+- TRAFIK (vigtigt): hent som UDGANGSPUNKT data ÉN gang inde i runAnimationIN() — data er typisk klar
+  før grafikken går on-air. Undgå løbende polling. Kun hvis indholdet SKAL opdatere MENS grafikken er
+  synlig (fx live-score), så poll langsomt (fx hvert 15.-30. sek) og KUN mens den er på skærmen (stop i
+  runAnimationOUT). Minimér kald til Vercel/Supabase. (Kampdag-grafik bruger Supabase realtime-push i
+  stedet for polling; embeddede custom-grafik kan ikke det, så fetch-på-IN er den letteste løsning.)
 - Felter (kode = hvad det ER — men TAL om dem i ALMINDELIGT SPROG over for operatøren, ikke koderne):
   · projekt.navn = projektets navn.
   · sub_aktiv_slot / sub_aktiv_n / sub_aktiv_t = slot-nr / navn / titel på den AKTIVE sub (navneskiltet).
