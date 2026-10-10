@@ -608,9 +608,17 @@ window._dHide=function(){document.getElementById('ib').classList.remove('in');};
 @keyframes _tkscroll{from{transform:translateX(0);}to{transform:translateX(-100%);}}`,
       bodyHtml: `<div id="tk"><div class="inner" id="d-tk">Ticker-tekst ruller her &nbsp;&bull;&nbsp; endnu en nyhed</div></div>
 <script>(function(){${base}
-function _apply(d){if(!d)return;var e=document.getElementById('d-tk');if(e&&(d.ticker_normal||'').trim())e.innerHTML=d.ticker_normal;}
-window._dShow=function(){document.getElementById('tk').classList.add('in');if(!_isPrev)_fetchData().then(function(d){if(d)_apply(d);});};
-window._dHide=function(){document.getElementById('tk').classList.remove('in');};
+var _SB_ANON='${SB_ANON}';var _pending=null,_ws=null,_hb=null,_ref=0,_dbT=null;
+function _apply(d){if(!d)return;var h=(d.ticker_normal||'').trim();if(h){var e=document.getElementById('d-tk');if(e)e.innerHTML=h;}}
+function _swap(){if(_pending==null)return;var e=document.getElementById('d-tk');if(e&&_pending.trim())e.innerHTML=_pending;_pending=null;}
+document.getElementById('d-tk').addEventListener('animationiteration',_swap); // skift kun ved loop-grænse
+function _refresh(){clearTimeout(_dbT);_dbT=setTimeout(function(){_fetchData().then(function(d){if(d)_pending=(d.ticker_normal||'');});},400);} // debounce: byge af rettelser => ét kald
+function _rt(){try{_ws=new WebSocket('wss://rxzxdcweqpbnvfkpnnrn.supabase.co/realtime/v1/websocket?apikey='+_SB_ANON+'&vsn=1.0.0');
+_ws.onopen=function(){_ws.send(JSON.stringify({topic:'realtime:tkdata-'+_pid,event:'phx_join',payload:{config:{postgres_changes:[{event:'*',schema:'public',table:'tickers',filter:'projekt_id=eq.'+_pid}]},access_token:_SB_ANON},ref:String(++_ref)}));_hb=setInterval(function(){if(_ws&&_ws.readyState===1)_ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:String(++_ref)}));},25000);};
+_ws.onmessage=function(e){try{var m=JSON.parse(e.data);if(m.event==='postgres_changes')_refresh();}catch(x){}};
+_ws.onclose=function(){clearInterval(_hb);_hb=null;};_ws.onerror=function(){try{_ws.close();}catch(x){}};}catch(x){}}
+window._dShow=function(){document.getElementById('tk').classList.add('in');if(!_isPrev){_fetchData().then(function(d){if(d)_apply(d);});_rt();}};
+window._dHide=function(){document.getElementById('tk').classList.remove('in');if(_ws){try{_ws.close();}catch(x){}_ws=null;}clearInterval(_hb);_hb=null;_pending=null;};
 })();<\/script>`
     }, anim);
   }

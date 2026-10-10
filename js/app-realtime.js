@@ -97,6 +97,13 @@ sbClient.channel('db-changes')
           refreshCredits();
         } else if (p.new.key === 'komm_master') {
           _kommPaaMode = (p.new.value === 'on'); // hold master i sync på tværs af faner/paneler
+        } else if (p.new.key === 'info_bokse') {
+          // INFO synker på tværs af stationer: parse direkte fra event-payload (ingen DB-genhentning).
+          if (p.new.projekt_id === aktivProjektId) {
+            try { const v = JSON.parse(p.new.value || '[]'); infoBokse = Array.isArray(v) ? v : []; } catch {}
+            if (typeof renderInfo === 'function' && document.getElementById('tab-info')?.classList.contains('active')) renderInfo();
+            if (document.getElementById('tab-grafik-ops')?.classList.contains('active')) _debouncedRenderGrafikOps();
+          }
         }
         // Opdater grafik-tab hvis det er åbent og en trigger-key, lt_slot eller score_breaking_trigger ændrer sig
         if (OVERLAY_GRAPHICS.some(g => g.triggerKey === p.new.key) || p.new.key === 'lt_slot' || p.new.key === 'score_breaking_trigger' || customGrafik.some(g => g.trigger_key === p.new.key) || KOMM_BOKSE.some(k => k.triggerKey === p.new.key) || BROADCAST_TRIGGER_KEYS.has(p.new.key)) {
