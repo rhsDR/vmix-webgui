@@ -18,12 +18,13 @@ export default async function handler(req, res) {
   try {
     const pid = encodeURIComponent(id);
 
-    const [projektRaw, kampeRaw, subsRaw, vmixCallsRaw, tickersRaw, settingsRaw] = await Promise.all([
+    const [projektRaw, kampeRaw, subsRaw, vmixCallsRaw, tickersRaw, creditsRaw, settingsRaw] = await Promise.all([
       sbGet('projekter?id=eq.' + pid + '&select=navn,type,undertitel,aktiv&limit=1'),
       sbGet('kampe?projekt_id=eq.' + pid + '&select=slot,hold1_lang,hold1_kort,hold1_score,hold2_score,hold2_kort,hold2_lang,kommentator,lokation,vmixcall,on_air,last_card_type,last_card_player,last_card_min,last_card_team_kort,status_short,status_elapsed&order=slot.asc'),
       sbGet('subs?projekt_id=eq.' + pid + '&select=slot,navn,titel&order=slot.asc'),
       sbGet('vmix_calls?projekt_id=eq.' + pid + '&select=slot,navn,titel,link&order=slot.asc'),
       sbGet('tickers?projekt_id=eq.' + pid + '&select=slot,overskrift,tekst,on_air,breaking&order=slot.asc'),
+      sbGet('credits?projekt_id=eq.' + pid + '&select=side,orden,titel,navne&order=orden.asc'),
       sbGet('settings?projekt_id=eq.' + pid + '&select=key,value')
     ]);
 
@@ -122,6 +123,15 @@ export default async function handler(req, res) {
           json[`K${s}_elapsed`]  = r.status_elapsed       ?? 0;
         });
     }
+
+    // Credits (rulletekster) + info-bokse — så (agent-)grafik kan hente dem fra samme API.
+    json.credits = (creditsRaw || []).map(r => ({ side: r.side, orden: r.orden, titel: r.titel || '', navne: r.navne || '' }));
+    const _infoRow = settingsRaw.find(r => r.key === 'info_bokse');
+    let _infoArr = [];
+    try { _infoArr = _infoRow && _infoRow.value ? JSON.parse(_infoRow.value) : []; } catch {}
+    json.info = Array.isArray(_infoArr)
+      ? _infoArr.map(b => ({ overskrift: b.overskrift || '', indhold: b.indhold || '', output: b.output || '' }))
+      : [];
 
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Access-Control-Allow-Origin', '*');

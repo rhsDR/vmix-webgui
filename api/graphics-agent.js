@@ -85,11 +85,15 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
 - Poll fx hvert 3.-5. sekund og opdatér DOM'en (grafikken kører som browser source i vMix).
 - Felter (kode = hvad det ER — men TAL om dem i ALMINDELIGT SPROG over for operatøren, ikke koderne):
   · projekt.navn = projektets navn.
-  · sub_aktiv_n / sub_aktiv_t = navn / titel på den AKTIVE sub (det aktuelle navneskilt).
+  · sub_aktiv_slot / sub_aktiv_n / sub_aktiv_t = slot-nr / navn / titel på den AKTIVE sub (navneskiltet).
   · S1_n/S1_t … S15 = navn / titel for sub nr. 1-15 (navneskilte/lower-thirds).
   · VMC1_n/_t/_l … (1-8) = navn / titel / link for vMix-opkald.
   · T1_ov/T1_txt/T1_air/T1_brk … (1-20) = ticker-slot: overskrift / tekst / on-air / breaking.
   · ticker_normal, ticker_breaking = hele den samlede rulletekst (FÆRDIG HTML).
+  · credits = ARRAY af rulletekst-sektioner: [{side:'V'|'H' (venstre/højre kolonne), orden, titel,
+    navne}]. navne = personer som tekst, én pr. linje (adskilt af linjeskift eller komma).
+  · info = ARRAY af info-bokse: [{overskrift, indhold, output}]. output = hoved/komm/overlay-3 =
+    hvilket overlay boksen hører til (filtrér evt. på output hvis grafikken kun skal vise ét overlays).
   · (kun kampdag) K1 … K6 = kamp nr. 1-6: K{n}_h1_L/K = hjemmeholdets lange/korte navn,
     K{n}_h2_L/K = udeholdet, K{n}_h1_S / K{n}_h2_S = mål, K{n}_samf = samlet stilling som færdig streng
     (fx "FCK 2 - 1 BIF"), K{n}_kom = kommentator, K{n}_lok = lokation, K{n}_status / K{n}_elapsed =
