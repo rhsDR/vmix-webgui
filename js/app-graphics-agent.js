@@ -210,9 +210,10 @@ function _gaRenderPreview() {
   const doc = html.replace(/(<html[^>]*>)/i, '$1' + inject);
   if (!box.querySelector('.ga-preview-frame')) {
     box.innerHTML = `
-      <div class="ga-preview-head"><span>PREVIEW <span style="color:#6a6a6a;font-weight:400">(over mørk baggrund)</span></span><span style="display:flex;gap:6px;"><button id="ga-safe-toggle" class="ga-preview-btn" title="Vis title-safe (5%) + action-safe (3,5%)">⊡ Safe-areas</button><button id="ga-preview-play" class="ga-preview-btn">▶ Afspil igen</button></span></div>
+      <div class="ga-preview-head"><span>PREVIEW <span style="color:#6a6a6a;font-weight:400">(over mørk baggrund)</span></span><span style="display:flex;gap:6px;"><button id="ga-safe-toggle" class="ga-preview-btn" title="Vis title-safe (5%) + action-safe (3,5%)">⊡ Safe-areas</button><button id="ga-preview-play" class="ga-preview-btn" title="Afspil ind-animationen igen">▶ Spil ind</button><button id="ga-preview-out" class="ga-preview-btn" title="Afspil ud-animationen">◀ Spil ud</button></span></div>
       <div class="ga-preview-stage"><iframe class="ga-preview-frame" title="grafik-preview"></iframe><div class="ga-safe-guides" hidden><div class="ga-safe action"></div><div class="ga-safe title"></div></div></div>`;
     box.querySelector('#ga-preview-play').addEventListener('click', _gaReplayPreview);
+    box.querySelector('#ga-preview-out').addEventListener('click', _gaPlayOutPreview);
     box.querySelector('#ga-safe-toggle').addEventListener('click', function(){
       const g = box.querySelector('.ga-safe-guides'); const show = g.hasAttribute('hidden');
       if (show) g.removeAttribute('hidden'); else g.setAttribute('hidden', '');
@@ -239,6 +240,18 @@ function _gaReplayPreview() {
   const doc = frame._doc;
   frame.srcdoc = '';               // genindlæs → runAnimationIN spilles igen
   setTimeout(() => { frame.srcdoc = doc; }, 50);
+}
+
+// Afspil UD-animationen i preview-iframen (srcdoc = samme origin → runAnimationOUT kan kaldes direkte).
+// Så man kan se BÅDE ind- og ud-animationen i agentens preview, ikke kun ind.
+function _gaPlayOutPreview() {
+  const frame = document.querySelector('#ga-preview .ga-preview-frame');
+  if (!frame) return;
+  try {
+    const w = frame.contentWindow;
+    if (w && typeof w.runAnimationOUT === 'function') w.runAnimationOUT();
+    else if (w && typeof w._dHide === 'function') w._dHide(); // data-skabeloner
+  } catch (e) {}
 }
 
 // Strip kodeblokke fra agent-tekst der vises i chatten (config/html surfaces i kort nedenfor)
