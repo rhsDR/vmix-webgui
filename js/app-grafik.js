@@ -126,13 +126,16 @@ async function _fireOneHandling(h, slotOverride) {
     }
     return;
   }
-  // TV sub-grafik med plads: sæt active_sub FØR trigger (parallel til kampdag's lt_slot) så grafikken
-  // henter /api/vmix og viser den valgte sub. Ved 'out' springes active_sub over.
-  if (h.slot && _isTvSubTrigger(h.key)) {
-    if (h.value !== 'out') {
-      await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'active_sub', value: String(h.slot) });
-      grafiktState['active_sub'] = String(h.slot);
-      if (typeof activeSubSlot !== 'undefined') activeSubSlot = parseInt(h.slot) || 0;
+  // TV sub-grafik: sæt active_sub FØR trigger (parallel til kampdag's lt_slot) så grafikken henter
+  // /api/vmix og viser den valgte sub. slotOverride (valgt ved afvikling) vinder over makroens faste
+  // plads; er ingen af dem sat, trigges blot grafikken (viser nuværende active_sub). 'out' springer
+  // active_sub over.
+  if (_isTvSubTrigger(h.key)) {
+    const eff = slotOverride || h.slot || '';
+    if (h.value !== 'out' && eff) {
+      await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'active_sub', value: String(eff) });
+      grafiktState['active_sub'] = String(eff);
+      if (typeof activeSubSlot !== 'undefined') activeSubSlot = parseInt(eff) || 0;
     }
     await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value });
     grafiktState[h.key] = h.value;
@@ -1368,6 +1371,16 @@ function _afvMakroViewHTML() {
           if (h.key === 'alle_af') return '■ ALLE AF';
           return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
         }).join(' · ');
+        // Har makroen et sub-ON-trin, så vis en plads-vælger (som kampdag): forvalgt til makroens
+        // faste plads, eller "→ Vælg ved afvikling" hvis ingen — operatøren bestemmer sub ved KØR.
+        const subOnStep = (m.handlinger || []).find(h => _isTvSubTrigger(h.key) && h.value !== 'out');
+        let slotPickerHTML = '';
+        if (subOnStep) {
+          const opts = _tvSubSlotOpts(subOnStep.slot || '');
+          if ((opts.match(/<option/g) || []).length > 1) {
+            slotPickerHTML = `<select class="afv-slot-sel" style="background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;">${opts}</select>`;
+          }
+        }
         return `<div class="grafik-block afv-makro-row" draggable="true" data-makro-id="${m.id}" style="--g-color:${m.farve || '#4a9eff'}">
           <span class="afv-drag-handle" style="color:#555;font-size:18px;user-select:none;flex-shrink:0;cursor:grab;padding:0 6px 0 2px;">⠿</span>
           <div class="grafik-block-info">
@@ -1376,6 +1389,7 @@ function _afvMakroViewHTML() {
           </div>
           <div class="grafik-block-actions">
             <button class="grafik-btn-prw afv-edit-btn" data-id="${m.id}" title="Redigér">✎</button>
+            ${slotPickerHTML}
             <button class="grafik-btn-in afv-fire-btn" style="background:${m.farve || '#4a9eff'}22;border-color:${m.farve || '#4a9eff'}66;color:${m.farve || '#4a9eff'}" data-id="${m.id}">▶ KØR</button>
           </div>
         </div>`;
@@ -1399,7 +1413,11 @@ function _wireAfvMakroView(container) {
   const sletBtn = container.querySelector('#afv-liste-slet');
   if (sletBtn) sletBtn.addEventListener('click', deleteAktivListe);
   container.querySelectorAll('.afv-fire-btn').forEach(btn =>
-    btn.addEventListener('click', () => fireMakro(btn.dataset.id, '')));
+    btn.addEventListener('click', () => {
+      const row = btn.closest('.afv-makro-row');
+      const slotSel = row?.querySelector('.afv-slot-sel');
+      fireMakro(btn.dataset.id, slotSel?.value || '');
+    }));
   container.querySelectorAll('.afv-edit-btn').forEach(btn =>
     btn.addEventListener('click', () => openMakroModal(btn.dataset.id)));
   const afvList = container.querySelector('#afv-makro-list');
@@ -1554,12 +1572,14 @@ function _isTvSubTrigger(key) {
 }
 
 // <option>-liste over udfyldte subs (til makro-sub-plads-vælgeren).
+// Første option = "→ Vælg ved afvikling" (value='') som i kampdag: ingen fast plads — operatøren
+// vælger sub i afviklingsfanen når makroen køres.
 function _tvSubSlotOpts(selected) {
   const filled = (typeof subs !== 'undefined' ? subs : [])
     .map((s, i) => ({ slot: i + 1, navn: s.navn || '', titel: s.titel || '' }))
     .filter(s => s.navn.trim() || s.titel.trim());
-  if (!filled.length) return '<option value="">(udfyld subs i SUBS-fanen)</option>';
-  return filled.map(s => `<option value="${s.slot}"${String(selected) === String(s.slot) ? ' selected' : ''}>Sub ${s.slot}${s.navn ? ': ' + esc(s.navn) : ''}</option>`).join('');
+  const head = `<option value="">→ Vælg ved afvikling</option>`;
+  return head + filled.map(s => `<option value="${s.slot}"${String(selected) === String(s.slot) ? ' selected' : ''}>Sub ${s.slot}${s.navn ? ': ' + esc(s.navn) : ''}</option>`).join('');
 }
 
 function renderMakroer(leftPanel) {
