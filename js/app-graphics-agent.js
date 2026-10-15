@@ -174,6 +174,9 @@ function _gaRenderConfig() {
   const ovLabel = { hoved: 'Master', komm: 'Secondary', 'overlay-3': 'Fullscreen' }[c.overlay_target] || c.overlay_target || '—';
   const hasHtml = !!(gaResult.html || _gaLastUploadedHtml() || (gaRevisionGrafik && gaRevisionGrafik._html));
   const isRev = !!gaRevisionId;
+  const _katCur = (c.kategori && ['sub', 'info', 'ticker', 'credit', 'custom'].includes(c.kategori)) ? c.kategori
+    : (isRev && gaRevisionGrafik && gaRevisionGrafik.kategori) ? gaRevisionGrafik.kategori : 'custom';
+  const _katOpts = [['custom', 'Ingen / Custom'], ['sub', 'Subs'], ['info', 'Info'], ['ticker', 'Ticker'], ['credit', 'Credit']].map(([v, t]) => `<option value="${v}"${_katCur === v ? ' selected' : ''}>${t}</option>`).join('');
   box.innerHTML = warn + `
     <div class="ga-config-card">
       <div class="ga-config-title">${isRev ? 'Klar til at opdatere' : 'Klar til at gemme'}</div>
@@ -183,6 +186,10 @@ function _gaRenderConfig() {
         <span>Overlay</span><b>${esc(ovLabel)} · ${c.overlay_mode === 'standalone' ? 'Standalone' : 'Indlejret'}</b>
         <span>Auto-skjul</span><b>${c.auto_hide_seconds ? esc(c.auto_hide_seconds) + ' sek' : 'nej'}</b>
         <span>HTML</span><b>${gaResult.html ? 'genereret af agenten' : (isRev ? 'uændret (kun config)' : (hasHtml ? 'fra vedhæftet fil' : '⚠️ mangler'))}</b>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin:2px 0 10px;">
+        <span style="font-size:12px;color:#9c9c9c;min-width:70px;">Datakilde</span>
+        <select id="ga-kategori" style="flex:1;background:#111;border:1px solid #333;color:#ccc;padding:5px 8px;border-radius:5px;font-size:12px;">${_katOpts}</select>
       </div>
       <button id="ga-save" class="ga-save-btn"${hasHtml ? '' : ' disabled'}>${isRev ? 'Opdater grafik' : 'Gem grafik'}</button>
     </div>`;
@@ -472,6 +479,7 @@ function _gaUniqueTrigKey(base) {
 async function _gaDoSave() {
   const c = gaResult && gaResult.config;
   if (!c) return;
+  const _kat = document.getElementById('ga-kategori')?.value || 'custom';  // datakilde-parring
   const btn = document.getElementById('ga-save');
   if (btn) { btn.disabled = true; btn.textContent = 'Gemmer…'; }
   try {
@@ -494,7 +502,7 @@ async function _gaDoSave() {
 
       const { error: dbErr } = await sbClient.from('projekt_grafik').update({
         label: c.label || g.label, color: c.color || g.color || '#888888',
-        overlay_mode: mode, overlay_target: target, auto_hide_seconds: autoHide
+        overlay_mode: mode, overlay_target: target, auto_hide_seconds: autoHide, kategori: _kat
       }).eq('id', gaRevisionId);
       if (dbErr) { toast('DB fejl: ' + dbErr.message, 'err'); return; }
 
@@ -535,7 +543,7 @@ async function _gaDoSave() {
       projekt_id: aktivProjektId, label: c.label || trigKey, trigger_key: trigKey,
       file_url: urlData.publicUrl, file_path: filePath, color: c.color || '#888888',
       overlay_mode: mode, overlay_input: null, overlay_target: target,
-      auto_hide_seconds: autoHide, template_type: 'agent'
+      auto_hide_seconds: autoHide, template_type: 'agent', kategori: _kat
     });
     if (dbErr) { toast('DB fejl: ' + dbErr.message, 'err'); return; }
 

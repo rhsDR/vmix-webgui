@@ -158,7 +158,8 @@ derfor: det der ser glat ud i browseren kan fryse i vMix). Regler:
      "color": "#RRGGBB",
      "overlay_target": "hoved | komm | overlay-3",
      "overlay_mode": "embed | standalone",
-     "auto_hide_seconds": null_eller_tal
+     "auto_hide_seconds": null_eller_tal,
+     "kategori": "sub | info | ticker | credit | custom"
    }
    HVIS du selv genererede grafikken: udskriv OGSÅ hele den færdige HTML i en separat \`\`\`html-kodeblok.
    Afslut med spørgsmålet: "Er dette korrekt, eller skal jeg justere noget?"
@@ -176,6 +177,9 @@ derfor: det der ser glat ud i browseren kan fryse i vMix). Regler:
   (config + html) kan afgives uden at blive afkortet.
 - I JSON'en skal overlay_target være det interne id (hoved/komm/overlay-3), men tal om dem som
   Master/Secondary/Fullscreen over for brugeren.
+- "kategori" = den DATAKILDE grafikken henter fra / parres med: sub (navneskilt), info, ticker eller
+  credit — eller "custom" hvis den ikke bruger en projektdatakilde. Sæt den ud fra operatørens svar på
+  datakilde-spørgsmålet, så grafikken lander i den rigtige afviklings-kategori.
 
 ## Projekt-kontekst (fra dette projekts konfiguration)
 - Feltnavne-konventioner: ${cfg.field_conventions || '(ingen)'}
