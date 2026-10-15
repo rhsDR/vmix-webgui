@@ -777,7 +777,11 @@ function renderGrafikOps() {
           <button data-del-id="${g.id}" data-del-path="${g.file_path || ''}" data-del-label="${esc(g.label)}" style="padding:3px 8px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:4px;cursor:pointer;font-size:11px;">🗑</button>
         </div>
       </div>
-      <div style="font-size:11px;color:#8c8c8c;margin-bottom:4px;">${tilstand} · <span style="color:#4a9eff;">${esc(g.trigger_key)}</span>${g.auto_hide_seconds > 0 ? ` · auto-skjul ${g.auto_hide_seconds}s` : ''}</div>
+      <div style="font-size:11px;color:#8c8c8c;margin-bottom:6px;">${tilstand} · <span style="color:#4a9eff;">${esc(g.trigger_key)}</span>${g.auto_hide_seconds > 0 ? ` · auto-skjul ${g.auto_hide_seconds}s` : ''}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="font-size:10px;color:#666;letter-spacing:1px;flex-shrink:0;">DATAKILDE</span>
+        <select data-kat-id="${g.id}" title="Flyt grafikken til denne datakilde/kategori i afviklingen" style="flex:1;max-width:280px;background:#0d0d0d;border:1px solid #2a2a2a;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;">${_egneGrafikDataSources().map(([v, t]) => `<option value="${v}"${(g.kategori || 'custom') === v ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
+      </div>
       <details class="gops-links">
         <summary class="gops-links-summary">vMix-URL &amp; Companion-links</summary>
         <div style="margin-top:6px;">
@@ -832,6 +836,18 @@ function renderGrafikOps() {
     btn.addEventListener('click', () => copyText(btn.dataset.copy)));
   el.querySelectorAll('[data-edit-id]').forEach(btn =>
     btn.addEventListener('click', () => openEgneGrafikModal(btn.dataset.editId)));
+  // Inline DATAKILDE/kategori-skift — flyt grafikken mellem afviklings-kategorier (fx custom → sub) med ét klik.
+  el.querySelectorAll('[data-kat-id]').forEach(sel =>
+    sel.addEventListener('change', async () => {
+      try {
+        const { error } = await sbClient.from('projekt_grafik').update({ kategori: sel.value }).eq('id', sel.dataset.katId);
+        if (error) { toast('Fejl ved flyt: ' + error.message, 'err'); return; }
+        await loadKunstomGrafik();
+        renderGrafikOps();
+        renderGrafik();
+        toast('Datakilde opdateret', 'ok');
+      } catch { toast('Fejl ved flyt', 'err'); }
+    }));
   el.querySelectorAll('[data-del-id]').forEach(btn =>
     btn.addEventListener('click', () => _grafikOpsDeleteConfirm(btn, btn.dataset.delId, btn.dataset.delPath, btn.dataset.delLabel)));
   el.querySelectorAll('[data-trig][data-val]').forEach(btn =>

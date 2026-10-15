@@ -126,6 +126,18 @@ async function _fireOneHandling(h, slotOverride) {
     }
     return;
   }
+  // TV sub-grafik med plads: sæt active_sub FØR trigger (parallel til kampdag's lt_slot) så grafikken
+  // henter /api/vmix og viser den valgte sub. Ved 'out' springes active_sub over.
+  if (h.slot && _isTvSubTrigger(h.key)) {
+    if (h.value !== 'out') {
+      await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'active_sub', value: String(h.slot) });
+      grafiktState['active_sub'] = String(h.slot);
+      if (typeof activeSubSlot !== 'undefined') activeSubSlot = parseInt(h.slot) || 0;
+    }
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value });
+    grafiktState[h.key] = h.value;
+    return;
+  }
   await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value });
   grafiktState[h.key] = h.value;
 }
@@ -1181,21 +1193,9 @@ function renderGrafikTV(container) {
     return `<button class="grafik-v2-tab${active === t.id ? ' active' : ''}" data-gtab="${t.id}" style="--tab-color:${CAT_COLOR[t.id]}">${esc(t.label)}${dot}</button>`;
   }).join('') + `<button class="grafik-v2-tab${isAfv ? ' active' : ''}" data-gtab="afvikling" style="--tab-color:#ff8c00">AFVIKLING</button>`;
 
-  // SUB-kategori: vælg hvilken sub-plads grafikken skal vise (som kampdag — vælges i afviklingen).
-  const _subFilled = (typeof subs !== 'undefined' ? subs : []).map((s, i) => ({ slot: i + 1, navn: s.navn || '', titel: s.titel || '' })).filter(s => s.navn.trim() || s.titel.trim());
-  const _curSub = (typeof activeSubSlot !== 'undefined' ? activeSubSlot : 0);
-  const subSlotOpts = _subFilled.length
-    ? _subFilled.map(s => `<option value="${s.slot}"${String(_curSub) === String(s.slot) ? ' selected' : ''}>Sub ${s.slot}${s.navn ? ': ' + esc(s.navn) : ''}</option>`).join('')
-    : '<option value="">(udfyld subs i SUBS-fanen)</option>';
-
-  // Kampdag-stil række med ＋(makro)/PRW/< OUT/> IN. Sub-grafik får en plads-vælger (sætter active_sub).
+  // Kampdag-stil række med ＋(makro)/PRW/< OUT/> IN for info/ticker/credit/custom.
   const rowHTML = it => {
     const live = _isLive(it);
-    const isSub = it.cat === 'sub';
-    const slotSel = isSub ? `<select class="tv-sub-slot" title="Vælg sub-plads grafikken skal vise" style="background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;max-width:150px;">${subSlotOpts}</select>` : '';
-    const inBtn = isSub
-      ? `<button class="grafik-btn-in tv-sub-in" data-trig="${esc(it.trig)}"${live ? ' disabled' : ''}>&gt; IN</button>`
-      : `<button class="grafik-btn-in" data-trig="${esc(it.trig)}" data-val="in"${live ? ' disabled' : ''}>&gt; IN</button>`;
     return `<div class="grafik-block" style="--g-color:${it.color}">
       <div class="grafik-block-info">
         <span class="grafik-block-name">${esc(it.name)}</span>
@@ -1203,17 +1203,56 @@ function renderGrafikTV(container) {
       </div>
       <div class="grafik-block-actions">
         <button class="grafik-btn-prw tv-makro-add" data-mk-trig="${esc(it.trig)}" title="Opret makro">＋</button>
-        ${slotSel}
         <button class="grafik-btn-prw tv-prw" data-prw-url="${it.prv}" title="Preview">PRW</button>
         <button class="grafik-btn-out" data-trig="${esc(it.trig)}" data-val="out"${!live ? ' disabled' : ''}>&lt; OUT</button>
-        ${inBtn}
+        <button class="grafik-btn-in" data-trig="${esc(it.trig)}" data-val="in"${live ? ' disabled' : ''}>&gt; IN</button>
       </div>
     </div>`;
+  };
+
+  // SUB afvikles PRÆCIS som kampdag: liste af projektets subs (nr + navn/titel) med PRW / < OUT / > IN.
+  // Alle rækker deler projektets egen sub-grafik (første custom-grafik i kategori 'sub'); > IN sætter
+  // active_sub FØR grafikken trigges, så den henter /api/vmix og viser den valgte sub. Gen-tryk på en
+  // anden sub mens live = rent tekst-skift (grafikken re-fetcher på 'in', 'in'-klassen er allerede sat).
+  const _tvSubListHTML = () => {
+    const subGfx = catItems('sub');
+    if (!subGfx.length) return '<div class="grafik-v2-empty">Ingen sub-grafik endnu. Opret én via agenten eller en skabelon med <b>DATAKILDE = Subs</b> — så afvikles den her som i kampdag.</div>';
+    const gfx = subGfx[0];
+    const trig = gfx.trig;
+    const curSlot = (typeof activeSubSlot !== 'undefined' ? activeSubSlot : 0);
+    const trigLive = (grafiktState[trig] || 'out') !== 'out';
+    const filled = (typeof subs !== 'undefined' ? subs : [])
+      .map((s, i) => ({ slot: i + 1, navn: s.navn || '', titel: s.titel || '' }))
+      .filter(s => s.navn.trim() || s.titel.trim());
+    if (!filled.length) return '<div class="grafik-v2-empty">Ingen subs — udfyld i SUBS-fanen.</div>';
+    return filled.map(s => {
+      const slotAct = trigLive && String(curSlot) === String(s.slot);
+      const subMakro = (typeof makroer !== 'undefined' ? makroer : []).find(m =>
+        m.handlinger?.some(h => h.key === trig && String(h.slot) === String(s.slot)));
+      const makroBtn = subMakro
+        ? `<button class="grafik-btn-prw makro-sub-fire-btn" data-makro-id="${subMakro.id}" title="${esc(subMakro.label)}" style="color:${subMakro.farve || '#4a9eff'}">▶</button>`
+        : `<button class="grafik-btn-prw tv-sub-makro-add" data-mk-trig="${esc(trig)}" data-slot="${s.slot}" title="Opret makro for denne sub">＋</button>`;
+      return `<div class="grafik-block" style="--g-color:${gfx.color}">
+        <span class="grafik-block-num">${s.slot}</span>
+        <div class="grafik-block-info">
+          <span class="grafik-block-name${!s.navn ? ' muted' : ''}">${esc(s.navn || '—')}</span>
+          ${s.titel ? `<span class="grafik-block-sub">${esc(s.titel)}</span>` : ''}
+        </div>
+        <div class="grafik-block-actions">
+          ${makroBtn}
+          <button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" title="Preview">PRW</button>
+          <button class="grafik-btn-out" data-trig="${esc(trig)}" data-val="out"${!slotAct ? ' disabled' : ''}>&lt; OUT</button>
+          <button class="grafik-btn-in${slotAct ? ' on' : ''} tv-sub-slot-in" data-trig="${esc(trig)}" data-slot="${s.slot}">&gt; IN</button>
+        </div>
+      </div>`;
+    }).join('');
   };
 
   let contentHTML;
   if (isAfv) {
     contentHTML = _afvMakroViewHTML();
+  } else if (active === 'sub') {
+    contentHTML = _tvSubListHTML();
   } else {
     contentHTML = catItems(active).map(rowHTML).join('') || '<div class="grafik-v2-empty">Ingen grafik i denne kategori.</div>';
   }
@@ -1268,18 +1307,26 @@ function renderGrafikTV(container) {
   container.querySelectorAll('[data-trig][data-val]').forEach(btn =>
     btn.addEventListener('click', () => { if (btn.disabled) return; setGrafiktTrigger(btn.dataset.trig, btn.dataset.val); }));
 
-  // Sub-grafik: > IN sætter først den valgte sub-plads (active_sub) og tænder så grafikken,
-  // som henter /api/vmix og viser sub_aktiv_n/_t. active_sub gemmes FØR trigger (så fetch rammer rigtigt).
-  container.querySelectorAll('.tv-sub-in').forEach(btn =>
+  // SUB (kampdag-stil): > IN sætter active_sub FØR grafikken trigges, så den henter /api/vmix og
+  // viser den valgte sub. Skift til en anden sub mens live = rent tekst-skift (grafikken re-fetcher
+  // på 'in' uden at gen-animere). active_sub upsertes FØR trig (sekventielt) så fetch rammer rigtigt.
+  container.querySelectorAll('.tv-sub-slot-in').forEach(btn =>
     btn.addEventListener('click', async () => {
       if (btn.disabled) return;
-      const slot = btn.closest('.grafik-block')?.querySelector('.tv-sub-slot')?.value;
-      if (slot) {
-        activeSubSlot = parseInt(slot) || 0;
-        try { await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'active_sub', value: String(slot) }); } catch {}
-      }
-      setGrafiktTrigger(btn.dataset.trig, 'in');
+      const slot = btn.dataset.slot, trig = btn.dataset.trig;
+      if (slot) { activeSubSlot = parseInt(slot) || 0; grafiktState['active_sub'] = String(slot); }
+      grafiktState[trig] = 'in';
+      renderGrafikTV(container);
+      try {
+        if (slot) await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'active_sub', value: String(slot) });
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: trig, value: 'in' });
+      } catch { toast('Fejl ved sub-trigger', 'err'); }
     }));
+
+  container.querySelectorAll('.tv-sub-makro-add').forEach(btn =>
+    btn.addEventListener('click', () => openMakroModal(null, [{ key: btn.dataset.mkTrig, value: 'in', slot: btn.dataset.slot }])));
+  container.querySelectorAll('.makro-sub-fire-btn').forEach(btn =>
+    btn.addEventListener('click', () => fireMakro(btn.dataset.makroId)));
 
   container.querySelectorAll('.tv-prw').forEach(btn =>
     btn.addEventListener('click', () => {
@@ -1499,6 +1546,22 @@ function _defaultMakroKey() {
   return 'ticker_ovl_trigger';
 }
 
+// Er key en TV-sub-grafiks trigger? (custom-grafik i kategori 'sub'). Så kan makroen få en sub-plads-vælger
+// ligesom kampdag's lt_slot, og fireMakro sætter active_sub før den trigger grafikken.
+function _isTvSubTrigger(key) {
+  return typeof projektType !== 'undefined' && projektType === 'tv'
+    && (customGrafik || []).some(g => g.trigger_key === key && g.kategori === 'sub');
+}
+
+// <option>-liste over udfyldte subs (til makro-sub-plads-vælgeren).
+function _tvSubSlotOpts(selected) {
+  const filled = (typeof subs !== 'undefined' ? subs : [])
+    .map((s, i) => ({ slot: i + 1, navn: s.navn || '', titel: s.titel || '' }))
+    .filter(s => s.navn.trim() || s.titel.trim());
+  if (!filled.length) return '<option value="">(udfyld subs i SUBS-fanen)</option>';
+  return filled.map(s => `<option value="${s.slot}"${String(selected) === String(s.slot) ? ' selected' : ''}>Sub ${s.slot}${s.navn ? ': ' + esc(s.navn) : ''}</option>`).join('');
+}
+
 function renderMakroer(leftPanel) {
   let wrap = leftPanel.querySelector('.makroer-wrap');
   if (!wrap) {
@@ -1669,8 +1732,9 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
   const isLineup  = key === 'lineup_trigger';
   const isWait    = key === 'wait';
   const isAlleAf  = key === 'alle_af';
+  const isSub     = _isTvSubTrigger(key);
   const encodedSlot = (key === 'lt_trigger' && value === 'vmixcall') ? 'v' + slot : slot;
-  const slotOpts = isLt ? _buildLtSlotOpts(encodedSlot) : isLineup ? _buildLineupKampOpts(slot) : '';
+  const slotOpts = isLt ? _buildLtSlotOpts(encodedSlot) : isLineup ? _buildLineupKampOpts(slot) : isSub ? _tvSubSlotOpts(slot) : '';
   const valOpts = isLineup
     ? `<option value="home"${value === 'home' ? ' selected' : ''}>Hjemme</option>
        <option value="away"${value === 'away' ? ' selected' : ''}>Ude</option>
@@ -1695,7 +1759,7 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
       style="background:none;border:none;color:#666;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;">✕</button>
     <button class="makro-combine-btn" title="Tilføj til gruppe (kører samtidigt)"
       style="background:none;border:none;color:#4a9eff88;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;display:none;">⊕</button>
-    <select class="makro-slot-sel" style="flex:1 0 calc(100% - 22px);min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${(isLt || isLineup) ? 'block' : 'none'};">
+    <select class="makro-slot-sel" style="flex:1 0 calc(100% - 22px);min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${(isLt || isLineup || isSub) ? 'block' : 'none'};">
       ${slotOpts}
     </select>`;
   row.querySelector('.makro-key-sel').addEventListener('change', function() {
@@ -1703,14 +1767,16 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
     const lineup  = this.value === 'lineup_trigger';
     const wait    = this.value === 'wait';
     const alleAf  = this.value === 'alle_af';
+    const sub     = _isTvSubTrigger(this.value);
     const valSel  = row.querySelector('.makro-val-sel');
     const slotSel = row.querySelector('.makro-slot-sel');
-    slotSel.style.display = (lt || lineup) ? 'block' : 'none';
-    slotSel.style.flex    = (lt || lineup) ? '1 0 calc(100% - 22px)' : '';
+    slotSel.style.display = (lt || lineup || sub) ? 'block' : 'none';
+    slotSel.style.flex    = (lt || lineup || sub) ? '1 0 calc(100% - 22px)' : '';
     valSel.style.display  = (wait || alleAf) ? 'none' : 'block';
     row.querySelector('.makro-wait-inp').style.display = wait ? 'block' : 'none';
     if (lt)     slotSel.innerHTML = _buildLtSlotOpts('');
     if (lineup) slotSel.innerHTML = _buildLineupKampOpts('');
+    if (sub)    slotSel.innerHTML = _tvSubSlotOpts('');
     if (lineup) {
       valSel.innerHTML = `<option value="home">Hjemme</option><option value="away">Ude</option><option value="out">AF</option>`;
     } else if (!wait && !alleAf) {
