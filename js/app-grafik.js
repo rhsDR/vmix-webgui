@@ -1181,9 +1181,21 @@ function renderGrafikTV(container) {
     return `<button class="grafik-v2-tab${active === t.id ? ' active' : ''}" data-gtab="${t.id}" style="--tab-color:${CAT_COLOR[t.id]}">${esc(t.label)}${dot}</button>`;
   }).join('') + `<button class="grafik-v2-tab${isAfv ? ' active' : ''}" data-gtab="afvikling" style="--tab-color:#ff8c00">AFVIKLING</button>`;
 
-  // Kampdag-stil række med ＋(makro)/PRW/< OUT/> IN. Indbyggede subs bruger lt_trigger+slot.
+  // SUB-kategori: vælg hvilken sub-plads grafikken skal vise (som kampdag — vælges i afviklingen).
+  const _subFilled = (typeof subs !== 'undefined' ? subs : []).map((s, i) => ({ slot: i + 1, navn: s.navn || '', titel: s.titel || '' })).filter(s => s.navn.trim() || s.titel.trim());
+  const _curSub = (typeof activeSubSlot !== 'undefined' ? activeSubSlot : 0);
+  const subSlotOpts = _subFilled.length
+    ? _subFilled.map(s => `<option value="${s.slot}"${String(_curSub) === String(s.slot) ? ' selected' : ''}>Sub ${s.slot}${s.navn ? ': ' + esc(s.navn) : ''}</option>`).join('')
+    : '<option value="">(udfyld subs i SUBS-fanen)</option>';
+
+  // Kampdag-stil række med ＋(makro)/PRW/< OUT/> IN. Sub-grafik får en plads-vælger (sætter active_sub).
   const rowHTML = it => {
     const live = _isLive(it);
+    const isSub = it.cat === 'sub';
+    const slotSel = isSub ? `<select class="tv-sub-slot" title="Vælg sub-plads grafikken skal vise" style="background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;max-width:150px;">${subSlotOpts}</select>` : '';
+    const inBtn = isSub
+      ? `<button class="grafik-btn-in tv-sub-in" data-trig="${esc(it.trig)}"${live ? ' disabled' : ''}>&gt; IN</button>`
+      : `<button class="grafik-btn-in" data-trig="${esc(it.trig)}" data-val="in"${live ? ' disabled' : ''}>&gt; IN</button>`;
     return `<div class="grafik-block" style="--g-color:${it.color}">
       <div class="grafik-block-info">
         <span class="grafik-block-name">${esc(it.name)}</span>
@@ -1191,9 +1203,10 @@ function renderGrafikTV(container) {
       </div>
       <div class="grafik-block-actions">
         <button class="grafik-btn-prw tv-makro-add" data-mk-trig="${esc(it.trig)}" title="Opret makro">＋</button>
+        ${slotSel}
         <button class="grafik-btn-prw tv-prw" data-prw-url="${it.prv}" title="Preview">PRW</button>
         <button class="grafik-btn-out" data-trig="${esc(it.trig)}" data-val="out"${!live ? ' disabled' : ''}>&lt; OUT</button>
-        <button class="grafik-btn-in" data-trig="${esc(it.trig)}" data-val="in"${live ? ' disabled' : ''}>&gt; IN</button>
+        ${inBtn}
       </div>
     </div>`;
   };
@@ -1254,6 +1267,19 @@ function renderGrafikTV(container) {
 
   container.querySelectorAll('[data-trig][data-val]').forEach(btn =>
     btn.addEventListener('click', () => { if (btn.disabled) return; setGrafiktTrigger(btn.dataset.trig, btn.dataset.val); }));
+
+  // Sub-grafik: > IN sætter først den valgte sub-plads (active_sub) og tænder så grafikken,
+  // som henter /api/vmix og viser sub_aktiv_n/_t. active_sub gemmes FØR trigger (så fetch rammer rigtigt).
+  container.querySelectorAll('.tv-sub-in').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      if (btn.disabled) return;
+      const slot = btn.closest('.grafik-block')?.querySelector('.tv-sub-slot')?.value;
+      if (slot) {
+        activeSubSlot = parseInt(slot) || 0;
+        try { await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'active_sub', value: String(slot) }); } catch {}
+      }
+      setGrafiktTrigger(btn.dataset.trig, 'in');
+    }));
 
   container.querySelectorAll('.tv-prw').forEach(btn =>
     btn.addEventListener('click', () => {
