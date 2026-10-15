@@ -1477,14 +1477,26 @@ function _makroKeyOptions(selectedKey) {
     { key: 'wait',                label: '⏱ Pause/vent' },
     { key: 'alle_af',             label: '■ ALLE AF' },
   ];
-  const all = [
-    ...builtIn,
+  const generisk = builtIn.filter(b => b.key === 'wait' || b.key === 'alle_af');
+  const kampBuiltIn = builtIn.filter(b => b.key !== 'wait' && b.key !== 'alle_af');
+  const projektGrafik = [
     ...customGrafik.map(g => ({ key: g.trigger_key, label: g.label })),
     ...(infoBokse || []).map((b, i) => ({ key: 'info_' + b.id, label: 'Info: ' + (b.overskrift || ('boks ' + (i + 1))) }))
   ];
+  // TV-projekter: kun projektets EGNE grafikker + generiske handlinger (ikke kampdag-built-ins).
+  const isTv = typeof projektType !== 'undefined' && projektType === 'tv';
+  const all = isTv ? [...projektGrafik, ...generisk] : [...kampBuiltIn, ...generisk, ...projektGrafik];
   return all.map(o =>
     `<option value="${esc(o.key)}"${o.key === selectedKey ? ' selected' : ''}>${esc(o.label)}</option>`
   ).join('');
+}
+
+// Standard-handling når en ny makro/makro-række oprettes — TV bruger projektets egen grafik (ikke kampdag-ticker).
+function _defaultMakroKey() {
+  if (typeof projektType !== 'undefined' && projektType === 'tv') {
+    return (customGrafik[0] && customGrafik[0].trigger_key) || 'wait';
+  }
+  return 'ticker_ovl_trigger';
 }
 
 function renderMakroer(leftPanel) {
@@ -1601,7 +1613,7 @@ function openMakroModal(id, prefillHandlinger) {
   list.innerHTML = '';
   const src = m?.handlinger?.length ? m.handlinger
             : prefillHandlinger?.length ? prefillHandlinger
-            : [{ key: 'ticker_ovl_trigger', value: 'in' }];
+            : [{ key: _defaultMakroKey(), value: 'in' }];
   src.forEach(h => _addMakroHandlingRow(h.key, h.value, h.slot || ''));
   _updateMakroGrouping();
   const listEl = document.getElementById('makro-handlinger-list');
@@ -1616,7 +1628,7 @@ function _closeMakroModal() {
 }
 
 function _addMakroHandling() {
-  _addMakroHandlingRow('ticker_ovl_trigger', 'in');
+  _addMakroHandlingRow(_defaultMakroKey(), 'in');
   _updateMakroGrouping();
 }
 
@@ -1711,7 +1723,7 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
     _updateMakroGrouping();
   });
   row.querySelector('.makro-combine-btn').addEventListener('click', function() {
-    _addMakroHandlingRow('ticker_ovl_trigger', 'in', '', row);
+    _addMakroHandlingRow(_defaultMakroKey(), 'in', '', row);
     _updateMakroGrouping();
   });
   if (afterRow) afterRow.after(row);
