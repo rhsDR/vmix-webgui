@@ -144,6 +144,13 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
 ## Animation (ind/ud)
 - runAnimationIN: vis grafikken og animér den blødt IND (fx slide op + fade, ~0.4-0.6s, ease-out).
 - runAnimationOUT: animér UD (omvendt, ~0.3-0.5s, ease-in) og skjul til sidst.
+- RESPONSTID (KRITISK — ellers er der synligt delay fra tryk til grafik): runAnimationIN SKAL starte
+  bevægelsen MED DET SAMME. Sæt in-tilstanden/klassen FØRST (så animationen går i gang straks), og hent
+  evt. live-data PARALLELT — fyld teksten ind når den kommer (behold demo/sidste værdi indtil da). Bloker
+  ALDRIG animationen bag en fetch (await fetch FØR du animerer) eller bag document.fonts.ready — begge
+  giver et mærkbart delay; font-display:swap i /fonts.css viser teksten uden ventetid. Vil du have teksten
+  klar allerede ved IND (ingen efter-udfyldning), så hent /api/vmix ÉN gang ved LOAD og cache resultatet,
+  og vis cachen med det samme i runAnimationIN. runAnimationOUT skal også animere straks (ingen fetch).
 - Brug CSS-transitions/@keyframes på transform + opacity (se YDELSE nedenfor) til AL animation —
   ingen eksterne animations-biblioteker. Broadcast-passende: rolige, rene bevægelser.
   Sæt starttilstand skjult/forskudt, så grafikken ikke "blinker" før runAnimationIN kaldes.
