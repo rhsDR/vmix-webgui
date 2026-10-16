@@ -167,6 +167,27 @@ derfor: det der ser glat ud i browseren kan fryse i vMix). Regler:
 - Lav fades/reveals med CSS-transitions, ikke JS-drevet animation: et JS-bibliotek (fx GSAP) driver
   animationen på hovedtråden hver frame og kan stalle vMix' frame-produktion. CSS kører på compositor.
 
+## DR-HUSSTIL (fast reference — match denne stil til DR-grafik når intet andet er angivet)
+DR's broadcast-grafik har et fast udtryk:
+- FONT: 'DR Publik' (indbygget). Navne/overskrifter i VERSALER, SemiBold (font-weight:700); undertekst Regular (400).
+- FARVER: DR-blå #00004b (mørk — tekst & accenter), gul #ffd200, hvid tekst på blå, blå tekst på gul;
+  evt. cyan #00e5ff til en undertitel-blok. Rød #ff4444 = breaking.
+- LOWER-THIRD: vandret bjælke/boks der afsløres venstre→højre med clip-path; en lille farvet "tag"-boks
+  (kategori) + stort navn + mindre titel. Tekst afsløres TEGN-FOR-TEGN (hvert bogstav i eget <span>,
+  opacity 0→1 forskudt, gerne let uregelmæssigt).
+- TICKER: bjælke i bunden, tekst ruller horisontalt (transform/@keyframes); breaking i rødt.
+- UD = samme bevægelser i omvendt rækkefølge (bjælke klippes væk, tekst fader).
+- VIGTIGT: kampdags EGNE filer bruger GSAP, men custom-grafik må IKKE bruge GSAP/JS-biblioteker —
+  genskab udtrykket i REN CSS (transform/opacity/clip-path) + setTimeout til tegn-stagger.
+Signatur-bevægelser i ren CSS:
+\`\`\`css
+/* bjælke/boks wiper ind venstre→højre, ud = klippes væk */
+.bar{clip-path:inset(0 100% 0 0);transition:clip-path 1s cubic-bezier(.65,0,.35,1);}
+.bar.in{clip-path:inset(0 0 0 0);} .bar.out{clip-path:inset(0 0 100% 0);}
+/* tegn-for-tegn afsløring: hvert bogstav i sit eget <span>, afsløres forskudt via setTimeout */
+.ch{display:inline-block;opacity:0;transition:opacity .06s;} .ch.vis{opacity:1;}
+\`\`\`
+
 ## Dit workflow
 1. ANALYSÉR: Hvis brugeren uploader/indsætter HTML, læs den stille igennem — tekstfelter/elementer,
    har den runAnimationIN/OUT?, animationer, eksterne afhængigheder, grafiktype (lower-third/ticker/
