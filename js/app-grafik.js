@@ -1154,6 +1154,29 @@ function renderGrafik() {
 // der findes i projektet (INFO + hver custom-grafik), hver med rækker med ＋(makro)/PRW/
 // < OUT/> IN, plus AFVIKLING med makroer. Preview vises i højre panel. Kun projektets egne
 // grafikker. Info-bokse styres via trigger info_<id> (output i GRAFIK SETUP, tekst i INFO).
+// PRW i TV-afviklingen: custom-grafik ligger på Supabase (andet origin), så vi kan ikke kalde ind i
+// iframen. Hent HTML'en, injicér samme harness som on-air/agent-preview (fonts + __API_ORIGIN/
+// __PROJEKT_ID) og auto-kald runAnimationIN — ellers sidder grafikken bare skjult (intet sker).
+// __IS_PREVIEW=false → viser RIGTIGT projektdata (grafikken falder selv tilbage til demo hvis tom).
+async function _tvLoadPreview(url, container) {
+  const f = (container || document).querySelector('.grafik-preview-iframe');
+  if (!f || !url) return;
+  const origin = window.location.origin;
+  const pid = aktivProjektId;
+  let html = '';
+  try { html = await fetch(url, { cache: 'no-store' }).then(r => r.text()); }
+  catch { f.removeAttribute('srcdoc'); f.src = url; return; } // fallback: direkte (uden auto-afspil)
+  const _ffCss = (typeof fontLib !== 'undefined' ? (fontLib || []) : [])
+    .map(x => (typeof _fontFaceCss === 'function') ? _fontFaceCss(x) : '').filter(Boolean).join('');
+  const inject = `<link rel="stylesheet" href="${origin}/fonts.css"><style>${_ffCss}</style>`
+    + `<script>window.__PROJEKT_ID=${JSON.stringify(pid || '')};window.__API_ORIGIN=${JSON.stringify(origin)};`
+    + `window.__IS_PREVIEW=false;window.addEventListener('load',function(){setTimeout(function(){`
+    + `try{window.runAnimationIN&&window.runAnimationIN();}catch(e){}},250);});<\/script>`;
+  const doc = html.replace(/(<html[^>]*>)/i, '$1' + inject);
+  f.removeAttribute('src');
+  f.srcdoc = doc.includes('__PROJEKT_ID') ? doc : inject + html;
+}
+
 function renderGrafikTV(container) {
   container = container || document.getElementById('grafikList');
   if (!container) return;
@@ -1381,11 +1404,7 @@ function renderGrafikTV(container) {
     btn.addEventListener('click', () => fireMakro(btn.dataset.makroId)));
 
   container.querySelectorAll('.tv-prw').forEach(btn =>
-    btn.addEventListener('click', () => {
-      grafiktActivePrvUrl = btn.dataset.prwUrl;
-      const f = container.querySelector('.grafik-preview-iframe');
-      if (f) f.src = grafiktActivePrvUrl;
-    }));
+    btn.addEventListener('click', () => _tvLoadPreview(btn.dataset.prwUrl, container)));
 
   container.querySelectorAll('.tv-makro-add').forEach(btn =>
     btn.addEventListener('click', () => openMakroModal(null, [{ key: btn.dataset.mkTrig, value: 'in' }])));
