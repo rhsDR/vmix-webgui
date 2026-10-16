@@ -85,6 +85,14 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   injicerer BÅDE window.__API_ORIGIN OG window.__PROJEKT_ID i grafikken — brug dem (brug IKKE
   location.origin, som kan pege forkert for standalone-grafik). Svaret er et ARRAY med ét objekt →
   brug \`data[0]\`.
+- KRITISK — TEGNKODNING (Æ Ø Å): API-svaret er latin1/ISO-8859-1-kodet. Brug ALDRIG r.json() eller
+  r.text() til dette svar — de afkoder som UTF-8, så Æ/Ø/Å (og øvrige danske tegn) bliver til �.
+  Hent ALTID som bytes og afkod eksplicit med ISO-8859-1 — præcis sådan her:
+      const _r = await fetch(window.__API_ORIGIN + '/api/vmix/' + window.__PROJEKT_ID);
+      const _buf = await _r.arrayBuffer();
+      const _arr = JSON.parse(new TextDecoder('iso-8859-1').decode(_buf));
+      const d = (Array.isArray(_arr) && _arr[0]) ? _arr[0] : null;
+  Dette gælder AL datahentning fra /api/vmix — ellers er grafikken ødelagt for danske tegn.
 - TRAFIK (vigtigt): hent som UDGANGSPUNKT data ÉN gang inde i runAnimationIN() — data er typisk klar
   før grafikken går on-air. Undgå løbende polling. Kun hvis indholdet SKAL opdatere MENS grafikken er
   synlig (fx live-score), så poll langsomt (fx hvert 15.-30. sek) og KUN mens den er på skærmen (stop i
