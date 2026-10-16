@@ -179,6 +179,12 @@ DR's broadcast-grafik har et fast udtryk:
 - UD = samme bevægelser i omvendt rækkefølge (bjælke klippes væk, tekst fader).
 - VIGTIGT: kampdags EGNE filer bruger GSAP, men custom-grafik må IKKE bruge GSAP/JS-biblioteker —
   genskab udtrykket i REN CSS (transform/opacity/clip-path) + setTimeout til tegn-stagger.
+- CREDIT-SLUT (DR-logo): DR's krediterings-logo findes som transparent webm (4 sek) på
+  window.__API_ORIGIN + '/DR_KREDITERINGSLOGO_INTERN_INGEN_TEKST_4SEK.webm'. Skal en credits-grafik
+  slutte som kampdag: efter rulleteksten er kørt færdig, vis et fuldskærms <video muted playsinline>
+  med src sat til den URL (brug window.__API_ORIGIN — IKKE absolut "/", der virker ikke i blob-iframes),
+  kald video.play(), og skjul/afslut grafikken (runAnimationOUT) på videoens 'ended'-event. Video-
+  indlæsning blokeres ikke af systemets fetch-filter.
 Signatur-bevægelser i ren CSS:
 \`\`\`css
 /* bjælke/boks wiper ind venstre→højre, ud = klippes væk */
