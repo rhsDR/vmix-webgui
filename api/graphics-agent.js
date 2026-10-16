@@ -280,7 +280,10 @@ export default async function handler(req, res) {
   } catch { cfg = null; }
   if (!cfg) return res.status(404).json({ error: `Ingen graphics_agent_config for projekt_id: ${projekt_id}` });
 
-  // Kald Claude (non-streaming — v1)
+  // Kald Claude med STREAMING. Funktionen begynder at svare straks (første bytes inden for sekunder),
+  // så Vercel ikke 504'er på lange genereringer; bliver funktionen dræbt af maxDuration, får klienten et
+  // DELVIST svar (truncation) i stedet for en hård timeout. Protokol til klienten: rå tekst-deltaer,
+  // afsluttet med "\x1e" + JSON-metadata ({truncated:bool} eller {error:string}).
   try {
     const aRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -293,17 +296,48 @@ export default async function handler(req, res) {
         model: 'claude-sonnet-4-6',
         max_tokens: 8192,
         system: buildSystemPrompt(cfg, custom_fonts, data_sources, existing_graphics),
-        messages
+        messages,
+        stream: true
       })
     });
-    const data = await aRes.json();
     if (!aRes.ok) {
-      return res.status(502).json({ error: data?.error?.message || 'Anthropic API-fejl' });
+      let msg = 'Anthropic API-fejl';
+      try { msg = (await aRes.json())?.error?.message || msg; } catch {}
+      return res.status(502).json({ error: msg });
     }
-    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
-    // Signalér hvis svaret ramte token-loftet (frontend advarer + tolererer ulukket ```html)
-    return res.status(200).json({ text, truncated: data.stop_reason === 'max_tokens' });
+    res.writeHead(200, {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Accel-Buffering': 'no'
+    });
+    const reader = aRes.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '', stopReason = null;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, nl); buf = buf.slice(nl + 1);
+        if (!line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === '[DONE]') continue;
+        let evt; try { evt = JSON.parse(payload); } catch { continue; }
+        if (evt.type === 'content_block_delta' && evt.delta && evt.delta.type === 'text_delta') {
+          res.write(evt.delta.text);
+        } else if (evt.type === 'message_delta' && evt.delta && evt.delta.stop_reason) {
+          stopReason = evt.delta.stop_reason;
+        } else if (evt.type === 'error') {
+          res.write('\x1e' + JSON.stringify({ error: (evt.error && evt.error.message) || 'Anthropic stream-fejl' }));
+          return res.end();
+        }
+      }
+    }
+    res.write('\x1e' + JSON.stringify({ truncated: stopReason === 'max_tokens' }));
+    res.end();
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    if (!res.headersSent) return res.status(500).json({ error: err.message });
+    try { res.write('\x1e' + JSON.stringify({ error: err.message })); res.end(); } catch {}
   }
 }

@@ -421,13 +421,29 @@ async function _gaCallAgent() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: gaMessages, projekt_id: aktivProjektId, custom_fonts: (fontLib || []).map(f => f.family), data_sources: (typeof _egneGrafikDataSources === 'function' ? _egneGrafikDataSources().filter(([v]) => v !== 'custom').map(([, label]) => label) : []), existing_graphics: existing })
     });
-    const data = await r.json().catch(() => ({}));
     if (!r.ok) {
+      let data = {}; try { data = await r.json(); } catch {}
       gaError = (data.error || ('Fejl ' + r.status)) + (r.status === 503 ? ' — tilføj ANTHROPIC_API_KEY i Vercel.' : '');
       gaMessages.pop(); // fjern ubesvaret brugerbesked så samtalen forbliver gyldig
       return;
     }
-    const text = data.text || '(tomt svar)';
+    // Stream-svar: rå tekst-deltaer afsluttet med "\x1e" + JSON-metadata ({truncated} eller {error}).
+    // (Serveren streamer fra Claude → ingen 504; afbrydes den af maxDuration får vi delvist svar.)
+    let full = '';
+    try {
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        full += dec.decode(value, { stream: true });
+      }
+    } catch { /* afbrud midt i stream → brug det vi nåede at få */ }
+    let text = full, meta = {};
+    const _sep = full.lastIndexOf('\x1e');
+    if (_sep >= 0) { text = full.slice(0, _sep); try { meta = JSON.parse(full.slice(_sep + 1)); } catch {} }
+    if (meta.error) { gaError = meta.error; gaMessages.pop(); return; }
+    if (!text) text = '(tomt svar)';
     gaMessages.push({ role: 'assistant', content: text });
     const parsed = _gaParseResult(text);
     // Bevar config/HTML på tværs af rettelser (agenten gen-udskriver ikke altid begge)
@@ -437,7 +453,7 @@ async function _gaCallAgent() {
     };
     // Revidering: ny HTML men ingen config → brug grafikkens egen config (så gem virker)
     if (gaRevisionId && gaResult.html && !gaResult.config) gaResult.config = _gaRevisionBaseConfig();
-    gaTruncated = !!data.truncated;
+    gaTruncated = !!meta.truncated;
   } catch (err) {
     gaError = 'Netværksfejl: ' + err.message;
     gaMessages.pop();
