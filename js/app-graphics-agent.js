@@ -382,13 +382,15 @@ async function _gaOnSend() {
 let gaExistingHtmlCache = {}; // file_path -> html (session-cache; grafikker ændrer sig sjældent under en agent-session)
 
 // Hent projektets eksisterende grafikker (HTML) så agenten kan lave "noget der ligner".
-// Caches pr. session; base64-tunge fonte/billeder strippes, og hver fil + totalen kappes for at spare tokens.
+// Caches pr. session; base64-tunge fonte/billeder strippes, og hver fil + totalen kappes HÅRDT for at
+// holde input-tokens nede (ellers tipper store kald over Vercels 60s-loft → 504). Maks 2 grafikker /
+// ~6KB pr. fil / ~12KB total. Sendes kun tidligt i samtalen (reference er mest relevant ved starten).
 async function _gaLoadExistingGraphics() {
   const rows = (customGrafik || []).filter(g => g && g.file_path && g.id !== gaRevisionId);
   const out = [];
-  let budget = 60000;
+  let budget = 12000;
   for (const g of rows) {
-    if (out.length >= 8 || budget <= 0) break;
+    if (out.length >= 2 || budget <= 0) break;
     let html = gaExistingHtmlCache[g.file_path];
     if (html == null) {
       try {
@@ -400,7 +402,7 @@ async function _gaLoadExistingGraphics() {
     }
     if (!html) continue;
     let h = html.replace(/(url\(\s*['"]?data:[^,]*base64,)[A-Za-z0-9+/=\s]+/gi, '$1…STRIPPED…');
-    if (h.length > 14000) h = h.slice(0, 14000) + '\n<!-- …afkortet… -->';
+    if (h.length > 6000) h = h.slice(0, 6000) + '\n<!-- …afkortet… -->';
     out.push({ label: g.label || g.trigger_key, kategori: g.kategori || 'custom', trigger_key: g.trigger_key, html: h });
     budget -= h.length;
   }
@@ -410,7 +412,10 @@ async function _gaLoadExistingGraphics() {
 async function _gaCallAgent() {
   gaTruncated = false;
   try {
-    const existing = await _gaLoadExistingGraphics();
+    // Send kun grafik-referencen på de første par ture (mest relevant ved "lav noget der ligner");
+    // på senere ture/rettelser droppes den for at holde input-tokens — og dermed svartiden — nede.
+    const _userTurns = (gaMessages || []).filter(m => m.role === 'user').length;
+    const existing = _userTurns <= 2 ? await _gaLoadExistingGraphics() : [];
     const r = await apiFetch('/api/graphics-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
