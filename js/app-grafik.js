@@ -1269,6 +1269,48 @@ function renderGrafikTV(container) {
         <button class="copy-btn icon-btn" data-copy="${url}">⎘</button>
       </div>
     </div>`;
+  // COMPANION (HTTP POST) — links til hver sub, hver egen-grafik og hver makro (som kampdag).
+  // Standard i ALLE projekter. /api/trigger kører både enkelt-keys og hele makroer (?macro=).
+  const _tvCompanionHTML = () => {
+    if (!_companionToken) return '<div style="color:#666;font-size:11px;padding:4px 0">Henter token… genindlæs panelet hvis links mangler.</div>';
+    const T = qs => `${origin}/api/trigger/${pid}?token=${_companionToken}&${qs}`;
+    const row = (lbl, url, color) => `<div class="grafik-companion-row">
+      <span class="grafik-companion-lbl"${color ? ` style="color:${color}"` : ''}>${esc(lbl)}</span>
+      <span class="grafik-companion-url" title="${url}">${url}</span>
+      <button class="copy-btn icon-btn" data-copy="${url}">⎘</button>
+    </div>`;
+    let html = '';
+    // SUBS — hver plads sætter active_sub + trigger projektets sub-grafik (kræver en sub-grafik).
+    const subGfx = catItems('sub')[0];
+    if (subGfx) {
+      const filled = (typeof subs !== 'undefined' ? subs : [])
+        .map((s, i) => ({ slot: i + 1, navn: s.navn || '', titel: s.titel || '' }))
+        .filter(s => s.navn.trim() || s.titel.trim());
+      if (filled.length) {
+        html += '<div class="grafik-companion-subhead">SUBS</div>';
+        html += filled.map(s => row('Sub ' + s.slot + (s.navn ? ': ' + s.navn : ''), T(`key=${encodeURIComponent(subGfx.trig)}&value=in&slot=${s.slot}`), subGfx.color)).join('');
+        html += row('SUB AF', T(`key=${encodeURIComponent(subGfx.trig)}&value=out`), subGfx.color);
+      }
+    }
+    // EGNE GRAFIK — alle projektets grafikker (undtagen sub-grafikken, dækket af SUBS) PÅ/AF.
+    const egne = allItems.filter(it => it.cat !== 'sub');
+    if (egne.length) {
+      html += `<div class="grafik-companion-subhead" style="margin-top:${html ? '10px' : '0'}">EGNE GRAFIK</div>`;
+      html += egne.map(it => row(it.name.toUpperCase() + ' PÅ', T(`key=${encodeURIComponent(it.trig)}&value=in`), it.color)
+                           + row(it.name.toUpperCase() + ' AF', T(`key=${encodeURIComponent(it.trig)}&value=out`), it.color)).join('');
+    }
+    // MAKROER — hele makroen via ?macro=; har den et "vælg ved afvikling"-sub-trin, tilføjes &slot= (udfyld pladsen i Companion).
+    if ((typeof makroer !== 'undefined' ? makroer : []).length) {
+      html += `<div class="grafik-companion-subhead" style="margin-top:${html ? '10px' : '0'}">MAKROER</div>`;
+      html += makroer.map(m => {
+        const hasSub = (m.handlinger || []).some(h => _isTvSubTrigger(h.key));
+        const url = hasSub ? T(`macro=${m.id}&slot=`) : T(`macro=${m.id}`);
+        return row(m.label.toUpperCase(), url, m.farve || '#4a9eff');
+      }).join('');
+    }
+    return html || '<div style="color:#666;font-size:11px;padding:4px 0">Ingen grafik/makroer at trigge endnu.</div>';
+  };
+
   const prvUrl = grafiktActivePrvUrl || 'about:blank';
   const rightHTML = `
     <div>
@@ -1277,7 +1319,11 @@ function renderGrafikTV(container) {
     </div>
     ${onairBlock('ON AIR — MASTER', origin + '/master.html?p=' + pid)}
     ${onairBlock('ON AIR — SECONDARY', origin + '/secondary.html?p=' + pid)}
-    ${onairBlock('ON AIR — FULLSCREEN', origin + '/fullscreen.html?p=' + pid)}`;
+    ${onairBlock('ON AIR — FULLSCREEN', origin + '/fullscreen.html?p=' + pid)}
+    <details class="grafik-lag-details" style="margin-top:12px;">
+      <summary class="grafik-lag-summary">▸ COMPANION (HTTP POST)</summary>
+      <div id="tv-companion" class="grafik-companion-section" style="border:none;padding:0;margin-top:8px;">${_tvCompanionHTML()}</div>
+    </details>`;
 
   const existingWrap = container.querySelector('.grafik-v2-wrap');
   if (!existingWrap) {
@@ -1292,6 +1338,9 @@ function renderGrafikTV(container) {
   } else {
     existingWrap.querySelector('.grafik-v2-subtabs').innerHTML = subTabsHTML + `<button class="grafik-alle-af-btn" id="grafik-alle-af">■ ALLE AF</button>`;
     existingWrap.querySelector('.grafik-v2-content').innerHTML = contentHTML;
+    // Opdatér companion-links (ny sub/grafik/makro) uden at røre PREVIEW/ON AIR-iframes.
+    const _comp = existingWrap.querySelector('#tv-companion');
+    if (_comp) _comp.innerHTML = _tvCompanionHTML();
   }
 
   // ── Wiring ──

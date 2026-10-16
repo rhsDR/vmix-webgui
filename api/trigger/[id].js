@@ -122,6 +122,12 @@ async function runStep(pid, h, slotOverride) {
       if (slotPayload) await upsert(pid, 'lineup_data', JSON.stringify(slotPayload));
     } catch {}
   }
+  // TV sub-grafik i makro: slotOverride (valgt ved afvikling) eller h.slot sætter active_sub FØR
+  // triggeren. Kun for CUSTOM keys (ikke ALLOWED_KEYS → undgår lineup_trigger som også har slot).
+  const _subEff = slotOverride || h.slot || '';
+  if (_subEff && h.value !== 'out' && !ALLOWED_KEYS.includes(h.key)) {
+    await upsert(pid, 'active_sub', String(_subEff));
+  }
   await Promise.all([sbBroadcastRest(pid, h.key, h.value), upsert(pid, h.key, h.value)]);
 }
 
@@ -243,6 +249,11 @@ export default async function handler(req, res) {
         const slotPayload = slotsData[slot]?.[value];
         if (slotPayload) await upsert(id, 'lineup_data', JSON.stringify(slotPayload));
       } catch {}
+    }
+    // TV sub-grafik: ?slot=N på en CUSTOM trigger (ikke ALLOWED_KEYS) sætter active_sub FØR triggeren,
+    // så sub-grafikken henter /api/vmix og viser den valgte sub (parallel til lt_slot for kampdag).
+    if (slot && value !== 'out' && !ALLOWED_KEYS.includes(key)) {
+      await upsert(id, 'active_sub', String(slot));
     }
     const [bc] = await Promise.all([sbBroadcastRest(id, key, value), upsert(id, key, value)]);
     res.status(200).json({ ok: true, key, value, slot: slot || undefined, _bc: bc });
