@@ -33,6 +33,7 @@
     // SB_URL / SB_ANON / SB_HDR kommer fra js/supabase-config.js
     const customFrameMap = {};
     const customState    = {};
+    const customSlot     = {}; // sidste sub-plads pr. trigger-key — så skift mellem subs (value stadig 'in') går igennem
     const customStateTime = {};
 
     // Grafik-definitioner: id matcher iframe-id og Supabase-nøglen i overlay_lag_order
@@ -198,8 +199,12 @@
               var bIframe = customFrameMap[p.key];
               if (!bIframe) return;
               var prevBc = customState[p.key];
-              if (prevBc === p.value) return;
+              var prevSlot = customSlot[p.key] || '';
+              // Dedup på værdi OG plads: samme sub igen springes over, men SKIFT til en anden sub-plads
+              // (value stadig 'in') skal gå igennem, så den nye sub kommer på i stedet for den gamle.
+              if (prevBc === p.value && prevSlot === String(p.slot || '')) return;
               customState[p.key] = p.value;
+              customSlot[p.key] = String(p.slot || '');
               customStateTime[p.key] = Date.now();
               try {
                 // p.slot (fx sub-plads 1-15) sendes med til runAnimationIN, så en sub-grafik kan vise

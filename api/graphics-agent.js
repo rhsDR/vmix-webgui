@@ -153,7 +153,9 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   som streng "1"–"15". Hent ALLE subs ÉN gang ved LOAD fra /api/vmix (felter S1_n/S1_t … S15_n/S15_t) og
   cache dem; i runAnimationIN(slot) slå cache[slot] op, fyld navn/titel og animér STRAKS. Mangler slot (fx
   fra Companion), brug sub_aktiv_n/sub_aktiv_t. Kør evt. en baggrunds-refetch i runAnimationIN og opdatér
-  teksten stille, hvis en sub er rettet efter load.
+  teksten stille, hvis en sub er rettet efter load. Er grafikken ALLEREDE synlig (skift fra én sub til en
+  anden mens den er på), så skift blot teksten til den nye plads (evt. hurtig cross-fade/opdatering) i
+  stedet for at gen-animere hele vejen ind — hold styr på en "synlig"-tilstand selv.
 - Brug CSS-transitions/@keyframes på transform + opacity (se YDELSE nedenfor) til AL animation —
   ingen eksterne animations-biblioteker. Broadcast-passende: rolige, rene bevægelser.
   Sæt starttilstand skjult/forskudt, så grafikken ikke "blinker" før runAnimationIN kaldes.
