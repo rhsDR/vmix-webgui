@@ -379,13 +379,42 @@ async function _gaOnSend() {
   renderGraphicsAgent();
 }
 
+let gaExistingHtmlCache = {}; // file_path -> html (session-cache; grafikker ændrer sig sjældent under en agent-session)
+
+// Hent projektets eksisterende grafikker (HTML) så agenten kan lave "noget der ligner".
+// Caches pr. session; base64-tunge fonte/billeder strippes, og hver fil + totalen kappes for at spare tokens.
+async function _gaLoadExistingGraphics() {
+  const rows = (customGrafik || []).filter(g => g && g.file_path && g.id !== gaRevisionId);
+  const out = [];
+  let budget = 60000;
+  for (const g of rows) {
+    if (out.length >= 8 || budget <= 0) break;
+    let html = gaExistingHtmlCache[g.file_path];
+    if (html == null) {
+      try {
+        const { data: blob, error } = await sbClient.storage.from('grafik').download(g.file_path);
+        if (error) throw error;
+        html = await blob.text();
+      } catch { html = ''; }
+      gaExistingHtmlCache[g.file_path] = html;
+    }
+    if (!html) continue;
+    let h = html.replace(/(url\(\s*['"]?data:[^,]*base64,)[A-Za-z0-9+/=\s]+/gi, '$1…STRIPPED…');
+    if (h.length > 14000) h = h.slice(0, 14000) + '\n<!-- …afkortet… -->';
+    out.push({ label: g.label || g.trigger_key, kategori: g.kategori || 'custom', trigger_key: g.trigger_key, html: h });
+    budget -= h.length;
+  }
+  return out;
+}
+
 async function _gaCallAgent() {
   gaTruncated = false;
   try {
+    const existing = await _gaLoadExistingGraphics();
     const r = await apiFetch('/api/graphics-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: gaMessages, projekt_id: aktivProjektId, custom_fonts: (fontLib || []).map(f => f.family), data_sources: (typeof _egneGrafikDataSources === 'function' ? _egneGrafikDataSources().filter(([v]) => v !== 'custom').map(([, label]) => label) : []) })
+      body: JSON.stringify({ messages: gaMessages, projekt_id: aktivProjektId, custom_fonts: (fontLib || []).map(f => f.family), data_sources: (typeof _egneGrafikDataSources === 'function' ? _egneGrafikDataSources().filter(([v]) => v !== 'custom').map(([, label]) => label) : []), existing_graphics: existing })
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {

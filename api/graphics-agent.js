@@ -5,7 +5,7 @@ import { requireUser } from './_auth.js';
 // hurtige endpoints. (Sænk til 30 hvis Vercel-planen ikke tillader 60.)
 export const config = { maxDuration: 60 };
 
-function buildSystemPrompt(cfg, customFonts, dataSources) {
+function buildSystemPrompt(cfg, customFonts, dataSources, existingGraphics) {
   const LIB_FAMILIES = 'DR Publik (DR-husfont, standardvalg til DR-grafik), DM Sans, Inter, Lato, Poppins, Nunito, Source Sans 3, PT Sans, Barlow, Barlow Condensed, Oswald, Roboto Condensed, Montserrat, Raleway, Exo 2, Kanit, Rajdhani, Teko, Bebas Neue, Anton, Playfair Display, DM Mono';
   const _cf = Array.isArray(customFonts) ? [...new Set(customFonts.filter(Boolean))] : [];
   const CUSTOM_FONTS_LINE = _cf.length ? `\n  Brugeruploadede fonte (også self-hostede — brug frit ved navn): ${_cf.join(', ')}.` : '';
@@ -13,6 +13,21 @@ function buildSystemPrompt(cfg, customFonts, dataSources) {
   const DATA_SOURCES_LINE = _ds.length
     ? `Projektets tilgængelige datakilder: ${_ds.join('; ')}.`
     : 'Projektet har endnu ingen udfyldte datakilder.';
+  // Projektets eksisterende grafikker som reference, så agenten kan lave "noget der ligner".
+  const _eg = Array.isArray(existingGraphics) ? existingGraphics.filter(g => g && g.html) : [];
+  const EXISTING_BLOCK = _eg.length ? `
+
+## PROJEKTETS EKSISTERENDE GRAFIKKER (reference — genbrug stil/struktur)
+Operatøren beder ofte om noget der LIGNER det projektet allerede har. Nedenfor er projektets nuværende
+grafikker med fuld HTML. Når brugeren vil have noget "i samme stil", "ligesom X" eller en variant, så
+GENBRUG layout, farver, fonte, animationsmønster (runAnimationIN/OUT + CSS-transitions) og
+datahentning fra den mest relevante grafik herunder — så den nye grafik matcher husstilen. Kopiér IKKE
+trigger_key (den nye grafik skal have sin egen unikke).
+${_eg.map(g => `
+### ${g.label} [kategori: ${g.kategori || 'custom'}, trigger: ${g.trigger_key}]
+\`\`\`html
+${g.html}
+\`\`\``).join('\n')}` : '';
   return `Du er en broadcast grafik-konfigurationsassistent i et vMix live-produktionssystem (vmix-webgui).
 Din opgave: hjælpe operatøren med at TILFØJE en HTML-grafik til systemet — enten ved at KONFIGURERE
 en grafik brugeren uploader/indsætter, ELLER ved at GENERERE grafik-HTML ud fra en beskrivelse.
@@ -195,7 +210,7 @@ derfor: det der ser glat ud i browseren kan fryse i vMix). Regler:
 ## Projekt-kontekst (fra dette projekts konfiguration)
 - Feltnavne-konventioner: ${cfg.field_conventions || '(ingen)'}
 - vMix input-basenavn: ${cfg.vmix_input_base || 'GFX'}
-- Projekt-noter: ${cfg.template_notes || '(ingen)'}`;
+- Projekt-noter: ${cfg.template_notes || '(ingen)'}${EXISTING_BLOCK}`;
 }
 
 export default async function handler(req, res) {
@@ -209,7 +224,7 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'SUPABASE_SERVICE_ROLE_KEY er ikke sat i Vercel' });
   }
 
-  const { messages, projekt_id, custom_fonts, data_sources } = req.body || {};
+  const { messages, projekt_id, custom_fonts, data_sources, existing_graphics } = req.body || {};
   if (!projekt_id || !Array.isArray(messages) || !messages.length) {
     return res.status(400).json({ error: 'Mangler projekt_id eller messages' });
   }
@@ -238,7 +253,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 8192,
-        system: buildSystemPrompt(cfg, custom_fonts, data_sources),
+        system: buildSystemPrompt(cfg, custom_fonts, data_sources, existing_graphics),
         messages
       })
     });
