@@ -202,7 +202,9 @@
               customState[p.key] = p.value;
               customStateTime[p.key] = Date.now();
               try {
-                if (p.value === 'in') bIframe.contentWindow?.runAnimationIN?.();
+                // p.slot (fx sub-plads 1-15) sendes med til runAnimationIN, så en sub-grafik kan vise
+                // den valgte plads fra cache UDEN at hente. Grafikker uden plads-arg ignorerer det.
+                if (p.value === 'in') bIframe.contentWindow?.runAnimationIN?.(p.slot || '');
                 else if (p.value === 'out') {
                   if (prevBc === 'in') bIframe.contentWindow?.runAnimationOUT?.();
                   else if (bIframe.contentWindow?.__forceOut) bIframe.contentWindow.__forceOut();

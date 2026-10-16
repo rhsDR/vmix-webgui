@@ -1394,7 +1394,10 @@ function renderGrafikTV(container) {
       renderGrafikTV(container);
       try {
         if (slot) await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'active_sub', value: String(slot) });
-        await sbUpsert('settings', { projekt_id: aktivProjektId, key: trig, value: 'in' });
+        // slot sendes MED i broadcast'en (sbUpsert medtager body.slot), så sub-grafikken kan vise den
+        // valgte plads fra sin cache UDEN at hente → ingen delay. active_sub (ovenfor) bevares til
+        // /api/vmix + Companion. slot strippes fra selve DB-rækken i sbUpsert.
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: trig, value: 'in', slot: slot || undefined });
       } catch { toast('Fejl ved sub-trigger', 'err'); }
     }));
 

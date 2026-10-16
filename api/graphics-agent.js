@@ -144,13 +144,16 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
 ## Animation (ind/ud)
 - runAnimationIN: vis grafikken og animér den blødt IND (fx slide op + fade, ~0.4-0.6s, ease-out).
 - runAnimationOUT: animér UD (omvendt, ~0.3-0.5s, ease-in) og skjul til sidst.
-- RESPONSTID (KRITISK — ellers er der synligt delay fra tryk til grafik): runAnimationIN SKAL starte
-  bevægelsen MED DET SAMME. Sæt in-tilstanden/klassen FØRST (så animationen går i gang straks), og hent
-  evt. live-data PARALLELT — fyld teksten ind når den kommer (behold demo/sidste værdi indtil da). Bloker
-  ALDRIG animationen bag en fetch (await fetch FØR du animerer) eller bag document.fonts.ready — begge
-  giver et mærkbart delay; font-display:swap i /fonts.css viser teksten uden ventetid. Vil du have teksten
-  klar allerede ved IND (ingen efter-udfyldning), så hent /api/vmix ÉN gang ved LOAD og cache resultatet,
-  og vis cachen med det samme i runAnimationIN. runAnimationOUT skal også animere straks (ingen fetch).
+- RESPONSTID (KRITISK — ellers synligt delay ELLER "tom boks → tekst popper ind"): grafikken skal have sin
+  tekst KLAR når den animerer ind. PRIMÆRT: PREFETCH data ÉN gang ved LOAD og cache den — i runAnimationIN
+  vises cachen MED DET SAMME og animationen starter straks (ingen fetch, ingen tom boks). Hent ALDRIG data
+  FØR du animerer (await fetch → delay) og vent ALDRIG på document.fonts.ready (font-display:swap i
+  /fonts.css viser teksten uden ventetid). runAnimationOUT skal også animere straks.
+- NAVNESKILT/SUB specifikt (sådan undgås delay HELT): systemet kalder runAnimationIN(slot) med sub-pladsen
+  som streng "1"–"15". Hent ALLE subs ÉN gang ved LOAD fra /api/vmix (felter S1_n/S1_t … S15_n/S15_t) og
+  cache dem; i runAnimationIN(slot) slå cache[slot] op, fyld navn/titel og animér STRAKS. Mangler slot (fx
+  fra Companion), brug sub_aktiv_n/sub_aktiv_t. Kør evt. en baggrunds-refetch i runAnimationIN og opdatér
+  teksten stille, hvis en sub er rettet efter load.
 - Brug CSS-transitions/@keyframes på transform + opacity (se YDELSE nedenfor) til AL animation —
   ingen eksterne animations-biblioteker. Broadcast-passende: rolige, rene bevægelser.
   Sæt starttilstand skjult/forskudt, så grafikken ikke "blinker" før runAnimationIN kaldes.
