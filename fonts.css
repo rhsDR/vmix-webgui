@@ -5,10 +5,22 @@
    Indhold:
    - Alle ~20 Google-familier editoren tilbyder (latin-subset woff2, dækker æøå + typografisk
      tegnsætning), hentet lokalt til /fonts/google/.
-   - DR-husfonte (DR Publik m.fl.) ligger i spx-fonts.css (/fonts/*.ttf|otf), som editoren
-     også loader. DRPublik embeddes desuden som base64 direkte i de enkelte playout-grafikker.
+   - DR-husfonten 'DR Publik' (3 snit: Regular/SemiBold/BlackItalic) er udtrukket fra kampdag-
+     playout-grafikken og ligger i /fonts/DRPublik-*.otf. Den er dermed tilgængelig for agent/
+     custom-grafik via denne fil — ingen manuel font-upload nødvendig. Både 'DR Publik' (dansk)
+     og 'DR Public' (eng.) virker som family-navn. Flere snit findes i spx-fonts.css (legacy).
 
    Opdateres via node _dl-google-fonts.mjs (genskaber /fonts/google/ + CSS herunder). */
+
+/* DR Publik — DR's husfont (OpenType, udtrukket fra kampdag). font-weight:700 → SemiBold (som kampdag). */
+@font-face{font-family:'DR Publik';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/DRPublik-Regular.otf') format('opentype');}
+@font-face{font-family:'DR Publik';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/DRPublik-SemiBold.otf') format('opentype');}
+@font-face{font-family:'DR Publik';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/DRPublik-SemiBold.otf') format('opentype');}
+@font-face{font-family:'DR Publik';font-style:italic;font-weight:900;font-display:swap;src:url('/fonts/DRPublik-BlackItalic.otf') format('opentype');}
+@font-face{font-family:'DR Public';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/DRPublik-Regular.otf') format('opentype');}
+@font-face{font-family:'DR Public';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/DRPublik-SemiBold.otf') format('opentype');}
+@font-face{font-family:'DR Public';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/DRPublik-SemiBold.otf') format('opentype');}
+@font-face{font-family:'DR Public';font-style:italic;font-weight:900;font-display:swap;src:url('/fonts/DRPublik-BlackItalic.otf') format('opentype');}
 
 @font-face{font-family:'Anton';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/google/anton-400.woff2') format('woff2');}
 @font-face{font-family:'Barlow';font-style:normal;font-weight:300;font-display:swap;src:url('/fonts/google/barlow-300.woff2') format('woff2');}

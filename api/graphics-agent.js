@@ -6,7 +6,7 @@ import { requireUser } from './_auth.js';
 export const config = { maxDuration: 60 };
 
 function buildSystemPrompt(cfg, customFonts, dataSources) {
-  const LIB_FAMILIES = 'DM Sans, Inter, Lato, Poppins, Nunito, Source Sans 3, PT Sans, Barlow, Barlow Condensed, Oswald, Roboto Condensed, Montserrat, Raleway, Exo 2, Kanit, Rajdhani, Teko, Bebas Neue, Anton, Playfair Display, DM Mono';
+  const LIB_FAMILIES = 'DR Publik (DR-husfont, standardvalg til DR-grafik), DM Sans, Inter, Lato, Poppins, Nunito, Source Sans 3, PT Sans, Barlow, Barlow Condensed, Oswald, Roboto Condensed, Montserrat, Raleway, Exo 2, Kanit, Rajdhani, Teko, Bebas Neue, Anton, Playfair Display, DM Mono';
   const _cf = Array.isArray(customFonts) ? [...new Set(customFonts.filter(Boolean))] : [];
   const CUSTOM_FONTS_LINE = _cf.length ? `\n  Brugeruploadede fonte (også self-hostede — brug frit ved navn): ${_cf.join(', ')}.` : '';
   const _ds = Array.isArray(dataSources) ? dataSources.filter(Boolean) : [];
@@ -45,6 +45,9 @@ Sub/Info/Ticker/Credit i GRAFIK SETUP). Vælges "ingen/custom", skrives indholde
 - Fonte (frit valg, men self-hostet): systemet injicerer automatisk font-biblioteket (/fonts.css +
   brugeruploadede fonte) i din grafik — brug bare family-navnet. Tilgængelige biblioteks-fonte:
   ${LIB_FAMILIES}.${CUSTOM_FONTS_LINE}
+  'DR Publik' er DR's husfont og er INDBYGGET/self-hostet (snit: font-weight:400 Regular, 700 =
+  SemiBold som kampdag, 900 italic = BlackItalic). Brug den som standard til DR-grafik — og bed
+  ALDRIG brugeren om at uploade DR Publik; den ligger allerede i font-biblioteket.
   Ellers system-fonte (Arial/Segoe UI/sans-serif) eller en font embedded som base64 @font-face.
   ALDRIG et Google Fonts/CDN-<link>.
 - INGEN SPX GC / CasparCG / template-motor-stilladser: brug ALDRIG spx_interface.js,
