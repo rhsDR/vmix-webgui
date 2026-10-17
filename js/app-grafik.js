@@ -141,6 +141,14 @@ async function _fireOneHandling(h, slotOverride) {
     grafiktState[h.key] = h.value;
     return;
   }
+  // TV info-grafik: send boks-nummeret MED triggeren (slot) → master kalder runAnimationIN(slot) → viser
+  // netop den boks. slotOverride (valgt ved afvikling) vinder; 'out' sender ingen slot.
+  if (_isTvInfoTrigger(h.key)) {
+    const eff = slotOverride || h.slot || '';
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value, slot: (h.value !== 'out' && eff) ? String(eff) : undefined });
+    grafiktState[h.key] = h.value;
+    return;
+  }
   await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value });
   grafiktState[h.key] = h.value;
 }
@@ -1356,12 +1364,12 @@ function renderGrafikTV(container) {
       html += egne.map(it => row(it.name.toUpperCase() + ' PÅ', T(`key=${encodeURIComponent(it.trig)}&value=in`), it.color)
                            + row(it.name.toUpperCase() + ' AF', T(`key=${encodeURIComponent(it.trig)}&value=out`), it.color)).join('');
     }
-    // MAKROER — hele makroen via ?macro=; har den et "vælg ved afvikling"-sub-trin, tilføjes &slot= (udfyld pladsen i Companion).
+    // MAKROER — hele makroen via ?macro=; har den et "vælg ved afvikling"-sub/info-trin, tilføjes &slot= (udfyld pladsen i Companion).
     if ((typeof makroer !== 'undefined' ? makroer : []).length) {
       html += `<div class="grafik-companion-subhead" style="margin-top:${html ? '10px' : '0'}">MAKROER</div>`;
       html += makroer.map(m => {
-        const hasSub = (m.handlinger || []).some(h => _isTvSubTrigger(h.key));
-        const url = hasSub ? T(`macro=${m.id}&slot=`) : T(`macro=${m.id}`);
+        const hasSlot = (m.handlinger || []).some(h => _isTvSubTrigger(h.key) || _isTvInfoTrigger(h.key));
+        const url = hasSlot ? T(`macro=${m.id}&slot=`) : T(`macro=${m.id}`);
         return row(m.label.toUpperCase(), url, m.farve || '#4a9eff');
       }).join('');
     }
@@ -1493,10 +1501,11 @@ function _afvMakroViewHTML() {
         }).join(' · ');
         // Har makroen et sub-ON-trin, så vis en plads-vælger (som kampdag): forvalgt til makroens
         // faste plads, eller "→ Vælg ved afvikling" hvis ingen — operatøren bestemmer sub ved KØR.
-        const subOnStep = (m.handlinger || []).find(h => _isTvSubTrigger(h.key) && h.value !== 'out');
+        const subOnStep  = (m.handlinger || []).find(h => _isTvSubTrigger(h.key)  && h.value !== 'out');
+        const infoOnStep = (m.handlinger || []).find(h => _isTvInfoTrigger(h.key) && h.value !== 'out');
         let slotPickerHTML = '';
-        if (subOnStep) {
-          const opts = _tvSubSlotOpts(subOnStep.slot || '');
+        if (subOnStep || infoOnStep) {
+          const opts = subOnStep ? _tvSubSlotOpts(subOnStep.slot || '') : _tvInfoSlotOpts(infoOnStep.slot || '');
           if ((opts.match(/<option/g) || []).length > 1) {
             slotPickerHTML = `<select class="afv-slot-sel" style="background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;">${opts}</select>`;
           }
@@ -1664,10 +1673,9 @@ function _makroKeyOptions(selectedKey) {
   ];
   const generisk = builtIn.filter(b => b.key === 'wait' || b.key === 'alle_af');
   const kampBuiltIn = builtIn.filter(b => b.key !== 'wait' && b.key !== 'alle_af');
-  const projektGrafik = [
-    ...customGrafik.map(g => ({ key: g.trigger_key, label: g.label })),
-    ...(infoBokse || []).map((b, i) => ({ key: 'info_' + b.id, label: 'Info: ' + (b.overskrift || ('boks ' + (i + 1))) }))
-  ];
+  // Kun projektets GRAFIKKER (ikke de enkelte info-bokse) — ligesom sub viser sub-grafikken, ikke hver plads.
+  // Info-boks VÆLGES via boks-vælgeren på info-grafik-handlingen (_tvInfoSlotOpts), ikke som egne nøgler.
+  const projektGrafik = customGrafik.map(g => ({ key: g.trigger_key, label: g.label }));
   // TV-projekter: kun projektets EGNE grafikker + generiske handlinger (ikke kampdag-built-ins).
   const isTv = typeof projektType !== 'undefined' && projektType === 'tv';
   const all = isTv ? [...projektGrafik, ...generisk] : [...kampBuiltIn, ...generisk, ...projektGrafik];
@@ -1700,6 +1708,22 @@ function _tvSubSlotOpts(selected) {
     .filter(s => s.navn.trim() || s.titel.trim());
   const head = `<option value="">→ Vælg ved afvikling</option>`;
   return head + filled.map(s => `<option value="${s.slot}"${String(selected) === String(s.slot) ? ' selected' : ''}>Sub ${s.slot}${s.navn ? ': ' + esc(s.navn) : ''}</option>`).join('');
+}
+
+// Er key en TV-info-grafiks trigger? (custom-grafik i kategori 'info'). Så får makro-handlingen en
+// boks-vælger (hvilken info-boks grafikken skal vise), og fireMakro sender boks-nummeret med triggeren.
+function _isTvInfoTrigger(key) {
+  return typeof projektType !== 'undefined' && projektType === 'tv'
+    && (customGrafik || []).some(g => g.trigger_key === key && g.kategori === 'info');
+}
+
+// <option>-liste over udfyldte info-bokse (til makro-boks-vælgeren).
+function _tvInfoSlotOpts(selected) {
+  const filled = (typeof infoBokse !== 'undefined' ? infoBokse : [])
+    .map((b, i) => ({ slot: i + 1, overskrift: b.overskrift || '', indhold: b.indhold || '' }))
+    .filter(b => b.overskrift.trim() || b.indhold.trim());
+  const head = `<option value="">→ Vælg ved afvikling</option>`;
+  return head + filled.map(b => `<option value="${b.slot}"${String(selected) === String(b.slot) ? ' selected' : ''}>Boks ${b.slot}${b.overskrift ? ': ' + esc(b.overskrift) : ''}</option>`).join('');
 }
 
 function renderMakroer(leftPanel) {
@@ -1873,8 +1897,9 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
   const isWait    = key === 'wait';
   const isAlleAf  = key === 'alle_af';
   const isSub     = _isTvSubTrigger(key);
+  const isInfo    = _isTvInfoTrigger(key);
   const encodedSlot = (key === 'lt_trigger' && value === 'vmixcall') ? 'v' + slot : slot;
-  const slotOpts = isLt ? _buildLtSlotOpts(encodedSlot) : isLineup ? _buildLineupKampOpts(slot) : isSub ? _tvSubSlotOpts(slot) : '';
+  const slotOpts = isLt ? _buildLtSlotOpts(encodedSlot) : isLineup ? _buildLineupKampOpts(slot) : isSub ? _tvSubSlotOpts(slot) : isInfo ? _tvInfoSlotOpts(slot) : '';
   const valOpts = isLineup
     ? `<option value="home"${value === 'home' ? ' selected' : ''}>Hjemme</option>
        <option value="away"${value === 'away' ? ' selected' : ''}>Ude</option>
@@ -1899,7 +1924,7 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
       style="background:none;border:none;color:#666;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;">✕</button>
     <button class="makro-combine-btn" title="Tilføj til gruppe (kører samtidigt)"
       style="background:none;border:none;color:#4a9eff88;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;display:none;">⊕</button>
-    <select class="makro-slot-sel" style="flex:1 0 calc(100% - 22px);min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${(isLt || isLineup || isSub) ? 'block' : 'none'};">
+    <select class="makro-slot-sel" style="flex:1 0 calc(100% - 22px);min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${(isLt || isLineup || isSub || isInfo) ? 'block' : 'none'};">
       ${slotOpts}
     </select>`;
   row.querySelector('.makro-key-sel').addEventListener('change', function() {
@@ -1908,15 +1933,17 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
     const wait    = this.value === 'wait';
     const alleAf  = this.value === 'alle_af';
     const sub     = _isTvSubTrigger(this.value);
+    const info    = _isTvInfoTrigger(this.value);
     const valSel  = row.querySelector('.makro-val-sel');
     const slotSel = row.querySelector('.makro-slot-sel');
-    slotSel.style.display = (lt || lineup || sub) ? 'block' : 'none';
-    slotSel.style.flex    = (lt || lineup || sub) ? '1 0 calc(100% - 22px)' : '';
+    slotSel.style.display = (lt || lineup || sub || info) ? 'block' : 'none';
+    slotSel.style.flex    = (lt || lineup || sub || info) ? '1 0 calc(100% - 22px)' : '';
     valSel.style.display  = (wait || alleAf) ? 'none' : 'block';
     row.querySelector('.makro-wait-inp').style.display = wait ? 'block' : 'none';
     if (lt)     slotSel.innerHTML = _buildLtSlotOpts('');
     if (lineup) slotSel.innerHTML = _buildLineupKampOpts('');
     if (sub)    slotSel.innerHTML = _tvSubSlotOpts('');
+    if (info)   slotSel.innerHTML = _tvInfoSlotOpts('');
     if (lineup) {
       valSel.innerHTML = `<option value="home">Hjemme</option><option value="away">Ude</option><option value="out">AF</option>`;
     } else if (!wait && !alleAf) {

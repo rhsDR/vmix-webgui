@@ -122,11 +122,19 @@ async function runStep(pid, h, slotOverride) {
       if (slotPayload) await upsert(pid, 'lineup_data', JSON.stringify(slotPayload));
     } catch {}
   }
-  // TV sub-grafik i makro: slotOverride (valgt ved afvikling) eller h.slot sætter active_sub FØR
-  // triggeren. Kun for CUSTOM keys (ikke ALLOWED_KEYS → undgår lineup_trigger som også har slot).
-  const _subEff = slotOverride || h.slot || '';
-  if (_subEff && h.value !== 'out' && !ALLOWED_KEYS.includes(h.key)) {
-    await upsert(pid, 'active_sub', String(_subEff));
+  // TV sub/info-grafik i makro med plads: send pladsen MED broadcast'en (info-grafik viser boksen via
+  // runAnimationIN(slot)); for SUB sættes active_sub også (fallback for ældre sub-grafik). Kun CUSTOM keys
+  // (ikke ALLOWED_KEYS → undgår lineup_trigger som også har slot). Kategori afgør om active_sub sættes.
+  const _eff = slotOverride || h.slot || '';
+  if (_eff && h.value !== 'out' && !ALLOWED_KEYS.includes(h.key)) {
+    let kat = '';
+    try {
+      const gr = await sbGet(`projekt_grafik?projekt_id=eq.${encodeURIComponent(pid)}&trigger_key=eq.${encodeURIComponent(h.key)}&limit=1&select=kategori`);
+      kat = gr[0]?.kategori || '';
+    } catch {}
+    if (kat === 'sub') await upsert(pid, 'active_sub', String(_eff));
+    await Promise.all([sbBroadcastRest(pid, h.key, h.value, { slot: String(_eff) }), upsert(pid, h.key, h.value)]);
+    return;
   }
   await Promise.all([sbBroadcastRest(pid, h.key, h.value), upsert(pid, h.key, h.value)]);
 }
