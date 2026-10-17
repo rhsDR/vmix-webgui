@@ -226,13 +226,22 @@
             var _tbl = msg.payload.data.table;
             var rec = msg.payload.data.record;
             if (!rec || rec.projekt_id !== pid) return;
-            // Data ændret (subs eller info-bokse) → bed custom-grafikker genopfriske deres cache, så næste
-            // IN viser friske data UDEN "gammel-så-ny"-flash (grafikken lytter efter {type:'vmixDataChanged'}).
-            if (_tbl === 'subs' || (_tbl === 'settings' && rec.key === 'info_bokse')) {
+            // Data ændret → send SELVE den ændrede data til custom-grafikker (gratis postMessage fra masters
+            // ALLEREDE åbne realtime-forbindelse) så de opdaterer deres cache UDEN et nyt /api/vmix-kald.
+            // Så er cachen frisk før næste IN (ingen "gammel-så-ny"-flash) og trafikken holdes på et minimum.
+            function _pushToCustom(payload){
               Object.keys(customFrameMap).forEach(function(k){
-                try { customFrameMap[k].contentWindow && customFrameMap[k].contentWindow.postMessage({ type: 'vmixDataChanged' }, '*'); } catch (e) {}
+                try { var cw = customFrameMap[k].contentWindow; if (cw) cw.postMessage(payload, '*'); } catch (e) {}
               });
-              if (_tbl === 'subs') return; // subs-række har ingen settings-key at behandle videre
+            }
+            if (_tbl === 'subs') {
+              _pushToCustom({ type: 'vmixData', kind: 'sub', slot: String(rec.slot || ''), navn: rec.navn || '', titel: rec.titel || '' });
+              return; // subs-række har ingen settings-key at behandle videre
+            }
+            if (_tbl === 'settings' && rec.key === 'info_bokse') {
+              var _bokse = []; try { _bokse = JSON.parse(rec.value || '[]'); } catch (e) {}
+              _pushToCustom({ type: 'vmixData', kind: 'info', bokse: Array.isArray(_bokse) ? _bokse : [] });
+              return; // intet andet behandler info_bokse
             }
             if (rec.key === 'overlay_lag_order') {
               _lagFlat = _detectFlat(rec.value);

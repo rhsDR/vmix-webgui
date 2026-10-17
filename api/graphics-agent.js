@@ -149,19 +149,22 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   vises cachen MED DET SAMME og animationen starter straks (ingen fetch, ingen tom boks). Hent ALDRIG data
   FØR du animerer (await fetch → delay) og vent ALDRIG på document.fonts.ready (font-display:swap i
   /fonts.css viser teksten uden ventetid). runAnimationOUT skal også animere straks.
-  FRISKHED (KRITISK — så en rettelse slår igennem FØRSTE gang UDEN "gammel-så-ny"-flash): hold cachen frisk
-  LIVE i stedet for at hente-på-IN. Systemet sender en besked til grafikken når projektdata ændres — lyt:
-    window.addEventListener('message', function(e){ if(e && e.data && e.data.type==='vmixDataChanged'){ /* re-hent /api/vmix (debounce ~300ms) og opdatér cachen */ } });
-  Så er cachen altid frisk FØR næste IN, og runAnimationIN viser bare cache[slot] med det samme. Vis ALDRIG
-  den gamle cache og opdatér den så bagefter (det giver netop det flash). Er grafikken allerede synlig og
-  den viste boks/plads lige blev rettet, må du opdatere den viste tekst stille — ellers rør den ikke.
+  FRISKHED (KRITISK — frisk uden flash OG uden ekstra kald): prefetch ÉN gang ved load; derefter opdaterer
+  systemet cachen LIVE via en window-besked med SELVE dataen — hent ALDRIG /api/vmix igen for at opdatere
+  (hold trafikken på et minimum). Lyt:
+    window.addEventListener('message', function(e){ var d = e && e.data; if (!d || d.type !== 'vmixData') return;
+      if (d.kind === 'sub')  cache[d.slot] = { n:(d.navn||'').normalize('NFC'), t:(d.titel||'').normalize('NFC') };
+      if (d.kind === 'info') (d.bokse||[]).forEach(function(b,i){ cache[String(i+1)] = { overskrift:(b.overskrift||'').normalize('NFC'), indhold:(b.indhold||'').normalize('NFC') }; });
+      /* opdatér også den VISTE tekst stille, hvis den viste plads/boks lige blev ændret */ });
+  Så er cachen altid frisk FØR næste IN. runAnimationIN viser bare cache[slot] med det samme — vis ALDRIG
+  den gamle cache og opdatér den så bagefter (det giver flashet), og lav ALDRIG en refetch-på-IN.
   UNDTAGELSE — lang rulletekst (credits): her må du gerne hente friske data PÅ IN og bygge rullen dér
   (await fetch er ok — delayet er ligegyldigt for en lang rulle, og indholdet er altid friskt).
 - NAVNESKILT/SUB specifikt (sådan undgås delay HELT): systemet kalder runAnimationIN(slot) med sub-pladsen
   som streng "1"–"15". Hent ALLE subs ÉN gang ved LOAD fra /api/vmix (felter S1_n/S1_t … S15_n/S15_t) og
   cache dem; i runAnimationIN(slot) slå cache[slot] op, fyld navn/titel og animér STRAKS. Mangler slot (fx
-  fra Companion), brug sub_aktiv_n/sub_aktiv_t. Hold cachen frisk via {type:'vmixDataChanged'}-beskeden (se
-  FRISKHED) — IKKE en refetch-på-IN der viser gammelt først. Er grafikken ALLEREDE synlig (skift fra én sub
+  fra Companion), brug sub_aktiv_n/sub_aktiv_t. Hold cachen frisk via vmixData-beskeden (se FRISKHED) —
+  IKKE en refetch-på-IN der viser gammelt først. Er grafikken ALLEREDE synlig (skift fra én sub
   til en anden mens den er på), så skift blot teksten til den nye plads med det samme (ingen gen-animation,
   intet flash) — hold styr på en "synlig"-tilstand selv.
   DEMO/PREVIEW (OBLIGATORISK): i agent-preview kaldes runAnimationIN() UDEN plads, og window.__IS_PREVIEW
