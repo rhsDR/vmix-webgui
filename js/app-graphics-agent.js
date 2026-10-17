@@ -381,16 +381,16 @@ async function _gaOnSend() {
 
 let gaExistingHtmlCache = {}; // file_path -> html (session-cache; grafikker ændrer sig sjældent under en agent-session)
 
-// Hent projektets eksisterende grafikker (HTML) så agenten kan lave "noget der ligner".
-// Caches pr. session; base64-tunge fonte/billeder strippes, og hver fil + totalen kappes HÅRDT for at
-// holde input-tokens nede (ellers tipper store kald over Vercels 60s-loft → 504). Maks 2 grafikker /
-// ~6KB pr. fil / ~12KB total. Sendes kun tidligt i samtalen (reference er mest relevant ved starten).
+// Hent projektets eksisterende grafikker (HTML) så agenten kan se/henvise til dem ("som supershow sub"
+// / "noget der ligner"). Caches pr. session; base64-tunge fonte/billeder strippes. Kappet moderat (maks
+// 3 grafikker / ~12KB pr. fil / ~28KB total) — hver lille grafik sendes HEL (så animations-JS'en er med).
+// Sendes på HVER tur (streaming håndterer nu 504, så ingen grund til at skjule referencen senere).
 async function _gaLoadExistingGraphics() {
   const rows = (customGrafik || []).filter(g => g && g.file_path && g.id !== gaRevisionId);
   const out = [];
-  let budget = 12000;
+  let budget = 28000;
   for (const g of rows) {
-    if (out.length >= 2 || budget <= 0) break;
+    if (out.length >= 3 || budget <= 0) break;
     let html = gaExistingHtmlCache[g.file_path];
     if (html == null) {
       try {
@@ -402,7 +402,7 @@ async function _gaLoadExistingGraphics() {
     }
     if (!html) continue;
     let h = html.replace(/(url\(\s*['"]?data:[^,]*base64,)[A-Za-z0-9+/=\s]+/gi, '$1…STRIPPED…');
-    if (h.length > 6000) h = h.slice(0, 6000) + '\n<!-- …afkortet… -->';
+    if (h.length > 12000) h = h.slice(0, 12000) + '\n<!-- …afkortet… -->';
     out.push({ label: g.label || g.trigger_key, kategori: g.kategori || 'custom', trigger_key: g.trigger_key, html: h });
     budget -= h.length;
   }
@@ -412,10 +412,9 @@ async function _gaLoadExistingGraphics() {
 async function _gaCallAgent() {
   gaTruncated = false;
   try {
-    // Send kun grafik-referencen på de første par ture (mest relevant ved "lav noget der ligner");
-    // på senere ture/rettelser droppes den for at holde input-tokens — og dermed svartiden — nede.
-    const _userTurns = (gaMessages || []).filter(m => m.role === 'user').length;
-    const existing = _userTurns <= 2 ? await _gaLoadExistingGraphics() : [];
+    // Grafik-referencen sendes på HVER tur, så agenten altid kan se/henvise til projektets grafikker
+    // (fx "som supershow sub"). Streaming håndterer 504, og referencen er kappet (se _gaLoadExistingGraphics).
+    const existing = await _gaLoadExistingGraphics();
     const r = await apiFetch('/api/graphics-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
