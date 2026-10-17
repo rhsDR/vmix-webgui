@@ -172,7 +172,10 @@
           topic: 'triggers-' + pid,
           postgresChanges: [
             { event: 'UPDATE', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + pid },
-            { event: 'INSERT', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + pid }
+            { event: 'INSERT', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + pid },
+            // subs-ændringer → ping custom-grafik så den genopfrisker sin cache (frisk FØR næste IN, ingen flash)
+            { event: 'UPDATE', schema: 'public', table: 'subs', filter: 'projekt_id=eq.' + pid },
+            { event: 'INSERT', schema: 'public', table: 'subs', filter: 'projekt_id=eq.' + pid }
           ],
           // Ved (gen)forbindelse: hent aktuel custom-grafik-state, så triggers
           // affyret mens forbindelsen var nede/åbnede ikke går tabt
@@ -217,11 +220,20 @@
               } catch {}
               return;
             }
-            // Databaseændringer (settings) — Companion-triggers, lag-orden m.m.
+            // Databaseændringer (settings/subs) — Companion-triggers, lag-orden, data-opfriskning m.m.
             if (msg.event !== 'postgres_changes') return;
             if (!msg.payload || !msg.payload.data) return;
+            var _tbl = msg.payload.data.table;
             var rec = msg.payload.data.record;
             if (!rec || rec.projekt_id !== pid) return;
+            // Data ændret (subs eller info-bokse) → bed custom-grafikker genopfriske deres cache, så næste
+            // IN viser friske data UDEN "gammel-så-ny"-flash (grafikken lytter efter {type:'vmixDataChanged'}).
+            if (_tbl === 'subs' || (_tbl === 'settings' && rec.key === 'info_bokse')) {
+              Object.keys(customFrameMap).forEach(function(k){
+                try { customFrameMap[k].contentWindow && customFrameMap[k].contentWindow.postMessage({ type: 'vmixDataChanged' }, '*'); } catch (e) {}
+              });
+              if (_tbl === 'subs') return; // subs-række har ingen settings-key at behandle videre
+            }
             if (rec.key === 'overlay_lag_order') {
               _lagFlat = _detectFlat(rec.value);
               mainOrder = rec.value ? rec.value.split(',').map(function(s){return s.trim();}).filter(Boolean) : [...DEFAULT_ORDER];

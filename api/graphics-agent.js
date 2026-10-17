@@ -149,21 +149,21 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   vises cachen MED DET SAMME og animationen starter straks (ingen fetch, ingen tom boks). Hent ALDRIG data
   FØR du animerer (await fetch → delay) og vent ALDRIG på document.fonts.ready (font-display:swap i
   /fonts.css viser teksten uden ventetid). runAnimationOUT skal også animere straks.
-  FRISKHED (KRITISK): når du bruger cache, SKAL runAnimationIN også hente friske data i baggrunden og
-  OPDATERE DEN VISTE TEKST (ikke kun cachen) når de kommer — ellers slår en rettelse lavet efter load først
-  igennem NÆSTE gang grafikken vises (ikke første). Opdatér kun den tekst der faktisk er ændret (stille,
-  uden gen-animation).
+  FRISKHED (KRITISK — så en rettelse slår igennem FØRSTE gang UDEN "gammel-så-ny"-flash): hold cachen frisk
+  LIVE i stedet for at hente-på-IN. Systemet sender en besked til grafikken når projektdata ændres — lyt:
+    window.addEventListener('message', function(e){ if(e && e.data && e.data.type==='vmixDataChanged'){ /* re-hent /api/vmix (debounce ~300ms) og opdatér cachen */ } });
+  Så er cachen altid frisk FØR næste IN, og runAnimationIN viser bare cache[slot] med det samme. Vis ALDRIG
+  den gamle cache og opdatér den så bagefter (det giver netop det flash). Er grafikken allerede synlig og
+  den viste boks/plads lige blev rettet, må du opdatere den viste tekst stille — ellers rør den ikke.
   UNDTAGELSE — lang rulletekst (credits): her må du gerne hente friske data PÅ IN og bygge rullen dér
-  (await fetch er ok — delayet er ligegyldigt for en lang rulle, og indholdet er altid friskt). Prefetch/
-  cache + friskheds-reapply er mest til HURTIGE grafikker (navneskilt/sub, info-boks, bug, lower-third).
+  (await fetch er ok — delayet er ligegyldigt for en lang rulle, og indholdet er altid friskt).
 - NAVNESKILT/SUB specifikt (sådan undgås delay HELT): systemet kalder runAnimationIN(slot) med sub-pladsen
   som streng "1"–"15". Hent ALLE subs ÉN gang ved LOAD fra /api/vmix (felter S1_n/S1_t … S15_n/S15_t) og
   cache dem; i runAnimationIN(slot) slå cache[slot] op, fyld navn/titel og animér STRAKS. Mangler slot (fx
-  fra Companion), brug sub_aktiv_n/sub_aktiv_t. Kør ALTID en baggrunds-refetch i runAnimationIN og opdatér
-  den VISTE tekst (ikke kun cachen) når den returnerer, hvis den valgte plads er ændret siden load. Er
-  grafikken ALLEREDE synlig (skift fra én sub til en
-  anden mens den er på), så skift blot teksten til den nye plads (evt. hurtig cross-fade/opdatering) i
-  stedet for at gen-animere hele vejen ind — hold styr på en "synlig"-tilstand selv.
+  fra Companion), brug sub_aktiv_n/sub_aktiv_t. Hold cachen frisk via {type:'vmixDataChanged'}-beskeden (se
+  FRISKHED) — IKKE en refetch-på-IN der viser gammelt først. Er grafikken ALLEREDE synlig (skift fra én sub
+  til en anden mens den er på), så skift blot teksten til den nye plads med det samme (ingen gen-animation,
+  intet flash) — hold styr på en "synlig"-tilstand selv.
   DEMO/PREVIEW (OBLIGATORISK): i agent-preview kaldes runAnimationIN() UDEN plads, og window.__IS_PREVIEW
   er true (ingen fetch). Bag derfor PÆNE demo-værdier ind i HTML'en (fx navn "Navn Navnesen", titel
   "Titel/rolle") der vises når der ingen plads/live-data er — grafikken må ALDRIG være tom i preview.
