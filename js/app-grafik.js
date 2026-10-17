@@ -1274,11 +1274,45 @@ function renderGrafikTV(container) {
     }).join('');
   };
 
+  // INFO afvikles som SUB: liste af projektets info-bokse (nr + overskrift) med PRW / < OUT / > IN.
+  // Alle rækker deler projektets egen info-grafik (første custom-grafik i kategori 'info'); > IN sender
+  // boks-nummeret MED triggeren (slot), så grafikken viser netop den boks (fraCache(slot)). Skift mellem
+  // bokse mens live = rent tekst-skift i grafikken.
+  const _tvInfoListHTML = () => {
+    const infoGfx = catItems('info');
+    if (!infoGfx.length) return '<div class="grafik-v2-empty">Ingen info-grafik endnu. Opret én via agenten eller en skabelon med <b>DATAKILDE = Info</b>.</div>';
+    const gfx = infoGfx[0];
+    const trig = gfx.trig;
+    const trigLive = (grafiktState[trig] || 'out') !== 'out';
+    const curSlot = grafiktState['_info_slot'] || 0;
+    const boxes = (typeof infoBokse !== 'undefined' ? infoBokse : [])
+      .map((b, i) => ({ slot: i + 1, overskrift: b.overskrift || '', indhold: b.indhold || '' }))
+      .filter(b => b.overskrift.trim() || b.indhold.trim());
+    if (!boxes.length) return '<div class="grafik-v2-empty">Ingen info-bokse — skriv i INFO-fanen.</div>';
+    return boxes.map(b => {
+      const slotAct = trigLive && String(curSlot) === String(b.slot);
+      return `<div class="grafik-block" style="--g-color:${gfx.color}">
+        <span class="grafik-block-num">${b.slot}</span>
+        <div class="grafik-block-info">
+          <span class="grafik-block-name${!b.overskrift ? ' muted' : ''}">${esc(b.overskrift || '(uden overskrift)')}</span>
+          ${b.indhold ? `<span class="grafik-block-sub">${esc(b.indhold.split('\n')[0])}</span>` : ''}
+        </div>
+        <div class="grafik-block-actions">
+          <button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" title="Preview">PRW</button>
+          <button class="grafik-btn-out" data-trig="${esc(trig)}" data-val="out"${!slotAct ? ' disabled' : ''}>&lt; OUT</button>
+          <button class="grafik-btn-in${slotAct ? ' on' : ''} tv-info-slot-in" data-trig="${esc(trig)}" data-slot="${b.slot}">&gt; IN</button>
+        </div>
+      </div>`;
+    }).join('');
+  };
+
   let contentHTML;
   if (isAfv) {
     contentHTML = _afvMakroViewHTML();
   } else if (active === 'sub') {
     contentHTML = _tvSubListHTML();
+  } else if (active === 'info') {
+    contentHTML = _tvInfoListHTML();
   } else {
     contentHTML = catItems(active).map(rowHTML).join('') || '<div class="grafik-v2-empty">Ingen grafik i denne kategori.</div>';
   }
@@ -1399,6 +1433,21 @@ function renderGrafikTV(container) {
         // /api/vmix + Companion. slot strippes fra selve DB-rækken i sbUpsert.
         await sbUpsert('settings', { projekt_id: aktivProjektId, key: trig, value: 'in', slot: slot || undefined });
       } catch { toast('Fejl ved sub-trigger', 'err'); }
+    }));
+
+  // INFO-boks: > IN sender boks-nummeret (slot) MED triggeren → master kalder grafikkens
+  // runAnimationIN(slot) → viser netop den boks (fraCache). Ingen DB-"active" nødvendig; grafikken
+  // har alle bokse cachet og vælger ud fra slot. Skift mellem bokse mens live = rent tekst-skift.
+  container.querySelectorAll('.tv-info-slot-in').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      if (btn.disabled) return;
+      const slot = btn.dataset.slot, trig = btn.dataset.trig;
+      grafiktState['_info_slot'] = String(slot);
+      grafiktState[trig] = 'in';
+      renderGrafikTV(container);
+      try {
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: trig, value: 'in', slot: slot || undefined });
+      } catch { toast('Fejl ved info-trigger', 'err'); }
     }));
 
   container.querySelectorAll('.tv-sub-makro-add').forEach(btn =>
