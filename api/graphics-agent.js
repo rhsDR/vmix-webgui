@@ -153,6 +153,9 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   OPDATERE DEN VISTE TEKST (ikke kun cachen) når de kommer — ellers slår en rettelse lavet efter load først
   igennem NÆSTE gang grafikken vises (ikke første). Opdatér kun den tekst der faktisk er ændret (stille,
   uden gen-animation).
+  UNDTAGELSE — lang rulletekst (credits): her må du gerne hente friske data PÅ IN og bygge rullen dér
+  (await fetch er ok — delayet er ligegyldigt for en lang rulle, og indholdet er altid friskt). Prefetch/
+  cache + friskheds-reapply er mest til HURTIGE grafikker (navneskilt/sub, info-boks, bug, lower-third).
 - NAVNESKILT/SUB specifikt (sådan undgås delay HELT): systemet kalder runAnimationIN(slot) med sub-pladsen
   som streng "1"–"15". Hent ALLE subs ÉN gang ved LOAD fra /api/vmix (felter S1_n/S1_t … S15_n/S15_t) og
   cache dem; i runAnimationIN(slot) slå cache[slot] op, fyld navn/titel og animér STRAKS. Mangler slot (fx
