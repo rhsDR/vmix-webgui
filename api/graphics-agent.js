@@ -164,6 +164,10 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   grafikken ALLEREDE synlig (skift fra én sub til en
   anden mens den er på), så skift blot teksten til den nye plads (evt. hurtig cross-fade/opdatering) i
   stedet for at gen-animere hele vejen ind — hold styr på en "synlig"-tilstand selv.
+  DEMO/PREVIEW (OBLIGATORISK): i agent-preview kaldes runAnimationIN() UDEN plads, og window.__IS_PREVIEW
+  er true (ingen fetch). Bag derfor PÆNE demo-værdier ind i HTML'en (fx navn "Navn Navnesen", titel
+  "Titel/rolle") der vises når der ingen plads/live-data er — grafikken må ALDRIG være tom i preview.
+  Samme gælder info/credit/ticker-grafik (demo-overskrift/indhold, demo-credits, demo-ticker).
 - Brug CSS-transitions/@keyframes på transform + opacity (se YDELSE nedenfor) til AL animation —
   ingen eksterne animations-biblioteker. Broadcast-passende: rolige, rene bevægelser.
   Sæt starttilstand skjult/forskudt, så grafikken ikke "blinker" før runAnimationIN kaldes.
