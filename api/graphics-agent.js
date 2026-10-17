@@ -149,11 +149,16 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   vises cachen MED DET SAMME og animationen starter straks (ingen fetch, ingen tom boks). Hent ALDRIG data
   FØR du animerer (await fetch → delay) og vent ALDRIG på document.fonts.ready (font-display:swap i
   /fonts.css viser teksten uden ventetid). runAnimationOUT skal også animere straks.
+  FRISKHED (KRITISK): når du bruger cache, SKAL runAnimationIN også hente friske data i baggrunden og
+  OPDATERE DEN VISTE TEKST (ikke kun cachen) når de kommer — ellers slår en rettelse lavet efter load først
+  igennem NÆSTE gang grafikken vises (ikke første). Opdatér kun den tekst der faktisk er ændret (stille,
+  uden gen-animation).
 - NAVNESKILT/SUB specifikt (sådan undgås delay HELT): systemet kalder runAnimationIN(slot) med sub-pladsen
   som streng "1"–"15". Hent ALLE subs ÉN gang ved LOAD fra /api/vmix (felter S1_n/S1_t … S15_n/S15_t) og
   cache dem; i runAnimationIN(slot) slå cache[slot] op, fyld navn/titel og animér STRAKS. Mangler slot (fx
-  fra Companion), brug sub_aktiv_n/sub_aktiv_t. Kør evt. en baggrunds-refetch i runAnimationIN og opdatér
-  teksten stille, hvis en sub er rettet efter load. Er grafikken ALLEREDE synlig (skift fra én sub til en
+  fra Companion), brug sub_aktiv_n/sub_aktiv_t. Kør ALTID en baggrunds-refetch i runAnimationIN og opdatér
+  den VISTE tekst (ikke kun cachen) når den returnerer, hvis den valgte plads er ændret siden load. Er
+  grafikken ALLEREDE synlig (skift fra én sub til en
   anden mens den er på), så skift blot teksten til den nye plads (evt. hurtig cross-fade/opdatering) i
   stedet for at gen-animere hele vejen ind — hold styr på en "synlig"-tilstand selv.
 - Brug CSS-transitions/@keyframes på transform + opacity (se YDELSE nedenfor) til AL animation —
