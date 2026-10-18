@@ -160,6 +160,12 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   den gamle cache og opdatér den så bagefter (det giver flashet), og lav ALDRIG en refetch-på-IN.
   UNDTAGELSE — lang rulletekst (credits): her må du gerne hente friske data PÅ IN og bygge rullen dér
   (await fetch er ok — delayet er ligegyldigt for en lang rulle, og indholdet er altid friskt).
+- AFSLØRING/VÆKST (undgå "tom-så-tekst" og spring i to steps): hvis en grafik vokser/ruller ind (fx en
+  info-boks der kommer top-ned), så BYG indholdet FØRST så elementet har sin FULDE størrelse (tekst skjult,
+  opacity 0), og afslør så boks + tekst SAMMEN i ÉN jævn bevægelse (samme retning + varighed). ALDRIG:
+  afslør en tom/lav boks og fyld den med tekst bagefter (giver tom-boks-flash eller et spring til fuld
+  højde). Vokser den, så forankr i den kant den vokser FRA (top-ned ⇒ forankr top via top:, så den ikke
+  "hopper"); clip-path top-ned = inset(0 0 100% 0) → inset(0 0 0 0). Samme princip for alle retninger.
 - NAVNESKILT/SUB specifikt (sådan undgås delay HELT): systemet kalder runAnimationIN(slot) med sub-pladsen
   som streng "1"–"15". Hent ALLE subs ÉN gang ved LOAD fra /api/vmix (felter S1_n/S1_t … S15_n/S15_t) og
   cache dem; i runAnimationIN(slot) slå cache[slot] op, fyld navn/titel og animér STRAKS. Mangler slot (fx
