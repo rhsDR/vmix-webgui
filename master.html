@@ -34,6 +34,7 @@
     const customFrameMap = {};
     const customState    = {};
     const customSlot     = {}; // sidste sub-plads pr. trigger-key — så skift mellem subs (value stadig 'in') går igennem
+    const customCat      = {}; // kategori pr. trigger-key (fx 'sub') — så active_sub-skift kun rammer sub-grafik
     const customStateTime = {};
 
     // Grafik-definitioner: id matcher iframe-id og Supabase-nøglen i overlay_lag_order
@@ -243,6 +244,20 @@
               _pushToCustom({ type: 'vmixData', kind: 'info', bokse: Array.isArray(_bokse) ? _bokse : [] });
               return; // intet andet behandler info_bokse
             }
+            // active_sub ændret → skift den SYNLIGE sub-grafik til den nye plads via grafikkens egen
+            // runAnimationIN(slot)-skift. Dette går via den PÅLIDELIGE realtime-DB-ændring (ikke den
+            // flygtige broadcast), så "skift til en anden sub mens live" virker også hvis broadcast tabes.
+            // Kun sub-kategori-frames der allerede er 'in' (ellers venter vi på selve triggeren).
+            if (_tbl === 'settings' && rec.key === 'active_sub') {
+              var _asSlot = String(rec.value || '');
+              Object.keys(customFrameMap).forEach(function (k) {
+                if (customCat[k] === 'sub' && customState[k] === 'in') {
+                  customSlot[k] = _asSlot;
+                  try { var cw = customFrameMap[k].contentWindow; if (cw && cw.runAnimationIN) cw.runAnimationIN(_asSlot); } catch (e) {}
+                }
+              });
+              return;
+            }
             if (rec.key === 'overlay_lag_order') {
               _lagFlat = _detectFlat(rec.value);
               mainOrder = rec.value ? rec.value.split(',').map(function(s){return s.trim();}).filter(Boolean) : [...DEFAULT_ORDER];
@@ -319,6 +334,7 @@
             if (!DEFAULT_ORDER.includes(shortId)) DEFAULT_ORDER.push(shortId);
             customFrameMap[g.trigger_key] = iframe;
             customState[g.trigger_key] = 'out';
+            customCat[g.trigger_key] = g.kategori || '';
           }));
           applyOrder(DEFAULT_ORDER);
         }
