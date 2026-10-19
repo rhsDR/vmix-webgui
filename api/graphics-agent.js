@@ -166,6 +166,10 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   afslør en tom/lav boks og fyld den med tekst bagefter (giver tom-boks-flash eller et spring til fuld
   højde). Vokser den, så forankr i den kant den vokser FRA (top-ned ⇒ forankr top via top:, så den ikke
   "hopper"); clip-path top-ned = inset(0 0 100% 0) → inset(0 0 0 0). Samme princip for alle retninger.
+  Skal teksten "skrives på" MENS boksen vokser (fx flerliniet indhold), så tilføj teksten i små bidder
+  (1-2 ord ad gangen, ~60-120ms mellem), giv boksen overflow:hidden + transition:height, og sæt efter hver
+  bid boksens height = dens scrollHeight → boksen vokser ét trin ad gangen i takt med ordene (ikke fuld
+  højde fra start, ikke pre-placerede ord der kun fader via opacity).
 - NAVNESKILT/SUB specifikt (sådan undgås delay HELT): systemet kalder runAnimationIN(slot) med sub-pladsen
   som streng "1"–"15". Hent ALLE subs ÉN gang ved LOAD fra /api/vmix (felter S1_n/S1_t … S15_n/S15_t) og
   cache dem; i runAnimationIN(slot) slå cache[slot] op, fyld navn/titel og animér STRAKS. Mangler slot (fx
