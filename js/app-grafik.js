@@ -1358,14 +1358,21 @@ function renderGrafikTV(container) {
     // SUBS — hver plads sætter active_sub + trigger projektets sub-grafik (kræver en sub-grafik).
     const subGfx = catItems('sub')[0];
     if (subGfx) {
-      const filled = (typeof subs !== 'undefined' ? subs : [])
-        .map((s, i) => ({ slot: i + 1, navn: s.navn || '', titel: s.titel || '' }))
-        .filter(s => s.navn.trim() || s.titel.trim());
-      if (filled.length) {
-        html += '<div class="grafik-companion-subhead">SUBS</div>';
-        html += filled.map(s => row('Sub ' + s.slot + (s.navn ? ': ' + s.navn : ''), T(`key=${encodeURIComponent(subGfx.trig)}&value=in&slot=${s.slot}`), subGfx.color)).join('');
-        html += row('SUB AF', T(`key=${encodeURIComponent(subGfx.trig)}&value=out`), subGfx.color);
+      // Ét PÅ-link PR. PLADS: 1-15 = subs ("Sub N"), 16-23 = vMix Calls ("V k"). ALLE pladser får et FAST
+      // link (uanset om de er udfyldt) så Companion-knapper kan forhåndstildeles — udfyld blot navn/titel i
+      // SUBS-fanen bagefter. Navnet vises i labelen når pladsen er udfyldt. + ét enkelt SUB AF.
+      const _subArr = (typeof subs !== 'undefined' ? subs : []);
+      const _vmcArr = (typeof vmixCalls !== 'undefined' ? vmixCalls : []);
+      html += '<div class="grafik-companion-subhead">SUBS</div>';
+      for (let s = 1; s <= 15; s++) {
+        const nv = (_subArr[s - 1] && (_subArr[s - 1].navn || '').trim()) ? ': ' + _subArr[s - 1].navn : '';
+        html += row('Sub ' + s + nv, T(`key=${encodeURIComponent(subGfx.trig)}&value=in&slot=${s}`), subGfx.color);
       }
+      for (let k = 1; k <= 8; k++) {
+        const nv = (_vmcArr[k - 1] && (_vmcArr[k - 1].navn || '').trim()) ? ': ' + _vmcArr[k - 1].navn : '';
+        html += row('V' + k + nv, T(`key=${encodeURIComponent(subGfx.trig)}&value=in&slot=${15 + k}`), subGfx.color);
+      }
+      html += row('SUB AF', T(`key=${encodeURIComponent(subGfx.trig)}&value=out`), subGfx.color);
     }
     // INFO — ét PÅ-link pr. udfyldt info-boks (trigger info-grafikken med boksens plads) + ét enkelt INFO AF.
     // Præcis som SUBS; info-grafikken vises derfor IKKE under EGNE GRAFIK.
