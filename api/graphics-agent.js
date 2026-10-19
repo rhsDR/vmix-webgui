@@ -174,6 +174,9 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   boksen+tekst-elementet en FAST bredde (fx width:<X>px + box-sizing:border-box, eller mål den fulde teksts
   bredde én gang og lås den FØR animationen), så ombrydning sker inden for en konstant bredde — kun højden
   vokser. Ingen bredde-"jitter" ved linjeskift.
+  SKÆVE BOKSE (skewX/skewY) der vokser: sæt transform-origin til det HJØRNE boksen vokser fra (fx
+  left top ved top-ned-vækst). Uden det regnes skewen om boksens MIDTE, så den skæve form forskydes
+  horisontalt hver gang højden ændres (ser ud som om boksen "bevæger sig" ved hvert linjeskift).
 - NAVNESKILT/SUB specifikt (sådan undgås delay HELT): systemet kalder runAnimationIN(slot) med sub-pladsen
   som streng "1"–"15". Hent ALLE subs ÉN gang ved LOAD fra /api/vmix (felter S1_n/S1_t … S15_n/S15_t) og
   cache dem; i runAnimationIN(slot) slå cache[slot] op, fyld navn/titel og animér STRAKS. Mangler slot (fx
