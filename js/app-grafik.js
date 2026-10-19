@@ -369,8 +369,8 @@ function renderGrafik() {
         m.handlinger?.some(h => h.key === 'lt_trigger' && String(h.slot) === String(slot))
       );
       const makroBtn = subMakro
-        ? `<button class="grafik-btn-prw makro-sub-fire-btn" data-makro-id="${subMakro.id}"
-             title="${esc(subMakro.label)}" style="color:${subMakro.farve || '#4a9eff'}">▶</button>`
+        ? `<button class="${(subMakro.handlinger || []).some(h => h.key !== 'wait' && h.key !== 'alle_af' && h.value !== 'out') ? 'grafik-btn-in' : 'grafik-btn-out'} makro-sub-fire-btn" data-makro-id="${subMakro.id}"
+             title="${esc(subMakro.label)}">▶</button>`
         : `<button class="grafik-btn-prw makro-sub-add-btn" data-slot="${slot}"
              title="Opret makro for denne sub">＋</button>`;
       return `<div class="grafik-block" style="--g-color:${g.color}">
@@ -618,6 +618,7 @@ function renderGrafik() {
               slotPickerHTML = `<select class="afv-slot-sel" style="background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;">${opts}</select>`;
             }
           }
+          const fireOn = (m.handlinger || []).some(h => h.key !== 'wait' && h.key !== 'alle_af' && h.value !== 'out');
           return `<div class="grafik-block afv-makro-row" draggable="true" data-makro-id="${m.id}" style="--g-color:${m.farve || '#4a9eff'}">
             <span class="afv-drag-handle" style="color:#555;font-size:18px;user-select:none;flex-shrink:0;cursor:grab;padding:0 6px 0 2px;">⠿</span>
             <div class="grafik-block-info">
@@ -627,7 +628,7 @@ function renderGrafik() {
             <div class="grafik-block-actions">
               <button class="grafik-btn-prw afv-edit-btn" data-id="${m.id}" title="Redigér">✎</button>
               ${slotPickerHTML}
-              <button class="grafik-btn-in afv-fire-btn" style="background:${m.farve || '#4a9eff'}22;border-color:${m.farve || '#4a9eff'}66;color:${m.farve || '#4a9eff'}" data-id="${m.id}">▶ KØR</button>
+              <button class="${fireOn ? 'grafik-btn-in' : 'grafik-btn-out'} afv-fire-btn" data-id="${m.id}">▶ KØR</button>
             </div>
           </div>`;
         }).join('')
@@ -1267,7 +1268,7 @@ function renderGrafikTV(container) {
       const subMakro = (typeof makroer !== 'undefined' ? makroer : []).find(m =>
         m.handlinger?.some(h => h.key === trig && String(h.slot) === String(s.slot)));
       const makroBtn = subMakro
-        ? `<button class="grafik-btn-prw makro-sub-fire-btn" data-makro-id="${subMakro.id}" title="${esc(subMakro.label)}" style="color:${subMakro.farve || '#4a9eff'}">▶</button>`
+        ? `<button class="${(subMakro.handlinger || []).some(h => h.key !== 'wait' && h.key !== 'alle_af' && h.value !== 'out') ? 'grafik-btn-in' : 'grafik-btn-out'} makro-sub-fire-btn" data-makro-id="${subMakro.id}" title="${esc(subMakro.label)}">▶</button>`
         : `<button class="grafik-btn-prw tv-sub-makro-add" data-mk-trig="${esc(trig)}" data-slot="${s.slot}" title="Opret makro for denne sub">＋</button>`;
       return `<div class="grafik-block" style="--g-color:${gfx.color}">
         <span class="grafik-block-num">${s.slot}</span>
@@ -1800,6 +1801,7 @@ function renderMakroer(leftPanel) {
         });
         return g.steps.length > 1 ? `[${labels.join(' + ')}]` : labels[0];
       }).join(' · ');
+      const fireOn = (m.handlinger || []).some(h => h.key !== 'wait' && h.key !== 'alle_af' && h.value !== 'out');
       html += `
       <div class="grafik-block" style="--g-color:${m.farve || '#4a9eff'}">
         <div class="grafik-block-info">
@@ -1811,7 +1813,7 @@ function renderMakroer(leftPanel) {
             onclick="openMakroModal('${m.id}')">✎</button>
           <button class="grafik-btn-prw" title="Slet" style="color:#c44"
             onclick="deleteMakro('${m.id}')">✕</button>
-          <button class="grafik-btn-in" style="background:${m.farve || '#4a9eff'}22;border-color:${m.farve || '#4a9eff'}66;color:${m.farve || '#4a9eff'}"
+          <button class="${fireOn ? 'grafik-btn-in' : 'grafik-btn-out'}"
             onclick="fireMakro('${m.id}')">▶ KØR</button>
         </div>
       </div>`;
