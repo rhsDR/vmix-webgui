@@ -137,7 +137,10 @@ async function _fireOneHandling(h, slotOverride) {
       grafiktState['active_sub'] = String(eff);
       if (typeof activeSubSlot !== 'undefined') activeSubSlot = parseInt(eff) || 0;
     }
-    await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value });
+    // Send pladsen MED triggeren (som info-trinnet og det enkelte IN-klik) → broadcast bærer slot, så
+    // master kalder runAnimationIN(slot) og de-dupper på værdi+plads. Uden slot ser master value='in'+
+    // slot='' hver gang og springer efterfølgende subs over → viser samme sub hele makroen igennem.
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value, slot: (h.value !== 'out' && eff) ? String(eff) : undefined });
     grafiktState[h.key] = h.value;
     return;
   }
