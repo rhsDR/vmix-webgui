@@ -11,6 +11,25 @@ async function sbGet(path) {
   return res.json();
 }
 
+// ASCII-sikker JSON: ethvert tegn > U+007F skrives som \uXXXX, så body'en bliver REN ASCII (identiske
+// bytes i BÅDE latin1 og UTF-8). Så overlever æøå uanset hvordan klienten tolker charset:
+//  - Companion / UTF-8-læsere: fik "V\xE6rter" = "V<fejl>rter" før (latin1-byte 0xE6 er ugyldig UTF-8);
+//    nu står der "Værter" i rene ASCII-bytes, og JSON-parseren opløser æ -> æ.
+//  - Vores egen grafik: TextDecoder('iso-8859-1') af ren ASCII giver den SAMME streng -> JSON.parse
+//    opløser æ -> æ. Uændret adfærd — grafikken skal IKKE røres.
+//  Bonus: tegn over U+00FF (fx en-dash) overlever nu korrekt; latin1 truncerede dem til forkerte tegn før.
+//  Implementeret som en char-code-loop (ikke regex) så KILDEKODEN her er ren ASCII og ikke kan blive
+//  ødelagt af editor/git.
+function asciiJson(obj) {
+  const s = JSON.stringify(obj);
+  let out = '';
+  for (let i = 0; i < s.length; i++) {
+    const code = s.charCodeAt(i);
+    out += code > 0x7f ? '\\u' + code.toString(16).padStart(4, '0') : s[i];
+  }
+  return out;
+}
+
 export default async function handler(req, res) {
   const { id } = req.query;
   if (!id) return res.status(400).json({ error: 'projekt id mangler' });
@@ -35,7 +54,7 @@ export default async function handler(req, res) {
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Content-Type', 'application/json; charset=iso-8859-1');
-      return res.status(200).end(Buffer.from(JSON.stringify([{ aktiv: false }]), 'latin1'));
+      return res.status(200).end(Buffer.from(asciiJson([{ aktiv: false }]), 'latin1'));
     }
 
     // Byg ticker-strenge — kun ON AIR
@@ -136,7 +155,7 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/json; charset=iso-8859-1');
-    const buf = Buffer.from(JSON.stringify([json]), 'latin1');
+    const buf = Buffer.from(asciiJson([json]), 'latin1');
     return res.status(200).end(buf);
 
   } catch (err) {
