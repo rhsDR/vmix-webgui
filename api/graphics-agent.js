@@ -180,6 +180,16 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   giv containeren width:fit-content + left:50% + transform:translateX(-50%) (IKKE en fast bredde) — så
   centreres den automatisk efter det faktiske indhold. En fast bredde + venstrestillet indhold giver en
   boks der ligger til venstre i et bredere (centreret) felt.
+  BJÆLKE/NAVNESKILT HUGGER TEKSTEN (ens luft i begge sider): en farvet bjælke bag tekst (sub/lower-third/
+  navneskilt) må ALDRIG være bredere end teksten + ens luft i hver side. Er den for bred (tom plads til
+  HØJRE for teksten), er bredden næsten altid regnet forkert. Sætter du width ud fra en MÅLT tekstbredde,
+  så pas på box-sizing: med content-box (STANDARD) lægger browseren SELV padding-left+padding-right oven i
+  width → så skal width = KUN den målte tekstbredde. Lægger du OGSÅ padding-værdierne oven i width (fx
+  width = tekst + venstre + højre padding), tælles padding DOBBELT = stor tom plads til højre. Enten:
+  (a) content-box + width = kun tekstbredden, ELLER (b) box-sizing:border-box + width = tekst + venstre +
+  højre padding. Vælg ÉN model — aldrig begge. Mål: synlig venstre luft (padding-left minus evt. accent-
+  streg/kant) = højre luft (padding-right). Samme gælder en fast width:fit-content/inline-block løsning:
+  bjælken skal følge teksten, ikke have en fast eller for stor bredde.
   SKÆVE BOKSE (skewX/skewY) der vokser: sæt transform-origin til det HJØRNE boksen vokser fra (fx
   left top ved top-ned-vækst). Uden det regnes skewen om boksens MIDTE, så den skæve form forskydes
   horisontalt hver gang højden ændres (ser ud som om boksen "bevæger sig" ved hvert linjeskift). Et evt.
