@@ -116,8 +116,9 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
 - Felter (kode = hvad det ER — men TAL om dem i ALMINDELIGT SPROG over for operatøren, ikke koderne):
   · projekt.navn = projektets navn.
   · sub_aktiv_slot / sub_aktiv_n / sub_aktiv_t = slot-nr / navn / titel på den AKTIVE sub (navneskiltet).
-  · S1_n/S1_t … S15 = navn / titel for sub nr. 1-15 (navneskilte/lower-thirds).
-  · VMC1_n/_t/_l … (1-8) = navn / titel / link for vMix-opkald.
+  · S1_n/S1_t … S15 = navn / titel for sub nr. 1-15. PLUS S16_n/S16_t … S23 = vMix Calls brugt som subs
+    (VMC1 → plads 16 … VMC8 → plads 23). En sub-grafik skal derfor cache pladser 1-30 (ikke kun 1-15).
+  · VMC1_n/_t/_l … (1-8) = navn / titel / link for vMix-opkald (link bruges kun til kampdag-vmixcall).
   · T1_ov/T1_txt/T1_air/T1_brk … (1-20) = ticker-slot: overskrift / tekst / on-air / breaking.
   · ticker_normal, ticker_breaking = hele den samlede rulletekst (FÆRDIG HTML).
   · credits = ARRAY af rulletekst-sektioner: [{side:'V'|'H' (venstre/højre kolonne), orden, titel,
@@ -196,8 +197,9 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   MOD-skævet indre element (skewX i modsat retning der holder teksten lige) SKAL have SAMME
   transform-origin — ellers forskyder TEKSTEN sig når højden vokser, selvom selve boksen står stille.
 - NAVNESKILT/SUB specifikt (sådan undgås delay HELT): systemet kalder runAnimationIN(slot) med sub-pladsen
-  som streng "1"–"15". Hent ALLE subs ÉN gang ved LOAD fra /api/vmix (felter S1_n/S1_t … S15_n/S15_t) og
-  cache dem; i runAnimationIN(slot) slå cache[slot] op, fyld navn/titel og animér STRAKS. Mangler slot (fx
+  som streng "1"–"30" (1-15 = subs, 16-23 = vMix Calls brugt som subs). Hent ALLE pladser ÉN gang ved LOAD
+  fra /api/vmix og cache dem — LOOP 1..30 over S{i}_n/S{i}_t (IKKE kun 1..15, ellers mangler vMix Call-subs);
+  i runAnimationIN(slot) slå cache[slot] op, fyld navn/titel og animér STRAKS. Mangler slot (fx
   fra Companion), brug sub_aktiv_n/sub_aktiv_t. Hold cachen frisk via vmixData-beskeden (se FRISKHED) —
   IKKE en refetch-på-IN der viser gammelt først. Er grafikken ALLEREDE synlig (skift fra én sub
   til en anden mens den er på), så skift blot teksten til den nye plads med det samme (ingen gen-animation,

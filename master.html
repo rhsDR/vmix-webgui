@@ -176,7 +176,10 @@
             { event: 'INSERT', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + pid },
             // subs-ændringer → ping custom-grafik så den genopfrisker sin cache (frisk FØR næste IN, ingen flash)
             { event: 'UPDATE', schema: 'public', table: 'subs', filter: 'projekt_id=eq.' + pid },
-            { event: 'INSERT', schema: 'public', table: 'subs', filter: 'projekt_id=eq.' + pid }
+            { event: 'INSERT', schema: 'public', table: 'subs', filter: 'projekt_id=eq.' + pid },
+            // vmix_calls bruges også som subs (plads 15+k) → samme friskhed
+            { event: 'UPDATE', schema: 'public', table: 'vmix_calls', filter: 'projekt_id=eq.' + pid },
+            { event: 'INSERT', schema: 'public', table: 'vmix_calls', filter: 'projekt_id=eq.' + pid }
           ],
           // Ved (gen)forbindelse: hent aktuel custom-grafik-state, så triggers
           // affyret mens forbindelsen var nede/åbnede ikke går tabt
@@ -238,6 +241,11 @@
             if (_tbl === 'subs') {
               _pushToCustom({ type: 'vmixData', kind: 'sub', slot: String(rec.slot || ''), navn: rec.navn || '', titel: rec.titel || '' });
               return; // subs-række har ingen settings-key at behandle videre
+            }
+            if (_tbl === 'vmix_calls') {
+              // vMix Call brugt som sub = plads 15+k → send som kind:'sub' med den kombinerede plads.
+              _pushToCustom({ type: 'vmixData', kind: 'sub', slot: String(15 + (rec.slot || 0)), navn: rec.navn || '', titel: rec.titel || '' });
+              return;
             }
             if (_tbl === 'settings' && rec.key === 'info_bokse') {
               var _bokse = []; try { _bokse = JSON.parse(rec.value || '[]'); } catch (e) {}

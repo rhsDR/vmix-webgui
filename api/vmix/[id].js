@@ -83,13 +83,24 @@ export default async function handler(req, res) {
     // Aktiv sub
     const activeSubRow = settingsRaw.find(r => r.key === 'active_sub');
     const activeSubSlot = activeSubRow ? parseInt(activeSubRow.value) || 0 : 0;
-    const activeSubData = subsRaw.find(r => r.slot === activeSubSlot);
+    // Plads > 15 = en vMix Call brugt som sub (fortsættelse af sub-pladserne, VMC-k → plads 15+k).
+    const activeSubData = activeSubSlot > 15
+      ? vmixCallsRaw.find(r => r.slot === activeSubSlot - 15)
+      : subsRaw.find(r => r.slot === activeSubSlot);
 
     // Byg subs som navngivne objekter S1_n, S1_t osv.
     const subs = {};
     subsRaw.forEach(r => {
       subs[`S${r.slot}_n`] = r.navn  || '';
       subs[`S${r.slot}_t`] = r.titel || '';
+    });
+    // vMix Calls kan OGSÅ bruges som subs i TV: eksponér dem som FORTSÆTTELSE af sub-pladserne
+    // (VMC1 → S16 … VMC8 → S23), så den samme sub-grafik kan vise dem via S{n}-felterne.
+    // VMC{n}-felterne nedenfor bevares uændret (kampdag/vmixcall-link bruger dem stadig).
+    vmixCallsRaw.forEach(r => {
+      const combo = 15 + r.slot;
+      subs[`S${combo}_n`] = r.navn  || '';
+      subs[`S${combo}_t`] = r.titel || '';
     });
 
     // Byg vmix calls som navngivne objekter VMC1_n osv.
