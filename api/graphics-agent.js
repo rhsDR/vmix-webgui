@@ -176,6 +176,10 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   med width:fit-content + en max-width så lange tekster ombryder, aflæs offsetWidth), LÅS så boksens width
   til den målte værdi, ryd teksten og kør vækst-animationen. Resultat: kort tekst = smal boks, lang tekst =
   op til max + ombrudt, og bredden er KONSTANT under animationen (ingen jitter).
+  CENTRERING uanset størrelse: skal boksen altid være vandret centreret uanset hvor stor/lille den er, så
+  giv containeren width:fit-content + left:50% + transform:translateX(-50%) (IKKE en fast bredde) — så
+  centreres den automatisk efter det faktiske indhold. En fast bredde + venstrestillet indhold giver en
+  boks der ligger til venstre i et bredere (centreret) felt.
   SKÆVE BOKSE (skewX/skewY) der vokser: sæt transform-origin til det HJØRNE boksen vokser fra (fx
   left top ved top-ned-vækst). Uden det regnes skewen om boksens MIDTE, så den skæve form forskydes
   horisontalt hver gang højden ændres (ser ud som om boksen "bevæger sig" ved hvert linjeskift). Et evt.
