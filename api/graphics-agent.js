@@ -170,10 +170,12 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   (1-2 ord ad gangen, ~60-120ms mellem), giv boksen overflow:hidden + transition:height, og sæt efter hver
   bid boksens height = dens scrollHeight → boksen vokser ét trin ad gangen i takt med ordene (ikke fuld
   højde fra start, ikke pre-placerede ord der kun fader via opacity).
-  LÅS DEN ANDEN AKSE: en boks der vokser i højden må ALDRIG også ændre BREDDE når teksten ombrydes. Giv
-  boksen+tekst-elementet en FAST bredde (fx width:<X>px + box-sizing:border-box, eller mål den fulde teksts
-  bredde én gang og lås den FØR animationen), så ombrydning sker inden for en konstant bredde — kun højden
-  vokser. Ingen bredde-"jitter" ved linjeskift.
+  LÅS DEN ANDEN AKSE: en boks der vokser i højden må ALDRIG ændre BREDDE under animationen. Men brug IKKE en
+  hård fast bredde (fx width:1100px) — det gør KORTE tekster alt for brede. Tilpas i stedet bredden til
+  indholdet OG lås den: MÅL den fulde teksts naturlige bredde ÉN gang FØR animationen (sæt fuld tekst ind
+  med width:fit-content + en max-width så lange tekster ombryder, aflæs offsetWidth), LÅS så boksens width
+  til den målte værdi, ryd teksten og kør vækst-animationen. Resultat: kort tekst = smal boks, lang tekst =
+  op til max + ombrudt, og bredden er KONSTANT under animationen (ingen jitter).
   SKÆVE BOKSE (skewX/skewY) der vokser: sæt transform-origin til det HJØRNE boksen vokser fra (fx
   left top ved top-ned-vækst). Uden det regnes skewen om boksens MIDTE, så den skæve form forskydes
   horisontalt hver gang højden ændres (ser ud som om boksen "bevæger sig" ved hvert linjeskift). Et evt.
