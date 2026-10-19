@@ -258,10 +258,18 @@ export default async function handler(req, res) {
         if (slotPayload) await upsert(id, 'lineup_data', JSON.stringify(slotPayload));
       } catch {}
     }
-    // TV sub-grafik: ?slot=N på en CUSTOM trigger (ikke ALLOWED_KEYS) sætter active_sub FØR triggeren,
-    // så sub-grafikken henter /api/vmix og viser den valgte sub (parallel til lt_slot for kampdag).
+    // TV sub/info-grafik: ?slot=N på en CUSTOM trigger (ikke ALLOWED_KEYS). Send pladsen MED broadcast'en
+    // (info-grafik viser boksen via runAnimationIN(slot)); for SUB sættes active_sub også (fallback + /api/vmix).
+    // Kategori afgør om active_sub sættes (så info ikke forurener active_sub).
     if (slot && value !== 'out' && !ALLOWED_KEYS.includes(key)) {
-      await upsert(id, 'active_sub', String(slot));
+      let kat = '';
+      try {
+        const gr = await sbGet(`projekt_grafik?projekt_id=eq.${encodeURIComponent(id)}&trigger_key=eq.${encodeURIComponent(key)}&limit=1&select=kategori`);
+        kat = gr[0]?.kategori || '';
+      } catch {}
+      if (kat === 'sub') await upsert(id, 'active_sub', String(slot));
+      const [bc] = await Promise.all([sbBroadcastRest(id, key, value, { slot: String(slot) }), upsert(id, key, value)]);
+      return res.status(200).json({ ok: true, key, value, slot, _bc: bc });
     }
     const [bc] = await Promise.all([sbBroadcastRest(id, key, value), upsert(id, key, value)]);
     res.status(200).json({ ok: true, key, value, slot: slot || undefined, _bc: bc });

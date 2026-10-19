@@ -1357,8 +1357,21 @@ function renderGrafikTV(container) {
         html += row('SUB AF', T(`key=${encodeURIComponent(subGfx.trig)}&value=out`), subGfx.color);
       }
     }
-    // EGNE GRAFIK — alle projektets grafikker (undtagen sub-grafikken, dækket af SUBS) PÅ/AF.
-    const egne = allItems.filter(it => it.cat !== 'sub');
+    // INFO — ét PÅ-link pr. udfyldt info-boks (trigger info-grafikken med boksens plads) + ét enkelt INFO AF.
+    // Præcis som SUBS; info-grafikken vises derfor IKKE under EGNE GRAFIK.
+    const infoGfx = catItems('info')[0];
+    if (infoGfx) {
+      const bokse = (typeof infoBokse !== 'undefined' ? infoBokse : [])
+        .map((b, i) => ({ slot: i + 1, overskrift: b.overskrift || '', indhold: b.indhold || '' }))
+        .filter(b => b.overskrift.trim() || b.indhold.trim());
+      if (bokse.length) {
+        html += `<div class="grafik-companion-subhead" style="margin-top:${html ? '10px' : '0'}">INFO</div>`;
+        html += bokse.map(b => row('Info ' + b.slot + (b.overskrift ? ': ' + b.overskrift : ''), T(`key=${encodeURIComponent(infoGfx.trig)}&value=in&slot=${b.slot}`), infoGfx.color)).join('');
+        html += row('INFO AF', T(`key=${encodeURIComponent(infoGfx.trig)}&value=out`), infoGfx.color);
+      }
+    }
+    // EGNE GRAFIK — øvrige grafikker (sub + info har egne sektioner ovenfor) PÅ/AF.
+    const egne = allItems.filter(it => it.cat !== 'sub' && it.cat !== 'info');
     if (egne.length) {
       html += `<div class="grafik-companion-subhead" style="margin-top:${html ? '10px' : '0'}">EGNE GRAFIK</div>`;
       html += egne.map(it => row(it.name.toUpperCase() + ' PÅ', T(`key=${encodeURIComponent(it.trig)}&value=in`), it.color)
