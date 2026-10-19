@@ -1921,23 +1921,27 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
        <option value="out"${value === 'out' ? ' selected' : ''}>AF</option>`;
   const row = document.createElement('div');
   row.className = 'makro-handling-row';
-  row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#1a1a1a;border:1px solid #252525;border-radius:6px;padding:5px 8px;';
+  row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:9px 11px;';
   row.innerHTML = `
-    <span class="makro-drag-handle" draggable="true" style="color:#444;font-size:14px;user-select:none;flex-shrink:0;">⠿</span>
-    <select class="makro-key-sel" style="flex:1;min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;">
+    <span class="makro-drag-handle" draggable="true" style="color:#555;font-size:18px;user-select:none;flex-shrink:0;cursor:grab;padding:0 2px;">⠿</span>
+    <select class="makro-key-sel" style="flex:1;min-width:0;background:#111;border:1px solid #333;color:#ddd;padding:8px;border-radius:6px;font-size:13px;">
       ${_makroKeyOptions(key)}
     </select>
-    <select class="makro-val-sel" style="width:68px;flex-shrink:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${(isWait || isAlleAf) ? 'none' : 'block'};">
+    <select class="makro-val-sel" style="width:82px;flex-shrink:0;background:#111;border:1px solid #333;color:#ddd;padding:8px;border-radius:6px;font-size:13px;display:${(isWait || isAlleAf) ? 'none' : 'block'};">
       ${valOpts}
     </select>
-    <input class="makro-wait-inp" type="number" min="0.1" step="0.1" placeholder="sek"
-      value="${isWait ? esc(value) : ''}"
-      style="width:68px;flex-shrink:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${isWait ? 'block' : 'none'};">
+    <span class="makro-wait-group" style="display:${isWait ? 'inline-flex' : 'none'};align-items:center;flex-shrink:0;">
+      <button class="makro-wait-dec" type="button" title="Mindre" style="background:#242424;border:1px solid #333;color:#ddd;cursor:pointer;font-size:22px;line-height:1;width:38px;height:38px;border-radius:6px 0 0 6px;">−</button>
+      <input class="makro-wait-inp" type="number" min="0.1" step="0.1" placeholder="sek" value="${isWait ? esc(value) : ''}"
+        style="width:58px;height:38px;text-align:center;background:#111;border-top:1px solid #333;border-bottom:1px solid #333;border-left:none;border-right:none;color:#ddd;padding:0 2px;font-size:15px;box-sizing:border-box;">
+      <button class="makro-wait-inc" type="button" title="Mere" style="background:#242424;border:1px solid #333;color:#ddd;cursor:pointer;font-size:22px;line-height:1;width:38px;height:38px;border-radius:0 6px 6px 0;">+</button>
+      <span style="font-size:12px;color:#888;margin-left:7px;">sek</span>
+    </span>
     <button class="makro-delete-btn"
-      style="background:none;border:none;color:#666;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;">✕</button>
+      style="background:none;border:none;color:#888;cursor:pointer;font-size:20px;padding:2px 6px;flex-shrink:0;">✕</button>
     <button class="makro-combine-btn" title="Tilføj til gruppe (kører samtidigt)"
-      style="background:none;border:none;color:#4a9eff88;cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;display:none;">⊕</button>
-    <select class="makro-slot-sel" style="flex:1 0 calc(100% - 22px);min-width:0;background:#111;border:1px solid #333;color:#ccc;padding:5px;border-radius:5px;font-size:11px;display:${(isLt || isLineup || isSub || isInfo) ? 'block' : 'none'};">
+      style="background:none;border:none;color:#4a9eff88;cursor:pointer;font-size:20px;padding:2px 6px;flex-shrink:0;display:none;">⊕</button>
+    <select class="makro-slot-sel" style="flex:1 0 calc(100% - 22px);min-width:0;background:#111;border:1px solid #333;color:#ddd;padding:8px;border-radius:6px;font-size:13px;display:${(isLt || isLineup || isSub || isInfo) ? 'block' : 'none'};">
       ${slotOpts}
     </select>`;
   row.querySelector('.makro-key-sel').addEventListener('change', function() {
@@ -1952,7 +1956,7 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
     slotSel.style.display = (lt || lineup || sub || info) ? 'block' : 'none';
     slotSel.style.flex    = (lt || lineup || sub || info) ? '1 0 calc(100% - 22px)' : '';
     valSel.style.display  = (wait || alleAf) ? 'none' : 'block';
-    row.querySelector('.makro-wait-inp').style.display = wait ? 'block' : 'none';
+    row.querySelector('.makro-wait-group').style.display = wait ? 'inline-flex' : 'none';
     if (lt)     slotSel.innerHTML = _buildLtSlotOpts('');
     if (lineup) slotSel.innerHTML = _buildLineupKampOpts('');
     if (sub)    slotSel.innerHTML = _tvSubSlotOpts('');
@@ -1964,6 +1968,15 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
     }
     _updateMakroGrouping();
   });
+  const _waitInp = row.querySelector('.makro-wait-inp');
+  const _stepWait = d => {
+    let v = parseFloat(_waitInp.value);
+    if (!(v > 0)) v = 0.5;
+    v = Math.max(0.1, Math.round((v + d) * 10) / 10);
+    _waitInp.value = v;
+  };
+  row.querySelector('.makro-wait-dec').addEventListener('click', () => _stepWait(-0.1));
+  row.querySelector('.makro-wait-inc').addEventListener('click', () => _stepWait(0.1));
   row.querySelector('.makro-delete-btn').addEventListener('click', function() {
     row.remove();
     _updateMakroGrouping();
