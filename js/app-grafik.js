@@ -1526,6 +1526,10 @@ function _afvMakroViewHTML() {
             slotPickerHTML = `<select class="afv-slot-sel" style="background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;">${opts}</select>`;
           }
         }
+        // KØR følger samme grøn=PÅ / rød=AF-kode som de andre knapper: grøn hvis makroen TÆNDER noget
+        // (mindst ét ikke-wait/alle_af-trin med value ≠ 'out'), ellers rød (kun-sluk-makro). Makroens egen
+        // farve vises KUN i den lille venstre-bar (--g-color), ikke på knappen.
+        const fireOn = (m.handlinger || []).some(h => h.key !== 'wait' && h.key !== 'alle_af' && h.value !== 'out');
         return `<div class="grafik-block afv-makro-row" draggable="true" data-makro-id="${m.id}" style="--g-color:${m.farve || '#4a9eff'}">
           <span class="afv-drag-handle" style="color:#555;font-size:18px;user-select:none;flex-shrink:0;cursor:grab;padding:0 6px 0 2px;">⠿</span>
           <div class="grafik-block-info">
@@ -1535,7 +1539,7 @@ function _afvMakroViewHTML() {
           <div class="grafik-block-actions">
             <button class="grafik-btn-prw afv-edit-btn" data-id="${m.id}" title="Redigér">✎</button>
             ${slotPickerHTML}
-            <button class="grafik-btn-in afv-fire-btn" style="background:${m.farve || '#4a9eff'}22;border-color:${m.farve || '#4a9eff'}66;color:${m.farve || '#4a9eff'}" data-id="${m.id}">▶ KØR</button>
+            <button class="${fireOn ? 'grafik-btn-in' : 'grafik-btn-out'} afv-fire-btn" data-id="${m.id}">▶ KØR</button>
           </div>
         </div>`;
       }).join('')
