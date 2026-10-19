@@ -60,7 +60,7 @@ function renderInfo() {
   list.innerHTML = `
     <div class="credits-speed-bar">
       <button class="btn btn-save" id="infoAdd">＋ Tilføj info-boks</button>
-      ${infoBokse.length ? '<button class="btn" id="infoDelAll" style="background:#2a1010;border:1px solid #4a2020;color:#ef4444;margin-left:8px;">✕ Slet alle</button>' : ''}
+      ${infoBokse.length ? '<button class="btn" id="infoDelAll" style="background:#2a1010;border:1px solid #4a2020;color:#ef4444;margin-left:auto;">✕ Slet alle</button>' : ''}
     </div>
     <div id="infoCards" style="margin-top:14px;">${cards || '<div style="color:#8c8c8c;font-size:12px;padding:12px 0;">Ingen info-bokse endnu. Klik “＋ Tilføj info-boks”.</div>'}</div>`;
 
