@@ -52,8 +52,8 @@ function renderCredits() {
   // SAMLEDE varighed (start→slut, ca.). Kampdag: slideren er scroll-hastighed som hidtil.
   const _crIsTv = (typeof projektType !== 'undefined' && projektType === 'tv');
   const _crLabel = _crIsTv ? 'Samlet tid' : 'Hastighed';
-  const _crMin = _crIsTv ? 15 : 10;
-  const _crMax = _crIsTv ? 120 : 30;
+  const _crMin = _crIsTv ? 5 : 10;
+  const _crMax = _crIsTv ? 60 : 30;
   const _crStep = _crIsTv ? 5 : 1;
   const _crSuffix = _crIsTv ? ' sek (ca.)' : ' sek';
   speedBar.innerHTML = `
