@@ -156,6 +156,9 @@ export default async function handler(req, res) {
 
     // Credits (rulletekster) + info-bokse — så (agent-)grafik kan hente dem fra samme API.
     json.credits = (creditsRaw || []).map(r => ({ side: r.side, orden: r.orden, titel: r.titel || '', navne: r.navne || '' }));
+    // Samlet varighed (sek) fra credits_speed — TV-credits-grafik bruger den som mål for start→slut-tiden.
+    const _crSpdRow = settingsRaw.find(r => r.key === 'credits_speed');
+    json.credits_sek = _crSpdRow ? (parseFloat(_crSpdRow.value) || 30) : 30;
     const _infoRow = settingsRaw.find(r => r.key === 'info_bokse');
     let _infoArr = [];
     try { _infoArr = _infoRow && _infoRow.value ? JSON.parse(_infoRow.value) : []; } catch {}

@@ -48,10 +48,18 @@ function renderCredits() {
   // Speed bar
   const speedBar = document.createElement('div');
   speedBar.className = 'credits-speed-bar';
+  // TV-projekter: credits-grafikken (credits_band) er en 3-kol typewriter → slideren styrer her den
+  // SAMLEDE varighed (start→slut, ca.). Kampdag: slideren er scroll-hastighed som hidtil.
+  const _crIsTv = (typeof projektType !== 'undefined' && projektType === 'tv');
+  const _crLabel = _crIsTv ? 'Samlet tid' : 'Hastighed';
+  const _crMin = _crIsTv ? 15 : 10;
+  const _crMax = _crIsTv ? 120 : 30;
+  const _crStep = _crIsTv ? 5 : 1;
+  const _crSuffix = _crIsTv ? ' sek (ca.)' : ' sek';
   speedBar.innerHTML = `
-    <span class="credits-speed-label">Hastighed</span>
-    <input type="range" class="speed-slider" id="speedSlider" min="10" max="30" step="1" value="${creditsData.speed}">
-    <span class="credits-speed-val" id="speedVal">${creditsData.speed} sek</span>
+    <span class="credits-speed-label">${_crLabel}</span>
+    <input type="range" class="speed-slider" id="speedSlider" min="${_crMin}" max="${_crMax}" step="${_crStep}" value="${creditsData.speed}">
+    <span class="credits-speed-val" id="speedVal">${creditsData.speed}${_crSuffix}</span>
     <button class="btn btn-save" id="saveSpeedBtn">GEM</button>
     <button class="btn btn-cancel" id="previewBtn" style="margin-left:auto;">▶ PREVIEW</button>
     <span class="credits-live-badge" id="creditsTriggerBadge"><span class="credits-live-dot"></span>LIVE</span>
@@ -63,12 +71,12 @@ function renderCredits() {
   updateCreditsSendBtn();
   speedBar.querySelector('#speedSlider').addEventListener('input', e => {
     creditsData.speed = parseInt(e.target.value);
-    document.getElementById('speedVal').textContent = creditsData.speed + ' sek';
+    document.getElementById('speedVal').textContent = creditsData.speed + _crSuffix;
   });
   speedBar.querySelector('#saveSpeedBtn').addEventListener('click', async () => {
     try {
       await sbPatch('settings?projekt_id=eq.' + aktivProjektId + '&key=eq.credits_speed', { value: creditsData.speed.toString() });
-      toast('Hastighed gemt ✓', 'ok');
+      toast((_crIsTv ? 'Samlet tid gemt ✓' : 'Hastighed gemt ✓'), 'ok');
     } catch { toast('Fejl ved gem', 'err'); }
   });
   speedBar.querySelector('#creditsUrlCopy').addEventListener('click', () => copyText('https://vmix-control.vercel.app/credits.html?p=' + aktivProjektId));
