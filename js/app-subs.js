@@ -47,8 +47,8 @@ function buildSubRow(i) {
         <input class="form-input navn-input"  id="sn-${i}" value="${esc(s.buf.navn)}"  placeholder="Navn">
         <input class="form-input titel-input" id="st-${i}" value="${esc(s.buf.titel)}" placeholder="Titel">
         <select class="form-input" id="ss-${i}" title="Hvilken side grafikken vises i">
-          <option value="venstre"${(s.buf.side || 'venstre') === 'venstre' ? ' selected' : ''}>◀ Venstre side</option>
-          <option value="hojre"${(s.buf.side || 'venstre') === 'hojre' ? ' selected' : ''}>Højre side ▶</option>
+          <option value="venstre"${(s.buf.side || 'venstre') === 'venstre' ? ' selected' : ''}>Venstre side</option>
+          <option value="hojre"${(s.buf.side || 'venstre') === 'hojre' ? ' selected' : ''}>Højre side</option>
         </select>
       </div>
       <div class="sub-actions">
@@ -77,7 +77,7 @@ function buildSubRow(i) {
       <span class="sub-text ${hasData ? '' : 'empty'}">${hasData
         ? `<span class="sub-navn">${esc(s.navn)}</span><span class="sub-titel">${esc(s.titel)}</span>`
         : '—'}</span>
-      <span class="sub-side-tag" title="Side" style="font-size:10px;letter-spacing:1px;color:#777;flex-shrink:0;">${(s.side || 'venstre') === 'hojre' ? 'HØJRE ▶' : '◀ VENSTRE'}</span>
+      <span class="sub-side-tag" title="Side" style="font-size:10px;font-weight:600;letter-spacing:1px;color:#93c5fd;background:#15243a;border:1px solid #2d4a6a;border-radius:4px;padding:2px 8px;flex-shrink:0;">${(s.side || 'venstre') === 'hojre' ? 'HØJRE' : 'VENSTRE'}</span>
       <button class="icon-btn" id="seb-${i}" title="Rediger">✏️</button>`;
     row.querySelector('#seb-' + i).addEventListener('click', () => {
       s.buf = { navn: s.navn, titel: s.titel, side: s.side || 'venstre' };
@@ -126,8 +126,8 @@ function buildVmixCallRow(i) {
           <button class="copy-btn icon-btn" id="vccp-${i}" title="Kopiér link">⎘</button>
         </div>
         <select class="form-input" id="vcs-${i}" title="Hvilken side grafikken vises i">
-          <option value="venstre"${(c.buf.side || 'venstre') === 'venstre' ? ' selected' : ''}>◀ Venstre side</option>
-          <option value="hojre"${(c.buf.side || 'venstre') === 'hojre' ? ' selected' : ''}>Højre side ▶</option>
+          <option value="venstre"${(c.buf.side || 'venstre') === 'venstre' ? ' selected' : ''}>Venstre side</option>
+          <option value="hojre"${(c.buf.side || 'venstre') === 'hojre' ? ' selected' : ''}>Højre side</option>
         </select>
       </div>
       <div class="sub-actions">
@@ -159,7 +159,7 @@ function buildVmixCallRow(i) {
         : `<span class="sub-text ${hasData ? '' : 'empty'}">${hasData
             ? `<span class="sub-navn">${esc(c.navn)}</span><span class="sub-titel">${esc(c.titel)}</span><span class="sub-link-row"><span class="sub-link" title="${esc(c.link)}">${esc(c.link) || ''}</span><button class="copy-btn icon-btn" id="vccp2-${i}" title="Kopiér link">⎘</button></span>`
             : '—'}</span>`}
-      ${!kampBruger ? `<span class="sub-side-tag" title="Side" style="font-size:10px;letter-spacing:1px;color:#777;flex-shrink:0;">${(c.side || 'venstre') === 'hojre' ? 'HØJRE ▶' : '◀ VENSTRE'}</span>` : ''}
+      ${!kampBruger ? `<span class="sub-side-tag" title="Side" style="font-size:10px;font-weight:600;letter-spacing:1px;color:#93c5fd;background:#15243a;border:1px solid #2d4a6a;border-radius:4px;padding:2px 8px;flex-shrink:0;">${(c.side || 'venstre') === 'hojre' ? 'HØJRE' : 'VENSTRE'}</span>` : ''}
       ${!kampBruger ? `<button class="icon-btn" id="vceb-${i}" title="Rediger">✏️</button>` : ''}
       <button class="icon-btn vmix-col-btn" id="vccol-${i}" title="Fold ind"><i class="collapse-arrow">▴</i></button>`;
     const colBtn = row.querySelector('#vccol-' + i);
