@@ -1260,12 +1260,12 @@ function renderGrafikTV(container) {
     const curSlot = (typeof activeSubSlot !== 'undefined' ? activeSubSlot : 0);
     const trigLive = (grafiktState[trig] || 'out') !== 'out';
     const filled = (typeof subs !== 'undefined' ? subs : [])
-      .map((s, i) => ({ slot: i + 1, disp: String(i + 1), navn: s.navn || '', titel: s.titel || '' }))
+      .map((s, i) => ({ slot: i + 1, disp: String(i + 1), navn: s.navn || '', titel: s.titel || '', side: s.side || 'venstre' }))
       .filter(s => s.navn.trim() || s.titel.trim());
     // vMix Calls listes OGSÅ som subs (pladser 16-23, vist V1-V8) — samme sub-grafik viser dem via
     // S16+-felterne i /api/vmix; active_sub/trigger bruger plads 16-23.
     const filledVmc = (typeof vmixCalls !== 'undefined' ? vmixCalls : [])
-      .map((c, i) => ({ slot: 15 + i + 1, disp: 'V' + (i + 1), navn: c.navn || '', titel: c.titel || '' }))
+      .map((c, i) => ({ slot: 15 + i + 1, disp: 'V' + (i + 1), navn: c.navn || '', titel: c.titel || '', side: c.side || 'venstre' }))
       .filter(c => c.navn.trim() || c.titel.trim());
     const rows = filled.concat(filledVmc);
     if (!rows.length) return '<div class="grafik-v2-empty">Ingen subs — udfyld i SUBS-fanen.</div>';
@@ -1282,6 +1282,7 @@ function renderGrafikTV(container) {
           <span class="grafik-block-name${!s.navn ? ' muted' : ''}">${esc(s.navn || '—')}</span>
           ${s.titel ? `<span class="grafik-block-sub">${esc(s.titel)}</span>` : ''}
         </div>
+        <span class="tv-sub-side-tag" title="Hvilken side grafikken vises i" style="font-size:9px;font-weight:600;letter-spacing:1px;color:#93c5fd;background:#15243a;border:1px solid #2d4a6a;border-radius:4px;padding:2px 7px;flex-shrink:0;">${s.side === 'hojre' ? 'HØJRE' : 'VENSTRE'}</span>
         <div class="grafik-block-actions">
           ${makroBtn}
           <button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" title="Preview">PRW</button>
