@@ -239,12 +239,12 @@
               });
             }
             if (_tbl === 'subs') {
-              _pushToCustom({ type: 'vmixData', kind: 'sub', slot: String(rec.slot || ''), navn: rec.navn || '', titel: rec.titel || '' });
+              _pushToCustom({ type: 'vmixData', kind: 'sub', slot: String(rec.slot || ''), navn: rec.navn || '', titel: rec.titel || '', side: rec.side || 'venstre' });
               return; // subs-række har ingen settings-key at behandle videre
             }
             if (_tbl === 'vmix_calls') {
               // vMix Call brugt som sub = plads 15+k → send som kind:'sub' med den kombinerede plads.
-              _pushToCustom({ type: 'vmixData', kind: 'sub', slot: String(15 + (rec.slot || 0)), navn: rec.navn || '', titel: rec.titel || '' });
+              _pushToCustom({ type: 'vmixData', kind: 'sub', slot: String(15 + (rec.slot || 0)), navn: rec.navn || '', titel: rec.titel || '', side: rec.side || 'venstre' });
               return;
             }
             if (_tbl === 'settings' && rec.key === 'info_bokse') {

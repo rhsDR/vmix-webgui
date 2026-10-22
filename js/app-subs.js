@@ -46,6 +46,10 @@ function buildSubRow(i) {
       <div class="sub-edit-fields">
         <input class="form-input navn-input"  id="sn-${i}" value="${esc(s.buf.navn)}"  placeholder="Navn">
         <input class="form-input titel-input" id="st-${i}" value="${esc(s.buf.titel)}" placeholder="Titel">
+        <select class="form-input" id="ss-${i}" title="Hvilken side grafikken vises i">
+          <option value="venstre"${(s.buf.side || 'venstre') === 'venstre' ? ' selected' : ''}>◀ Venstre side</option>
+          <option value="hojre"${(s.buf.side || 'venstre') === 'hojre' ? ' selected' : ''}>Højre side ▶</option>
+        </select>
       </div>
       <div class="sub-actions">
         <button class="btn-sm save"   id="sg-${i}">GEM</button>
@@ -54,6 +58,7 @@ function buildSubRow(i) {
       </div>`;
     row.querySelector('#sn-' + i).addEventListener('input',  e => { s.buf.navn  = e.target.value; });
     row.querySelector('#st-' + i).addEventListener('input',  e => { s.buf.titel = e.target.value; });
+    row.querySelector('#ss-' + i).addEventListener('change', e => { s.buf.side  = e.target.value; });
     titleCaseInput(row.querySelector('#sn-' + i), s.buf, 'navn');
     titleCaseInput(row.querySelector('#st-' + i), s.buf, 'titel');
     row.querySelector('#sg-' + i).addEventListener('click',  () => saveSubRow(i));
@@ -72,9 +77,10 @@ function buildSubRow(i) {
       <span class="sub-text ${hasData ? '' : 'empty'}">${hasData
         ? `<span class="sub-navn">${esc(s.navn)}</span><span class="sub-titel">${esc(s.titel)}</span>`
         : '—'}</span>
+      <span class="sub-side-tag" title="Side" style="font-size:10px;letter-spacing:1px;color:#777;flex-shrink:0;">${(s.side || 'venstre') === 'hojre' ? 'HØJRE ▶' : '◀ VENSTRE'}</span>
       <button class="icon-btn" id="seb-${i}" title="Rediger">✏️</button>`;
     row.querySelector('#seb-' + i).addEventListener('click', () => {
-      s.buf = { navn: s.navn, titel: s.titel };
+      s.buf = { navn: s.navn, titel: s.titel, side: s.side || 'venstre' };
       s.editMode = true;
       rerenderSub(i);
     });
@@ -119,6 +125,10 @@ function buildVmixCallRow(i) {
           <input class="form-input" id="vcl-${i}" value="${esc(c.buf.link)}" placeholder="vMix Call Link" style="flex:1;">
           <button class="copy-btn icon-btn" id="vccp-${i}" title="Kopiér link">⎘</button>
         </div>
+        <select class="form-input" id="vcs-${i}" title="Hvilken side grafikken vises i">
+          <option value="venstre"${(c.buf.side || 'venstre') === 'venstre' ? ' selected' : ''}>◀ Venstre side</option>
+          <option value="hojre"${(c.buf.side || 'venstre') === 'hojre' ? ' selected' : ''}>Højre side ▶</option>
+        </select>
       </div>
       <div class="sub-actions">
         <button class="btn-sm save"   id="vcg-${i}">GEM</button>
@@ -130,6 +140,7 @@ function buildVmixCallRow(i) {
     titleCaseInput(row.querySelector('#vcn-' + i), c.buf, 'navn');
     titleCaseInput(row.querySelector('#vct-' + i), c.buf, 'titel');
     row.querySelector('#vcl-'  + i).addEventListener('input', e => { c.buf.link  = e.target.value; });
+    row.querySelector('#vcs-'  + i).addEventListener('change', e => { c.buf.side = e.target.value; });
     row.querySelector('#vccp-' + i).addEventListener('click', () => copyText(row.querySelector('#vcl-' + i).value));
     row.querySelector('#vcg-'  + i).addEventListener('click', () => saveVmixCallRow(i));
     row.querySelector('#vca-'  + i).addEventListener('click', () => { c.editMode = false; rerenderVmixCall(i); });
@@ -148,6 +159,7 @@ function buildVmixCallRow(i) {
         : `<span class="sub-text ${hasData ? '' : 'empty'}">${hasData
             ? `<span class="sub-navn">${esc(c.navn)}</span><span class="sub-titel">${esc(c.titel)}</span><span class="sub-link-row"><span class="sub-link" title="${esc(c.link)}">${esc(c.link) || ''}</span><button class="copy-btn icon-btn" id="vccp2-${i}" title="Kopiér link">⎘</button></span>`
             : '—'}</span>`}
+      ${!kampBruger ? `<span class="sub-side-tag" title="Side" style="font-size:10px;letter-spacing:1px;color:#777;flex-shrink:0;">${(c.side || 'venstre') === 'hojre' ? 'HØJRE ▶' : '◀ VENSTRE'}</span>` : ''}
       ${!kampBruger ? `<button class="icon-btn" id="vceb-${i}" title="Rediger">✏️</button>` : ''}
       <button class="icon-btn vmix-col-btn" id="vccol-${i}" title="Fold ind"><i class="collapse-arrow">▴</i></button>`;
     const colBtn = row.querySelector('#vccol-' + i);
@@ -158,7 +170,7 @@ function buildVmixCallRow(i) {
       if (cpBtn) cpBtn.addEventListener('click', () => copyText(c.link));
       const ebBtn = row.querySelector('#vceb-' + i);
       if (ebBtn) ebBtn.addEventListener('click', () => {
-        c.buf = { navn: c.navn, titel: c.titel, link: c.link };
+        c.buf = { navn: c.navn, titel: c.titel, link: c.link, side: c.side || 'venstre' };
         c.editMode = true;
         rerenderVmixCall(i);
       });
@@ -171,11 +183,12 @@ async function saveSubRow(i) {
   const s = subs[i];
   s.navn  = s.buf.navn;
   s.titel = s.buf.titel;
+  s.side  = s.buf.side || 'venstre';
   s.editMode = false;
   s.savePending = true;
   rerenderSub(i);
   try {
-    await sbPatch('subs?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { navn: s.navn, titel: s.titel });
+    await sbPatch('subs?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { navn: s.navn, titel: s.titel, side: s.side });
     toast('Gemt ✓', 'ok');
     flashSaved(document.getElementById('sub-' + i), 'blue');
   } catch { toast('Fejl ved gem', 'err'); }
@@ -187,11 +200,12 @@ async function saveVmixCallRow(i) {
   c.navn  = c.buf.navn;
   c.titel = c.buf.titel;
   c.link  = c.buf.link;
+  c.side  = c.buf.side || 'venstre';
   c.editMode = false;
   c.savePending = true;
   rerenderVmixCall(i);
   try {
-    await sbPatch('vmix_calls?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { navn: c.navn, titel: c.titel, link: c.link });
+    await sbPatch('vmix_calls?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { navn: c.navn, titel: c.titel, link: c.link, side: c.side });
     toast('Gemt ✓', 'ok');
     flashSaved(document.getElementById('vcall-' + i), 'purple');
     // Synk link til kamp slot

@@ -40,8 +40,8 @@ export default async function handler(req, res) {
     const [projektRaw, kampeRaw, subsRaw, vmixCallsRaw, tickersRaw, creditsRaw, settingsRaw] = await Promise.all([
       sbGet('projekter?id=eq.' + pid + '&select=navn,type,undertitel,aktiv&limit=1'),
       sbGet('kampe?projekt_id=eq.' + pid + '&select=slot,hold1_lang,hold1_kort,hold1_score,hold2_score,hold2_kort,hold2_lang,kommentator,lokation,vmixcall,on_air,last_card_type,last_card_player,last_card_min,last_card_team_kort,status_short,status_elapsed&order=slot.asc'),
-      sbGet('subs?projekt_id=eq.' + pid + '&select=slot,navn,titel&order=slot.asc'),
-      sbGet('vmix_calls?projekt_id=eq.' + pid + '&select=slot,navn,titel,link&order=slot.asc'),
+      sbGet('subs?projekt_id=eq.' + pid + '&select=slot,navn,titel,side&order=slot.asc'),
+      sbGet('vmix_calls?projekt_id=eq.' + pid + '&select=slot,navn,titel,link,side&order=slot.asc'),
       sbGet('tickers?projekt_id=eq.' + pid + '&select=slot,overskrift,tekst,on_air,breaking&order=slot.asc'),
       sbGet('credits?projekt_id=eq.' + pid + '&select=side,orden,titel,navne&order=orden.asc'),
       sbGet('settings?projekt_id=eq.' + pid + '&select=key,value')
@@ -93,6 +93,7 @@ export default async function handler(req, res) {
     subsRaw.forEach(r => {
       subs[`S${r.slot}_n`] = r.navn  || '';
       subs[`S${r.slot}_t`] = r.titel || '';
+      subs[`S${r.slot}_side`] = r.side || 'venstre';
     });
     // vMix Calls kan OGSÅ bruges som subs i TV: eksponér dem som FORTSÆTTELSE af sub-pladserne
     // (VMC1 → S16 … VMC8 → S23), så den samme sub-grafik kan vise dem via S{n}-felterne.
@@ -101,6 +102,7 @@ export default async function handler(req, res) {
       const combo = 15 + r.slot;
       subs[`S${combo}_n`] = r.navn  || '';
       subs[`S${combo}_t`] = r.titel || '';
+      subs[`S${combo}_side`] = r.side || 'venstre';
     });
 
     // Byg vmix calls som navngivne objekter VMC1_n osv.

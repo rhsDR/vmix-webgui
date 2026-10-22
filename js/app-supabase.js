@@ -151,8 +151,8 @@ async function fetchAll() {
       enetpulseId: r.enetpulse_id || null
     })),
     subs: {
-      subs:      subsRaw.map(r => ({ navn: r.navn || '', titel: r.titel || '' })),
-      vmixCalls: vmixCallsRaw.map(r => ({ navn: r.navn || '', titel: r.titel || '', link: r.link || '' }))
+      subs:      subsRaw.map(r => ({ navn: r.navn || '', titel: r.titel || '', side: r.side || 'venstre' })),
+      vmixCalls: vmixCallsRaw.map(r => ({ navn: r.navn || '', titel: r.titel || '', link: r.link || '', side: r.side || 'venstre' }))
     },
     tickers: tickersRaw.map(r => ({
       overskrift: r.overskrift || '',
