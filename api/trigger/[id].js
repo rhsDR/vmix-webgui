@@ -170,17 +170,6 @@ export default async function handler(req, res) {
       const rows = await sbGet(`projekt_makroer?id=eq.${encodeURIComponent(macroId)}&projekt_id=eq.${encodeURIComponent(id)}&limit=1`);
       const macro = rows[0];
       if (!macro) return res.status(404).json({ error: 'Makro ikke fundet' });
-      // DRYRUN: ?dryrun=1 → returnér hvad makroen VILLE gøre med den givne slot, UDEN at fyre noget.
-      // Sikkert at kalde på et live-projekt. effSlot = den plads hvert trin reelt ville bruge.
-      if (req.query.dryrun) {
-        return res.status(200).json({
-          ok: true, dryrun: true, macro: macro.label || '', slotReceived: slotOverride,
-          steps: (macro.handlinger || []).map(h => ({
-            key: h.key, value: h.value, slotStored: h.slot || '',
-            effSlot: slotOverride || h.slot || '', inAllowedKeys: ALLOWED_KEYS.includes(h.key)
-          }))
-        });
-      }
       // Pre-flight: afvis hele makroen op front hvis den samlede ventetid over-
       // stiger budgettet. Alternativet — at starte en makro vi ikke kan nå at
       // gøre færdig — ville efterlade grafik i en halv tilstand når Vercel
@@ -211,14 +200,7 @@ export default async function handler(req, res) {
         if (seg.type === 'wait') { await new Promise(r => setTimeout(r, seg.ms)); continue; }
         await Promise.all(seg.steps.map(h => runStep(id, h, slotOverride)));
       }
-      // Diagnostik: ekko den modtagne slot (slotOverride) + makroens trin, så man i Companion-/HTTP-svaret
-      // kan se OM pladsen faktisk nåede frem. Tom slotReceived = klienten (Companion) sender ikke tallet.
-      return res.status(200).json({
-        ok: true,
-        fired: (macro.handlinger || []).length,
-        slotReceived: slotOverride,
-        steps: (macro.handlinger || []).map(h => ({ key: h.key, value: h.value, slot: h.slot || '', effSlot: slotOverride || h.slot || '' }))
-      });
+      return res.status(200).json({ ok: true, fired: (macro.handlinger || []).length });
     } catch (err) {
       return res.status(502).json({ error: String(err.message) });
     }
