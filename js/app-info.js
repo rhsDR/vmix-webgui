@@ -124,35 +124,5 @@ async function addInfoBox() {
   renderInfo();
 }
 
-// ── OUTPUT-valg (KUN her: GRAFIK SETUP → INFO-BOKSE) ──
-async function setInfoBoxOutput(id, val) {
-  const b = infoBokse.find(x => x.id === id);
-  if (!b) return;
-  b.output = val;
-  try { await saveInfoBokse('Output gemt'); } catch { toast('Fejl ved gem af output', 'err'); }
-}
-
-// Sektion der indlejres i renderGrafikOps (GRAFIK SETUP). Tom hvis ingen info-bokse.
-function infoBokseSetupHTML() {
-  if (!Array.isArray(infoBokse) || !infoBokse.length) return '';
-  const rows = infoBokse.map((b, i) => {
-    const label = esc(b.overskrift || ('Info ' + (i + 1)));
-    const opts = INFO_OUTPUTS.map(([v, t]) => `<option value="${v}"${b.output === v ? ' selected' : ''}>${t}</option>`).join('');
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1a1a1a;">
-      <span style="flex:1;font-size:12px;color:#eee;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</span>
-      <select class="form-input" data-info-out="${b.id}" style="width:auto;min-width:140px;">${opts}</select>
-    </div>`;
-  }).join('');
-  return `
-    <details class="gops-section" style="margin-top:14px;">
-      <summary class="gops-summary">INFO-BOKSE <span class="gops-summary-hint">— vælg output (overlay) pr. boks</span></summary>
-      <div style="font-size:11px;color:#8c8c8c;margin:6px 0 10px;">Vælg hvilket overlay-vindue hver info-boks skal ligge i. Teksten redigeres i INFO-fanen. Genindlæs overlay-kilden i vMix første gang.</div>
-      <div style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 12px;">${rows}</div>
-    </details>`;
-}
-
-function wireInfoBokseSetup(root) {
-  root.querySelectorAll('[data-info-out]').forEach(sel => {
-    sel.addEventListener('change', () => setInfoBoxOutput(sel.dataset.infoOut, sel.value));
-  });
-}
+// OUTPUT-valg fjernet (okt 2026): info vises nu via den indlejrede info-grafiks overlay_target + trigger
+// (GRAFIK → INFO), ikke via per-boks output. `output`-feltet i data ignoreres (ingen migration nødvendig).

@@ -828,7 +828,6 @@ function renderGrafikOps() {
         ${grafikkort || '<div style="color:#8c8c8c;font-size:12px;padding:16px 0;">Ingen grafikker endnu. Klik "＋ Tilføj ny grafik" for at starte.</div>'}
       </details>
       ${_fontLibSectionHTML()}
-      ${(typeof infoBokseSetupHTML === 'function' ? infoBokseSetupHTML() : '')}
     </div>`;
 
   // Event delegation — ingen inline onclick (undgår JSON.stringify HTML-escaping-bug)
@@ -859,7 +858,6 @@ function renderGrafikOps() {
   el.querySelector('#font-upload-btn')?.addEventListener('click', uploadFont);
   el.querySelectorAll('[data-del-font]').forEach(btn =>
     btn.addEventListener('click', () => deleteFontById(btn.dataset.delFont, btn.dataset.delFontPath, btn.dataset.delFontFam)));
-  if (typeof wireInfoBokseSetup === 'function') wireInfoBokseSetup(el);
   initComposerDnd();
 }
 
