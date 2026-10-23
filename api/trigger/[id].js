@@ -200,7 +200,14 @@ export default async function handler(req, res) {
         if (seg.type === 'wait') { await new Promise(r => setTimeout(r, seg.ms)); continue; }
         await Promise.all(seg.steps.map(h => runStep(id, h, slotOverride)));
       }
-      return res.status(200).json({ ok: true, fired: (macro.handlinger || []).length });
+      // Diagnostik: ekko den modtagne slot (slotOverride) + makroens trin, så man i Companion-/HTTP-svaret
+      // kan se OM pladsen faktisk nåede frem. Tom slotReceived = klienten (Companion) sender ikke tallet.
+      return res.status(200).json({
+        ok: true,
+        fired: (macro.handlinger || []).length,
+        slotReceived: slotOverride,
+        steps: (macro.handlinger || []).map(h => ({ key: h.key, value: h.value, slot: h.slot || '', effSlot: slotOverride || h.slot || '' }))
+      });
     } catch (err) {
       return res.status(502).json({ error: String(err.message) });
     }
