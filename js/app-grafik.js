@@ -1173,6 +1173,13 @@ function renderGrafik() {
 async function _tvLoadPreview(url, container, mode, slot) {
   const f = (container || document).querySelector('.grafik-preview-iframe');
   if (!f || !url) return;
+  // PRW UD på en preview der ALLEREDE viser samme grafik: genindlæs IKKE — spil kun ud-animationen
+  // direkte (srcdoc = samme origin). Ellers reloader iframen (grafikken forsvinder brat), spiller ind
+  // og så ud = "går af → kommer på → går af". Direkte OUT giver en ren ud-animation.
+  if (mode === 'out' && f.dataset.prvLoaded === url) {
+    try { if (f.contentWindow && f.contentWindow.runAnimationOUT) f.contentWindow.runAnimationOUT(); } catch (e) {}
+    return;
+  }
   const origin = window.location.origin;
   const pid = aktivProjektId;
   let html = '';
@@ -1194,6 +1201,7 @@ async function _tvLoadPreview(url, container, mode, slot) {
   const doc = html.replace(/(<html[^>]*>)/i, '$1' + inject);
   f.removeAttribute('src');
   f.srcdoc = doc.includes('__PROJEKT_ID') ? doc : inject + html;
+  f.dataset.prvLoaded = url; // husk hvilken grafik der er indlæst → PRW UD kan spille ren ud-animation
 }
 
 function renderGrafikTV(container) {
