@@ -1187,17 +1187,24 @@ async function _tvLoadPreview(url, container, mode, slot) {
   catch { f.removeAttribute('srcdoc'); f.src = url; return; } // fallback: direkte (uden auto-afspil)
   const _ffCss = (typeof fontLib !== 'undefined' ? (fontLib || []) : [])
     .map(x => (typeof _fontFaceCss === 'function') ? _fontFaceCss(x) : '').filter(Boolean).join('');
-  // mode 'out': spil ind, og derefter ud ~1,3s senere, så man ser UD-animationen i preview.
-  const _outJs = mode === 'out'
-    ? `setTimeout(function(){try{window.runAnimationOUT&&window.runAnimationOUT();}catch(e){}},1300);`
-    : '';
-  // slot sendes med, så preview viser NETOP rækkens sub/info (ikke demo/aktiv). Delay giver prefetch'en
-  // tid til at hente den rigtige data fra /api/vmix før runAnimationIN, så det er det FAKTISKE indhold.
+  // slot sendes med, så preview viser NETOP rækkens sub/info (ikke demo/aktiv). Delay (600ms) giver
+  // prefetch'en tid til at hente den rigtige data fra /api/vmix før runAnimationIN = FAKTISK indhold.
   const _slotJs = JSON.stringify(slot || '');
+  const _boot = `window.__PROJEKT_ID=${JSON.stringify(pid || '')};window.__API_ORIGIN=${JSON.stringify(origin)};window.__IS_PREVIEW=false;`;
+  // mode 'out' (kold — intet indlæst endnu): vis en REN ud-animation. Grafikkens indhold skjules mens
+  // den bygger ind (visibility:hidden beholder layout/måling), afsløres så fuldt PÅ og spiller ud →
+  // ingen synlig ind-animation, ingen off→on→off. mode null (PRW): spil blot ind som normalt.
+  const _runJs = mode === 'out'
+    ? `document.documentElement.style.visibility='hidden';`
+      + `window.addEventListener('load',function(){setTimeout(function(){`
+      + `try{window.runAnimationIN&&window.runAnimationIN(${_slotJs});}catch(e){}`
+      + `setTimeout(function(){document.documentElement.style.visibility='';`
+      + `setTimeout(function(){try{window.runAnimationOUT&&window.runAnimationOUT();}catch(e){}},350);`
+      + `},1300);},600);});`
+    : `window.addEventListener('load',function(){setTimeout(function(){`
+      + `try{window.runAnimationIN&&window.runAnimationIN(${_slotJs});}catch(e){}},600);});`;
   const inject = `<link rel="stylesheet" href="${origin}/fonts.css"><style>${_ffCss}</style>`
-    + `<script>window.__PROJEKT_ID=${JSON.stringify(pid || '')};window.__API_ORIGIN=${JSON.stringify(origin)};`
-    + `window.__IS_PREVIEW=false;window.addEventListener('load',function(){setTimeout(function(){`
-    + `try{window.runAnimationIN&&window.runAnimationIN(${_slotJs});}catch(e){}` + _outJs + `},600);});<\/script>`;
+    + `<script>${_boot}${_runJs}<\/script>`;
   const doc = html.replace(/(<html[^>]*>)/i, '$1' + inject);
   f.removeAttribute('src');
   f.srcdoc = doc.includes('__PROJEKT_ID') ? doc : inject + html;
