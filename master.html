@@ -36,6 +36,7 @@
     const customSlot     = {}; // sidste sub-plads pr. trigger-key — så skift mellem subs (value stadig 'in') går igennem
     const customCat      = {}; // kategori pr. trigger-key (fx 'sub') — så active_sub-skift kun rammer sub-grafik
     const customStateTime = {};
+    let   _activeSubSlot = ''; // aktuel active_sub-plads — så settings-stien (_dispatch) viser den RIGTIGE sub, ikke stale 'aktiv'
 
     // Grafik-definitioner: id matcher iframe-id og Supabase-nøglen i overlay_lag_order
     const GRAPHICS = [
@@ -157,12 +158,17 @@
           }
           var cIframe = customFrameMap[key];
           if (!cIframe) return;
+          var isSub = customCat[key] === 'sub';
           var cPrev = customState[key];
-          if (cPrev === value) return;
+          // Sub-grafik: tillad re-trigger når active_sub-pladsen har ændret sig (value stadig 'in') — ellers
+          // de-duppes et plads-skift via settings-stien væk. Send ALTID den aktuelle active_sub-plads med, så
+          // grafikken viser den RIGTIGE sub (ikke stale 'aktiv' fra fraCache('')).
+          if (cPrev === value && !(isSub && value === 'in' && customSlot[key] !== _activeSubSlot)) return;
           customState[key] = value;
           customStateTime[key] = Date.now();
+          if (isSub && value === 'in') customSlot[key] = _activeSubSlot;
           try {
-            if (value === 'in') cIframe.contentWindow?.runAnimationIN?.();
+            if (value === 'in') cIframe.contentWindow?.runAnimationIN?.(isSub ? _activeSubSlot : undefined);
             else if (value === 'out') {
               if (cPrev === 'in') cIframe.contentWindow?.runAnimationOUT?.();
               else if (cIframe.contentWindow?.__forceOut) cIframe.contentWindow.__forceOut();
@@ -258,6 +264,7 @@
             // Kun sub-kategori-frames der allerede er 'in' (ellers venter vi på selve triggeren).
             if (_tbl === 'settings' && rec.key === 'active_sub') {
               var _asSlot = String(rec.value || '');
+              _activeSubSlot = _asSlot;
               Object.keys(customFrameMap).forEach(function (k) {
                 if (customCat[k] === 'sub' && customState[k] === 'in') {
                   customSlot[k] = _asSlot;
@@ -358,10 +365,14 @@
       if (!keys.length) return;
       try {
         const data = await fetch(
-          `${SB_URL}/rest/v1/settings?key=in.(${keys.map(k=>encodeURIComponent(k)).join(',')})&projekt_id=eq.${encodeURIComponent(pid)}&select=key,value`,
+          `${SB_URL}/rest/v1/settings?key=in.(${keys.concat('active_sub').map(k=>encodeURIComponent(k)).join(',')})&projekt_id=eq.${encodeURIComponent(pid)}&select=key,value`,
           { headers: SB_HDR }
         ).then(r => r.json());
-        for (const row of data ?? []) _dispatch(row.key, row.value);
+        // Sæt active_sub-pladsen FØR vi dispatcher sub-triggeren, så sub-grafikken straks viser den rigtige
+        // sub (direkte DB-læsning — ikke via den cachede /api/vmix, hvis 'aktiv' ellers ville være forældet).
+        const _asRow = (data || []).find(r => r.key === 'active_sub');
+        if (_asRow) _activeSubSlot = String(_asRow.value || '');
+        for (const row of data ?? []) if (row.key !== 'active_sub') _dispatch(row.key, row.value);
       } catch {}
     }
 
