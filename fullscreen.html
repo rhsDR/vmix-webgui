@@ -484,6 +484,23 @@
       { id: 'credits',     file: 'credits.html',         trigKey: 'credits_trigger' },
     ];
 
+    // Kun KAMPDAG loader de indbyggede grafikker i dette overlay (tv m.fl. viser kun egen custom-grafik).
+    // Sikker default: ved fetch-fejl / ukendt / tom type BEHOLDES de. (_OPsyncBuiltins opretter i forvejen
+    // kun frames for grafik tildelt overlay-3, så TV har sjældent nogen — gaten fremtidssikrer.)
+    var _OPisKampdag = true;
+    (async function _OPstripBuiltinsForNonKampdag() {
+      let _t = '';
+      try {
+        const r = await fetch(`${SB_URL}/rest/v1/projekter?id=eq.${encodeURIComponent(projektId)}&select=type`, { headers: SB_HDR });
+        const rows = await r.json();
+        if (!rows || !rows[0]) return;
+        _t = rows[0].type || '';
+      } catch { return; }
+      if (_t === 'kampdag' || _t === '') return;
+      _OPisKampdag = false;
+      _OP_BUILTIN.forEach(function(bg){ var f = document.getElementById('builtin-'+bg.id+'-frame'); if (f) f.remove(); });
+    })();
+
     // Live-tilstand: cache så built-in grafik kan flyttes til/fra Fullscreen LIVE.
     var _OPlagOrder = [];
     var _OPgrafMap  = {};
@@ -492,6 +509,7 @@
       return idx >= 0 ? String((_OPlagOrder.length - idx) * 1000) : '500';
     }
     function _OPsyncBuiltins() {
+      if (!_OPisKampdag) { _OP_BUILTIN.forEach(function(bg){ var f = document.getElementById('builtin-'+bg.id+'-frame'); if (f) f.remove(); }); return; }
       _OP_BUILTIN.forEach(function(bg) {
         var fid = 'builtin-' + bg.id + '-frame';
         var existing = document.getElementById(fid);

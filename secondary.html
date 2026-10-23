@@ -36,6 +36,24 @@
       document.getElementById('komm-k'+n+'-frame').src = src;
     });
 
+    // Kun KAMPDAG-projekter loader de indbyggede grafikker (komm-bokse + lower-third/ticker/live-boks/
+    // lineup/credits) i dette overlay. Andre typer (tv m.fl.) viser kun deres egen custom-grafik.
+    // Sikker default: ved fetch-fejl / ukendt / tom type BEHOLDES de (kampdag taber aldrig sine overlays).
+    var _isKampdag = true;
+    (async function _secStripBuiltinsForNonKampdag() {
+      let _t = '';
+      try {
+        const r = await fetch(`${SB_URL}/rest/v1/projekter?id=eq.${encodeURIComponent(_pid)}&select=type`, { headers: SB_HDR });
+        const rows = await r.json();
+        if (!rows || !rows[0]) return;
+        _t = rows[0].type || '';
+      } catch { return; }
+      if (_t === 'kampdag' || _t === '') return;
+      _isKampdag = false;
+      [1,2,3,4,5,6].forEach(function(n){ var f = document.getElementById('komm-k'+n+'-frame'); if (f) f.src = 'about:blank'; });
+      BUILTIN_GRAPHICS.forEach(function(bg){ var f = document.getElementById('builtin-'+bg.id+'-frame'); if (f) f.remove(); });
+    })();
+
     // SB_URL / SB_ANON / SB_HDR kommer fra js/supabase-config.js
     const customFrameMap = {};
     const customState    = {};
@@ -59,6 +77,12 @@
       return idx >= 0 ? String((_lagOrder.length - idx) * 1000) : '500';
     }
     function _syncKommBuiltins() {
+      // Ikke-kampdag: ingen indbyggede grafikker i dette overlay (kun egen custom-grafik).
+      if (!_isKampdag) {
+        [1,2,3,4,5,6].forEach(function(n){ var f = document.getElementById('komm-k'+n+'-frame'); if (f && (f.src || '').indexOf('about:blank') === -1) f.src = 'about:blank'; });
+        BUILTIN_GRAPHICS.forEach(function(bg){ var f = document.getElementById('builtin-'+bg.id+'-frame'); if (f) f.remove(); });
+        return;
+      }
       // Komm-bokse: vis kun hvis 'komm' er tildelt komm-overlayet (default)
       var kommTarget = _grafMap['komm'] || 'komm';
       [1,2,3,4,5,6].forEach(function(n) {

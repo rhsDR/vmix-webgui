@@ -78,16 +78,19 @@
       frame.src = src;
     });
 
-    // TV-projekter bruger KUN custom-grafik (loades separat via loadCustomGrafik). Fjern de indbyggede
-    // kampdag-grafikker (lower-third/live-boks/ticker/score/lineup/credits) fra TV-masteren, så de ikke
-    // kører unødigt (undgår fx Live_BOKS' SPX-404 + overhead). Kampdag er UBERØRT: hvis type != 'tv'
-    // stopper funktionen uden at ændre noget.
-    (async function _stripBuiltinsForTv() {
+    // De indbyggede grafikker (lower-third/live-boks/ticker/score/lineup/credits) hører til KAMPDAG.
+    // Kun kampdag-projekter må loade dem; alle andre typer (tv + evt. fremtidige) skal ikke dele dem i
+    // overlayet. Sikker default: ved fetch-fejl / ukendt / tom type BEHOLDES de (så en live kampdag
+    // aldrig taber sine overlays). Custom-grafik loades uændret via loadCustomGrafik.
+    (async function _stripBuiltinsForNonKampdag() {
+      let _type = '';
       try {
         const r = await fetch(`${SB_URL}/rest/v1/projekter?id=eq.${encodeURIComponent(pid)}&select=type`, { headers: SB_HDR });
         const rows = await r.json();
-        if (!rows || !rows[0] || rows[0].type !== 'tv') return; // kun TV-projekter
-      } catch { return; }
+        if (!rows || !rows[0]) return;          // intet projekt fundet → behold (sikkert)
+        _type = rows[0].type || '';
+      } catch { return; }                        // fetch-fejl → behold (sikkert for kampdag)
+      if (_type === 'kampdag' || _type === '') return; // kun kampdag (+ ukendt/tom) beholder de indbyggede
       GRAPHICS.forEach(g => {
         const f = document.getElementById(g.id + '-frame');
         if (f) f.src = 'about:blank';
