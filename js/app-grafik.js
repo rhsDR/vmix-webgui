@@ -1184,10 +1184,13 @@ async function _tvLoadPreview(url, container, mode) {
   const _outJs = mode === 'out'
     ? `setTimeout(function(){try{window.runAnimationOUT&&window.runAnimationOUT();}catch(e){}},1300);`
     : '';
+  // slot sendes med, så preview viser NETOP rækkens sub/info (ikke demo/aktiv). Delay giver prefetch'en
+  // tid til at hente den rigtige data fra /api/vmix før runAnimationIN, så det er det FAKTISKE indhold.
+  const _slotJs = JSON.stringify(slot || '');
   const inject = `<link rel="stylesheet" href="${origin}/fonts.css"><style>${_ffCss}</style>`
     + `<script>window.__PROJEKT_ID=${JSON.stringify(pid || '')};window.__API_ORIGIN=${JSON.stringify(origin)};`
     + `window.__IS_PREVIEW=false;window.addEventListener('load',function(){setTimeout(function(){`
-    + `try{window.runAnimationIN&&window.runAnimationIN();}catch(e){}` + _outJs + `},250);});<\/script>`;
+    + `try{window.runAnimationIN&&window.runAnimationIN(${_slotJs});}catch(e){}` + _outJs + `},600);});<\/script>`;
   const doc = html.replace(/(<html[^>]*>)/i, '$1' + inject);
   f.removeAttribute('src');
   f.srcdoc = doc.includes('__PROJEKT_ID') ? doc : inject + html;
@@ -1290,8 +1293,8 @@ function renderGrafikTV(container) {
         <span class="tv-sub-side-tag" title="Hvilken side grafikken vises i" style="font-size:9px;font-weight:600;letter-spacing:1px;color:#93c5fd;background:#15243a;border:1px solid #2d4a6a;border-radius:4px;padding:2px 7px;flex-shrink:0;">${s.side === 'hojre' ? 'HØJRE' : 'VENSTRE'}</span>
         <div class="grafik-block-actions">
           ${makroBtn}
-          <button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" title="Preview ind">PRW</button>
-          <button class="grafik-btn-prw tv-prw-out" data-prw-url="${gfx.prv}" title="Preview ud">PRW UD</button>
+          <button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" data-prw-slot="${s.slot}" title="Preview ind">PRW</button>
+          <button class="grafik-btn-prw tv-prw-out" data-prw-url="${gfx.prv}" data-prw-slot="${s.slot}" title="Preview ud">PRW UD</button>
           <button class="grafik-btn-out" data-trig="${esc(trig)}" data-val="out"${!slotAct ? ' disabled' : ''}>&lt; OUT</button>
           <button class="grafik-btn-in${slotAct ? ' on' : ''} tv-sub-slot-in" data-trig="${esc(trig)}" data-slot="${s.slot}">&gt; IN</button>
         </div>
@@ -1323,8 +1326,8 @@ function renderGrafikTV(container) {
           ${b.indhold ? `<span class="grafik-block-sub">${esc(b.indhold.split('\n')[0])}</span>` : ''}
         </div>
         <div class="grafik-block-actions">
-          <button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" title="Preview ind">PRW</button>
-          <button class="grafik-btn-prw tv-prw-out" data-prw-url="${gfx.prv}" title="Preview ud">PRW UD</button>
+          <button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}" title="Preview ind">PRW</button>
+          <button class="grafik-btn-prw tv-prw-out" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}" title="Preview ud">PRW UD</button>
           <button class="grafik-btn-out" data-trig="${esc(trig)}" data-val="out"${!slotAct ? ' disabled' : ''}>&lt; OUT</button>
           <button class="grafik-btn-in${slotAct ? ' on' : ''} tv-info-slot-in" data-trig="${esc(trig)}" data-slot="${b.slot}">&gt; IN</button>
         </div>
@@ -1419,10 +1422,6 @@ function renderGrafikTV(container) {
     <div>
       <div class="grafik-companion-head" style="margin-bottom:6px;">PREVIEW</div>
       <div class="grafik-preview-box"><iframe class="grafik-preview-iframe" src="${prvUrl}"></iframe></div>
-      <div style="display:flex;gap:6px;margin-top:8px;">
-        <button class="grafik-btn-in" id="tv-prw-in-btn" style="flex:1;" title="Spil ind-animationen i preview">▶ PRW IND</button>
-        <button class="grafik-btn-out" id="tv-prw-out-btn" style="flex:1;" title="Spil ud-animationen i preview">◀ PRW UD</button>
-      </div>
     </div>
     ${onairBlock('ON AIR — MASTER', origin + '/master.html?p=' + pid)}
     ${onairBlock('ON AIR — SECONDARY', origin + '/secondary.html?p=' + pid)}
@@ -1506,21 +1505,11 @@ function renderGrafikTV(container) {
     btn.addEventListener('click', () => fireMakro(btn.dataset.makroId)));
 
   container.querySelectorAll('.tv-prw').forEach(btn =>
-    btn.addEventListener('click', () => _tvLoadPreview(btn.dataset.prwUrl, container)));
+    btn.addEventListener('click', () => _tvLoadPreview(btn.dataset.prwUrl, container, null, btn.dataset.prwSlot)));
 
   container.querySelectorAll('.tv-prw-out').forEach(btn =>
-    btn.addEventListener('click', () => _tvLoadPreview(btn.dataset.prwUrl, container, 'out')));
+    btn.addEventListener('click', () => _tvLoadPreview(btn.dataset.prwUrl, container, 'out', btn.dataset.prwSlot)));
 
-  // PRW IND / PRW UD: spil ind-/ud-animationen i den indlæste preview-iframe (srcdoc = samme origin →
-  // runAnimationIN/OUT kan kaldes direkte). Bound-guard, da preview-panelet persisterer ved del-render.
-  container.querySelectorAll('#tv-prw-in-btn, #tv-prw-out-btn').forEach(btn => {
-    if (btn.dataset.bound) return; btn.dataset.bound = '1';
-    btn.addEventListener('click', () => {
-      const f = container.querySelector('.grafik-preview-iframe');
-      const fn = btn.id === 'tv-prw-out-btn' ? 'runAnimationOUT' : 'runAnimationIN';
-      try { f && f.contentWindow && f.contentWindow[fn] && f.contentWindow[fn](); } catch (e) {}
-    });
-  });
 
   container.querySelectorAll('.tv-makro-add').forEach(btn =>
     btn.addEventListener('click', () => openMakroModal(null, [{ key: btn.dataset.mkTrig, value: 'in' }])));
