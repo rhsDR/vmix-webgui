@@ -118,6 +118,12 @@ Grafik kan hente live projekt-data fra systemets vMix-API:
   · sub_aktiv_slot / sub_aktiv_n / sub_aktiv_t = slot-nr / navn / titel på den AKTIVE sub (navneskiltet).
   · S1_n/S1_t … S15 = navn / titel for sub nr. 1-15. PLUS S16_n/S16_t … S23 = vMix Calls brugt som subs
     (VMC1 → plads 16 … VMC8 → plads 23). En sub-grafik skal derfor cache pladser 1-30 (ikke kun 1-15).
+  · S{n}_side = 'venstre' eller 'hojre' = hvilken side sub nr. n skal stå i (default 'venstre'). En
+    navneskilt-/sub-grafik BØR understøtte begge sider: læs S{n}_side i cachen og ved 'hojre' spejl HELE
+    lower-third'en vandret (fx containeren transform:scaleX(-1), position i højre kant) MEN mod-spejl
+    tekst-elementerne (scaleX(-1) på navn/titel) så teksten forbliver LÆSBAR. Samme ind/ud-animation gælder
+    begge sider; anvend siden i runAnimationIN(slot) FØR animationen starter. Måle-elementer skal være
+    SØSKENDE til den spejlede container, så bredde-måling er upåvirket.
   · VMC1_n/_t/_l … (1-8) = navn / titel / link for vMix-opkald (link bruges kun til kampdag-vmixcall).
   · T1_ov/T1_txt/T1_air/T1_brk … (1-20) = ticker-slot: overskrift / tekst / on-air / breaking.
   · ticker_normal, ticker_breaking = hele den samlede rulletekst (FÆRDIG HTML).
