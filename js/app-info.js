@@ -45,7 +45,7 @@ function _infoBoxCard(b, idx) {
           </div>
           <div class="form-group span2">
             <label class="form-label">Indhold</label>
-            <textarea class="form-input" data-field="indhold" rows="3" placeholder="Indhold (flere linjer tilladt)">${esc(b.indhold || '')}</textarea>
+            <textarea class="form-input" data-field="indhold" rows="3" placeholder="Indhold (maks 3 linjer)">${esc(b.indhold || '')}</textarea>
           </div>
         </div>
         <div class="edit-actions"><button class="btn btn-save" data-act="gem">💾 GEM</button></div>
@@ -71,7 +71,20 @@ function renderInfo() {
     const box = infoBokse.find(b => b.id === id);
     if (!box) return;
     card.querySelector('[data-field="overskrift"]').addEventListener('input', e => { box.overskrift = e.target.value; });
-    card.querySelector('[data-field="indhold"]').addEventListener('input', e => { box.indhold = e.target.value; });
+    // Info-indhold: maks 3 linjer. Enter blokeres ved 3 linjer; paste af mere afkortes til 3.
+    const indholdEl = card.querySelector('[data-field="indhold"]');
+    indholdEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && e.target.value.split('\n').length >= 3) e.preventDefault();
+    });
+    indholdEl.addEventListener('input', e => {
+      if (e.target.value.split('\n').length > 3) {
+        const pos = e.target.selectionStart;
+        e.target.value = e.target.value.split('\n').slice(0, 3).join('\n');
+        const p = Math.min(pos, e.target.value.length);
+        try { e.target.setSelectionRange(p, p); } catch (err) {}
+      }
+      box.indhold = e.target.value;
+    });
     card.querySelector('[data-act="gem"]').addEventListener('click', async () => {
       try { await saveInfoBokse('Gemt ✓'); } catch { toast('Fejl ved gem', 'err'); }
     });
