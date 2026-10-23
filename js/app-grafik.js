@@ -1299,7 +1299,9 @@ function renderGrafikTV(container) {
       const makroBtn = subMakro
         ? `<button class="${(subMakro.handlinger || []).some(h => h.key !== 'wait' && h.key !== 'alle_af' && h.value !== 'out') ? 'grafik-btn-in' : 'grafik-btn-out'} makro-sub-fire-btn" data-makro-id="${subMakro.id}" title="${esc(subMakro.label)}">▶</button>`
         : `<button class="grafik-btn-prw tv-sub-makro-add" data-mk-trig="${esc(trig)}" data-slot="${s.slot}" title="Opret makro for denne sub">＋</button>`;
-      return `<div class="grafik-block" style="--g-color:${gfx.color}">
+      // Venstre-bar følger SUBS-fanens farvekode: subs = blå (--blue), vMix Calls (plads >15) = magenta.
+      const barColor = s.slot > 15 ? '#a855f7' : 'var(--blue)';
+      return `<div class="grafik-block" style="--g-color:${barColor}">
         <span class="grafik-block-num">${s.disp}</span>
         <div class="grafik-block-info">
           <span class="grafik-block-name${!s.navn ? ' muted' : ''}">${esc(s.navn || '—')}</span>
