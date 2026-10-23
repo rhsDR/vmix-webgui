@@ -10,7 +10,7 @@
 const INFO_OUTPUTS = [['hoved', 'Master'], ['komm', 'Secondary'], ['overlay-3', 'Fullscreen']];
 const INFO_OUTPUT_IDS = INFO_OUTPUTS.map(o => o[0]);
 // Maks tegn i info-indhold ≈ 3 linjer i grafikken (boksen er ~1100px bred ved 26px versaler).
-const INFO_INDHOLD_MAX = 160;
+const INFO_INDHOLD_MAX = 185;
 
 async function loadInfoBokse() {
   try {
