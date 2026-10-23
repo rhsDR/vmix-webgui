@@ -1412,6 +1412,10 @@ function renderGrafikTV(container) {
     <div>
       <div class="grafik-companion-head" style="margin-bottom:6px;">PREVIEW</div>
       <div class="grafik-preview-box"><iframe class="grafik-preview-iframe" src="${prvUrl}"></iframe></div>
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <button class="grafik-btn-in" id="tv-prw-in-btn" style="flex:1;" title="Spil ind-animationen i preview">▶ PRW IND</button>
+        <button class="grafik-btn-out" id="tv-prw-out-btn" style="flex:1;" title="Spil ud-animationen i preview">◀ PRW UD</button>
+      </div>
     </div>
     ${onairBlock('ON AIR — MASTER', origin + '/master.html?p=' + pid)}
     ${onairBlock('ON AIR — SECONDARY', origin + '/secondary.html?p=' + pid)}
@@ -1496,6 +1500,17 @@ function renderGrafikTV(container) {
 
   container.querySelectorAll('.tv-prw').forEach(btn =>
     btn.addEventListener('click', () => _tvLoadPreview(btn.dataset.prwUrl, container)));
+
+  // PRW IND / PRW UD: spil ind-/ud-animationen i den indlæste preview-iframe (srcdoc = samme origin →
+  // runAnimationIN/OUT kan kaldes direkte). Bound-guard, da preview-panelet persisterer ved del-render.
+  container.querySelectorAll('#tv-prw-in-btn, #tv-prw-out-btn').forEach(btn => {
+    if (btn.dataset.bound) return; btn.dataset.bound = '1';
+    btn.addEventListener('click', () => {
+      const f = container.querySelector('.grafik-preview-iframe');
+      const fn = btn.id === 'tv-prw-out-btn' ? 'runAnimationOUT' : 'runAnimationIN';
+      try { f && f.contentWindow && f.contentWindow[fn] && f.contentWindow[fn](); } catch (e) {}
+    });
+  });
 
   container.querySelectorAll('.tv-makro-add').forEach(btn =>
     btn.addEventListener('click', () => openMakroModal(null, [{ key: btn.dataset.mkTrig, value: 'in' }])));
