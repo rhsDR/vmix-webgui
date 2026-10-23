@@ -628,7 +628,7 @@ function renderGrafik() {
             <div class="grafik-block-actions">
               <button class="grafik-btn-prw afv-edit-btn" data-id="${m.id}" title="Redigér">✎</button>
               ${slotPickerHTML}
-              <button class="${fireOn ? 'grafik-btn-in' : 'grafik-btn-out'} afv-fire-btn" data-id="${m.id}">▶ KØR</button>
+              <button class="${fireOn ? 'grafik-btn-in' : 'grafik-btn-out'} afv-fire-btn" data-id="${m.id}">${fireOn ? '&gt; IN' : '&lt; OUT'}</button>
             </div>
           </div>`;
         }).join('')
@@ -1568,7 +1568,7 @@ function _afvMakroViewHTML() {
           <div class="grafik-block-actions">
             <button class="grafik-btn-prw afv-edit-btn" data-id="${m.id}" title="Redigér">✎</button>
             ${slotPickerHTML}
-            <button class="${fireOn ? 'grafik-btn-in' : 'grafik-btn-out'} afv-fire-btn" data-id="${m.id}">▶ KØR</button>
+            <button class="${fireOn ? 'grafik-btn-in' : 'grafik-btn-out'} afv-fire-btn" data-id="${m.id}">${fireOn ? '&gt; IN' : '&lt; OUT'}</button>
           </div>
         </div>`;
       }).join('')
