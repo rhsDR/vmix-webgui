@@ -1199,8 +1199,8 @@ async function _tvLoadPreview(url, container, mode, slot) {
       + `window.addEventListener('load',function(){setTimeout(function(){`
       + `try{window.runAnimationIN&&window.runAnimationIN(${_slotJs});}catch(e){}`
       + `setTimeout(function(){document.documentElement.style.visibility='';`
-      + `setTimeout(function(){try{window.runAnimationOUT&&window.runAnimationOUT();}catch(e){}},350);`
-      + `},1300);},600);});`
+      + `setTimeout(function(){try{window.runAnimationOUT&&window.runAnimationOUT();}catch(e){}},200);`
+      + `},900);},600);});`
     : `window.addEventListener('load',function(){setTimeout(function(){`
       + `try{window.runAnimationIN&&window.runAnimationIN(${_slotJs});}catch(e){}},600);});`;
   const inject = `<link rel="stylesheet" href="${origin}/fonts.css"><style>${_ffCss}</style>`
