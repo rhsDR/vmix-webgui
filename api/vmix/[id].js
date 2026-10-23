@@ -168,7 +168,10 @@ export default async function handler(req, res) {
       ? _infoArr.map(b => ({ overskrift: b.overskrift || '', indhold: b.indhold || '', output: b.output || '' }))
       : [];
 
-    res.setHeader('Cache-Control', 'no-store');
+    // CDN-cache (Vercel) pr. projekt: Companion poller hvert 5. sek + grafik-loads deler ét DB-svar i
+    // stedet for 7 queries pr. kald. SWR serverer cache straks og fornyer i baggrunden. Live-opdatering
+    // til panel/master/grafik går via realtime+postMessage (ikke dette endpoint), så de mærker ikke de ~5s.
+    res.setHeader('Cache-Control', 'public, s-maxage=5, stale-while-revalidate=30');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/json; charset=iso-8859-1');
     const buf = Buffer.from(asciiJson([json]), 'latin1');
