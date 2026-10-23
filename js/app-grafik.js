@@ -1170,7 +1170,7 @@ function renderGrafik() {
 // iframen. Hent HTML'en, injicér samme harness som on-air/agent-preview (fonts + __API_ORIGIN/
 // __PROJEKT_ID) og auto-kald runAnimationIN — ellers sidder grafikken bare skjult (intet sker).
 // __IS_PREVIEW=false → viser RIGTIGT projektdata (grafikken falder selv tilbage til demo hvis tom).
-async function _tvLoadPreview(url, container, mode) {
+async function _tvLoadPreview(url, container, mode, slot) {
   const f = (container || document).querySelector('.grafik-preview-iframe');
   if (!f || !url) return;
   const origin = window.location.origin;
