@@ -9,6 +9,8 @@
 // Ingen på/af i panelet — boksen ligger altid på et overlay, og vMix styrer vis/skjul.
 const INFO_OUTPUTS = [['hoved', 'Master'], ['komm', 'Secondary'], ['overlay-3', 'Fullscreen']];
 const INFO_OUTPUT_IDS = INFO_OUTPUTS.map(o => o[0]);
+// Maks tegn i info-indhold ≈ 3 linjer i grafikken (boksen er ~1100px bred ved 26px versaler).
+const INFO_INDHOLD_MAX = 160;
 
 async function loadInfoBokse() {
   try {
@@ -45,7 +47,8 @@ function _infoBoxCard(b, idx) {
           </div>
           <div class="form-group span2">
             <label class="form-label">Indhold</label>
-            <textarea class="form-input" data-field="indhold" rows="3" placeholder="Indhold (maks 3 linjer)">${esc(b.indhold || '')}</textarea>
+            <textarea class="form-input" data-field="indhold" rows="3" maxlength="${INFO_INDHOLD_MAX}" placeholder="Indhold (maks 3 linjer)">${esc(b.indhold || '')}</textarea>
+            <div class="info-char-count" style="font-size:10px;color:#888;text-align:right;margin-top:3px;letter-spacing:.5px;">${INFO_INDHOLD_MAX - (b.indhold || '').length} tegn tilbage</div>
           </div>
         </div>
         <div class="edit-actions"><button class="btn btn-save" data-act="gem">💾 GEM</button></div>
@@ -71,8 +74,16 @@ function renderInfo() {
     const box = infoBokse.find(b => b.id === id);
     if (!box) return;
     card.querySelector('[data-field="overskrift"]').addEventListener('input', e => { box.overskrift = e.target.value; });
-    // Info-indhold: maks 3 linjer. Enter blokeres ved 3 linjer; paste af mere afkortes til 3.
+    // Info-indhold: maks 3 linjer + maks INFO_INDHOLD_MAX tegn. Enter blokeres ved 3 linjer; paste af mere
+    // afkortes; tæller viser resterende tegn.
     const indholdEl = card.querySelector('[data-field="indhold"]');
+    const countEl = card.querySelector('.info-char-count');
+    const updateCount = () => {
+      if (!countEl) return;
+      const rest = INFO_INDHOLD_MAX - indholdEl.value.length;
+      countEl.textContent = rest + ' tegn tilbage';
+      countEl.style.color = rest <= 15 ? '#ef4444' : '#888';
+    };
     indholdEl.addEventListener('keydown', e => {
       if (e.key === 'Enter' && e.target.value.split('\n').length >= 3) e.preventDefault();
     });
@@ -84,6 +95,7 @@ function renderInfo() {
         try { e.target.setSelectionRange(p, p); } catch (err) {}
       }
       box.indhold = e.target.value;
+      updateCount();
     });
     card.querySelector('[data-act="gem"]').addEventListener('click', async () => {
       try { await saveInfoBokse('Gemt ✓'); } catch { toast('Fejl ved gem', 'err'); }
