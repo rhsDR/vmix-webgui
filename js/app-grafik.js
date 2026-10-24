@@ -615,7 +615,7 @@ function renderGrafik() {
             const encodedSlot = ltOnStep.value === 'vmixcall' ? 'v' + (ltOnStep.slot || '') : (ltOnStep.slot || '');
             const opts = _buildLtSlotOpts(encodedSlot);
             if ((opts.match(/<option/g) || []).length > 1) {
-              slotPickerHTML = `<select class="afv-slot-sel" style="background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;">${opts}</select>`;
+              slotPickerHTML = `<select class="afv-slot-sel" style="background:#15243a;border:1px solid #3b82f6;color:#fff;padding:5px 10px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 0 0 2px rgba(59,130,246,0.2);">${opts}</select>`;
             }
           }
           const fireOn = (m.handlinger || []).some(h => h.key !== 'wait' && h.key !== 'alle_af' && h.value !== 'out');
@@ -1569,7 +1569,7 @@ function _afvMakroViewHTML() {
         if (subOnStep || infoOnStep) {
           const opts = subOnStep ? _tvSubSlotOpts(subOnStep.slot || '') : _tvInfoSlotOpts(infoOnStep.slot || '');
           if ((opts.match(/<option/g) || []).length > 1) {
-            slotPickerHTML = `<select class="afv-slot-sel" style="background:#111;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;">${opts}</select>`;
+            slotPickerHTML = `<select class="afv-slot-sel" style="background:#15243a;border:1px solid #3b82f6;color:#fff;padding:5px 10px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 0 0 2px rgba(59,130,246,0.2);">${opts}</select>`;
           }
         }
         // KØR følger samme grøn=PÅ / rød=AF-kode som de andre knapper: grøn hvis makroen TÆNDER noget
