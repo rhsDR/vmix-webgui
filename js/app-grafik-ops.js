@@ -882,7 +882,32 @@ function _grafikOpsDeleteConfirm(btn, id, filePath, label) {
 // serverless-funktion (Vercel Hobby-grænse = 12 functions).
 const FONT_EXT_FORMAT = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' };
 const FONT_ALLOWED_EXT = ['woff2', 'woff', 'ttf', 'otf'];
-let _fontUploadFile = null;
+let _fontUploadFiles = [];
+
+// Gæt vægt + stil ud fra filnavnet (fx "AkkuratPro-Bold.woff2" → 700 normal; "...-Italic" → italic),
+// så man slipper for at vælge dem manuelt. En numerisk vægt i navnet (fx "700") vinder.
+function _fontDetectFromName(fname) {
+  const base = String(fname || '').replace(/\.[^.]+$/, '').toLowerCase();
+  const style = /italic|oblique/.test(base) ? 'italic' : 'normal';
+  let weight = 400;
+  const num = base.match(/(?:^|[^0-9])([1-9]00)(?:[^0-9]|$)/);
+  if (num) { weight = parseInt(num[1]); }
+  else {
+    const WT = [[/thin|hairline/, 100], [/extra[\s_-]?light|ultra[\s_-]?light/, 200], [/semi[\s_-]?light/, 300],
+      [/light/, 300], [/book|regular|normal/, 400], [/medium/, 500], [/semi[\s_-]?bold|demi[\s_-]?bold/, 600],
+      [/extra[\s_-]?bold|ultra[\s_-]?bold/, 800], [/black|heavy/, 900], [/bold/, 700]];
+    for (const [re, w] of WT) { if (re.test(base)) { weight = w; break; } }
+  }
+  return { weight, style };
+}
+
+// Afled et rent family-navn fra filnavnet ved at fjerne vægt/stil-tokens (så flere filer deler ét navn).
+function _fontDeriveFamily(fname) {
+  let base = String(fname || '').replace(/\.[^.]+$/, '');
+  base = base.replace(/[\s_-]*(thin|hairline|extra[\s_-]?light|ultra[\s_-]?light|semi[\s_-]?light|light|book|regular|normal|medium|semi[\s_-]?bold|demi[\s_-]?bold|extra[\s_-]?bold|ultra[\s_-]?bold|black|heavy|bold|italic|oblique)\b/gi, '');
+  base = base.replace(/[\s_-]*[1-9]00\b/g, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return base || String(fname || '').replace(/\.[^.]+$/, '');
+}
 
 async function loadFontLib() {
   try {
@@ -912,6 +937,7 @@ function _fontLibSectionHTML() {
         <div style="font-size:12px;color:#eee;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fam} <span style="font-size:10px;color:#8c8c8c;font-weight:400;">· ${w}${it ? ' italic' : ''}</span></div>
         <div style="font-family:'${cssFam}',sans-serif;font-weight:${w};font-style:${it ? 'italic' : 'normal'};font-size:20px;color:#cbd5e1;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">AaBbCc Æ Ø Å 0123</div>
       </div>
+      <button data-copy="font-family:'${cssFam}'" title="Kopiér font-family til CSS" style="padding:3px 10px;background:#15243a;border:1px solid #2d4a6a;color:#93c5fd;border-radius:4px;cursor:pointer;font-size:11px;flex:none;">Kopiér CSS</button>
       <button data-del-font="${f.id}" data-del-font-path="${esc(f.file_path || '')}" data-del-font-fam="${fam}" style="padding:3px 8px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:4px;cursor:pointer;font-size:11px;flex:none;">🗑</button>
     </div>`;
   }).join('') : '<div style="color:#8c8c8c;font-size:12px;padding:12px 0;">Ingen uploadede fonte endnu.</div>';
@@ -920,7 +946,7 @@ function _fontLibSectionHTML() {
     <details class="gops-section" style="margin-top:14px;">
       <summary class="gops-summary">FONTE <span class="gops-summary-hint">— upload egne fonte til alle grafikker</span></summary>
       <style>${faces}</style>
-      <div style="font-size:11px;color:#8c8c8c;margin:6px 0 10px;">Uploadede fonte er tilgængelige i <b>alle projekter</b> og i grafik-agenten. Skriv font-navnet i din grafiks CSS (fx <span style="color:#4a9eff;">font-family:'Mit Navn'</span>). Anbefalet format: <b>.woff2</b> (mindst). Også .woff/.ttf/.otf.</div>
+      <div style="font-size:11px;color:#8c8c8c;margin:6px 0 10px;">Uploadede fonte er tilgængelige i <b>alle projekter</b> og i grafik-agenten. Brug <b>Kopiér CSS</b> ud for fonten (eller skriv <span style="color:#4a9eff;">font-family:'Mit Navn'</span> selv). <b>Vælg gerne flere filer på én gang</b> (regular + bold + italic) — vægt og stil gættes automatisk ud fra filnavnet. Anbefalet format: <b>.woff2</b>.</div>
       <div style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:12px;">
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
           <div style="flex:2;min-width:150px;">
@@ -928,15 +954,15 @@ function _fontLibSectionHTML() {
             <input id="font-family-inp" placeholder="fx Akkurat Pro" style="width:100%;background:#0d0d0d;border:1px solid #333;color:#ddd;border-radius:4px;padding:5px 8px;font-size:12px;outline:none;">
           </div>
           <div style="min-width:80px;">
-            <div style="font-size:10px;color:#9c9c9c;letter-spacing:1px;margin-bottom:3px;">VÆGT</div>
+            <div style="font-size:10px;color:#9c9c9c;letter-spacing:1px;margin-bottom:3px;">VÆGT <span style="color:#6a6a6a;">(auto)</span></div>
             <select id="font-weight-sel" style="width:100%;background:#0d0d0d;border:1px solid #333;color:#ddd;border-radius:4px;padding:5px 6px;font-size:12px;outline:none;">${weightOpts}</select>
           </div>
           <div style="min-width:90px;">
-            <div style="font-size:10px;color:#9c9c9c;letter-spacing:1px;margin-bottom:3px;">STIL</div>
+            <div style="font-size:10px;color:#9c9c9c;letter-spacing:1px;margin-bottom:3px;">STIL <span style="color:#6a6a6a;">(auto)</span></div>
             <select id="font-style-sel" style="width:100%;background:#0d0d0d;border:1px solid #333;color:#ddd;border-radius:4px;padding:5px 6px;font-size:12px;outline:none;"><option value="normal">normal</option><option value="italic">italic</option></select>
           </div>
-          <input type="file" id="font-file-inp" accept=".woff2,.woff,.ttf,.otf" style="display:none;">
-          <button id="font-pick-btn" style="padding:6px 12px;background:#222;border:1px solid #333;color:#aaa;border-radius:6px;cursor:pointer;font-size:11px;">Vælg fil…</button>
+          <input type="file" id="font-file-inp" accept=".woff2,.woff,.ttf,.otf" multiple style="display:none;">
+          <button id="font-pick-btn" style="padding:6px 12px;background:#222;border:1px solid #333;color:#aaa;border-radius:6px;cursor:pointer;font-size:11px;">Vælg filer…</button>
           <button id="font-upload-btn" disabled style="padding:6px 14px;background:#1a2a3a;border:1px solid #1d4ed8;color:#93c5fd;border-radius:6px;cursor:pointer;font-size:11px;letter-spacing:1px;opacity:.5;">Upload</button>
         </div>
         <div id="font-file-name" style="font-size:11px;color:#8c8c8c;margin-top:7px;min-height:14px;"></div>
@@ -948,45 +974,66 @@ function _fontLibSectionHTML() {
 function _fontPick() { document.getElementById('font-file-inp')?.click(); }
 
 function _fontFileChosen(input) {
-  const f = input.files && input.files[0];
-  _fontUploadFile = null;
+  const files = [...(input.files || [])].filter(f => FONT_ALLOWED_EXT.includes(f.name.split('.').pop().toLowerCase()));
+  _fontUploadFiles = files;
   const nameEl = document.getElementById('font-file-name');
   const famInp = document.getElementById('font-family-inp');
-  const upBtn = document.getElementById('font-upload-btn');
-  const reset = () => { if (upBtn) { upBtn.disabled = true; upBtn.style.opacity = '.5'; } };
-  if (!f) { if (nameEl) nameEl.textContent = ''; reset(); return; }
-  const ext = f.name.split('.').pop().toLowerCase();
-  if (!FONT_ALLOWED_EXT.includes(ext)) { toast('Ugyldigt format — brug .woff2/.woff/.ttf/.otf', 'err'); input.value = ''; reset(); return; }
-  _fontUploadFile = f;
-  if (nameEl) nameEl.textContent = f.name + ' · ' + Math.round(f.size / 1024) + ' KB';
-  if (famInp && !famInp.value.trim()) famInp.value = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+  const wSel   = document.getElementById('font-weight-sel');
+  const sSel   = document.getElementById('font-style-sel');
+  const upBtn  = document.getElementById('font-upload-btn');
+  const reset  = () => { if (upBtn) { upBtn.disabled = true; upBtn.style.opacity = '.5'; } };
+  if ((input.files || []).length && !files.length) { toast('Ugyldigt format — brug .woff2/.woff/.ttf/.otf', 'err'); input.value = ''; }
+  if (!files.length) { if (nameEl) nameEl.textContent = ''; reset(); return; }
+  // Auto-udfyld family fra første fil (hvis feltet er tomt) — rent navn uden vægt/stil-token.
+  if (famInp && !famInp.value.trim()) famInp.value = _fontDeriveFamily(files[0].name);
+  if (files.length === 1) {
+    const d = _fontDetectFromName(files[0].name);
+    if (wSel) wSel.value = String(d.weight);
+    if (sSel) sSel.value = d.style;
+    if (nameEl) nameEl.textContent = `${files[0].name} · ${Math.round(files[0].size / 1024)} KB · auto: ${d.weight}${d.style === 'italic' ? ' italic' : ''}`;
+  } else {
+    const list = files.map(f => { const d = _fontDetectFromName(f.name); return `${f.name.replace(/\.[^.]+$/, '')} (${d.weight}${d.style === 'italic' ? ' it' : ''})`; }).join(' · ');
+    if (nameEl) nameEl.textContent = `${files.length} fonte · vægt/stil auto pr. fil: ${list}`;
+  }
   if (upBtn) { upBtn.disabled = false; upBtn.style.opacity = '1'; }
 }
 
 async function uploadFont() {
-  const file = _fontUploadFile;
-  if (!file) { toast('Vælg en fil først', 'err'); return; }
-  const famRaw = (document.getElementById('font-family-inp')?.value || '').replace(/["'\\<>]/g, '').trim();
+  const files = _fontUploadFiles || [];
+  if (!files.length) { toast('Vælg en eller flere filer først', 'err'); return; }
+  let famRaw = (document.getElementById('font-family-inp')?.value || '').replace(/["'\\<>]/g, '').trim();
+  if (!famRaw) famRaw = _fontDeriveFamily(files[0].name);
   if (!famRaw) { toast('Skriv et font-navn', 'err'); return; }
-  const weight = parseInt(document.getElementById('font-weight-sel')?.value) || 400;
-  const style = document.getElementById('font-style-sel')?.value === 'italic' ? 'italic' : 'normal';
-  const ext = file.name.split('.').pop().toLowerCase();
-  if (!FONT_ALLOWED_EXT.includes(ext)) { toast('Ugyldigt format', 'err'); return; }
+  // Én fil → brug dropdown-værdierne (forvalgt fra auto-gæt, kan overstyres). Flere → gæt pr. fil.
+  const single   = files.length === 1;
+  const selWeight = parseInt(document.getElementById('font-weight-sel')?.value) || 400;
+  const selStyle  = document.getElementById('font-style-sel')?.value === 'italic' ? 'italic' : 'normal';
   const upBtn = document.getElementById('font-upload-btn');
   if (upBtn) { upBtn.disabled = true; upBtn.textContent = 'Uploader…'; }
+  let ok = 0, fail = 0;
   try {
-    const safe = famRaw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'font';
-    const filePath = `fonts/${safe}-${weight}${style === 'italic' ? 'i' : ''}-${Date.now()}.${ext}`;
-    const ct = ext === 'woff2' ? 'font/woff2' : ext === 'woff' ? 'font/woff' : ext === 'ttf' ? 'font/ttf' : 'font/otf';
-    const { error: upErr } = await sbClient.storage.from('grafik').upload(filePath, file, { contentType: ct, upsert: true });
-    if (upErr) { toast('Upload fejlede: ' + upErr.message, 'err'); return; }
-    const { data: urlData } = sbClient.storage.from('grafik').getPublicUrl(filePath);
-    const { error: dbErr } = await sbClient.from('custom_fonts').insert({ family: famRaw, weight, style, file_url: urlData.publicUrl, file_path: filePath });
-    if (dbErr) { toast('DB fejl: ' + dbErr.message, 'err'); return; }
-    _fontUploadFile = null;
+    for (const file of files) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!FONT_ALLOWED_EXT.includes(ext)) { fail++; continue; }
+      const det = _fontDetectFromName(file.name);
+      const weight = single ? selWeight : det.weight;
+      const style  = single ? selStyle  : det.style;
+      const safe = famRaw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'font';
+      const filePath = `fonts/${safe}-${weight}${style === 'italic' ? 'i' : ''}-${Date.now()}-${ok}.${ext}`;
+      const ct = ext === 'woff2' ? 'font/woff2' : ext === 'woff' ? 'font/woff' : ext === 'ttf' ? 'font/ttf' : 'font/otf';
+      const { error: upErr } = await sbClient.storage.from('grafik').upload(filePath, file, { contentType: ct, upsert: true });
+      if (upErr) { fail++; continue; }
+      const { data: urlData } = sbClient.storage.from('grafik').getPublicUrl(filePath);
+      const { error: dbErr } = await sbClient.from('custom_fonts').insert({ family: famRaw, weight, style, file_url: urlData.publicUrl, file_path: filePath });
+      if (dbErr) { fail++; continue; }
+      ok++;
+    }
+    _fontUploadFiles = [];
     await loadFontLib();
     renderGrafikOps();
-    toast('Font uploadet: ' + famRaw, 'ok');
+    if (ok && !fail) toast(ok === 1 ? 'Font uploadet: ' + famRaw : ok + ' fonte uploadet: ' + famRaw, 'ok');
+    else if (ok && fail) toast(ok + ' uploadet, ' + fail + ' fejlede', 'err');
+    else toast('Upload fejlede', 'err');
   } finally {
     if (upBtn) upBtn.textContent = 'Upload';
   }
