@@ -902,9 +902,13 @@ function _fontDetectFromName(fname) {
 }
 
 // Afled et rent family-navn fra filnavnet ved at fjerne vægt/stil-tokens (så flere filer deler ét navn).
+// Loop indtil stabil, så SAMMENSATTE tokens uden separator ("BoldItalic") også fjernes helt — mens \b
+// bevares, så ægte navne som "Bookman"/"Lighthouse" IKKE rammes.
 function _fontDeriveFamily(fname) {
   let base = String(fname || '').replace(/\.[^.]+$/, '');
-  base = base.replace(/[\s_-]*(thin|hairline|extra[\s_-]?light|ultra[\s_-]?light|semi[\s_-]?light|light|book|regular|normal|medium|semi[\s_-]?bold|demi[\s_-]?bold|extra[\s_-]?bold|ultra[\s_-]?bold|black|heavy|bold|italic|oblique)\b/gi, '');
+  const tokenRe = /[\s_-]*(thin|hairline|extra[\s_-]?light|ultra[\s_-]?light|semi[\s_-]?light|light|book|regular|normal|medium|semi[\s_-]?bold|demi[\s_-]?bold|extra[\s_-]?bold|ultra[\s_-]?bold|black|heavy|bold|italic|oblique)\b/gi;
+  let prev;
+  do { prev = base; base = base.replace(tokenRe, ''); } while (base !== prev);
   base = base.replace(/[\s_-]*[1-9]00\b/g, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
   return base || String(fname || '').replace(/\.[^.]+$/, '');
 }
