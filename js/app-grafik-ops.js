@@ -1012,9 +1012,14 @@ async function uploadFont() {
   const single   = files.length === 1;
   const selWeight = parseInt(document.getElementById('font-weight-sel')?.value) || 400;
   const selStyle  = document.getElementById('font-style-sel')?.value === 'italic' ? 'italic' : 'normal';
+  // Erstat-ved-dublet: samme family+vægt+stil → opdatér den eksisterende række (og slet den gamle fil)
+  // i stedet for at lave en dublet. seen-map startes fra de allerede-uploadede + opdateres i løkken.
+  const keyOf = (fam, w, st) => `${String(fam).trim().toLowerCase()}|${w}|${st}`;
+  const seen = {};
+  (fontLib || []).forEach(x => { seen[keyOf(x.family, parseInt(x.weight) || 400, x.style === 'italic' ? 'italic' : 'normal')] = { id: x.id, file_path: x.file_path || '' }; });
   const upBtn = document.getElementById('font-upload-btn');
   if (upBtn) { upBtn.disabled = true; upBtn.textContent = 'Uploader…'; }
-  let ok = 0, fail = 0;
+  let done = 0, fail = 0, idx = 0;
   try {
     for (const file of files) {
       const ext = file.name.split('.').pop().toLowerCase();
@@ -1023,20 +1028,31 @@ async function uploadFont() {
       const weight = single ? selWeight : det.weight;
       const style  = single ? selStyle  : det.style;
       const safe = famRaw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'font';
-      const filePath = `fonts/${safe}-${weight}${style === 'italic' ? 'i' : ''}-${Date.now()}-${ok}.${ext}`;
+      const filePath = `fonts/${safe}-${weight}${style === 'italic' ? 'i' : ''}-${Date.now()}-${idx++}.${ext}`;
       const ct = ext === 'woff2' ? 'font/woff2' : ext === 'woff' ? 'font/woff' : ext === 'ttf' ? 'font/ttf' : 'font/otf';
       const { error: upErr } = await sbClient.storage.from('grafik').upload(filePath, file, { contentType: ct, upsert: true });
       if (upErr) { fail++; continue; }
       const { data: urlData } = sbClient.storage.from('grafik').getPublicUrl(filePath);
-      const { error: dbErr } = await sbClient.from('custom_fonts').insert({ family: famRaw, weight, style, file_url: urlData.publicUrl, file_path: filePath });
-      if (dbErr) { fail++; continue; }
-      ok++;
+      const key = keyOf(famRaw, weight, style);
+      const existing = seen[key];
+      if (existing) {
+        // ERSTAT: opdatér rækken til den nye fil, og ryd den gamle storage-fil (undgå forældreløse filer)
+        const { error: updErr } = await sbClient.from('custom_fonts').update({ file_url: urlData.publicUrl, file_path: filePath }).eq('id', existing.id);
+        if (updErr) { fail++; continue; }
+        if (existing.file_path && existing.file_path !== filePath) { try { await sbClient.storage.from('grafik').remove([existing.file_path]); } catch {} }
+        seen[key] = { id: existing.id, file_path: filePath };
+      } else {
+        const { data: insData, error: dbErr } = await sbClient.from('custom_fonts').insert({ family: famRaw, weight, style, file_url: urlData.publicUrl, file_path: filePath }).select('id').single();
+        if (dbErr) { fail++; continue; }
+        seen[key] = { id: insData?.id, file_path: filePath };
+      }
+      done++;
     }
     _fontUploadFiles = [];
     await loadFontLib();
     renderGrafikOps();
-    if (ok && !fail) toast(ok === 1 ? 'Font uploadet: ' + famRaw : ok + ' fonte uploadet: ' + famRaw, 'ok');
-    else if (ok && fail) toast(ok + ' uploadet, ' + fail + ' fejlede', 'err');
+    if (done && !fail) toast(done === 1 ? 'Font gemt: ' + famRaw : done + ' fonte gemt: ' + famRaw, 'ok');
+    else if (done && fail) toast(done + ' gemt, ' + fail + ' fejlede', 'err');
     else toast('Upload fejlede', 'err');
   } finally {
     if (upBtn) upBtn.textContent = 'Upload';
