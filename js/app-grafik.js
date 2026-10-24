@@ -623,7 +623,6 @@ function renderGrafik() {
             <span class="afv-drag-handle" style="color:#555;font-size:18px;user-select:none;flex-shrink:0;cursor:grab;padding:0 6px 0 2px;">⠿</span>
             <div class="grafik-block-info">
               <span class="grafik-block-name">${esc(m.label.toUpperCase())}</span>
-              ${summary ? `<span class="grafik-block-sub" style="color:#555">${esc(summary)}</span>` : ''}
             </div>
             <div class="grafik-block-actions">
               <button class="grafik-btn-prw afv-edit-btn" data-id="${m.id}" title="Redigér">✎</button>
@@ -1580,7 +1579,6 @@ function _afvMakroViewHTML() {
           <span class="afv-drag-handle" style="color:#555;font-size:18px;user-select:none;flex-shrink:0;cursor:grab;padding:0 6px 0 2px;">⠿</span>
           <div class="grafik-block-info">
             <span class="grafik-block-name">${esc(m.label.toUpperCase())}</span>
-            ${summary ? `<span class="grafik-block-sub" style="color:#555">${esc(summary)}</span>` : ''}
           </div>
           <div class="grafik-block-actions">
             <button class="grafik-btn-prw afv-edit-btn" data-id="${m.id}" title="Redigér">✎</button>
