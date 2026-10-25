@@ -933,7 +933,6 @@ function _fontFaceCss(f) {
 
 function _fontLibSectionHTML() {
   const faces = (fontLib || []).map(_fontFaceCss).filter(Boolean).join('');
-  const weightOpts = [100, 200, 300, 400, 500, 600, 700, 800, 900].map(w => `<option value="${w}"${w === 400 ? ' selected' : ''}>${w}</option>`).join('');
   const rows = (fontLib || []).length ? (fontLib || []).map(f => {
     const fam = esc(f.family), cssFam = _fontCssFamily(f), w = parseInt(f.weight) || 400, it = f.style === 'italic';
     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1a1a1a;">
@@ -950,20 +949,12 @@ function _fontLibSectionHTML() {
     <details class="gops-section" style="margin-top:14px;">
       <summary class="gops-summary">FONTE <span class="gops-summary-hint">— upload egne fonte til alle grafikker</span></summary>
       <style>${faces}</style>
-      <div style="font-size:11px;color:#8c8c8c;margin:6px 0 10px;">Uploadede fonte er tilgængelige i <b>alle projekter</b> og i grafik-agenten. Brug <b>Kopiér CSS</b> ud for fonten (eller skriv <span style="color:#4a9eff;">font-family:'Mit Navn'</span> selv). <b>Vælg gerne flere filer på én gang</b> (regular + bold + italic) — vægt og stil gættes automatisk ud fra filnavnet. Anbefalet format: <b>.woff2</b>.</div>
+      <div style="font-size:11px;color:#8c8c8c;margin:6px 0 10px;">Uploadede fonte er tilgængelige i <b>alle projekter</b> og i grafik-agenten. Brug <b>Kopiér CSS</b> ud for fonten (eller skriv <span style="color:#4a9eff;">font-family:'Mit Navn'</span> selv). <b>Vælg gerne flere filer på én gang</b> (regular + bold + italic) — vægt og stil sættes <b>automatisk</b> ud fra filnavnet (navngiv tydeligt, fx <span style="color:#4a9eff;">...-Bold</span> / <span style="color:#4a9eff;">...-Italic</span>). Anbefalet format: <b>.woff2</b>.</div>
       <div style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:12px;">
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
           <div style="flex:2;min-width:150px;">
             <div style="font-size:10px;color:#9c9c9c;letter-spacing:1px;margin-bottom:3px;">FONT-NAVN (family)</div>
             <input id="font-family-inp" placeholder="fx Akkurat Pro" style="width:100%;background:#0d0d0d;border:1px solid #333;color:#ddd;border-radius:4px;padding:5px 8px;font-size:12px;outline:none;">
-          </div>
-          <div style="min-width:80px;">
-            <div style="font-size:10px;color:#9c9c9c;letter-spacing:1px;margin-bottom:3px;">VÆGT <span style="color:#6a6a6a;">(auto)</span></div>
-            <select id="font-weight-sel" style="width:100%;background:#0d0d0d;border:1px solid #333;color:#ddd;border-radius:4px;padding:5px 6px;font-size:12px;outline:none;">${weightOpts}</select>
-          </div>
-          <div style="min-width:90px;">
-            <div style="font-size:10px;color:#9c9c9c;letter-spacing:1px;margin-bottom:3px;">STIL <span style="color:#6a6a6a;">(auto)</span></div>
-            <select id="font-style-sel" style="width:100%;background:#0d0d0d;border:1px solid #333;color:#ddd;border-radius:4px;padding:5px 6px;font-size:12px;outline:none;"><option value="normal">normal</option><option value="italic">italic</option></select>
           </div>
           <input type="file" id="font-file-inp" accept=".woff2,.woff,.ttf,.otf" multiple style="display:none;">
           <button id="font-pick-btn" style="padding:6px 12px;background:#222;border:1px solid #333;color:#aaa;border-radius:6px;cursor:pointer;font-size:11px;">Vælg filer…</button>
@@ -982,8 +973,6 @@ function _fontFileChosen(input) {
   _fontUploadFiles = files;
   const nameEl = document.getElementById('font-file-name');
   const famInp = document.getElementById('font-family-inp');
-  const wSel   = document.getElementById('font-weight-sel');
-  const sSel   = document.getElementById('font-style-sel');
   const upBtn  = document.getElementById('font-upload-btn');
   const reset  = () => { if (upBtn) { upBtn.disabled = true; upBtn.style.opacity = '.5'; } };
   if ((input.files || []).length && !files.length) { toast('Ugyldigt format — brug .woff2/.woff/.ttf/.otf', 'err'); input.value = ''; }
@@ -992,12 +981,10 @@ function _fontFileChosen(input) {
   if (famInp && !famInp.value.trim()) famInp.value = _fontDeriveFamily(files[0].name);
   if (files.length === 1) {
     const d = _fontDetectFromName(files[0].name);
-    if (wSel) wSel.value = String(d.weight);
-    if (sSel) sSel.value = d.style;
-    if (nameEl) nameEl.textContent = `${files[0].name} · ${Math.round(files[0].size / 1024)} KB · auto: ${d.weight}${d.style === 'italic' ? ' italic' : ''}`;
+    if (nameEl) nameEl.textContent = `${files[0].name} · ${Math.round(files[0].size / 1024)} KB · ${d.weight}${d.style === 'italic' ? ' italic' : ''}`;
   } else {
     const list = files.map(f => { const d = _fontDetectFromName(f.name); return `${f.name.replace(/\.[^.]+$/, '')} (${d.weight}${d.style === 'italic' ? ' it' : ''})`; }).join(' · ');
-    if (nameEl) nameEl.textContent = `${files.length} fonte · vægt/stil auto pr. fil: ${list}`;
+    if (nameEl) nameEl.textContent = `${files.length} fonte · ${list}`;
   }
   if (upBtn) { upBtn.disabled = false; upBtn.style.opacity = '1'; }
 }
@@ -1009,9 +996,6 @@ async function uploadFont() {
   if (!famRaw) famRaw = _fontDeriveFamily(files[0].name);
   if (!famRaw) { toast('Skriv et font-navn', 'err'); return; }
   // Én fil → brug dropdown-værdierne (forvalgt fra auto-gæt, kan overstyres). Flere → gæt pr. fil.
-  const single   = files.length === 1;
-  const selWeight = parseInt(document.getElementById('font-weight-sel')?.value) || 400;
-  const selStyle  = document.getElementById('font-style-sel')?.value === 'italic' ? 'italic' : 'normal';
   // Erstat-ved-dublet: samme family+vægt+stil → opdatér den eksisterende række (og slet den gamle fil)
   // i stedet for at lave en dublet. seen-map startes fra de allerede-uploadede + opdateres i løkken.
   const keyOf = (fam, w, st) => `${String(fam).trim().toLowerCase()}|${w}|${st}`;
@@ -1025,8 +1009,8 @@ async function uploadFont() {
       const ext = file.name.split('.').pop().toLowerCase();
       if (!FONT_ALLOWED_EXT.includes(ext)) { fail++; continue; }
       const det = _fontDetectFromName(file.name);
-      const weight = single ? selWeight : det.weight;
-      const style  = single ? selStyle  : det.style;
+      const weight = det.weight;
+      const style  = det.style;
       const safe = famRaw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'font';
       const filePath = `fonts/${safe}-${weight}${style === 'italic' ? 'i' : ''}-${Date.now()}-${idx++}.${ext}`;
       const ct = ext === 'woff2' ? 'font/woff2' : ext === 'woff' ? 'font/woff' : ext === 'ttf' ? 'font/ttf' : 'font/otf';
