@@ -37,7 +37,7 @@ function applySubRow(row) {
   const i = row.slot - 1;
   if (i < 0 || i > 14) return;
   if (subs[i].editMode || subs[i].savePending) return;
-  subs[i] = { ...subs[i], navn: row.navn || '', titel: row.titel || '' };
+  subs[i] = { ...subs[i], navn: row.navn || '', titel: row.titel || '', side: row.side || 'venstre' };
   rerenderSub(i);
   if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
 }
@@ -47,7 +47,7 @@ function applyVmixCallRow(row) {
   const i = row.slot - 1;
   if (i < 0 || i > 7) return;
   if (vmixCalls[i].editMode || vmixCalls[i].savePending) return;
-  vmixCalls[i] = { ...vmixCalls[i], navn: row.navn || '', titel: row.titel || '', link: row.link || '' };
+  vmixCalls[i] = { ...vmixCalls[i], navn: row.navn || '', titel: row.titel || '', link: row.link || '', side: row.side || 'venstre' };
   rerenderVmixCall(i);
   if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
 }
