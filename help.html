@@ -5,39 +5,41 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>vMix Live Control — Hjælp & Manual</title>
 <style>
-  :root { --blue:#3b82f6; --bg:#0d0d0d; --panel:#141414; --panel2:#1b1b1b; --line:#2a2a2a; --tx:#dcdcdc; --mut:#9a9a9a; }
+  :root { --blue:#4a9eff; --bg:#0e0e0e; --panel:#161616; --panel2:#1d1d1d; --line:#2e2e2e; --tx:#ececec; --mut:#b4b4b4; }
   * { box-sizing:border-box; }
-  html,body { margin:0; background:var(--bg); color:var(--tx); font-family:'Segoe UI',Roboto,Arial,sans-serif; font-size:15px; line-height:1.6; }
+  html,body { margin:0; background:var(--bg); color:var(--tx); font-family:'Segoe UI',Roboto,Arial,sans-serif; font-size:17px; line-height:1.75; }
   a { color:var(--blue); text-decoration:none; }
   a:hover { text-decoration:underline; }
-  header.top { position:sticky; top:0; z-index:10; background:#0a0a0a; border-bottom:1px solid var(--line); padding:14px 24px; display:flex; align-items:center; gap:14px; }
-  header.top h1 { font-size:17px; margin:0; letter-spacing:.5px; }
-  header.top .tag { font-size:11px; color:var(--mut); border:1px solid var(--line); border-radius:12px; padding:2px 10px; }
-  .wrap { display:flex; max-width:1200px; margin:0 auto; gap:28px; padding:24px; align-items:flex-start; }
-  nav.toc { position:sticky; top:72px; flex:0 0 240px; font-size:13px; max-height:calc(100vh - 96px); overflow:auto; border-right:1px solid var(--line); padding-right:14px; }
-  nav.toc a { display:block; color:var(--mut); padding:4px 8px; border-radius:6px; }
-  nav.toc a:hover { color:var(--tx); background:var(--panel); text-decoration:none; }
-  nav.toc .grp { color:#6a6a6a; font-size:10px; letter-spacing:1.5px; margin:14px 8px 4px; text-transform:uppercase; }
-  main { flex:1; min-width:0; }
-  section { margin-bottom:40px; scroll-margin-top:80px; }
-  h2 { font-size:21px; border-bottom:1px solid var(--line); padding-bottom:8px; margin-top:0; }
-  h3 { font-size:16px; color:#fff; margin:22px 0 6px; }
+  header.top { position:sticky; top:0; z-index:10; background:#0a0a0a; border-bottom:1px solid var(--line); padding:16px 28px; display:flex; align-items:center; gap:14px; }
+  header.top h1 { font-size:20px; margin:0; letter-spacing:.5px; }
+  header.top .tag { font-size:12px; color:var(--mut); border:1px solid var(--line); border-radius:12px; padding:3px 11px; }
+  .wrap { display:flex; max-width:1140px; margin:0 auto; gap:34px; padding:28px; align-items:flex-start; }
+  nav.toc { position:sticky; top:78px; flex:0 0 250px; font-size:14.5px; max-height:calc(100vh - 100px); overflow:auto; border-right:1px solid var(--line); padding-right:14px; }
+  nav.toc a { display:block; color:var(--mut); padding:5px 9px; border-radius:6px; }
+  nav.toc a:hover { color:#fff; background:var(--panel); text-decoration:none; }
+  nav.toc .grp { color:#7a7a7a; font-size:11px; letter-spacing:1.5px; margin:16px 9px 5px; text-transform:uppercase; }
+  main { flex:1; min-width:0; max-width:800px; }
+  section { margin-bottom:52px; scroll-margin-top:84px; }
+  h2 { font-size:26px; color:#fff; border-bottom:2px solid var(--line); padding-bottom:10px; margin:0 0 14px; letter-spacing:.3px; }
+  h3 { font-size:20px; color:#fff; margin:28px 0 8px; }
   p, li { color:var(--tx); }
-  ul,ol { padding-left:22px; }
-  li { margin:3px 0; }
-  code { background:#000; border:1px solid var(--line); border-radius:4px; padding:1px 6px; font-size:13px; color:#93c5fd; font-family:Consolas,monospace; }
-  .box { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin:12px 0; }
-  .tip { border-left:3px solid var(--blue); background:#10233f; }
-  .warn { border-left:3px solid #e0a63a; background:#2a230f; }
-  .btn { display:inline-block; border-radius:5px; padding:1px 9px; font-size:12px; font-weight:600; border:1px solid; }
-  .in { color:#5ad17a; border-color:#2e6b40; background:#11271a; }
-  .out { color:#ef6a6a; border-color:#6b2e2e; background:#271111; }
-  table { border-collapse:collapse; width:100%; margin:10px 0; font-size:14px; }
-  th,td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+  p { margin:10px 0; }
+  ul,ol { padding-left:24px; }
+  li { margin:6px 0; }
+  code { background:#000; border:1px solid var(--line); border-radius:4px; padding:2px 7px; font-size:14.5px; color:#93c5fd; font-family:Consolas,monospace; }
+  .box { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; margin:16px 0; }
+  .tip { border-left:4px solid var(--blue); background:#10233f; }
+  .warn { border-left:4px solid #e0a63a; background:#2a230f; }
+  .btn { display:inline-block; border-radius:5px; padding:2px 10px; font-size:13px; font-weight:600; border:1px solid; }
+  .in { color:#6ad98a; border-color:#2e6b40; background:#11271a; }
+  .out { color:#f08080; border-color:#6b2e2e; background:#271111; }
+  table { border-collapse:collapse; width:100%; margin:14px 0; font-size:15.5px; }
+  th,td { border:1px solid var(--line); padding:10px 13px; text-align:left; vertical-align:top; }
   th { background:var(--panel2); color:#fff; font-weight:600; }
-  .pill { font-size:10px; font-weight:600; letter-spacing:1px; color:#93c5fd; background:#15243a; border:1px solid #2d4a6a; border-radius:4px; padding:2px 8px; }
-  .muted { color:var(--mut); font-size:13px; }
-  kbd { background:#222; border:1px solid #444; border-bottom-width:2px; border-radius:4px; padding:1px 6px; font-size:12px; }
+  tr:nth-child(even) td { background:rgba(255,255,255,0.02); }
+  .pill { font-size:11px; font-weight:600; letter-spacing:1px; color:#93c5fd; background:#15243a; border:1px solid #2d4a6a; border-radius:4px; padding:2px 9px; }
+  .muted { color:var(--mut); font-size:14.5px; }
+  kbd { background:#222; border:1px solid #444; border-bottom-width:2px; border-radius:4px; padding:2px 7px; font-size:13px; }
 </style>
 </head>
 <body>
