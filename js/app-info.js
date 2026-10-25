@@ -48,7 +48,7 @@ function _infoBoxCard(b, idx) {
           <div class="form-group span2">
             <label class="form-label">Indhold</label>
             <textarea class="form-input" data-field="indhold" rows="3" maxlength="${INFO_INDHOLD_MAX}" placeholder="Indhold (maks 3 linjer)">${esc(b.indhold || '')}</textarea>
-            <div class="info-char-count" style="font-size:10px;color:#888;text-align:right;margin-top:3px;letter-spacing:.5px;">${INFO_INDHOLD_MAX - (b.indhold || '').length} tegn tilbage</div>
+            <div class="info-char-count" style="font-size:11px;color:#a5a5a5;text-align:right;margin-top:3px;letter-spacing:.5px;">${INFO_INDHOLD_MAX - (b.indhold || '').length} tegn tilbage</div>
           </div>
         </div>
         <div class="edit-actions"><button class="btn btn-save" data-act="gem">💾 GEM</button></div>
@@ -65,7 +65,7 @@ function renderInfo() {
       <button class="btn btn-save" id="infoAdd">＋ Tilføj info-boks</button>
       ${infoBokse.length ? '<button class="btn" id="infoDelAll" style="background:#2a1010;border:1px solid #4a2020;color:#ef4444;margin-left:auto;">✕ Slet alle</button>' : ''}
     </div>
-    <div id="infoCards" style="margin-top:14px;">${cards || '<div style="color:#8c8c8c;font-size:12px;padding:12px 0;">Ingen info-bokse endnu. Klik “＋ Tilføj info-boks”.</div>'}</div>`;
+    <div id="infoCards" style="margin-top:14px;">${cards || '<div style="color:#a5a5a5;font-size:13px;padding:12px 0;">Ingen info-bokse endnu. Klik “＋ Tilføj info-boks”.</div>'}</div>`;
 
   list.querySelector('#infoAdd').addEventListener('click', addInfoBox);
   list.querySelector('#infoDelAll')?.addEventListener('click', deleteAllInfoBokse);

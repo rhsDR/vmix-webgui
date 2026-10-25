@@ -977,10 +977,10 @@
     }
     .subs-section { margin-bottom: 28px; }
     .subs-section-title {
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 700;
       letter-spacing: 3px;
-      color: #868686;
+      color: #a5a5a5;
       text-transform: uppercase;
       margin-bottom: 10px;
       padding-bottom: 6px;
@@ -1032,7 +1032,7 @@
     .sub-row.flash-saved-blue   { animation: flash-blue   0.7s ease-out; }
     .sub-row.flash-saved-purple { animation: flash-purple 0.7s ease-out; }
     .sub-num {
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 700;
       min-width: 22px;
       text-align: right;
@@ -1054,7 +1054,7 @@
     .sub-row.no-data .sub-num { color: #2a2a2a; }
     .sub-row.no-data .icon-btn { color: #2a2a2a; }
     .sub-navn  { font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .sub-titel { font-size: 14px; font-weight: 400; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sub-titel { font-size: 14px; font-weight: 400; color: #a5a5a5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sub-link-row { display: flex; align-items: center; gap: 4px; }
     .sub-link {
       font-size: 13px;
@@ -1183,7 +1183,7 @@
 
     .ticker-normal { display: flex; flex-direction: row; align-items: baseline; gap: 14px; }
     .ticker-overskrift { font-size: 15px; font-weight: 400; color: #fff; text-transform: uppercase; white-space: nowrap; }
-    .ticker-tekst { font-size: 15px; color: #888; }
+    .ticker-tekst { font-size: 15px; color: #a5a5a5; }
 
     /* ── Credits ──────────────────────────────────────────── */
     .credits-speed-bar {
