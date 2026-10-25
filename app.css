@@ -1181,6 +1181,16 @@
     .ticker-body { padding: 4px 18px 18px 22px; }
     .ticker-block.collapsed .ticker-body { display: none; }
 
+    /* INFO-fanen: STØRRE/tydeligere tekst + mere KOMPAKTE kort. Scoped til #infoCards, så TICKER
+       (samme .ticker-*/.form-*-klasser) og andre formularer er uberørt. */
+    #infoCards .form-label { font-size: 13px; color: #b0b0b0; margin-bottom: 2px; }
+    #infoCards .form-input { font-size: 16px; padding: 8px 11px; }
+    #infoCards textarea.form-input { font-size: 16px; line-height: 1.5; min-height: 54px; }
+    #infoCards .ticker-body { padding: 10px 16px 12px; }
+    #infoCards .edit-grid { gap: 8px; }
+    #infoCards .edit-actions { margin-top: 10px; }
+    #infoCards .info-char-count { font-size: 12px; }
+
     .ticker-normal { display: flex; flex-direction: row; align-items: baseline; gap: 14px; }
     .ticker-overskrift { font-size: 15px; font-weight: 400; color: #fff; text-transform: uppercase; white-space: nowrap; }
     .ticker-tekst { font-size: 15px; color: #a5a5a5; }

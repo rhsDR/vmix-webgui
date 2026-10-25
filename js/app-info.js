@@ -34,13 +34,13 @@ async function saveInfoBokse(okMsg) {
 // ── INFO-fanen (kun tekst — INGEN output her) ──
 function _infoBoxCard(b, idx) {
   return `
-    <div class="ticker-block" style="margin-bottom:12px;" data-box="${b.id}">
+    <div class="ticker-block" style="margin-bottom:8px;" data-box="${b.id}">
       <div class="ticker-body" style="display:block;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
           <span class="ticker-num">INFO ${idx + 1}</span>
           <button class="btn" data-act="del" title="Slet info-boks" style="margin-left:auto;background:#2a1010;border:1px solid #4a2020;color:#ef4444;">✕ Slet</button>
         </div>
-        <div class="edit-grid" style="margin-bottom:10px;">
+        <div class="edit-grid" style="margin-bottom:6px;">
           <div class="form-group span2">
             <label class="form-label">Overskrift</label>
             <input class="form-input" data-field="overskrift" value="${esc(b.overskrift || '')}" placeholder="Overskrift">
