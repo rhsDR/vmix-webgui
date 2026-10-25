@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vMix Live Control — Hjælp & Manual</title>
+<style>
+  :root { --blue:#3b82f6; --bg:#0d0d0d; --panel:#141414; --panel2:#1b1b1b; --line:#2a2a2a; --tx:#dcdcdc; --mut:#9a9a9a; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--bg); color:var(--tx); font-family:'Segoe UI',Roboto,Arial,sans-serif; font-size:15px; line-height:1.6; }
+  a { color:var(--blue); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  header.top { position:sticky; top:0; z-index:10; background:#0a0a0a; border-bottom:1px solid var(--line); padding:14px 24px; display:flex; align-items:center; gap:14px; }
+  header.top h1 { font-size:17px; margin:0; letter-spacing:.5px; }
+  header.top .tag { font-size:11px; color:var(--mut); border:1px solid var(--line); border-radius:12px; padding:2px 10px; }
+  .wrap { display:flex; max-width:1200px; margin:0 auto; gap:28px; padding:24px; align-items:flex-start; }
+  nav.toc { position:sticky; top:72px; flex:0 0 240px; font-size:13px; max-height:calc(100vh - 96px); overflow:auto; border-right:1px solid var(--line); padding-right:14px; }
+  nav.toc a { display:block; color:var(--mut); padding:4px 8px; border-radius:6px; }
+  nav.toc a:hover { color:var(--tx); background:var(--panel); text-decoration:none; }
+  nav.toc .grp { color:#6a6a6a; font-size:10px; letter-spacing:1.5px; margin:14px 8px 4px; text-transform:uppercase; }
+  main { flex:1; min-width:0; }
+  section { margin-bottom:40px; scroll-margin-top:80px; }
+  h2 { font-size:21px; border-bottom:1px solid var(--line); padding-bottom:8px; margin-top:0; }
+  h3 { font-size:16px; color:#fff; margin:22px 0 6px; }
+  p, li { color:var(--tx); }
+  ul,ol { padding-left:22px; }
+  li { margin:3px 0; }
+  code { background:#000; border:1px solid var(--line); border-radius:4px; padding:1px 6px; font-size:13px; color:#93c5fd; font-family:Consolas,monospace; }
+  .box { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin:12px 0; }
+  .tip { border-left:3px solid var(--blue); background:#10233f; }
+  .warn { border-left:3px solid #e0a63a; background:#2a230f; }
+  .btn { display:inline-block; border-radius:5px; padding:1px 9px; font-size:12px; font-weight:600; border:1px solid; }
+  .in { color:#5ad17a; border-color:#2e6b40; background:#11271a; }
+  .out { color:#ef6a6a; border-color:#6b2e2e; background:#271111; }
+  table { border-collapse:collapse; width:100%; margin:10px 0; font-size:14px; }
+  th,td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+  th { background:var(--panel2); color:#fff; font-weight:600; }
+  .pill { font-size:10px; font-weight:600; letter-spacing:1px; color:#93c5fd; background:#15243a; border:1px solid #2d4a6a; border-radius:4px; padding:2px 8px; }
+  .muted { color:var(--mut); font-size:13px; }
+  kbd { background:#222; border:1px solid #444; border-bottom-width:2px; border-radius:4px; padding:1px 6px; font-size:12px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>vMix Live Control — Hjælp & Manual</h1>
+  <span class="tag">DR</span>
+</header>
+
+<div class="wrap">
+<nav class="toc">
+  <div class="grp">Kom i gang</div>
+  <a href="#overblik">Overblik</a>
+  <a href="#projekttyper">Projekt-typer</a>
+  <a href="#faner">Fanerne</a>
+  <div class="grp">Indhold</div>
+  <a href="#subs">Subs (navneskilte)</a>
+  <a href="#info">Info-bokse</a>
+  <a href="#ticker">Ticker</a>
+  <a href="#credits">Credits (rulletekst)</a>
+  <div class="grp">Afvikling</div>
+  <a href="#afvikling">GRAFIK — afvikling</a>
+  <a href="#makroer">Makroer</a>
+  <div class="grp">Opsætning</div>
+  <a href="#setup">GRAFIK SETUP</a>
+  <a href="#komponist">Overlay-komponist</a>
+  <a href="#agent">Grafik-agenten</a>
+  <a href="#fonte">Fonte (upload)</a>
+  <div class="grp">Teknik</div>
+  <a href="#vmix">vMix-opsætning</a>
+  <a href="#companion">Companion</a>
+  <a href="#fejl">Fejlfinding</a>
+</nav>
+
+<main>
+
+<section id="overblik">
+  <h2>Overblik</h2>
+  <p><b>vMix Live Control</b> er en browser-styring til grafik i vMix. Den består af tre dele:</p>
+  <ul>
+    <li><b>Panelet</b> (det du styrer fra) — faner til subs, info, ticker, credits, grafik-afvikling og opsætning.</li>
+    <li><b>Overlay-vinduerne</b> i vMix — <b>Master</b>, <b>Secondary</b> og <b>Fullscreen</b>. Det er browser-kilder i vMix der viser selve grafikken. Panelet sender signaler til dem i realtid.</li>
+    <li><b>Backend</b> (Supabase) — gemmer alt indhold og sender ændringer videre med det samme. Du skal normalt ikke røre den.</li>
+  </ul>
+  <div class="box tip">Når du retter noget i panelet, bliver det gemt og sendt til overlay-vinduerne i realtid — uden at du skal genindlæse noget i vMix.</div>
+</section>
+
+<section id="projekttyper">
+  <h2>Projekt-typer</h2>
+  <p>Der findes to slags projekter, og de viser forskellige faner:</p>
+  <table>
+    <tr><th>Type</th><th>Bruges til</th><th>Faner / indhold</th></tr>
+    <tr><td><b>Kampdag</b></td><td>Sport med kampe, stilling, kommentator-bokse, lineup</td><td>Kampe, stamdata, dashboard + hele kampdag-grafikken (indbyggede grafikker)</td></tr>
+    <tr><td><b>TV</b></td><td>Programmer (fx Super Showet)</td><td>SUBS, INFO, TICKER, CREDITS, GRAFIK, GRAFIK SETUP. Bruger <b>egne (custom) grafikker</b></td></tr>
+  </table>
+  <div class="box warn">Hvert projekt har sit eget indhold og sine egne overlays. Indhold deles <b>ikke</b> mellem projekter, og TV-projekter loader ikke kampdags indbyggede grafikker.</div>
+</section>
+
+<section id="faner">
+  <h2>Fanerne (TV-projekt)</h2>
+  <table>
+    <tr><th>Fane</th><th>Hvad den gør</th></tr>
+    <tr><td><b>SUBS</b></td><td>Opret/redigér navneskilte (navn + titel) + vMix Calls. Vælg venstre/højre side pr. sub.</td></tr>
+    <tr><td><b>INFO</b></td><td>Skriv info-bokse (overskrift + indhold, maks 3 linjer).</td></tr>
+    <tr><td><b>TICKER</b></td><td>Rulletekst i bunden.</td></tr>
+    <tr><td><b>CREDITS</b></td><td>Rulletekst til sluttekster (roller + navne).</td></tr>
+    <tr><td><b>GRAFIK</b></td><td>Selve afviklingen: sæt grafik på/af live, kør makroer. (Se <a href="#afvikling">Afvikling</a>.)</td></tr>
+    <tr><td><b>GRAFIK SETUP</b></td><td>Opsætning: overlay-komponist, egne grafikker, grafik-agent, font-upload.</td></tr>
+  </table>
+  <p class="muted">Indholdsfanerne (SUBS/INFO/TICKER/CREDITS) er hvor du skriver <i>teksten</i>. Selve af-/påsætningen på skærmen sker i <b>GRAFIK</b>-fanen.</p>
+</section>
+
+<section id="subs">
+  <h2>Subs (navneskilte)</h2>
+  <p>En sub er et navneskilt med <b>navn</b> + <b>titel</b>.</p>
+  <ol>
+    <li>Gå i <b>SUBS</b>-fanen → klik blyanten på en række → skriv navn + titel.</li>
+    <li>Vælg <span class="pill">VENSTRE</span> eller <span class="pill">HØJRE</span> side — grafikken spejlvendes, men teksten forbliver læsbar.</li>
+    <li>Gem.</li>
+  </ol>
+  <h3>vMix Calls som subs</h3>
+  <p>De 8 vMix Call-rækker (højre kolonne i SUBS) kan bruges som subs. De vises som <b>V1–V8</b> i afviklingen.</p>
+  <h3>Sæt en sub på</h3>
+  <p>Gå i <b>GRAFIK → SUB</b>. Hver sub har knapper: <span class="btn in">&gt; IN</span> sætter på, <span class="btn out">&lt; OUT</span> tager af. Skift til en anden sub mens den er på = den skifter direkte.</p>
+</section>
+
+<section id="info">
+  <h2>Info-bokse</h2>
+  <ol>
+    <li>Skriv boksen i <b>INFO</b>-fanen (overskrift + indhold). Maks 3 linjer — en tæller viser resterende tegn.</li>
+    <li>Sæt den på i <b>GRAFIK → INFO</b> med <span class="btn in">&gt; IN</span> / <span class="btn out">&lt; OUT</span>.</li>
+  </ol>
+  <div class="box tip">Linjeskift i teksten respekteres. Vil du have alt på én linje, så lad være med at trykke <kbd>Enter</kbd> midt i.</div>
+  <p class="muted">Info vises på det overlay hvor info-grafikken er placeret (typisk Master).</p>
+</section>
+
+<section id="ticker">
+  <h2>Ticker</h2>
+  <p>Rulletekst i bunden af skærmen. Skriv linjerne i <b>TICKER</b>-fanen og styr på/af i <b>GRAFIK → TICKER</b>.</p>
+</section>
+
+<section id="credits">
+  <h2>Credits (rulletekst)</h2>
+  <p>Sluttekster med roller og navne. I <b>CREDITS</b>-fanen skriver du sektioner (fx "Vært", "Producer") med navne under hver.</p>
+  <ul>
+    <li>Den gule overskrift-boks hugger sin egen tekst; navnene står under.</li>
+    <li>Du kan styre den <b>samlede varighed</b> (ca. 5–60 sek) med skyderen.</li>
+  </ul>
+  <p>Sæt den i gang i <b>GRAFIK → CREDIT</b>.</p>
+</section>
+
+<section id="afvikling">
+  <h2>GRAFIK — afvikling</h2>
+  <p>Her sætter du grafik på og af <b>live</b>. Venstre side = kategori-faner (SUB / INFO / TICKER / CREDIT / CUSTOM / AFVIKLING). Højre side = <b>PREVIEW</b> + <b>ON AIR</b>-monitorer.</p>
+  <h3>Knapper pr. række</h3>
+  <table>
+    <tr><th>Knap</th><th>Gør</th></tr>
+    <tr><td><b>PRW</b></td><td>Vis grafikken komme <b>ind</b> i preview-ruden (med rækkens rigtige indhold).</td></tr>
+    <tr><td><b>PRW UD</b></td><td>Vis grafikken gå <b>ud</b> i preview-ruden.</td></tr>
+    <tr><td><span class="btn in">&gt; IN</span></td><td>Sæt på skærmen (on air).</td></tr>
+    <tr><td><span class="btn out">&lt; OUT</span></td><td>Tag af skærmen.</td></tr>
+  </table>
+  <div class="box tip">PREVIEW er kun til dig — det går ikke på skærmen. Brug det til at tjekke indholdet før du sætter det <span class="btn in">&gt; IN</span>.</div>
+  <p>Farven i venstre kant viser hvad rækken er: <span class="pill" style="color:#93c5fd">blå = sub</span>, magenta = vMix Call.</p>
+</section>
+
+<section id="makroer">
+  <h2>Makroer</h2>
+  <p>En makro kører flere trin i rækkefølge med ét klik — fx "sluk info → vent → sæt sub på". De ligger i <b>GRAFIK → AFVIKLING</b> (og under hver kategori).</p>
+  <ul>
+    <li><span class="btn in">&gt; IN</span> (grøn) = makroen <b>tænder</b> noget · <span class="btn out">&lt; OUT</span> (rød) = makroen kun slukker.</li>
+    <li>Blyant-ikonet = redigér makroen (se og ret trinene, pauser osv.).</li>
+    <li><b>Plads-vælgeren</b> (den blå dropdown, fx "Vælg ved afvikling"): bruger makroen en sub/info, kan du vælge <i>hvilken</i> plads lige når du kører den. Lader du den stå på "Vælg ved afvikling", bruger den den aktive.</li>
+  </ul>
+  <div class="box warn">En makro må ikke have for lange pauser i alt (Companion-timeout). Får du besked om "makro for lang", så del den op i flere knapper.</div>
+</section>
+
+<section id="setup">
+  <h2>GRAFIK SETUP</h2>
+  <p>Opsætning og værktøjer. Her finder du:</p>
+  <ul>
+    <li><b>Overlay-komponist</b> — bestem hvilket overlay hver grafik ligger på + lag-rækkefølge.</li>
+    <li><b>Egne grafikker</b> — opret/redigér/slet dine grafikker; vælg DATAKILDE (sub/info/ticker/credit).</li>
+    <li><b>Grafik-agent</b> — få AI til at lave grafik for dig.</li>
+    <li><b>Fonte</b> — upload dine egne skrifttyper.</li>
+  </ul>
+</section>
+
+<section id="komponist">
+  <h2>Overlay-komponist</h2>
+  <p>De tre overlay-vinduer i vMix:</p>
+  <table>
+    <tr><th>Overlay</th><th>Typisk brug</th></tr>
+    <tr><td><b>Master</b></td><td>Hovedgrafik (subs, info, credits).</td></tr>
+    <tr><td><b>Secondary</b></td><td>Ekstra overlay (fx kommentator-bokse på kampdag).</td></tr>
+    <tr><td><b>Fullscreen</b></td><td>Fuldskærms-grafik (fx lineup på kampdag).</td></tr>
+  </table>
+  <p>I komponisten trækker du grafikker mellem de tre kolonner (= skift overlay) og lodret (= lag-rækkefølge/z-orden).</p>
+</section>
+
+<section id="agent">
+  <h2>Grafik-agenten</h2>
+  <p>En AI-assistent (GRAFIK SETUP → GRAFIK-AGENT) der kan <b>lave grafik fra en beskrivelse</b> eller konfigurere en HTML-fil du uploader.</p>
+  <ol>
+    <li>Beskriv hvad du vil have (fx "et navneskilt i DR-stil der viser den aktive sub").</li>
+    <li>Agenten stiller et par spørgsmål og genererer grafikken.</li>
+    <li>Den gemmes som en egen grafik og dukker op i afviklingen.</li>
+  </ol>
+  <div class="box tip">Du kan uploade et billede (mockup) og bede agenten genskabe det. Du kan også vælge en eksisterende grafik og bede om ændringer.</div>
+  <p class="muted">Agenten kender projektets datakilder (subs, info, credits, ticker) og DR-husstilen (DR Publik, DR-farver).</p>
+</section>
+
+<section id="fonte">
+  <h2>Fonte (upload)</h2>
+  <p>GRAFIK SETUP → VÆRKTØJER → <b>FONTE</b>. Upload dine egne skrifttyper, så de kan bruges i grafik + af agenten. <b>Uploadede fonte deles på tværs af alle projekter.</b></p>
+  <h3>Sådan uploader du</h3>
+  <ol>
+    <li>Klik <b>Vælg filer…</b> og vælg én eller <b>flere</b> fontfiler (fx regular + bold + italic på én gang).</li>
+    <li>Vægt og stil <b>gættes automatisk</b> ud fra filnavnet (fx <code>...-Bold</code> → 700, <code>...-Italic</code> → kursiv). Font-navnet udfyldes også automatisk — ret det hvis nødvendigt.</li>
+    <li>Klik <b>Upload</b>.</li>
+  </ol>
+  <h3>Sådan bruger du fonten</h3>
+  <p>Klik <b>Kopiér CSS</b> ud for fonten (kopierer <code>font-family:'Dit Navn'</code>) og sæt det ind i din grafiks CSS. Agenten kan også bruge den.</p>
+  <ul>
+    <li>Anbefalet format: <b>.woff2</b> (mindst/hurtigst). Også .woff/.ttf/.otf.</li>
+    <li>Flere vægte/stilarter = samme font-navn, forskellige filer (gæt sker pr. fil).</li>
+    <li>Uploader du samme font igen (samme navn+vægt+stil), <b>erstattes</b> den — ingen dubletter.</li>
+  </ul>
+  <div class="box warn"><b>DR Publik</b> og ~20 biblioteks-fonte er allerede indbygget — dem skal du <b>ikke</b> uploade. Skriv bare <code>font-family:'DR Publik'</code>.</div>
+</section>
+
+<section id="vmix">
+  <h2>vMix-opsætning</h2>
+  <p>Hvert overlay er en <b>browser-kilde</b> i vMix der peger på en URL med projektets id. URL'erne vises i panelet (ON AIR-sektionen).</p>
+  <table>
+    <tr><th>Overlay</th><th>URL (eksempel)</th></tr>
+    <tr><td>Master</td><td><code>…/master?p=&lt;projekt-id&gt;</code></td></tr>
+    <tr><td>Secondary</td><td><code>…/secondary?p=&lt;projekt-id&gt;</code></td></tr>
+    <tr><td>Fullscreen</td><td><code>…/fullscreen?p=&lt;projekt-id&gt;</code></td></tr>
+  </table>
+  <div class="box warn">Når grafik-koden opdateres (ny version deployet), skal du <b>genindlæse browser-kilden</b> i vMix, før ændringen slår igennem. Tegn-på-skærm-indhold (navne/tekst) opdateres derimod live uden reload.</div>
+</section>
+
+<section id="companion">
+  <h2>Companion (Stream Deck)</h2>
+  <p>Du kan styre grafik fra Bitfocus Companion med faste links. Panelet genererer dem (GRAFIK → Companion-sektionen) — kopiér linket ind i en "Generic HTTP"-knap (POST).</p>
+  <ul>
+    <li><b>Sub/info på en bestemt plads:</b> linket har <code>&amp;slot=</code> til sidst — sæt pladsens nummer ind (fx <code>&amp;slot=3</code>).</li>
+    <li><b>Makro:</b> link med <code>&amp;macro=…</code>. Har makroen "vælg ved afvikling", sæt også <code>&amp;slot=</code>-nummeret.</li>
+    <li>Companion viser også feedback (fx den aktive sub) — det kan være op til ~5 sek forsinket, hvilket er normalt.</li>
+  </ul>
+</section>
+
+<section id="fejl">
+  <h2>Fejlfinding</h2>
+  <h3>Grafikken opdaterer ikke / viser gammelt</h3>
+  <ul>
+    <li>Rettede du grafik-<b>koden</b>? Genindlæs browser-kilden i vMix.</li>
+    <li>Rettede du <b>tekst</b> (navn/titel/info)? Det bør ske live — hvis ikke, genindlæs kilden én gang.</li>
+  </ul>
+  <h3>Companion-knap virker ikke</h3>
+  <ul>
+    <li>Tjek at linket har den rigtige <code>token</code> og bruger <b>POST</b>.</li>
+    <li>Skifter subben ikke? Tjek at <code>&amp;slot=</code> har et tal til sidst.</li>
+  </ul>
+  <h3>Uploadet font vises ikke i vMix</h3>
+  <ul>
+    <li>Tjek at du skrev font-navnet præcis som i FONTE-listen (brug <b>Kopiér CSS</b>).</li>
+    <li>Genindlæs browser-kilden efter grafik-ændringer.</li>
+  </ul>
+  <h3>Grafik kommer ind men viser forkert/tom</h3>
+  <ul>
+    <li>Er indholdet gemt i den rigtige fane (SUBS/INFO)? En tom plads viser demo/standard.</li>
+  </ul>
+  <div class="box tip">Sidder du fast, så notér hvad du gjorde + hvad der skete, og tag et skærmbillede (gerne af browser-konsollen, <kbd>F12</kbd>) — det gør fejlfinding meget hurtigere.</div>
+</section>
+
+<p class="muted" style="border-top:1px solid var(--line); padding-top:14px;">vMix Live Control · intern hjælp. Mangler der noget, eller er en beskrivelse upræcis? Sig til, så opdateres siden.</p>
+
+</main>
+</div>
+</body>
+</html>
