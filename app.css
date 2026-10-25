@@ -1197,10 +1197,10 @@
       overflow: hidden;
     }
     .credits-speed-label {
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 700;
       letter-spacing: 2px;
-      color: #979797;
+      color: #b0b0b0;
       text-transform: uppercase;
       white-space: nowrap;
     }
@@ -1219,9 +1219,9 @@
       cursor: pointer;
     }
     .credits-speed-val {
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 700;
-      color: #ccc;
+      color: #e2e2e2;
       min-width: 52px;
     }
     @keyframes pulse-credits {
@@ -1232,7 +1232,7 @@
       display: none;
       align-items: center;
       gap: 5px;
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 700;
       letter-spacing: 1.5px;
       color: var(--red);
@@ -1252,10 +1252,10 @@
       padding-bottom: 40px;
     }
     .credits-col-header {
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 700;
       letter-spacing: 3px;
-      color: #868686;
+      color: #a5a5a5;
       text-transform: uppercase;
       margin-bottom: 12px;
       padding-bottom: 6px;
@@ -1273,14 +1273,14 @@
     .credit-card-header { display: flex; align-items: flex-start; gap: 8px; }
     .credit-card-content { flex: 1; }
     .credit-card-titel {
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 700;
       letter-spacing: 1.5px;
       text-transform: uppercase;
       color: var(--yellow);
       margin-bottom: 4px;
     }
-    .credit-card-navne { font-size: 13px; color: #ccc; line-height: 1.5; }
+    .credit-card-navne { font-size: 15px; color: #e2e2e2; line-height: 1.5; }
     .credit-card-actions { display: flex; gap: 2px; flex-shrink: 0; }
     .credit-add-btn {
       width: 100%;
@@ -1288,8 +1288,8 @@
       background: transparent;
       border: 1px dashed #2e2e2e;
       border-radius: 6px;
-      color: #868686;
-      font-size: 11px;
+      color: #a5a5a5;
+      font-size: 13px;
       font-weight: 700;
       letter-spacing: 2px;
       cursor: pointer;
