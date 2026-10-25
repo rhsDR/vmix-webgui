@@ -188,8 +188,8 @@ function _gaRenderConfig() {
         <span>HTML</span><b>${gaResult.html ? 'genereret af agenten' : (isRev ? 'uændret (kun config)' : (hasHtml ? 'fra vedhæftet fil' : '⚠️ mangler'))}</b>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin:2px 0 10px;">
-        <span style="font-size:12px;color:#9c9c9c;min-width:70px;">Datakilde</span>
-        <select id="ga-kategori" style="flex:1;background:#111;border:1px solid #333;color:#ccc;padding:5px 8px;border-radius:5px;font-size:12px;">${_katOpts}</select>
+        <span style="font-size:13px;color:#b0b0b0;min-width:70px;">Datakilde</span>
+        <select id="ga-kategori" style="flex:1;background:#111;border:1px solid #333;color:#ccc;padding:5px 8px;border-radius:5px;font-size:13px;">${_katOpts}</select>
       </div>
       <button id="ga-save" class="ga-save-btn"${hasHtml ? '' : ' disabled'}>${isRev ? 'Opdater grafik' : 'Gem grafik'}</button>
     </div>`;
