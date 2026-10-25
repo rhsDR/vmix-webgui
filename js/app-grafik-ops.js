@@ -159,29 +159,29 @@ function _egneGrafikSuggestTemplateKey() {
 function _egneGrafikRenderTemplateFields(type) {
   const el = document.getElementById('egn-tpl-fields');
   if (!el) return;
-  const inp = (id, ph, val='') => `<input id="${id}" type="text" placeholder="${ph}" value="${val.replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">`;
-  const colorInp = (id, val='#4a9eff') => `<div style="display:flex;align-items:center;gap:8px;"><label style="font-size:11px;color:#9c9c9c;letter-spacing:1px;">FARVE</label><input id="${id}" type="color" value="${val}" style="height:28px;width:50px;background:#111;border:1px solid #333;border-radius:4px;cursor:pointer;padding:2px;"></div>`;
+  const inp = (id, ph, val='') => `<input id="${id}" type="text" placeholder="${ph}" value="${val.replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:12px;">`;
+  const colorInp = (id, val='#4a9eff') => `<div style="display:flex;align-items:center;gap:8px;"><label style="font-size:12px;color:#b0b0b0;letter-spacing:1px;">FARVE</label><input id="${id}" type="color" value="${val}" style="height:28px;width:50px;background:#111;border:1px solid #333;border-radius:4px;cursor:pointer;padding:2px;"></div>`;
   if (type === 'lower_third') {
     el.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">${inp('egn-tpl-navn','Navn…')}${inp('egn-tpl-titel','Titel…')}${colorInp('egn-tpl-farve')}</div>`;
   } else if (type === 'bug') {
     el.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">${inp('egn-tpl-tekst','Tekst…')}
-      <select id="egn-tpl-pos" style="background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
+      <select id="egn-tpl-pos" style="background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:12px;">
         <option value="tl">Øverst venstre</option><option value="tr">Øverst højre</option>
         <option value="bl">Nederst venstre</option><option value="br">Nederst højre</option>
       </select></div>`;
   } else if (type === 'fullscreen') {
     el.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">${inp('egn-tpl-overskrift','Overskrift…')}${inp('egn-tpl-undertekst','Undertekst…')}
-      <div style="display:flex;align-items:center;gap:8px;"><label style="font-size:11px;color:#9c9c9c;letter-spacing:1px;">BAGGRUND</label><input id="egn-tpl-bg" type="color" value="#000000" style="height:28px;width:50px;background:#111;border:1px solid #333;border-radius:4px;cursor:pointer;padding:2px;"></div></div>`;
+      <div style="display:flex;align-items:center;gap:8px;"><label style="font-size:12px;color:#b0b0b0;letter-spacing:1px;">BAGGRUND</label><input id="egn-tpl-bg" type="color" value="#000000" style="height:28px;width:50px;background:#111;border:1px solid #333;border-radius:4px;cursor:pointer;padding:2px;"></div></div>`;
   } else if (type === 'timer') {
     el.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">
-      <div style="display:flex;gap:8px;align-items:center;"><label style="font-size:11px;color:#9c9c9c;letter-spacing:1px;min-width:50px;">START (sek)</label><input id="egn-tpl-fra" type="number" min="0" value="0" style="width:80px;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;"></div>
-      <select id="egn-tpl-format" style="background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:11px;">
+      <div style="display:flex;gap:8px;align-items:center;"><label style="font-size:12px;color:#b0b0b0;letter-spacing:1px;min-width:50px;">START (sek)</label><input id="egn-tpl-fra" type="number" min="0" value="0" style="width:80px;background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:12px;"></div>
+      <select id="egn-tpl-format" style="background:#111;border:1px solid #333;color:#ccc;padding:6px;border-radius:6px;font-size:12px;">
         <option value="mm:ss">mm:ss</option><option value="ss">sekunder</option>
       </select></div>`;
   } else if (type.indexOf('data_') === 0) {
     const srcLabel = { data_sub: 'det aktive navneskilt (subs)', data_ticker: 'ticker-teksten', data_credits: 'credits-rulleteksten', data_info: 'info-boksene' }[type] || type;
     const needColor = type === 'data_sub' || type === 'data_info';
-    el.innerHTML = `<div style="font-size:11px;color:#8c8c8c;line-height:1.5;">Henter <b style="color:#aaa">${srcLabel}</b> live fra projektet — ingen felter nødvendige. Du kan redigere HTML'en bagefter.</div>${needColor ? '<div style="margin-top:8px;">' + colorInp('egn-tpl-farve') + '</div>' : ''}`;
+    el.innerHTML = `<div style="font-size:12px;color:#a5a5a5;line-height:1.5;">Henter <b style="color:#aaa">${srcLabel}</b> live fra projektet — ingen felter nødvendige. Du kan redigere HTML'en bagefter.</div>${needColor ? '<div style="margin-top:8px;">' + colorInp('egn-tpl-farve') + '</div>' : ''}`;
   } else {
     el.innerHTML = '';
   }
@@ -328,17 +328,17 @@ function _egneGrafikShowConfirm(g) {
 
   let html = `<div style="font-size:13px;color:#86efac;margin-bottom:12px;">&#10003; Grafik tilføjet!</div>`;
   if (isStandalone) {
-    html += `<div style="margin-bottom:10px;"><div style="font-size:11px;color:#9c9c9c;letter-spacing:1px;margin-bottom:4px;">INDSÆT I VMIX (Browser Input):</div>
-      <div style="display:flex;align-items:center;gap:6px;"><span style="flex:1;font-size:11px;color:#aaa;background:#111;border:1px solid #333;padding:5px 8px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fileUrlWithPid}</span>
-      <button onclick="navigator.clipboard.writeText(${JSON.stringify(fileUrlWithPid)});toast('Kopieret','ok')" style="padding:4px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button></div></div>`;
+    html += `<div style="margin-bottom:10px;"><div style="font-size:12px;color:#b0b0b0;letter-spacing:1px;margin-bottom:4px;">INDSÆT I VMIX (Browser Input):</div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="flex:1;font-size:12px;color:#aaa;background:#111;border:1px solid #333;padding:5px 8px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fileUrlWithPid}</span>
+      <button onclick="navigator.clipboard.writeText(${JSON.stringify(fileUrlWithPid)});toast('Kopieret','ok')" style="padding:4px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:12px;">⎘</button></div></div>`;
   } else {
     const tLabel = g.overlay_target === 'komm' ? 'Secondary (secondary.html)' : 'Master (master.html)';
-    html += `<div style="font-size:11px;color:#9c9c9c;margin-bottom:10px;padding:8px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;">Indlejret i ${tLabel} — genindlæs overlayet i vMix for at aktivere grafikken.</div>`;
+    html += `<div style="font-size:12px;color:#b0b0b0;margin-bottom:10px;padding:8px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;">Indlejret i ${tLabel} — genindlæs overlayet i vMix for at aktivere grafikken.</div>`;
   }
-  html += `<div><div style="font-size:11px;color:#9c9c9c;letter-spacing:1px;margin-bottom:6px;">COMPANION LINKS:</div>
+  html += `<div><div style="font-size:12px;color:#b0b0b0;letter-spacing:1px;margin-bottom:6px;">COMPANION LINKS:</div>
     <div style="display:flex;flex-direction:column;gap:4px;">
-      <div style="display:flex;align-items:center;gap:6px;"><span style="width:24px;font-size:11px;color:#86efac;">PÅ</span><span style="flex:1;font-size:11px;color:#aaa;background:#111;border:1px solid #333;padding:5px 8px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${onUrl}</span><button onclick="navigator.clipboard.writeText(${JSON.stringify(onUrl)});toast('Kopieret','ok')" style="padding:4px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button></div>
-      <div style="display:flex;align-items:center;gap:6px;"><span style="width:24px;font-size:11px;color:#ef4444;">AF</span><span style="flex:1;font-size:11px;color:#aaa;background:#111;border:1px solid #333;padding:5px 8px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${offUrl}</span><button onclick="navigator.clipboard.writeText(${JSON.stringify(offUrl)});toast('Kopieret','ok')" style="padding:4px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button></div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:24px;font-size:12px;color:#86efac;">PÅ</span><span style="flex:1;font-size:12px;color:#aaa;background:#111;border:1px solid #333;padding:5px 8px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${onUrl}</span><button onclick="navigator.clipboard.writeText(${JSON.stringify(onUrl)});toast('Kopieret','ok')" style="padding:4px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:12px;">⎘</button></div>
+      <div style="display:flex;align-items:center;gap:6px;"><span style="width:24px;font-size:12px;color:#ef4444;">AF</span><span style="flex:1;font-size:12px;color:#aaa;background:#111;border:1px solid #333;padding:5px 8px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${offUrl}</span><button onclick="navigator.clipboard.writeText(${JSON.stringify(offUrl)});toast('Kopieret','ok')" style="padding:4px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:12px;">⎘</button></div>
     </div></div>`;
   document.getElementById('egn-confirm-body').innerHTML = html;
 }
@@ -741,9 +741,9 @@ function renderGrafikOps() {
   });
   const overlayRows = builtinWindows.map(w => `
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1a1a1a;">
-      <span style="flex:1;font-size:11px;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${w.url}">${w.label}</span>
-      <span style="font-size:11px;color:#8c8c8c;flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${w.url}</span>
-      <button class="copy-btn icon-btn" data-copy="${w.url}" style="padding:3px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button>
+      <span style="flex:1;font-size:12px;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${w.url}">${w.label}</span>
+      <span style="font-size:12px;color:#a5a5a5;flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${w.url}</span>
+      <button class="copy-btn icon-btn" data-copy="${w.url}" style="padding:3px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:12px;">⎘</button>
     </div>`).join('');
 
   // ─ Sektion: OVERLAY-KOMPONIST ─
@@ -759,10 +759,10 @@ function renderGrafikOps() {
     const offUrl = `${origin}/api/trigger/${pid}?token=${_companionToken}&key=${encodeURIComponent(g.trigger_key)}&value=out`;
     const vMixUrlRow = fileUrlWithPid ? `
       <div style="margin:6px 0 4px;">
-        <div style="font-size:11px;color:#9c9c9c;letter-spacing:1px;margin-bottom:3px;">URL TIL VMIX</div>
+        <div style="font-size:12px;color:#b0b0b0;letter-spacing:1px;margin-bottom:3px;">URL TIL VMIX</div>
         <div style="display:flex;align-items:center;gap:6px;">
-          <span style="flex:1;font-size:11px;color:#aaa;background:#0d0d0d;border:1px solid #2a2a2a;padding:4px 6px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fileUrlWithPid}</span>
-          <button class="copy-btn icon-btn" data-copy="${fileUrlWithPid}" style="padding:3px 7px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button>
+          <span style="flex:1;font-size:12px;color:#aaa;background:#0d0d0d;border:1px solid #2a2a2a;padding:4px 6px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fileUrlWithPid}</span>
+          <button class="copy-btn icon-btn" data-copy="${fileUrlWithPid}" style="padding:3px 7px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:12px;">⎘</button>
         </div>
       </div>` : '';
     return `
@@ -773,37 +773,37 @@ function renderGrafikOps() {
           <span style="font-size:13px;color:#eee;font-weight:600;">${esc(g.label)}</span>
         </div>
         <div style="display:flex;gap:6px;">
-          <button data-edit-id="${g.id}" style="padding:3px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">✎</button>
-          <button data-del-id="${g.id}" data-del-path="${g.file_path || ''}" data-del-label="${esc(g.label)}" style="padding:3px 8px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:4px;cursor:pointer;font-size:11px;">🗑</button>
+          <button data-edit-id="${g.id}" style="padding:3px 8px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:12px;">✎</button>
+          <button data-del-id="${g.id}" data-del-path="${g.file_path || ''}" data-del-label="${esc(g.label)}" style="padding:3px 8px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:4px;cursor:pointer;font-size:12px;">🗑</button>
         </div>
       </div>
-      <div style="font-size:11px;color:#8c8c8c;margin-bottom:6px;">${tilstand} · <span style="color:#4a9eff;">${esc(g.trigger_key)}</span>${g.auto_hide_seconds > 0 ? ` · auto-skjul ${g.auto_hide_seconds}s` : ''}</div>
+      <div style="font-size:12px;color:#a5a5a5;margin-bottom:6px;">${tilstand} · <span style="color:#4a9eff;">${esc(g.trigger_key)}</span>${g.auto_hide_seconds > 0 ? ` · auto-skjul ${g.auto_hide_seconds}s` : ''}</div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <span style="font-size:10px;color:#666;letter-spacing:1px;flex-shrink:0;">DATAKILDE</span>
-        <select data-kat-id="${g.id}" title="Flyt grafikken til denne datakilde/kategori i afviklingen" style="flex:1;max-width:280px;background:#0d0d0d;border:1px solid #2a2a2a;color:#ccc;padding:4px 6px;border-radius:5px;font-size:11px;">${_egneGrafikDataSources().map(([v, t]) => `<option value="${v}"${(g.kategori || 'custom') === v ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
+        <span style="font-size:11px;color:#666;letter-spacing:1px;flex-shrink:0;">DATAKILDE</span>
+        <select data-kat-id="${g.id}" title="Flyt grafikken til denne datakilde/kategori i afviklingen" style="flex:1;max-width:280px;background:#0d0d0d;border:1px solid #2a2a2a;color:#ccc;padding:4px 6px;border-radius:5px;font-size:12px;">${_egneGrafikDataSources().map(([v, t]) => `<option value="${v}"${(g.kategori || 'custom') === v ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>
       </div>
       <details class="gops-links">
         <summary class="gops-links-summary">vMix-URL &amp; Companion-links</summary>
         <div style="margin-top:6px;">
           ${vMixUrlRow}
-          <div style="font-size:11px;color:#9c9c9c;letter-spacing:1px;margin:6px 0 4px;">COMPANION LINKS</div>
+          <div style="font-size:12px;color:#b0b0b0;letter-spacing:1px;margin:6px 0 4px;">COMPANION LINKS</div>
           <div style="display:flex;flex-direction:column;gap:3px;">
             <div style="display:flex;align-items:center;gap:5px;">
-              <span style="width:22px;font-size:11px;color:#86efac;">PÅ</span>
-              <span style="flex:1;font-size:11px;color:#aaa;background:#0d0d0d;border:1px solid #2a2a2a;padding:3px 6px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${onUrl}</span>
-              <button class="copy-btn icon-btn" data-copy="${onUrl}" style="padding:3px 7px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button>
+              <span style="width:22px;font-size:12px;color:#86efac;">PÅ</span>
+              <span style="flex:1;font-size:12px;color:#aaa;background:#0d0d0d;border:1px solid #2a2a2a;padding:3px 6px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${onUrl}</span>
+              <button class="copy-btn icon-btn" data-copy="${onUrl}" style="padding:3px 7px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:12px;">⎘</button>
             </div>
             <div style="display:flex;align-items:center;gap:5px;">
-              <span style="width:22px;font-size:11px;color:#ef4444;">AF</span>
-              <span style="flex:1;font-size:11px;color:#aaa;background:#0d0d0d;border:1px solid #2a2a2a;padding:3px 6px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${offUrl}</span>
-              <button class="copy-btn icon-btn" data-copy="${offUrl}" style="padding:3px 7px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">⎘</button>
+              <span style="width:22px;font-size:12px;color:#ef4444;">AF</span>
+              <span style="flex:1;font-size:12px;color:#aaa;background:#0d0d0d;border:1px solid #2a2a2a;padding:3px 6px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${offUrl}</span>
+              <button class="copy-btn icon-btn" data-copy="${offUrl}" style="padding:3px 7px;background:#222;border:1px solid #333;color:#aaa;border-radius:4px;cursor:pointer;font-size:12px;">⎘</button>
             </div>
           </div>
         </div>
       </details>
       <div style="display:flex;gap:6px;margin-top:10px;">
-        <button data-trig="${esc(g.trigger_key)}" data-val="out" style="flex:1;padding:6px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:6px;cursor:pointer;font-size:11px;">&#60; AF</button>
-        <button data-trig="${esc(g.trigger_key)}" data-val="in" style="flex:2;padding:6px;background:#1a3a1a;border:1px solid #2d5a2d;color:#86efac;border-radius:6px;cursor:pointer;font-size:11px;">&#9654; PÅ</button>
+        <button data-trig="${esc(g.trigger_key)}" data-val="out" style="flex:1;padding:6px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:6px;cursor:pointer;font-size:12px;">&#60; AF</button>
+        <button data-trig="${esc(g.trigger_key)}" data-val="in" style="flex:2;padding:6px;background:#1a3a1a;border:1px solid #2d5a2d;color:#86efac;border-radius:6px;cursor:pointer;font-size:12px;">&#9654; PÅ</button>
       </div>
     </div>`;
   }).join('');
@@ -812,20 +812,20 @@ function renderGrafikOps() {
     <div style="max-width:800px;margin:0 auto;padding:16px;">
       <details class="gops-section" style="margin-bottom:14px;">
         <summary class="gops-summary">OVERLAY VINDUER <span class="gops-summary-hint">— vMix browser-inputs (engangs-setup)</span></summary>
-        <div style="font-size:11px;color:#8c8c8c;margin:6px 0 8px;">Indsæt disse URLs i vMix som Browser-inputs. Standalone grafikker under EGNE GRAFIKKER dukker automatisk op her.</div>
+        <div style="font-size:12px;color:#a5a5a5;margin:6px 0 8px;">Indsæt disse URLs i vMix som Browser-inputs. Standalone grafikker under EGNE GRAFIKKER dukker automatisk op her.</div>
         <div style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:8px 12px;">${overlayRows}</div>
       </details>
       <details open class="gops-section" style="margin-bottom:14px;">
         <summary class="gops-summary">OVERLAY-KOMPONIST <span class="gops-summary-hint">— placér &amp; stabl grafik pr. overlay</span></summary>
-        <div style="font-size:11px;color:#8c8c8c;margin:6px 0 10px;">Øverst = forrest i vMix. Træk lodret for z-orden · træk mellem kolonner for at flytte til et andet overlay. Ændringer slår igennem live.</div>
+        <div style="font-size:12px;color:#a5a5a5;margin:6px 0 10px;">Øverst = forrest i vMix. Træk lodret for z-orden · træk mellem kolonner for at flytte til et andet overlay. Ændringer slår igennem live.</div>
         <div class="comp-grid">${composerGrid}</div>
       </details>
       <details open class="gops-section">
         <summary class="gops-summary">EGNE GRAFIKKER</summary>
         <div style="display:flex;justify-content:flex-end;margin:8px 0 10px;">
-          <button id="gops-add-btn" style="padding:5px 12px;background:#1a2a3a;border:1px solid #1d4ed8;color:#93c5fd;border-radius:6px;cursor:pointer;font-size:11px;letter-spacing:1px;">＋ Tilføj ny grafik</button>
+          <button id="gops-add-btn" style="padding:5px 12px;background:#1a2a3a;border:1px solid #1d4ed8;color:#93c5fd;border-radius:6px;cursor:pointer;font-size:12px;letter-spacing:1px;">＋ Tilføj ny grafik</button>
         </div>
-        ${grafikkort || '<div style="color:#8c8c8c;font-size:12px;padding:16px 0;">Ingen grafikker endnu. Klik "＋ Tilføj ny grafik" for at starte.</div>'}
+        ${grafikkort || '<div style="color:#a5a5a5;font-size:13px;padding:16px 0;">Ingen grafikker endnu. Klik "＋ Tilføj ny grafik" for at starte.</div>'}
       </details>
       ${_fontLibSectionHTML()}
     </div>`;
@@ -868,9 +868,9 @@ function _grafikOpsDeleteConfirm(btn, id, filePath, label) {
   const shortLabel = label.length > 22 ? label.slice(0, 22) + '…' : label;
   const origHTML = wrap.innerHTML;
   wrap.innerHTML = `
-    <span style="font-size:11px;color:#ef4444;margin-right:6px;">Slet "${shortLabel}"?</span>
-    <button id="_gops_ja" style="padding:3px 9px;background:#4a1010;border:1px solid #ef4444;color:#ef4444;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">Ja, slet</button>
-    <button id="_gops_ann" style="padding:3px 9px;background:#222;border:1px solid #444;color:#aaa;border-radius:4px;cursor:pointer;font-size:11px;">Annuller</button>`;
+    <span style="font-size:12px;color:#ef4444;margin-right:6px;">Slet "${shortLabel}"?</span>
+    <button id="_gops_ja" style="padding:3px 9px;background:#4a1010;border:1px solid #ef4444;color:#ef4444;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;">Ja, slet</button>
+    <button id="_gops_ann" style="padding:3px 9px;background:#222;border:1px solid #444;color:#aaa;border-radius:4px;cursor:pointer;font-size:12px;">Annuller</button>`;
   wrap.querySelector('#_gops_ja').onclick = () => deleteEgneGrafikById(id, filePath, label);
   wrap.querySelector('#_gops_ann').onclick = () => { delete wrap.dataset.confirming; wrap.innerHTML = origHTML; };
 }
@@ -937,30 +937,30 @@ function _fontLibSectionHTML() {
     const fam = esc(f.family), cssFam = _fontCssFamily(f), w = parseInt(f.weight) || 400, it = f.style === 'italic';
     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1a1a1a;">
       <div style="flex:1;min-width:0;">
-        <div style="font-size:12px;color:#eee;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fam} <span style="font-size:10px;color:#8c8c8c;font-weight:400;">· ${w}${it ? ' italic' : ''}</span></div>
+        <div style="font-size:13px;color:#eee;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fam} <span style="font-size:11px;color:#a5a5a5;font-weight:400;">· ${w}${it ? ' italic' : ''}</span></div>
         <div style="font-family:'${cssFam}',sans-serif;font-weight:${w};font-style:${it ? 'italic' : 'normal'};font-size:20px;color:#cbd5e1;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">AaBbCc Æ Ø Å 0123</div>
       </div>
-      <button data-copy="font-family:'${cssFam}'" title="Kopiér font-family til CSS" style="padding:3px 10px;background:#15243a;border:1px solid #2d4a6a;color:#93c5fd;border-radius:4px;cursor:pointer;font-size:11px;flex:none;">Kopiér CSS</button>
-      <button data-del-font="${f.id}" data-del-font-path="${esc(f.file_path || '')}" data-del-font-fam="${fam}" style="padding:3px 8px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:4px;cursor:pointer;font-size:11px;flex:none;">🗑</button>
+      <button data-copy="font-family:'${cssFam}'" title="Kopiér font-family til CSS" style="padding:3px 10px;background:#15243a;border:1px solid #2d4a6a;color:#93c5fd;border-radius:4px;cursor:pointer;font-size:12px;flex:none;">Kopiér CSS</button>
+      <button data-del-font="${f.id}" data-del-font-path="${esc(f.file_path || '')}" data-del-font-fam="${fam}" style="padding:3px 8px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;border-radius:4px;cursor:pointer;font-size:12px;flex:none;">🗑</button>
     </div>`;
-  }).join('') : '<div style="color:#8c8c8c;font-size:12px;padding:12px 0;">Ingen uploadede fonte endnu.</div>';
+  }).join('') : '<div style="color:#a5a5a5;font-size:13px;padding:12px 0;">Ingen uploadede fonte endnu.</div>';
 
   return `
     <details class="gops-section" style="margin-top:14px;">
       <summary class="gops-summary">FONTE <span class="gops-summary-hint">— upload egne fonte til alle grafikker</span></summary>
       <style>${faces}</style>
-      <div style="font-size:11px;color:#8c8c8c;margin:6px 0 10px;">Uploadede fonte er tilgængelige i <b>alle projekter</b> og i grafik-agenten. Brug <b>Kopiér CSS</b> ud for fonten (eller skriv <span style="color:#4a9eff;">font-family:'Mit Navn'</span> selv). <b>Vælg gerne flere filer på én gang</b> (regular + bold + italic) — vægt og stil sættes <b>automatisk</b> ud fra filnavnet (navngiv tydeligt, fx <span style="color:#4a9eff;">...-Bold</span> / <span style="color:#4a9eff;">...-Italic</span>). Anbefalet format: <b>.woff2</b>.</div>
+      <div style="font-size:12px;color:#a5a5a5;margin:6px 0 10px;">Uploadede fonte er tilgængelige i <b>alle projekter</b> og i grafik-agenten. Brug <b>Kopiér CSS</b> ud for fonten (eller skriv <span style="color:#4a9eff;">font-family:'Mit Navn'</span> selv). <b>Vælg gerne flere filer på én gang</b> (regular + bold + italic) — vægt og stil sættes <b>automatisk</b> ud fra filnavnet (navngiv tydeligt, fx <span style="color:#4a9eff;">...-Bold</span> / <span style="color:#4a9eff;">...-Italic</span>). Anbefalet format: <b>.woff2</b>.</div>
       <div style="background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:12px;">
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
           <div style="flex:2;min-width:150px;">
-            <div style="font-size:10px;color:#9c9c9c;letter-spacing:1px;margin-bottom:3px;">FONT-NAVN (family)</div>
-            <input id="font-family-inp" placeholder="fx Akkurat Pro" style="width:100%;background:#0d0d0d;border:1px solid #333;color:#ddd;border-radius:4px;padding:5px 8px;font-size:12px;outline:none;">
+            <div style="font-size:11px;color:#b0b0b0;letter-spacing:1px;margin-bottom:3px;">FONT-NAVN (family)</div>
+            <input id="font-family-inp" placeholder="fx Akkurat Pro" style="width:100%;background:#0d0d0d;border:1px solid #333;color:#ddd;border-radius:4px;padding:5px 8px;font-size:13px;outline:none;">
           </div>
           <input type="file" id="font-file-inp" accept=".woff2,.woff,.ttf,.otf" multiple style="display:none;">
-          <button id="font-pick-btn" style="padding:6px 12px;background:#222;border:1px solid #333;color:#aaa;border-radius:6px;cursor:pointer;font-size:11px;">Vælg filer…</button>
-          <button id="font-upload-btn" disabled style="padding:6px 14px;background:#1a2a3a;border:1px solid #1d4ed8;color:#93c5fd;border-radius:6px;cursor:pointer;font-size:11px;letter-spacing:1px;opacity:.5;">Upload</button>
+          <button id="font-pick-btn" style="padding:6px 12px;background:#222;border:1px solid #333;color:#aaa;border-radius:6px;cursor:pointer;font-size:12px;">Vælg filer…</button>
+          <button id="font-upload-btn" disabled style="padding:6px 14px;background:#1a2a3a;border:1px solid #1d4ed8;color:#93c5fd;border-radius:6px;cursor:pointer;font-size:12px;letter-spacing:1px;opacity:.5;">Upload</button>
         </div>
-        <div id="font-file-name" style="font-size:11px;color:#8c8c8c;margin-top:7px;min-height:14px;"></div>
+        <div id="font-file-name" style="font-size:12px;color:#a5a5a5;margin-top:7px;min-height:14px;"></div>
         <div id="font-lib-list" style="margin-top:6px;">${rows}</div>
       </div>
     </details>`;
