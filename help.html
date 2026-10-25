@@ -62,6 +62,7 @@
   <a href="#makroer">Makroer</a>
   <div class="grp">Opsætning</div>
   <a href="#setup">GRAFIK SETUP</a>
+  <a href="#datakilde" style="padding-left:18px;">— Datakilde</a>
   <a href="#komponist">Overlay-komponist</a>
   <a href="#agent">Grafik-agenten</a>
   <a href="#fonte">Fonte (upload)</a>
@@ -183,6 +184,20 @@
     <li><b>Grafik-agent</b> — få AI til at lave grafik for dig.</li>
     <li><b>Fonte</b> — upload dine egne skrifttyper.</li>
   </ul>
+
+  <h3 id="datakilde">Hvad betyder DATAKILDE?</h3>
+  <p>Når du opretter/redigerer en egen grafik, vælger du en <b>datakilde</b>. Den bestemmer <b>hvilken slags projekt-data grafikken henter</b> — og dermed <b>hvor grafikken ligger i afviklingen</b> (GRAFIK-fanen).</p>
+  <table>
+    <tr><th>Valg</th><th>Betyder</th></tr>
+    <tr><td><b>Ingen / Custom</b></td><td>Henter ingen projektdata — selvstændig grafik (fast tekst/billede). Ligger under CUSTOM og tændes/slukkes som én grafik.</td></tr>
+    <tr><td><b>Subs</b></td><td>Viser sub-data (navn/titel). Ligger under SUB — hver sub bliver en række du kan sætte på.</td></tr>
+    <tr><td><b>Info</b></td><td>Viser info-bokse. Ligger under INFO — hver boks en række.</td></tr>
+    <tr><td><b>Ticker</b></td><td>Viser rulletekst. Ligger under TICKER.</td></tr>
+    <tr><td><b>Credits</b></td><td>Viser sluttekst/credits. Ligger under CREDIT.</td></tr>
+  </table>
+  <p>Tallet i parentes viser hvor meget data projektet har lige nu — fx <i>"Info (9 i projektet)"</i> = 9 info-bokse, <i>"Ticker (tom)"</i> = ingen ticker-tekst endnu.</p>
+  <div class="box tip"><b>Eksempel:</b> en grafik med datakilde <b>Info</b> optræder under GRAFIK → INFO, hvor du vælger hvilken af info-boksene der sættes på skærmen. Satte du den til <b>Ingen/Custom</b>, ville den ikke kende info-boksene.</div>
+  <p class="muted">Selve grafik-HTML'en skal også rent faktisk læse de valgte felter — det gør agent-lavede grafikker automatisk.</p>
 </section>
 
 <section id="komponist">
