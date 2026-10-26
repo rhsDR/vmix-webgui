@@ -4,7 +4,7 @@ function renderSubs() {
   if (!container) return;
   container.innerHTML = '';
 
-  // Top-bar: Ryd alt — nulstiller navn/titel/side for ALLE subs + vMix Calls (vMix Call-links bevares).
+  // Top-bar: Ryd alt — nulstiller navn/titel/side for ALLE subs + vMix Calls (i TV ryddes vMix Call-link også).
   const bar = document.createElement('div');
   bar.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:14px;';
   bar.innerHTML = '<button class="btn" id="subsClearAll" style="background:#2a1010;border:1px solid #4a2020;color:#ef4444;">✕ Ryd alt</button>';
@@ -39,14 +39,18 @@ function rerenderSub(i) {
 // Nulstil ALLE subs + vMix Calls (navn/titel/side). Bulk-PATCH pr. tabel (uden slot-filter = alle rækker
 // for projektet). vMix Call-links (kampdag-synkede) bevares. Realtime-UPDATE synker andre åbne paneler.
 async function clearAllSubs() {
-  if (!confirm('Ryd ALLE subs og vMix Calls?\n\nNavn, titel og side nulstilles for alle (vMix Call-links bevares). Dette kan ikke fortrydes.')) return;
+  if (!confirm('Ryd ALLE subs og vMix Calls?\n\nNavn, titel og side nulstilles for alle. Dette kan ikke fortrydes.')) return;
+  // TV-projekter har INGEN kampdag-tilknytning → ryd også vMix Call-link'et. (Kun kampdag beholder link'et,
+  // da det dér er synket til kampens vMix Call.)
+  const isTv = (typeof projektType !== 'undefined' && projektType === 'tv');
+  const vmcBody = isTv ? { navn: '', titel: '', side: 'venstre', link: '' } : { navn: '', titel: '', side: 'venstre' };
   try {
     await Promise.all([
       sbPatch('subs?projekt_id=eq.' + aktivProjektId, { navn: '', titel: '', side: 'venstre' }),
-      sbPatch('vmix_calls?projekt_id=eq.' + aktivProjektId, { navn: '', titel: '', side: 'venstre' }),
+      sbPatch('vmix_calls?projekt_id=eq.' + aktivProjektId, vmcBody),
     ]);
     subs.forEach(s => { s.navn = ''; s.titel = ''; s.side = 'venstre'; s.editMode = false; });
-    vmixCalls.forEach(c => { c.navn = ''; c.titel = ''; c.side = 'venstre'; c.editMode = false; });
+    vmixCalls.forEach(c => { c.navn = ''; c.titel = ''; c.side = 'venstre'; c.editMode = false; if (isTv) c.link = ''; });
     renderSubs();
     toast('Alle subs og vMix Calls ryddet', 'ok');
   } catch { toast('Fejl ved rydning', 'err'); }
@@ -232,7 +236,9 @@ async function saveVmixCallRow(i) {
     toast('Gemt ✓', 'ok');
     flashSaved(document.getElementById('vcall-' + i), 'purple');
     // Synk link til kamp slot
-    if (i < 6 && kampe[i]) {
+    // KUN kampdag synker vMix Call-link til kampen. TV-projekter må aldrig røre kampe-tabellen → TV og
+    // kampdag virker uafhængigt af hinanden.
+    if (projektType === 'kampdag' && i < 6 && kampe[i]) {
       kampe[i].vmixcall     = c.link;
       kampe[i].buf.vmixcall = c.link;
       await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { vmixcall: c.link });
