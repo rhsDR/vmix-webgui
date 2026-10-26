@@ -6,8 +6,9 @@ export default async function handler(req, res) {
   }
   if (await requireAdmin(req, res)) return;
 
-  const { email } = req.body;
+  const { email, username } = req.body;
   if (!email) return res.status(400).json({ error: 'Email mangler' });
+  const visningsnavn = (username || '').trim();
 
   const DEFAULT_PASSWORD = process.env.DEFAULT_INVITE_PASSWORD;
   if (!DEFAULT_PASSWORD) return res.status(503).json({ error: 'DEFAULT_INVITE_PASSWORD er ikke sat i Vercel' });
@@ -41,10 +42,10 @@ export default async function handler(req, res) {
         'Authorization': 'Bearer ' + serviceKey,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ password: DEFAULT_PASSWORD, email_confirm: true })
+      body: JSON.stringify({ password: DEFAULT_PASSWORD, email_confirm: true, user_metadata: { username: visningsnavn } })
     });
 
-    return res.status(200).json({ id: data.id, email: data.email });
+    return res.status(200).json({ id: data.id, email: data.email, username: visningsnavn });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

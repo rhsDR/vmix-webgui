@@ -35,6 +35,7 @@ export default async function handler(req, res) {
     const users = (usersData.users || []).map(u => ({
       id:         u.id,
       email:      u.email,
+      username:   (u.user_metadata && u.user_metadata.username) || '',
       created_at: u.created_at,
       last_sign_in: u.last_sign_in_at,
       role:       roleMap[u.id] || 'user'

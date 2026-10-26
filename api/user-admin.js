@@ -2,8 +2,9 @@ import { requireAdmin } from './_auth.js';
 
 // Samlet admin-bruger-endpoint. Lagt sammen fra delete-user.js + set-password.js for at
 // holde os under Vercel Hobby-planens grænse på 12 serverless functions.
-//   POST { userId, action: 'delete' }  → sletter brugeren
-//   POST { userId, action: 'reset'  }  → nulstiller kode til DEFAULT_INVITE_PASSWORD
+//   POST { userId, action: 'delete' }             → sletter brugeren
+//   POST { userId, action: 'reset'  }             → nulstiller kode til DEFAULT_INVITE_PASSWORD
+//   POST { userId, action: 'username', username } → sætter visningsnavn (user_metadata.username)
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (await requireAdmin(req, res)) return;
@@ -39,6 +40,20 @@ export default async function handler(req, res) {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) return res.status(response.status).json({ error: data.message || 'Fejl' });
       return res.status(200).json({ ok: true });
+    }
+
+    if (action === 'username') {
+      // Visningsnavn kun — login forbliver e-mail-baseret. user_metadata flettes server-side,
+      // så øvrige metadata-felter bevares.
+      const visningsnavn = (req.body.username || '').trim();
+      const response = await fetch(supabaseUrl + '/auth/v1/admin/users/' + userId, {
+        method: 'PUT',
+        headers: { 'apikey': serviceKey, 'Authorization': 'Bearer ' + serviceKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_metadata: { username: visningsnavn } })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) return res.status(response.status).json({ error: data.message || 'Fejl' });
+      return res.status(200).json({ ok: true, username: visningsnavn });
     }
 
     return res.status(400).json({ error: 'Ukendt action' });
