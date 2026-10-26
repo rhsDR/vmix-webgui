@@ -52,8 +52,10 @@
 <nav class="toc">
   <div class="grp">Kom i gang</div>
   <a href="#overblik">Overblik</a>
+  <a href="#login">Log ind &amp; projekter</a>
   <a href="#projekttyper">Projekt-typer</a>
   <a href="#faner">Fanerne</a>
+  <a href="#arbejdsgang">Typisk arbejdsgang</a>
   <div class="grp">Indhold</div>
   <a href="#subs">Subs (navneskilte)</a>
   <a href="#info">Info-bokse</a>
@@ -67,11 +69,16 @@
   <a href="#datakilde" style="padding-left:18px;">— Datakilde</a>
   <a href="#komponist">Overlay-komponist</a>
   <a href="#agent">Grafik-agenten</a>
+  <a href="#editor">Grafik-editor</a>
   <a href="#fonte">Fonte (upload)</a>
   <div class="grp">Teknik</div>
   <a href="#vmix">vMix-opsætning</a>
   <a href="#companion">Companion</a>
   <a href="#fejl">Fejlfinding</a>
+  <div class="grp">Administration</div>
+  <a href="#admin">Brugerstyring</a>
+  <div class="grp">Opslag</div>
+  <a href="#ordliste">Ordliste</a>
 </nav>
 
 <main>
@@ -85,6 +92,23 @@
     <li><b>Backend</b> (Supabase) — gemmer alt indhold og sender ændringer videre med det samme. Du skal normalt ikke røre den.</li>
   </ul>
   <div class="box tip">Når du retter noget i panelet, bliver det gemt og sendt til overlay-vinduerne i realtid — uden at du skal genindlæse noget i vMix.</div>
+  <h3>Hvordan hænger det sammen?</h3>
+  <p>Du retter tekst i panelet → det gemmes i backenden → backenden skubber ændringen ud til <i>alle</i> åbne overlay-vinduer <b>og</b> til andre operatører der har panelet åbent, med det samme. Flere kan altså arbejde i samme projekt samtidig og se hinandens ændringer live.</p>
+  <p class="muted">Selve <b>grafik-koden</b> (udseendet) hentes derimod kun når en browser-kilde indlæses. Ændrer man <i>koden</i> (fx via en ny version), skal browser-kilden genindlæses i vMix — men tekst/indhold opdateres altid live. Se <a href="#vmix">vMix-opsætning</a>.</p>
+</section>
+
+<section id="login">
+  <h2>Log ind &amp; projekter</h2>
+  <ol>
+    <li>Åbn forsiden og log ind med din <b>e-mail</b> + <b>adgangskode</b>. Første kode får du af en admin (se <a href="#admin">Brugerstyring</a>).</li>
+    <li>Du lander på <b>projekt-oversigten</b>. Hvert kort er ét projekt — <span class="pill" style="color:#f9b36a;background:#2a1f0f;border-color:#6b4a2d">Kampdag</span> eller <span class="pill">TV Produktion</span>.</li>
+    <li>Klik et projekt for at åbne panelet for netop det projekt.</li>
+  </ol>
+  <div class="box tip">Øverst til højre på oversigten: <b>Log ud</b>, <b>Grafik Editor</b> og — hvis du er admin — <b>Brugerstyring</b> + en <b>ADMIN</b>-markering.</div>
+  <ul>
+    <li><b>Admins</b> kan desuden slå et TV-projekt aktivt/inaktivt direkte på kortet. Inaktive projekter kan ikke åbnes.</li>
+    <li>Glemt kode? En admin kan nulstille den (den sættes tilbage til standard-koden).</li>
+  </ul>
 </section>
 
 <section id="projekttyper">
@@ -112,28 +136,56 @@
   <p class="muted">Indholdsfanerne (SUBS/INFO/TICKER/CREDITS) er hvor du skriver <i>teksten</i>. Selve af-/påsætningen på skærmen sker i <b>GRAFIK</b>-fanen.</p>
 </section>
 
+<section id="arbejdsgang">
+  <h2>Typisk arbejdsgang</h2>
+  <p>Den røde tråd er altid den samme — <b>skriv indhold</b> ét sted, <b>sæt det på skærmen</b> et andet:</p>
+  <ol>
+    <li><b>Før udsendelsen:</b> skriv dit indhold i indholdsfanerne — navne i <b>SUBS</b>, info i <b>INFO</b>, rulletekst i <b>TICKER</b>, sluttekster i <b>CREDITS</b>. Alt gemmes pr. projekt.</li>
+    <li><b>Tjek opsætningen</b> (gøres typisk én gang): at grafikkerne ligger på de rigtige overlays i <a href="#komponist">Overlay-komponisten</a>, og at browser-kilderne er sat op i vMix.</li>
+    <li><b>Under udsendelsen:</b> gå i <b>GRAFIK</b>-fanen. Brug <b>PRW</b> til at tjekke en grafik i preview, og <span class="btn in">&gt; IN</span> / <span class="btn out">&lt; OUT</span> til at sætte den på/af live.</li>
+    <li>Skal det gå stærkt, så bind de hyppige handlinger på <a href="#companion">Companion</a>-knapper.</li>
+  </ol>
+  <div class="box tip">Du kan sagtens rette en tekst <i>mens</i> grafikken er på skærmen — den opdaterer live. Du behøver ikke tage den af og på igen.</div>
+</section>
+
 <section id="subs">
   <h2>Subs (navneskilte)</h2>
-  <p>En sub er et navneskilt med <b>navn</b> + <b>titel</b>.</p>
+  <p>En sub er et navneskilt med <b>navn</b> + <b>titel</b>. Et projekt har <b>15 sub-pladser</b> (venstre kolonne) + <b>8 vMix Call-pladser</b> (højre kolonne).</p>
   <ol>
     <li>Gå i <b>SUBS</b>-fanen → klik blyanten på en række → skriv navn + titel.</li>
-    <li>Vælg <span class="pill">VENSTRE</span> eller <span class="pill">HØJRE</span> side — grafikken spejlvendes, men teksten forbliver læsbar.</li>
+    <li>Vælg <span class="pill">VENSTRE</span> eller <span class="pill">HØJRE</span> side — grafikken spejlvendes til den side, men teksten forbliver læsbar.</li>
     <li>Gem.</li>
   </ol>
+  <div class="box tip">Side-valget (venstre/højre) opdateres også live hos andre operatører og på overlayet — ingen genindlæsning nødvendig.</div>
+
   <h3>vMix Calls som subs</h3>
-  <p>De 8 vMix Call-rækker (højre kolonne i SUBS) kan bruges som subs. De vises som <b>V1–V8</b> i afviklingen.</p>
+  <p>De 8 vMix Call-rækker i højre kolonne er en særlig slags sub, typisk til <b>fjern-gæster / opkald</b>. De har ud over navn + titel også et <b>link</b>-felt. De vises som <b>V1–V8</b> i afviklingen og kendes på den <span style="color:#c084fc">magenta</span> kant (almindelige subs er <span style="color:#93c5fd">blå</span>).</p>
+
+  <h3>Den aktive sub</h3>
+  <p>Systemet husker <b>hvilken sub der er sat på senest</b> ("den aktive sub"). Det er den, en makro eller en Companion-knap uden fast plads-nummer rammer. Sætter du en ny sub på mens en anden er på skærmen, <b>skifter den direkte</b> til den nye uden at tage grafikken af og på.</p>
+
   <h3>Sæt en sub på</h3>
-  <p>Gå i <b>GRAFIK → SUB</b>. Hver sub har knapper: <span class="btn in">&gt; IN</span> sætter på, <span class="btn out">&lt; OUT</span> tager af. Skift til en anden sub mens den er på = den skifter direkte.</p>
+  <p>Gå i <b>GRAFIK → SUB</b>. Hver sub har knapper: <span class="btn in">&gt; IN</span> sætter på, <span class="btn out">&lt; OUT</span> tager af.</p>
+
+  <h3>Ryd alt</h3>
+  <p>Knappen <b>Ryd alt</b> øverst i SUBS-fanen nulstiller <b>alle</b> subs <b>og</b> alle vMix Calls i projektet (navn, titel, link) på én gang.</p>
+  <div class="box warn"><b>Ryd alt</b> kan ikke fortrydes. Den rører kun det aktuelle projekt — andre projekter påvirkes ikke.</div>
 </section>
 
 <section id="info">
   <h2>Info-bokse</h2>
+  <p>Du kan have <b>flere info-bokse</b> i et projekt — hver med en overskrift + et indhold. Hver boks bliver en række i GRAFIK → INFO, så du kan vælge præcis hvilken der skal på.</p>
   <ol>
-    <li>Skriv boksen i <b>INFO</b>-fanen (overskrift + indhold). Maks 3 linjer — en tæller viser resterende tegn.</li>
+    <li><b>＋ Tilføj info-boks</b> i <b>INFO</b>-fanen, og skriv overskrift + indhold. Maks 3 linjer — en tæller viser resterende tegn, og tælleren bliver rød når du nærmer dig grænsen.</li>
+    <li>Tryk <b>💾 GEM</b> på boksen.</li>
     <li>Sæt den på i <b>GRAFIK → INFO</b> med <span class="btn in">&gt; IN</span> / <span class="btn out">&lt; OUT</span>.</li>
   </ol>
-  <div class="box tip">Linjeskift i teksten respekteres. Vil du have alt på én linje, så lad være med at trykke <kbd>Enter</kbd> midt i.</div>
-  <p class="muted">Info vises på det overlay hvor info-grafikken er placeret (typisk Master).</p>
+  <div class="box tip">Linjeskift i teksten respekteres. Vil du have alt på én linje, så lad være med at trykke <kbd>Enter</kbd> midt i. Retter du teksten mens boksen er på skærmen, opdateres den live.</div>
+  <ul>
+    <li><b>✕ Slet</b> på en boks fjerner den enkelte boks.</li>
+    <li><b>✕ Slet alle</b> øverst fjerner alle info-bokse i projektet (kan ikke fortrydes).</li>
+  </ul>
+  <p class="muted">Info vises på det/de overlay(s) hvor info-grafikken er placeret (typisk Master). Vil du have info på flere overlays, skal info-grafikken sættes op på hvert af dem i <a href="#komponist">komponisten</a>.</p>
 </section>
 
 <section id="ticker">
@@ -226,6 +278,24 @@
   <p class="muted">Agenten kender projektets datakilder (subs, info, credits, ticker) og DR-husstilen (DR Publik, DR-farver).</p>
 </section>
 
+<section id="editor">
+  <h2>Grafik-editor</h2>
+  <p>En visuel editor til at <b>designe grafik helt fra bunden</b>, hvis du vil lave den i hånden i stedet for (eller sammen med) agenten. Åbnes med knappen <b>Grafik Editor</b> på projekt-oversigten.</p>
+  <ul>
+    <li><b>Lærred i fuld HD</b> (1920×1080) med linealer, zoom og snap.</li>
+    <li>Elementer: <b>tekst, rektangel, linje, ticker og billede</b>. Træk/skalér med håndtag, flyt med piletasterne, fortryd/gentag med <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd>.</li>
+    <li><b>Færdige oplæg</b> (presets): Lower Third, Ticker, Credit, Fullscreen Title — et godt udgangspunkt.</li>
+    <li>Pr. element: font, størrelse, farve, gradient + <b>IN/OUT-animation</b> (og avanceret keyframe-tidslinje).</li>
+  </ul>
+  <h3>Sådan bruger du resultatet</h3>
+  <ol>
+    <li>Giv dit design et <b>projektnavn</b> (bruges som filnavn) og gem undervejs.</li>
+    <li><b>Eksportér</b> som HTML.</li>
+    <li>Brug HTML'en som en egen grafik — fx ved at give filen til <a href="#agent">agenten</a>, som kobler datakilder (sub/info/…) på, så den kan hente projektets tekst.</li>
+  </ol>
+  <div class="box tip">Editoren er til design/opsætning — ikke noget du bruger live under en udsendelse. Den færdige grafik afvikles bagefter fra <b>GRAFIK</b>-fanen som alle andre.</div>
+</section>
+
 <section id="fonte">
   <h2>Fonte (upload)</h2>
   <p>GRAFIK SETUP → VÆRKTØJER → <b>FONTE</b>. Upload dine egne skrifttyper, så de kan bruges i grafik + af agenten. <b>Uploadede fonte deles på tværs af alle projekter.</b></p>
@@ -289,6 +359,55 @@
     <li>Er indholdet gemt i den rigtige fane (SUBS/INFO)? En tom plads viser demo/standard.</li>
   </ul>
   <div class="box tip">Sidder du fast, så notér hvad du gjorde + hvad der skete, og tag et skærmbillede (gerne af browser-konsollen, <kbd>F12</kbd>) — det gør fejlfinding meget hurtigere.</div>
+</section>
+
+<section id="admin">
+  <h2>Brugerstyring (admin)</h2>
+  <p>Kun for <b>admins</b>. Åbnes med knappen <b>Brugerstyring</b> på projekt-oversigten. Her inviterer du brugere, styrer roller og nulstiller koder.</p>
+
+  <h3>Roller</h3>
+  <table>
+    <tr><th>Rolle</th><th>Kan</th></tr>
+    <tr><td><b>Admin</b></td><td>Alt: bruge panelet + invitere/fjerne brugere, skifte roller, nulstille koder og slå TV-projekter aktive/inaktive.</td></tr>
+    <tr><td><b>Bruger</b></td><td>Logge ind og bruge panelet (skrive indhold + afvikle grafik).</td></tr>
+  </table>
+
+  <h3>Invitér en bruger</h3>
+  <ol>
+    <li>Skriv et <b>Visningsnavn</b> (valgfrit) + personens <b>e-mail</b>.</li>
+    <li>Klik <b>Send invitation</b>. Brugeren oprettes med en standard-adgangskode og kan logge ind med det samme via sin e-mail.</li>
+  </ol>
+  <div class="box tip"><b>Visningsnavnet</b> er kun til visning i brugerlisten — man logger altid ind med sin <b>e-mail</b>. Mangler en bruger et navn, står der “Intet visningsnavn”.</div>
+
+  <h3>Handlinger pr. bruger</h3>
+  <table>
+    <tr><th>Knap</th><th>Gør</th></tr>
+    <tr><td><b>✎ Navn</b></td><td>Sæt eller ret brugerens visningsnavn.</td></tr>
+    <tr><td><b>Gør til admin / Fjern admin</b></td><td>Skift rollen mellem Bruger og Admin.</td></tr>
+    <tr><td><b>Nulstil kode</b></td><td>Sæt adgangskoden tilbage til standard-koden (fx hvis nogen har glemt sin).</td></tr>
+    <tr><td><b>Fjern</b></td><td>Slet brugeren helt.</td></tr>
+  </table>
+  <p>Din egen række er markeret med <b>dig</b> og kan ikke fjernes/ændres af dig selv (ud over navnet).</p>
+  <p class="muted"><b>Online nu</b> øverst viser hvem der er logget ind lige nu. Siden har desuden faner med tekniske opslag (bl.a. projekternes data-URL'er).</p>
+</section>
+
+<section id="ordliste">
+  <h2>Ordliste</h2>
+  <table>
+    <tr><th>Begreb</th><th>Betyder</th></tr>
+    <tr><td><b>Overlay</b></td><td>Et grafik-lag i vMix. Der er tre: Master, Secondary, Fullscreen.</td></tr>
+    <tr><td><b>Browser-kilde</b></td><td>En kilde i vMix der viser en webside — her ét overlay-vindue fra systemet.</td></tr>
+    <tr><td><b>Sub</b></td><td>Navneskilt (navn + titel). 15 pr. projekt.</td></tr>
+    <tr><td><b>vMix Call</b></td><td>Særlig sub (med link-felt) til fjern-gæster. 8 pr. projekt, vist som V1–V8.</td></tr>
+    <tr><td><b>Aktiv sub</b></td><td>Den sub der er sat på senest — den en makro/Companion-knap uden fast plads rammer.</td></tr>
+    <tr><td><b>Info-boks</b></td><td>Overskrift + kort indhold (maks 3 linjer). Flere pr. projekt.</td></tr>
+    <tr><td><b>Ticker</b></td><td>Rullende tekst i bunden af skærmen.</td></tr>
+    <tr><td><b>Credits</b></td><td>Rullende sluttekster (roller + navne).</td></tr>
+    <tr><td><b>Makro</b></td><td>En knap der kører flere trin i rækkefølge.</td></tr>
+    <tr><td><b>Datakilde</b></td><td>Hvilken slags projekt-data en grafik henter (sub/info/ticker/credit) — se <a href="#datakilde">Datakilde</a>.</td></tr>
+    <tr><td><b>Egen / custom grafik</b></td><td>En grafik du selv har lavet (via agenten eller editoren) — modsat kampdags indbyggede grafikker.</td></tr>
+    <tr><td><b>Companion</b></td><td>Bitfocus Companion / Stream Deck — fysiske knapper der styrer grafikken.</td></tr>
+  </table>
 </section>
 
 <p class="muted" style="border-top:1px solid var(--line); padding-top:14px;">vMix Live Control · intern hjælp. Mangler der noget, eller er en beskrivelse upræcis? Sig til, så opdateres siden.</p>
