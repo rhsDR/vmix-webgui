@@ -1510,6 +1510,7 @@
       border-bottom: 1px solid #1e1e1e;
     }
     .grafik-v2-tab {
+      position: relative;
       background: transparent;
       border: none;
       border-bottom: 2px solid transparent;
@@ -1533,11 +1534,11 @@
     .afv-liste-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
     .afv-liste-sel { flex: 0 1 auto; min-width: 140px; background: #111; border: 1px solid #333; color: #ddd; padding: 6px 8px; border-radius: 6px; font-size: 12px; cursor: pointer; }
     .grafik-v2-onair {
+      position: absolute;
+      top: 4px; right: 5px;
       width: 6px; height: 6px;
       border-radius: 50%;
       background: var(--red);
-      display: inline-block;
-      flex-shrink: 0;
       animation: pulse-credits 1.4s ease-in-out infinite;
     }
 
