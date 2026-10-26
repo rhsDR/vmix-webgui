@@ -4,6 +4,13 @@ function renderSubs() {
   if (!container) return;
   container.innerHTML = '';
 
+  // Top-bar: Ryd alt — nulstiller navn/titel/side for ALLE subs + vMix Calls (vMix Call-links bevares).
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:14px;';
+  bar.innerHTML = '<button class="btn" id="subsClearAll" style="background:#2a1010;border:1px solid #4a2020;color:#ef4444;">✕ Ryd alt</button>';
+  bar.querySelector('#subsClearAll').addEventListener('click', clearAllSubs);
+  container.appendChild(bar);
+
   const grid = document.createElement('div');
   grid.className = 'subs-grid';
 
@@ -27,6 +34,22 @@ function renderSubs() {
 function rerenderSub(i) {
   const old = document.getElementById('sub-' + i);
   if (old) old.replaceWith(buildSubRow(i));
+}
+
+// Nulstil ALLE subs + vMix Calls (navn/titel/side). Bulk-PATCH pr. tabel (uden slot-filter = alle rækker
+// for projektet). vMix Call-links (kampdag-synkede) bevares. Realtime-UPDATE synker andre åbne paneler.
+async function clearAllSubs() {
+  if (!confirm('Ryd ALLE subs og vMix Calls?\n\nNavn, titel og side nulstilles for alle (vMix Call-links bevares). Dette kan ikke fortrydes.')) return;
+  try {
+    await Promise.all([
+      sbPatch('subs?projekt_id=eq.' + aktivProjektId, { navn: '', titel: '', side: 'venstre' }),
+      sbPatch('vmix_calls?projekt_id=eq.' + aktivProjektId, { navn: '', titel: '', side: 'venstre' }),
+    ]);
+    subs.forEach(s => { s.navn = ''; s.titel = ''; s.side = 'venstre'; s.editMode = false; });
+    vmixCalls.forEach(c => { c.navn = ''; c.titel = ''; c.side = 'venstre'; c.editMode = false; });
+    renderSubs();
+    toast('Alle subs og vMix Calls ryddet', 'ok');
+  } catch { toast('Fejl ved rydning', 'err'); }
 }
 
 function rerenderVmixCall(i) {
