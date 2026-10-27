@@ -468,6 +468,16 @@
   <script>
     let currentUser = null;
     let accessToken = null;
+
+    // Henter en frisk (auto-fornyet) access token lige før et admin-kald. Supabase-klienten
+    // fornyer selv tokenet, men KUN når vi beder om den aktuelle session; den token vi fangede
+    // ved sideload udløber efter ~1 time og giver ellers 401 "Unauthorized" på /api/-kaldene.
+    async function freshToken() {
+      const session = await getSession();
+      if (!session) { window.location.href = 'index.html'; return null; }
+      accessToken = session.access_token;
+      return accessToken;
+    }
     let projektNavne = {}; // id → navn + undertitel
 
     // Tab switching
@@ -678,7 +688,7 @@
     }
 
     async function loadUsers() {
-      const res = await fetch('/api/list-users', { headers: { 'Authorization': 'Bearer ' + accessToken } });
+      const res = await fetch('/api/list-users', { headers: { 'Authorization': 'Bearer ' + (await freshToken()) } });
       const data = await res.json();
       if (data.error) { toast(data.error, 'err'); return; }
       renderUsers(data.users);
@@ -734,7 +744,7 @@
 
       const res = await fetch('/api/invite', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (await freshToken()) },
         body: JSON.stringify({ email, username })
       });
       const data = await res.json();
@@ -759,7 +769,7 @@
       if (navn === null) return; // annulleret
       const res = await fetch('/api/user-admin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (await freshToken()) },
         body: JSON.stringify({ userId, action: 'username', username: navn.trim() })
       });
       const data = await res.json().catch(() => ({}));
@@ -792,7 +802,7 @@
       if (!confirm('Nulstil kode for ' + email + ' til DR35203040?')) return;
       const res = await fetch('/api/user-admin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (await freshToken()) },
         body: JSON.stringify({ userId, action: 'reset' })
       });
       const data = await res.json();
@@ -804,7 +814,7 @@
       if (!confirm('Fjern ' + email + '?')) return;
       const res = await fetch('/api/user-admin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (await freshToken()) },
         body: JSON.stringify({ userId, action: 'delete' })
       });
       const data = await res.json();
