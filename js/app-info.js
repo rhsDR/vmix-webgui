@@ -33,13 +33,43 @@ async function refreshInfo() { await loadInfoBokse(); renderInfo(); }
 async function saveInfoBokse(okMsg) {
   // Side 1 spejles altid til box.indhold, så afviklings-preview og /api/vmix (som læser indhold) matcher.
   infoBokse.forEach(b => { if (Array.isArray(b.sider) && b.sider.length) b.indhold = b.sider[0] || ''; });
+  // Fler-bruger-flet (kun hvis JEG har ændret noget): byg ud fra den NYESTE DB-tilstand, læg mine
+  // ændrede/tilføjede bokse ovenpå og fjern mine slettede — så en anden operatørs samtidige ændring
+  // på ANDRE bokse (fx en overskrift) ikke overskrives af mit gem.
+  if (_infoDirty.size || _infoDeleted.size) {
+    try {
+      const rows = await sbGet('settings?select=value&key=eq.info_bokse&projekt_id=eq.' + aktivProjektId);
+      const remote = rows[0] && rows[0].value ? JSON.parse(rows[0].value) : [];
+      if (Array.isArray(remote)) {
+        const mine = new Map(infoBokse.map(b => [b.id, b]));
+        const out = [];
+        const seen = new Set();
+        remote.forEach(rb => {
+          if (!rb || !rb.id || seen.has(rb.id)) return;
+          seen.add(rb.id);
+          if (_infoDeleted.has(rb.id)) return;                                 // jeg har slettet den
+          if (_infoDirty.has(rb.id) && mine.has(rb.id)) { out.push(mine.get(rb.id)); return; } // min version vinder
+          out.push(rb);                                                        // andres/urørt → behold remote
+        });
+        infoBokse.forEach(b => { if (!seen.has(b.id) && !_infoDeleted.has(b.id)) out.push(b); }); // mine nye bokse
+        infoBokse = out;
+      }
+    } catch {}
+  }
   await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'info_bokse', value: JSON.stringify(infoBokse) });
+  _infoDirty.clear(); _infoDeleted.clear();
   if (okMsg) toast(okMsg, 'ok');
 }
 
 // ── INFO-fanen (kun tekst — INGEN output her) ──
 // Maks antal sider pr. info-boks (side 1 + ekstra "side 2/3…" til overløbs-tekst).
 const INFO_MAX_SIDER = 5;
+
+// Fler-bruger: spor hvilke bokse DENNE bruger har ændret/tilføjet (_infoDirty) eller slettet
+// (_infoDeleted) siden sidste gem. Ved GEM flettes KUN disse oven på den nyeste DB-tilstand, så vi
+// publicerer egne ændringer uden at overskrive en anden operatørs samtidige ændringer på andre bokse.
+const _infoDirty = new Set();
+const _infoDeleted = new Set();
 
 // Opdaterer backdrop (overløb rødt) + auto-højde + tegntæller for ét side-felt.
 // INFO_INDHOLD_MAX er en BLØD grænse: alt kan skrives, men det der er over farves rødt.
@@ -123,7 +153,7 @@ function renderInfo() {
     const id = card.dataset.box;
     const box = infoBokse.find(b => b.id === id);
     if (!box) return;
-    card.querySelector('[data-field="overskrift"]').addEventListener('input', e => { box.overskrift = e.target.value; });
+    card.querySelector('[data-field="overskrift"]').addEventListener('input', e => { box.overskrift = e.target.value; _infoDirty.add(box.id); });
     // Info-indhold pr. SIDE: maks 3 linjer + maks INFO_INDHOLD_MAX tegn PR. side. Enter blokeres ved 3
     // linjer; paste af mere afkortes; tæller viser resterende tegn. Side 1 spejles til box.indhold (så
     // afviklings-preview og /api/vmix stadig har side 1).
@@ -135,6 +165,7 @@ function renderInfo() {
       ta.addEventListener('input', () => {
         box.sider[i] = ta.value;
         if (i === 0) box.indhold = ta.value;
+        _infoDirty.add(box.id);
         _infoRenderOverlay(ta);
       });
     });
@@ -142,6 +173,7 @@ function renderInfo() {
       if (!Array.isArray(box.sider)) box.sider = [box.indhold || ''];
       if (box.sider.length >= INFO_MAX_SIDER) return;
       box.sider.push('');
+      _infoDirty.add(box.id);
       try { await saveInfoBokse(); } catch {}
       renderInfo();
     });
@@ -150,14 +182,16 @@ function renderInfo() {
       box.sider.splice(i, 1);
       if (!box.sider.length) box.sider = [''];
       box.indhold = box.sider[0] || '';
+      _infoDirty.add(box.id);
       try { await saveInfoBokse('Side fjernet'); } catch {}
       renderInfo();
     }));
     card.querySelector('[data-act="gem"]').addEventListener('click', async () => {
-      try { await saveInfoBokse('Gemt ✓'); } catch { toast('Fejl ved gem', 'err'); }
+      try { await saveInfoBokse('Gemt ✓'); renderInfo(); } catch { toast('Fejl ved gem', 'err'); }
     });
     card.querySelector('[data-act="del"]').addEventListener('click', async () => {
       if (!confirm('Slet denne info-boks?')) return;
+      _infoDeleted.add(id); _infoDirty.delete(id);
       infoBokse = infoBokse.filter(b => b.id !== id);
       try { await saveInfoBokse('Slettet'); } catch { toast('Fejl ved slet', 'err'); }
       renderInfo();
@@ -168,6 +202,7 @@ function renderInfo() {
 async function deleteAllInfoBokse() {
   if (!infoBokse.length) return;
   if (!confirm('Slet ALLE ' + infoBokse.length + ' info-bokse i dette projekt? Dette kan ikke fortrydes.')) return;
+  infoBokse.forEach(b => { _infoDeleted.add(b.id); _infoDirty.delete(b.id); });
   infoBokse = [];
   try { await saveInfoBokse('Alle info-bokse slettet'); } catch { toast('Fejl ved slet', 'err'); }
   renderInfo();
@@ -176,6 +211,7 @@ async function deleteAllInfoBokse() {
 async function addInfoBox() {
   const id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'b' + Date.now();
   infoBokse.push({ id, overskrift: '', indhold: '', sider: [''], output: 'hoved' });
+  _infoDirty.add(id);
   try { await saveInfoBokse(); } catch { toast('Fejl ved gem', 'err'); }
   renderInfo();
 }
