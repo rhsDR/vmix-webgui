@@ -1343,11 +1343,13 @@ function renderGrafikTV(container) {
       // "PRW n" (preview NETOP den side via slot "boks.side") + "SIDE n" (tag den live).
       const pages = b.sider.map((s, i) => ({ n: i + 1, text: s || '' })).filter(p => p.n === 1 || p.text.trim());
       const in1Act = boxLive && curPage === 1;
-      const extraBtns = pages.filter(p => p.n > 1).map(p => {
-        const sendSlot = `${b.slot}.${p.n}`;
+      const extra = pages.filter(p => p.n > 1);
+      // PRW-knapperne samles (PRW, PRW 2, PRW 3, PRW UD); SIDE-knapperne ligger ved > IN.
+      const prwExtra = extra.map(p =>
+        `<button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}.${p.n}" title="Preview side ${p.n}">PRW ${p.n}</button>`).join('');
+      const sideExtra = extra.map(p => {
         const act = boxLive && curPage === p.n;
-        return `<button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" data-prw-slot="${sendSlot}" title="Preview side ${p.n}">PRW ${p.n}</button>`
-          + `<button class="grafik-btn-in${act ? ' on' : ''} tv-info-slot-in" data-trig="${esc(trig)}" data-slot="${sendSlot}" title="Skift til side ${p.n}">SIDE ${p.n}</button>`;
+        return `<button class="grafik-btn-in${act ? ' on' : ''} tv-info-slot-in" data-trig="${esc(trig)}" data-slot="${b.slot}.${p.n}" title="Skift til side ${p.n}">SIDE ${p.n}</button>`;
       }).join('');
       return `<div class="grafik-block" style="--g-color:${gfx.color}">
         <span class="grafik-block-num">${b.slot}</span>
@@ -1357,10 +1359,11 @@ function renderGrafikTV(container) {
         </div>
         <div class="grafik-block-actions">
           <button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}" title="Preview side 1">PRW</button>
+          ${prwExtra}
           <button class="grafik-btn-prw tv-prw-out" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}" title="Preview ud">PRW UD</button>
           <button class="grafik-btn-out" data-trig="${esc(trig)}" data-val="out"${!boxLive ? ' disabled' : ''}>&lt; OUT</button>
           <button class="grafik-btn-in${in1Act ? ' on' : ''} tv-info-slot-in" data-trig="${esc(trig)}" data-slot="${b.slot}" title="Vis (side 1)">&gt; IN</button>
-          ${extraBtns}
+          ${sideExtra}
         </div>
       </div>`;
     }).join('');
