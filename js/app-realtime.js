@@ -106,6 +106,9 @@ sbClient.channel('db-changes')
             if (!_editingInfo) {
               try { const v = JSON.parse(p.new.value || '[]'); infoBokse = Array.isArray(v) ? v : []; } catch {}
               if (typeof renderInfo === 'function' && document.getElementById('tab-info')?.classList.contains('active')) renderInfo();
+              // Afviklingen (GRAFIK → INFO) skal også opdatere live hos andre brugere — som subs gør —
+              // så en tilføjet/ændret info-boks straks optræder i rækken.
+              if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
               if (document.getElementById('tab-grafik-ops')?.classList.contains('active')) _debouncedRenderGrafikOps();
             }
           }
