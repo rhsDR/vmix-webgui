@@ -165,7 +165,8 @@ export default async function handler(req, res) {
     let _infoArr = [];
     try { _infoArr = _infoRow && _infoRow.value ? JSON.parse(_infoRow.value) : []; } catch {}
     json.info = Array.isArray(_infoArr)
-      ? _infoArr.map(b => ({ overskrift: b.overskrift || '', indhold: b.indhold || '', output: b.output || '' }))
+      ? _infoArr.map(b => ({ overskrift: b.overskrift || '', indhold: b.indhold || '',
+          sider: (Array.isArray(b.sider) && b.sider.length) ? b.sider : [b.indhold || ''], output: b.output || '' }))
       : [];
 
     // CDN-cache (Vercel) pr. projekt: Companion poller hvert 5. sek + grafik-loads deler ét DB-svar i

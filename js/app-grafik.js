@@ -1330,22 +1330,34 @@ function renderGrafikTV(container) {
     const trigLive = (grafiktState[trig] || 'out') !== 'out';
     const curSlot = grafiktState['_info_slot'] || 0;
     const boxes = (typeof infoBokse !== 'undefined' ? infoBokse : [])
-      .map((b, i) => ({ slot: i + 1, overskrift: b.overskrift || '', indhold: b.indhold || '' }))
+      .map((b, i) => ({ slot: i + 1, overskrift: b.overskrift || '', indhold: b.indhold || '',
+        sider: (Array.isArray(b.sider) && b.sider.length) ? b.sider : [b.indhold || ''] }))
       .filter(b => b.overskrift.trim() || b.indhold.trim());
     if (!boxes.length) return '<div class="grafik-v2-empty">Ingen info-bokse — skriv i INFO-fanen.</div>';
+    // curSlot kan være "boks" (side 1) eller "boks.side" (fx "1.2"). Split for at vide hvilken side der er live.
+    const [curBox, curPageRaw] = String(curSlot).split('.');
+    const curPage = parseInt(curPageRaw || '1', 10) || 1;
     return boxes.map(b => {
-      const slotAct = trigLive && String(curSlot) === String(b.slot);
+      const boxLive = trigLive && String(curBox) === String(b.slot);
+      // Side 1 vises altid (> IN); ekstra sider kun hvis de har tekst.
+      const pages = b.sider.map((s, i) => ({ n: i + 1, text: s || '' })).filter(p => p.n === 1 || p.text.trim());
+      const pageBtns = pages.map(p => {
+        const sendSlot = p.n === 1 ? String(b.slot) : `${b.slot}.${p.n}`;
+        const act = boxLive && curPage === p.n;
+        const label = p.n === 1 ? '&gt; IN' : 'SIDE ' + p.n;
+        return `<button class="grafik-btn-in${act ? ' on' : ''} tv-info-slot-in" data-trig="${esc(trig)}" data-slot="${sendSlot}" title="${p.n === 1 ? 'Vis (side 1)' : 'Skift til side ' + p.n}">${label}</button>`;
+      }).join('');
       return `<div class="grafik-block" style="--g-color:${gfx.color}">
         <span class="grafik-block-num">${b.slot}</span>
         <div class="grafik-block-info">
-          <span class="grafik-block-name${!b.overskrift ? ' muted' : ''}">${esc(b.overskrift || '(uden overskrift)')}</span>
+          <span class="grafik-block-name${!b.overskrift ? ' muted' : ''}">${esc(b.overskrift || '(uden overskrift)')}${pages.length > 1 ? ` <span style="color:#888;font-size:10px;font-weight:600;">· ${pages.length} sider</span>` : ''}</span>
           ${b.indhold ? `<span class="grafik-block-sub">${esc(b.indhold.split('\n')[0])}</span>` : ''}
         </div>
         <div class="grafik-block-actions">
           <button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}" title="Preview ind">PRW</button>
           <button class="grafik-btn-prw tv-prw-out" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}" title="Preview ud">PRW UD</button>
-          <button class="grafik-btn-out" data-trig="${esc(trig)}" data-val="out"${!slotAct ? ' disabled' : ''}>&lt; OUT</button>
-          <button class="grafik-btn-in${slotAct ? ' on' : ''} tv-info-slot-in" data-trig="${esc(trig)}" data-slot="${b.slot}">&gt; IN</button>
+          <button class="grafik-btn-out" data-trig="${esc(trig)}" data-val="out"${!boxLive ? ' disabled' : ''}>&lt; OUT</button>
+          ${pageBtns}
         </div>
       </div>`;
     }).join('');
@@ -1406,11 +1418,21 @@ function renderGrafikTV(container) {
     const infoGfx = catItems('info')[0];
     if (infoGfx) {
       const bokse = (typeof infoBokse !== 'undefined' ? infoBokse : [])
-        .map((b, i) => ({ slot: i + 1, overskrift: b.overskrift || '', indhold: b.indhold || '' }))
+        .map((b, i) => ({ slot: i + 1, overskrift: b.overskrift || '', indhold: b.indhold || '',
+          sider: (Array.isArray(b.sider) && b.sider.length) ? b.sider : [b.indhold || ''] }))
         .filter(b => b.overskrift.trim() || b.indhold.trim());
       if (bokse.length) {
         html += `<div class="grafik-companion-subhead" style="margin-top:${html ? '10px' : '0'}">INFO</div>`;
-        html += bokse.map(b => row('Info ' + b.slot + (b.overskrift ? ': ' + b.overskrift : ''), T(`key=${encodeURIComponent(infoGfx.trig)}&value=in&slot=${b.slot}`), infoGfx.color)).join('');
+        html += bokse.map(b => {
+          const base = 'Info ' + b.slot + (b.overskrift ? ': ' + b.overskrift : '');
+          // Side 1 altid; ekstra sider (med tekst) får eget link med slot "boks.side".
+          const pages = b.sider.map((s, i) => ({ n: i + 1, text: s || '' })).filter(p => p.n === 1 || p.text.trim());
+          return pages.map(p => {
+            const sendSlot = p.n === 1 ? String(b.slot) : `${b.slot}.${p.n}`;
+            const lbl = p.n === 1 ? base : base + ' — side ' + p.n;
+            return row(lbl, T(`key=${encodeURIComponent(infoGfx.trig)}&value=in&slot=${sendSlot}`), infoGfx.color);
+          }).join('');
+        }).join('');
         html += row('INFO AF', T(`key=${encodeURIComponent(infoGfx.trig)}&value=out`), infoGfx.color);
       }
     }
