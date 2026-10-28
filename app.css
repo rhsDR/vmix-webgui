@@ -1190,6 +1190,8 @@
     #infoCards .edit-grid { gap: 8px; }
     #infoCards .edit-actions { margin-top: 10px; }
     #infoCards .info-char-count { font-size: 12px; }
+    /* INFO-boksene behøver ikke fylde hele panelets bredde. */
+    #infoList { max-width: 760px; }
 
     /* Overløbs-fremhævning: en backdrop bag textarea'en spejler teksten; det der er ud over
        grænsen vises RØDT. Textarea'en har gennemsigtig tekst (men synlig markør) så man ser

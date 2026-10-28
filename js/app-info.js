@@ -112,7 +112,7 @@ function _infoBoxCard(b, idx) {
       <div class="info-char-count" data-side-count="${i}" style="font-size:11px;color:#a5a5a5;text-align:right;margin-top:3px;letter-spacing:.5px;">${INFO_INDHOLD_MAX - (s || '').length} tegn tilbage</div>
     </div>`).join('');
   const addSideBtn = sider.length < INFO_MAX_SIDER
-    ? `<button class="btn" data-side-add style="margin-top:8px;padding:4px 11px;font-size:12px;">＋ Tilføj side</button>` : '';
+    ? `<button class="btn" data-side-add style="display:inline-block;width:auto;align-self:flex-start;margin-top:8px;padding:5px 12px;font-size:12px;background:#222;border:1px solid #333;color:#bbb;">＋ Tilføj side</button>` : '';
   return `
     <div class="ticker-block" style="margin-bottom:8px;" data-box="${b.id}">
       <div class="ticker-body" style="display:block;">
