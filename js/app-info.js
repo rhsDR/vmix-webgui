@@ -41,6 +41,31 @@ async function saveInfoBokse(okMsg) {
 // Maks antal sider pr. info-boks (side 1 + ekstra "side 2/3…" til overløbs-tekst).
 const INFO_MAX_SIDER = 5;
 
+// Opdaterer backdrop (overløb rødt) + auto-højde + tegntæller for ét side-felt.
+// INFO_INDHOLD_MAX er en BLØD grænse: alt kan skrives, men det der er over farves rødt.
+function _infoRenderOverlay(ta) {
+  const wrap = ta.parentElement;
+  const bd = wrap && wrap.querySelector('.info-ta-backdrop');
+  const val = ta.value;
+  const max = INFO_INDHOLD_MAX;
+  if (bd) {
+    const normal = val.slice(0, max), ovf = val.slice(max);
+    bd.innerHTML = esc(normal) + (ovf ? '<span class="ovf">' + esc(ovf) + '</span>' : '') + '​';
+  }
+  // Auto-højde så al tekst (også den røde) er synlig uden intern scroll.
+  ta.style.height = 'auto';
+  const h = Math.max(54, ta.scrollHeight);
+  ta.style.height = h + 'px';
+  if (bd) bd.style.height = h + 'px';
+  const countEl = wrap && wrap.nextElementSibling && wrap.nextElementSibling.classList.contains('info-char-count')
+    ? wrap.nextElementSibling : null;
+  if (countEl) {
+    const rest = max - val.length;
+    if (rest >= 0) { countEl.textContent = rest + ' tegn tilbage'; countEl.style.color = rest <= 15 ? '#ef4444' : '#888'; }
+    else { countEl.textContent = (-rest) + ' tegn for meget'; countEl.style.color = '#ef4444'; }
+  }
+}
+
 function _infoBoxCard(b, idx) {
   const sider = (Array.isArray(b.sider) && b.sider.length) ? b.sider : [b.indhold || ''];
   const flerSider = sider.length > 1;
@@ -50,7 +75,10 @@ function _infoBoxCard(b, idx) {
         <span style="font-size:11px;font-weight:600;color:#9a9a9a;letter-spacing:.5px;">SIDE ${i + 1}</span>
         ${i > 0 ? `<button class="btn" data-side-del="${i}" title="Fjern side" style="margin-left:auto;padding:1px 8px;background:#2a1010;border:1px solid #4a2020;color:#ef4444;font-size:11px;">✕</button>` : ''}
       </div>` : ''}
-      <textarea class="form-input" data-side-ta="${i}" rows="3" maxlength="${INFO_INDHOLD_MAX}" placeholder="${i ? 'Side ' + (i + 1) + ' (overløbs-tekst)' : 'Indhold (maks 3 linjer)'}">${esc(s)}</textarea>
+      <div class="info-ta-wrap">
+        <div class="info-ta-backdrop" aria-hidden="true"></div>
+        <textarea class="form-input info-ta" data-side-ta="${i}" rows="3" placeholder="${i ? 'Side ' + (i + 1) + ' (overløbs-tekst)' : 'Indhold'}">${esc(s)}</textarea>
+      </div>
       <div class="info-char-count" data-side-count="${i}" style="font-size:11px;color:#a5a5a5;text-align:right;margin-top:3px;letter-spacing:.5px;">${INFO_INDHOLD_MAX - (s || '').length} tegn tilbage</div>
     </div>`).join('');
   const addSideBtn = sider.length < INFO_MAX_SIDER
@@ -102,26 +130,12 @@ function renderInfo() {
     if (!Array.isArray(box.sider) || !box.sider.length) box.sider = [box.indhold || ''];
     card.querySelectorAll('[data-side-ta]').forEach(ta => {
       const i = parseInt(ta.dataset.sideTa, 10);
-      const countEl = card.querySelector(`[data-side-count="${i}"]`);
-      const updateCount = () => {
-        if (!countEl) return;
-        const rest = INFO_INDHOLD_MAX - ta.value.length;
-        countEl.textContent = rest + ' tegn tilbage';
-        countEl.style.color = rest <= 15 ? '#ef4444' : '#888';
-      };
-      ta.addEventListener('keydown', e => {
-        if (e.key === 'Enter' && e.target.value.split('\n').length >= 3) e.preventDefault();
-      });
-      ta.addEventListener('input', e => {
-        if (e.target.value.split('\n').length > 3) {
-          const pos = e.target.selectionStart;
-          e.target.value = e.target.value.split('\n').slice(0, 3).join('\n');
-          const p = Math.min(pos, e.target.value.length);
-          try { e.target.setSelectionRange(p, p); } catch (err) {}
-        }
-        box.sider[i] = e.target.value;
-        if (i === 0) box.indhold = e.target.value;
-        updateCount();
+      _infoRenderOverlay(ta); // initial: overløbs-farve + auto-højde + tæller
+      // Hele teksten må skrives/indsættes (ingen hård grænse); det der er for meget vises rødt.
+      ta.addEventListener('input', () => {
+        box.sider[i] = ta.value;
+        if (i === 0) box.indhold = ta.value;
+        _infoRenderOverlay(ta);
       });
     });
     card.querySelector('[data-side-add]')?.addEventListener('click', async () => {

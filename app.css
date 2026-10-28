@@ -1191,6 +1191,27 @@
     #infoCards .edit-actions { margin-top: 10px; }
     #infoCards .info-char-count { font-size: 12px; }
 
+    /* Overløbs-fremhævning: en backdrop bag textarea'en spejler teksten; det der er ud over
+       grænsen vises RØDT. Textarea'en har gennemsigtig tekst (men synlig markør) så man ser
+       backdrop'en. Begge SKAL have identiske box-mål for at flugte. */
+    #infoCards .info-ta-wrap { position: relative; }
+    #infoCards .info-ta-backdrop {
+      position: absolute; inset: 0; margin: 0; z-index: 0;
+      font-family: inherit; font-size: 16px; line-height: 1.5; letter-spacing: normal;
+      padding: 8px 11px; border: 1px solid transparent; border-radius: 4px; box-sizing: border-box;
+      white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word;
+      color: #fff; background: var(--input-bg); pointer-events: none; overflow: hidden;
+    }
+    #infoCards .info-ta-backdrop .ovf { color: #ff5b5b; }
+    #infoCards textarea.info-ta {
+      position: relative; z-index: 1; display: block; box-sizing: border-box;
+      background: transparent; color: transparent; caret-color: #fff;
+      resize: none; overflow: hidden;
+      white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word;
+    }
+    #infoCards textarea.info-ta::placeholder { color: #6a6a6a; }
+    #infoCards textarea.info-ta::selection { background: rgba(74,158,255,.35); }
+
     .ticker-normal { display: flex; flex-direction: row; align-items: baseline; gap: 14px; }
     .ticker-overskrift { font-size: 15px; font-weight: 400; color: #fff; text-transform: uppercase; white-space: nowrap; }
     .ticker-tekst { font-size: 15px; color: #a5a5a5; }
