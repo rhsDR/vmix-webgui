@@ -202,9 +202,9 @@
   <p>Sluttekster med roller og navne. I <b>CREDITS</b>-fanen skriver du sektioner (fx "Vært", "Producer") med navne under hver.</p>
   <ul>
     <li>Den gule overskrift-boks hugger sin egen tekst; navnene står under.</li>
-    <li>Du kan styre den <b>samlede varighed</b> (ca. 5–60 sek) med skyderen.</li>
+    <li>Du kan styre den <b>samlede varighed</b> (ca. 5–60 sek, i 1-sek-trin) med skyderen.</li>
   </ul>
-  <p>Sæt den i gang i <b>GRAFIK → CREDIT</b>.</p>
+  <p>Sæt den i gang i <b>GRAFIK → CREDIT</b>. Du kan trykke <b>credit på igen</b> for at rulle forfra — uden at tage den af (<span class="btn out">&lt; OUT</span>) først.</p>
 </section>
 
 <section id="afvikling">
@@ -333,12 +333,13 @@
 
 <section id="companion">
   <h2>Companion (Stream Deck)</h2>
-  <p>Du kan styre grafik fra Bitfocus Companion med faste links. Panelet genererer dem (GRAFIK → Companion-sektionen) — kopiér linket ind i en "Generic HTTP"-knap (POST).</p>
+  <p>Du kan styre grafik fra Bitfocus Companion med faste links. Panelet genererer dem (GRAFIK → Companion-sektionen) — kopiér linket ind i en "Generic HTTP"-knap. Både <b>POST</b> og <b>GET</b> virker.</p>
   <ul>
     <li><b>Sub/info på en bestemt plads:</b> linket har <code>&amp;slot=</code> til sidst — sæt pladsens nummer ind (fx <code>&amp;slot=3</code>).</li>
-    <li><b>Makro:</b> link med <code>&amp;macro=…</code>. Har makroen "vælg ved afvikling", sæt også <code>&amp;slot=</code>-nummeret.</li>
+    <li><b>Makro:</b> link med <code>&amp;macro=…</code>. Har makroen et sub/info-trin der skal vælge plads, sæt også <code>&amp;slot=</code>-nummeret.</li>
     <li>Companion viser også feedback (fx den aktive sub) — det kan være op til ~5 sek forsinket, hvilket er normalt.</li>
   </ul>
+  <div class="box warn"><b>POST vs GET:</b> POST er standard og sikrest. GET kan testes direkte i en browser, men da tokenet står i selve URL'en, kan link-preview i chat/mail (Slack/Teams) komme til at <b>fyre</b> en GET-trigger automatisk. Paste derfor aldrig GET-links (med token) i delte kanaler — hold dem i Companion.</div>
 </section>
 
 <section id="fejl">
