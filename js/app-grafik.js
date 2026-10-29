@@ -1453,7 +1453,9 @@ function renderGrafikTV(container) {
     if ((typeof makroer !== 'undefined' ? makroer : []).length) {
       html += `<div class="grafik-companion-subhead" style="margin-top:${html ? '10px' : '0'}">MAKROER</div>`;
       html += makroer.map(m => {
-        const hasSlot = (m.handlinger || []).some(h => _isTvSubTrigger(h.key) || _isTvInfoTrigger(h.key));
+        // Kun makroer med en sub/info-IN (der faktisk skal vælge plads) får &slot=. En 'out'
+        // (fx CREDIT START's info_boks_master=out) bruger ingen plads → intet misvisende &slot=.
+        const hasSlot = (m.handlinger || []).some(h => (_isTvSubTrigger(h.key) || _isTvInfoTrigger(h.key)) && h.value !== 'out');
         const url = hasSlot ? T(`macro=${m.id}&slot=`) : T(`macro=${m.id}`);
         return row(m.label.toUpperCase(), url, m.farve || '#4a9eff');
       }).join('');
