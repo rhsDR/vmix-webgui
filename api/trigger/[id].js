@@ -140,7 +140,11 @@ async function runStep(pid, h, slotOverride) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  // Accepter både POST (standard) og GET (vMix-/SPX-stil, testbart i browser). Alle parametre
+  // læses fra query-strengen, så GET virker uden ændringer. no-store: en trigger er en HANDLING og
+  // må ALDRIG caches/gen-serveres (ellers kunne et gentryk via GET blive serveret fra cache).
+  if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  res.setHeader('Cache-Control', 'no-store');
 
   // Token-lås: alle kald (Companion m.fl.) skal medsende ?token= der matcher
   // TRIGGER_TOKEN-miljøvariablen i Vercel. Uden env-var afvises alt (fail closed).
