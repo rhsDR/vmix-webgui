@@ -54,7 +54,7 @@ function renderCredits() {
   const _crLabel = _crIsTv ? 'Samlet tid' : 'Hastighed';
   const _crMin = _crIsTv ? 5 : 10;
   const _crMax = _crIsTv ? 60 : 30;
-  const _crStep = _crIsTv ? 5 : 1;
+  const _crStep = 1; // 1-sekunds-interval (både TV "samlet tid" og kampdag-hastighed)
   const _crSuffix = _crIsTv ? ' sek (ca.)' : ' sek';
   speedBar.innerHTML = `
     <span class="credits-speed-label">${_crLabel}</span>
