@@ -36,6 +36,7 @@
     const customSlot     = {}; // sidste sub-plads pr. trigger-key — så skift mellem subs (value stadig 'in') går igennem
     const customCat      = {}; // kategori pr. trigger-key (fx 'sub') — så active_sub-skift kun rammer sub-grafik
     const customStateTime = {};
+    const _creditTs = {}; // sidste credit-IN-fyring pr. key — debouncer broadcast+settings-ekko til ét rul
     let   _activeSubSlot = ''; // aktuel active_sub-plads — så settings-stien (_dispatch) viser den RIGTIGE sub, ikke stale 'aktiv'
 
     // Grafik-definitioner: id matcher iframe-id og Supabase-nøglen i overlay_lag_order
@@ -179,11 +180,16 @@
           var cIframe = customFrameMap[key];
           if (!cIframe) return;
           var isSub = customCat[key] === 'sub';
+          var isCredit = customCat[key] === 'credit';
           var cPrev = customState[key];
           // Sub-grafik: tillad re-trigger når active_sub-pladsen har ændret sig (value stadig 'in') — ellers
           // de-duppes et plads-skift via settings-stien væk. Send ALTID den aktuelle active_sub-plads med, så
           // grafikken viser den RIGTIGE sub (ikke stale 'aktiv' fra fraCache('')).
-          if (cPrev === value && !(isSub && value === 'in' && customSlot[key] !== _activeSubSlot)) return;
+          // Credit: en 'in' skal ALTID kunne rulle credits på igen (uden 'out'). Debounce på _creditTs sikrer
+          // kun ÉT runAnimationIN pr. tryk på tværs af broadcast+settings (grafikken loadData'er async).
+          var _creditRefire = isCredit && value === 'in';
+          if (cPrev === value && !(isSub && value === 'in' && customSlot[key] !== _activeSubSlot) && !_creditRefire) return;
+          if (_creditRefire) { if (Date.now() - (_creditTs[key] || 0) < 250) return; _creditTs[key] = Date.now(); }
           customState[key] = value;
           customStateTime[key] = Date.now();
           if (isSub && value === 'in') customSlot[key] = _activeSubSlot;
@@ -240,6 +246,7 @@
               // settings-ekkoet de-duppes stadig i _dispatch, så vi ikke dobbelt-fyrer.
               var _creditRefire = customCat[p.key] === 'credit' && p.value === 'in';
               if (prevBc === p.value && prevSlot === String(p.slot || '') && !_creditRefire) return;
+              if (_creditRefire) { if (Date.now() - (_creditTs[p.key] || 0) < 250) return; _creditTs[p.key] = Date.now(); }
               customState[p.key] = p.value;
               customSlot[p.key] = String(p.slot || '');
               customStateTime[p.key] = Date.now();
