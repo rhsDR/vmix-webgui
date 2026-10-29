@@ -235,7 +235,11 @@
               var prevSlot = customSlot[p.key] || '';
               // Dedup på værdi OG plads: samme sub igen springes over, men SKIFT til en anden sub-plads
               // (value stadig 'in') skal gå igennem, så den nye sub kommer på i stedet for den gamle.
-              if (prevBc === p.value && prevSlot === String(p.slot || '')) return;
+              // Credit: en 'in' skal ALTID kunne rulle credits på igen UDEN en 'out' imellem (fx når
+              // grafikken selv er rullet færdig/af efter varigheden). Kun broadcast-stien undtages —
+              // settings-ekkoet de-duppes stadig i _dispatch, så vi ikke dobbelt-fyrer.
+              var _creditRefire = customCat[p.key] === 'credit' && p.value === 'in';
+              if (prevBc === p.value && prevSlot === String(p.slot || '') && !_creditRefire) return;
               customState[p.key] = p.value;
               customSlot[p.key] = String(p.slot || '');
               customStateTime[p.key] = Date.now();
