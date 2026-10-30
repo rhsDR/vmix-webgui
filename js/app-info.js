@@ -160,10 +160,10 @@ function _infoBoxEdit(b, idx) {
             ${addSideBtn}
           </div>
         </div>
-        <div class="edit-actions" style="display:flex;gap:8px;align-items:center;">
-          <button class="btn" data-act="ryd" title="Ryd denne bloks indhold (nulstil til 1 side)" style="background:#2a1010;border:1px solid #4a2020;color:#ef4444;">✕ Ryd alt</button>
-          <button class="btn btn-save" data-act="gem" style="margin-left:auto;">💾 GEM</button>
-          <button class="btn btn-cancel" data-act="annuller">ANNULLER</button>
+        <div class="sub-actions" style="margin-top:10px;">
+          <button class="btn-sm save"   data-act="gem">GEM</button>
+          <button class="btn-sm cancel" data-act="annuller">ANNULLER</button>
+          <button class="btn-sm reset"  data-act="ryd" title="Ryd denne bloks indhold (nulstil til 1 side)">RYD</button>
         </div>
       </div>
     </div>`;
