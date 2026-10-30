@@ -353,7 +353,14 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 8192,
-        system: buildSystemPrompt(cfg, custom_fonts, data_sources, existing_graphics),
+        // Prompt-caching: den store statiske system-prompt (~280 linjer) sendes hver tur i et interview
+        // (4-7 ture). Cachen (ephemeral, 5-min TTL) gør at kun 1. tur betaler fuld pris — resten genbruger
+        // cachen (~90% billigere + hurtigere på system-delen). GA for claude-sonnet-4-6 (version 2023-06-01).
+        system: [{
+          type: 'text',
+          text: buildSystemPrompt(cfg, custom_fonts, data_sources, existing_graphics),
+          cache_control: { type: 'ephemeral' }
+        }],
         messages,
         stream: true
       })
