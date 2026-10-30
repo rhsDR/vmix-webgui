@@ -8,11 +8,9 @@ export const config = { maxDuration: 60 };
 function buildSystemPrompt(cfg, customFonts, dataSources, existingGraphics) {
   const LIB_FAMILIES = 'DR Publik (DR-husfont, standardvalg til DR-grafik), DM Sans, Inter, Lato, Poppins, Nunito, Source Sans 3, PT Sans, Barlow, Barlow Condensed, Oswald, Roboto Condensed, Montserrat, Raleway, Exo 2, Kanit, Rajdhani, Teko, Bebas Neue, Anton, Playfair Display, DM Mono';
   const _cf = Array.isArray(customFonts) ? [...new Set(customFonts.filter(Boolean))] : [];
-  const CUSTOM_FONTS_LINE = _cf.length ? `\n  Brugeruploadede fonte (også self-hostede — brug frit ved navn): ${_cf.join(', ')}.` : '';
+  const CUSTOM_FONTS = _cf.length ? _cf.join(', ') : '(ingen)';
   const _ds = Array.isArray(dataSources) ? dataSources.filter(Boolean) : [];
-  const DATA_SOURCES_LINE = _ds.length
-    ? `Projektets tilgængelige datakilder: ${_ds.join('; ')}.`
-    : 'Projektet har endnu ingen udfyldte datakilder.';
+  const DATA_SOURCES = _ds.length ? _ds.join('; ') : '(ingen udfyldte endnu)';
   // Projektets eksisterende grafikker som reference, så agenten kan lave "noget der ligner".
   const _eg = Array.isArray(existingGraphics) ? existingGraphics.filter(g => g && g.html) : [];
   const EXISTING_BLOCK = _eg.length ? `
@@ -28,13 +26,13 @@ ${_eg.map(g => `
 \`\`\`html
 ${g.html}
 \`\`\``).join('\n')}` : '';
-  return `Du er en broadcast grafik-konfigurationsassistent i et vMix live-produktionssystem (vmix-webgui).
+  const core = `Du er en broadcast grafik-konfigurationsassistent i et vMix live-produktionssystem (vmix-webgui).
 Din opgave: hjælpe operatøren med at TILFØJE en HTML-grafik til systemet — enten ved at KONFIGURERE
 en grafik brugeren uploader/indsætter, ELLER ved at GENERERE grafik-HTML ud fra en beskrivelse.
 
 ## DATAKILDE (spørg tidligt)
 Spørg ALTID operatøren hvilken datakilde grafikken skal hente sit indhold fra, og foreslå projektets
-tilgængelige. ${DATA_SOURCES_LINE}
+tilgængelige (de konkrete datakilder for dette projekt er listet nederst under "## Projekt-kontekst").
 Live-data hentes via window.__API_ORIGIN + '/api/vmix/' + window.__PROJEKT_ID (se datakilde-sektionen
 nedenfor). Grafikken bør så "parres" med den valgte datakilde (operatøren sætter grafikkens Kategori =
 Sub/Info/Ticker/Credit i GRAFIK SETUP). Vælges "ingen/custom", skrives indholdet direkte i grafikken.
@@ -59,7 +57,7 @@ Sub/Info/Ticker/Credit i GRAFIK SETUP). Vælges "ingen/custom", skrives indholde
   Lav AL animation med ren CSS (se YDELSE-sektionen) — ingen eksterne JS-biblioteker.
 - Fonte (frit valg, men self-hostet): systemet injicerer automatisk font-biblioteket (/fonts.css +
   brugeruploadede fonte) i din grafik — brug bare family-navnet. Tilgængelige biblioteks-fonte:
-  ${LIB_FAMILIES}.${CUSTOM_FONTS_LINE}
+  ${LIB_FAMILIES}. (Eventuelle brugeruploadede fonte for dette projekt står nederst under "## Projekt-kontekst".)
   'DR Publik' er DR's husfont og er INDBYGGET/self-hostet (snit: font-weight:400 Regular, 700 =
   SemiBold som kampdag, 900 italic = BlackItalic). Brug den som standard til DR-grafik — og bed
   ALDRIG brugeren om at uploade DR Publik; den ligger allerede i font-biblioteket.
@@ -302,12 +300,18 @@ Signatur-bevægelser i ren CSS:
   Master/Secondary/Fullscreen over for brugeren.
 - "kategori" = den DATAKILDE grafikken henter fra / parres med: sub (navneskilt), info, ticker eller
   credit — eller "custom" hvis den ikke bruger en projektdatakilde. Sæt den ud fra operatørens svar på
-  datakilde-spørgsmålet, så grafikken lander i den rigtige afviklings-kategori.
+  datakilde-spørgsmålet, så grafikken lander i den rigtige afviklings-kategori.`;
 
-## Projekt-kontekst (fra dette projekts konfiguration)
+  // Projekt-specifik kontekst = SEPARAT cache-blok (skifter pr. projekt). "core" ovenfor forbliver
+  // byte-identisk på tværs af ALLE samtaler/projekter → caches globalt (5-min TTL).
+  const context = `## Projekt-kontekst (fra dette projekts konfiguration)
+- Tilgængelige datakilder: ${DATA_SOURCES}
+- Brugeruploadede fonte (brug frit ved navn): ${CUSTOM_FONTS}
 - Feltnavne-konventioner: ${cfg.field_conventions || '(ingen)'}
 - vMix input-basenavn: ${cfg.vmix_input_base || 'GFX'}
 - Projekt-noter: ${cfg.template_notes || '(ingen)'}${EXISTING_BLOCK}`;
+
+  return { core, context };
 }
 
 export default async function handler(req, res) {
@@ -338,6 +342,16 @@ export default async function handler(req, res) {
   } catch { cfg = null; }
   if (!cfg) return res.status(404).json({ error: `Ingen graphics_agent_config for projekt_id: ${projekt_id}` });
 
+  // Prompt-caching i to blokke: "core" = statiske instruktioner (byte-identiske for ALLE kald → global
+  // cache på tværs af samtaler/projekter); "context" = projekt-specifikt (datakilder/fonte/cfg/eksisterende
+  // grafik → cache pr. samtale). Begge ephemeral (5-min TTL). Core alene er >1024 tokens → begge breakpoints
+  // er gyldige. Resultat: 1. tur i en helt ny samtale rammer typisk core-cachen alligevel; resten rammer begge.
+  const { core, context } = buildSystemPrompt(cfg, custom_fonts, data_sources, existing_graphics);
+  const _sys = [
+    { type: 'text', text: core,    cache_control: { type: 'ephemeral' } },
+    { type: 'text', text: context, cache_control: { type: 'ephemeral' } }
+  ];
+
   // Kald Claude med STREAMING. Funktionen begynder at svare straks (første bytes inden for sekunder),
   // så Vercel ikke 504'er på lange genereringer; bliver funktionen dræbt af maxDuration, får klienten et
   // DELVIST svar (truncation) i stedet for en hård timeout. Protokol til klienten: rå tekst-deltaer,
@@ -353,14 +367,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 8192,
-        // Prompt-caching: den store statiske system-prompt (~280 linjer) sendes hver tur i et interview
-        // (4-7 ture). Cachen (ephemeral, 5-min TTL) gør at kun 1. tur betaler fuld pris — resten genbruger
-        // cachen (~90% billigere + hurtigere på system-delen). GA for claude-sonnet-4-6 (version 2023-06-01).
-        system: [{
-          type: 'text',
-          text: buildSystemPrompt(cfg, custom_fonts, data_sources, existing_graphics),
-          cache_control: { type: 'ephemeral' }
-        }],
+        system: _sys,
         messages,
         stream: true
       })
