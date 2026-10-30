@@ -112,21 +112,24 @@ function _infoBoxDisplay(b, idx) {
   const sider = (Array.isArray(b.sider) && b.sider.length) ? b.sider : [b.indhold || ''];
   const vis = sider.map((s, i) => ({ n: i + 1, text: s || '' })).filter(p => p.n === 1 || p.text.trim());
   const fler = vis.length > 1;
+  // Hver side som sin egen under-blok inde i hoved-blokken.
   const indholdHTML = vis.map(p => `
-    <div style="margin-top:${p.n > 1 ? 8 : 0}px;">
-      ${fler ? `<div style="font-size:12px;font-weight:700;color:#a0a0a0;letter-spacing:.5px;margin-bottom:3px;">SIDE ${p.n}</div>` : ''}
+    <div style="background:#191919;border:1px solid #343434;border-radius:8px;padding:10px 14px;margin-top:8px;">
+      ${fler ? `<div style="font-size:12px;font-weight:700;color:#a0a0a0;letter-spacing:.5px;margin-bottom:4px;">SIDE ${p.n}</div>` : ''}
       <div style="font-size:16px;line-height:1.55;color:#e4e4e4;white-space:pre-wrap;word-break:break-word;">${p.text.trim() ? esc(p.text) : '<span style="color:#666;">(tom)</span>'}</div>
     </div>`).join('');
   return `
     <div class="ticker-block" style="margin-bottom:14px;" data-box="${b.id}">
       <div class="ticker-body" style="display:block;">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <span class="ticker-num">INFO ${idx + 1}</span>
-          <span style="flex:1;min-width:0;font-size:19px;font-weight:700;color:${b.overskrift ? '#f3f3f3' : '#777'};">${esc(b.overskrift || '(uden overskrift)')}${fler ? ` <span style="color:#999;font-size:12px;font-weight:600;">· ${vis.length} sider</span>` : ''}</span>
-          <button class="icon-btn" data-act="edit" title="Rediger">✏️</button>
-          <button class="icon-btn" data-act="del" title="Slet">🗑</button>
+        <div style="position:relative;text-align:center;padding:0 56px;margin-bottom:6px;">
+          <span class="ticker-num" style="vertical-align:middle;">INFO ${idx + 1}</span>
+          <span style="font-size:19px;font-weight:700;color:${b.overskrift ? '#f3f3f3' : '#777'};margin-left:10px;vertical-align:middle;">${esc(b.overskrift || '(uden overskrift)')}</span>
+          <div style="position:absolute;top:-2px;right:0;display:flex;gap:2px;">
+            <button class="icon-btn" data-act="edit" title="Rediger">✏️</button>
+            <button class="icon-btn" data-act="del" title="Slet">🗑</button>
+          </div>
         </div>
-        <div style="margin-top:8px;">${indholdHTML}</div>
+        ${indholdHTML}
       </div>
     </div>`;
 }
