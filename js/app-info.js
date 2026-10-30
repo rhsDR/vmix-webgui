@@ -56,7 +56,12 @@ async function saveInfoBokse(okMsg) {
       }
     } catch {}
   }
-  await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'info_bokse', value: JSON.stringify(infoBokse) });
+  // Serialisér KUN de persistente felter — editMode (og øvrige transiente) må IKKE gemmes i DB.
+  const _clean = infoBokse.map(b => ({
+    id: b.id, overskrift: b.overskrift || '', indhold: b.indhold || '',
+    sider: (Array.isArray(b.sider) && b.sider.length) ? b.sider : [b.indhold || ''], output: b.output || 'hoved'
+  }));
+  await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'info_bokse', value: JSON.stringify(_clean) });
   _infoDirty.clear(); _infoDeleted.clear();
   if (okMsg) toast(okMsg, 'ok');
 }
@@ -96,7 +101,32 @@ function _infoRenderOverlay(ta) {
   }
 }
 
+// Blok vises i DISPLAY-mode som standard; blyant → edit-mode (som subs). editMode er transient (gemmes ikke).
 function _infoBoxCard(b, idx) {
+  return b.editMode ? _infoBoxEdit(b, idx) : _infoBoxDisplay(b, idx);
+}
+
+// DISPLAY-mode: overskrift + indholds-preview + blyant (rediger) + skraldespand (slet blok).
+function _infoBoxDisplay(b, idx) {
+  const sider = (Array.isArray(b.sider) && b.sider.length) ? b.sider : [b.indhold || ''];
+  const antalSider = sider.filter((s, i) => i === 0 || (s || '').trim()).length;
+  const preview = ((b.indhold || sider[0] || '').split('\n')[0] || '').trim();
+  return `
+    <div class="ticker-block" style="margin-bottom:8px;" data-box="${b.id}">
+      <div class="ticker-body" style="display:flex;align-items:center;gap:12px;">
+        <span class="ticker-num">INFO ${idx + 1}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:16px;font-weight:600;color:${b.overskrift ? '#f0f0f0' : '#777'};">${esc(b.overskrift || '(uden overskrift)')}${antalSider > 1 ? ` <span style="color:#888;font-size:11px;font-weight:600;">· ${antalSider} sider</span>` : ''}</div>
+          ${preview ? `<div style="font-size:13px;color:#a5a5a5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${esc(preview)}</div>` : ''}
+        </div>
+        <button class="icon-btn" data-act="edit" title="Rediger">✏️</button>
+        <button class="icon-btn" data-act="del" title="Slet">🗑</button>
+      </div>
+    </div>`;
+}
+
+// EDIT-mode: overskrift + side-felter + tilføj side + Ryd alt / GEM / ANNULLER.
+function _infoBoxEdit(b, idx) {
   const sider = (Array.isArray(b.sider) && b.sider.length) ? b.sider : [b.indhold || ''];
   const flerSider = sider.length > 1;
   const siderHTML = sider.map((s, i) => `
@@ -118,7 +148,6 @@ function _infoBoxCard(b, idx) {
       <div class="ticker-body" style="display:block;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
           <span class="ticker-num">INFO ${idx + 1}</span>
-          <button class="btn" data-act="del" title="Slet info-boks" style="margin-left:auto;background:#2a1010;border:1px solid #4a2020;color:#ef4444;">✕ Slet</button>
         </div>
         <div class="edit-grid" style="margin-bottom:6px;">
           <div class="form-group span2">
@@ -131,7 +160,11 @@ function _infoBoxCard(b, idx) {
             ${addSideBtn}
           </div>
         </div>
-        <div class="edit-actions"><button class="btn btn-save" data-act="gem">💾 GEM</button></div>
+        <div class="edit-actions" style="display:flex;gap:8px;align-items:center;">
+          <button class="btn" data-act="ryd" title="Ryd denne bloks indhold (nulstil til 1 side)" style="background:#2a1010;border:1px solid #4a2020;color:#ef4444;">✕ Ryd alt</button>
+          <button class="btn btn-save" data-act="gem" style="margin-left:auto;">💾 GEM</button>
+          <button class="btn btn-cancel" data-act="annuller">ANNULLER</button>
+        </div>
       </div>
     </div>`;
 }
@@ -153,15 +186,27 @@ function renderInfo() {
     const id = card.dataset.box;
     const box = infoBokse.find(b => b.id === id);
     if (!box) return;
+
+    // DISPLAY-mode: blyant → edit, skraldespand → slet blok.
+    if (!box.editMode) {
+      card.querySelector('[data-act="edit"]').addEventListener('click', () => { box.editMode = true; renderInfo(); });
+      card.querySelector('[data-act="del"]').addEventListener('click', async () => {
+        if (!confirm('Slet denne info-boks?')) return;
+        _infoDeleted.add(id); _infoDirty.delete(id);
+        infoBokse = infoBokse.filter(b => b.id !== id);
+        try { await saveInfoBokse('Slettet'); } catch { toast('Fejl ved slet', 'err'); }
+        renderInfo();
+      });
+      return;
+    }
+
+    // EDIT-mode. Side 1 spejles til box.indhold (afviklings-preview + /api/vmix). Tilføj/fjern side og
+    // Ryd alt ændrer KUN hukommelsen — gemmes først ved GEM; ANNULLER genindlæser og kasserer.
     card.querySelector('[data-field="overskrift"]').addEventListener('input', e => { box.overskrift = e.target.value; _infoDirty.add(box.id); });
-    // Info-indhold pr. SIDE: maks 3 linjer + maks INFO_INDHOLD_MAX tegn PR. side. Enter blokeres ved 3
-    // linjer; paste af mere afkortes; tæller viser resterende tegn. Side 1 spejles til box.indhold (så
-    // afviklings-preview og /api/vmix stadig har side 1).
     if (!Array.isArray(box.sider) || !box.sider.length) box.sider = [box.indhold || ''];
     card.querySelectorAll('[data-side-ta]').forEach(ta => {
       const i = parseInt(ta.dataset.sideTa, 10);
-      _infoRenderOverlay(ta); // initial: overløbs-farve + auto-højde + tæller
-      // Hele teksten må skrives/indsættes (ingen hård grænse); det der er for meget vises rødt.
+      _infoRenderOverlay(ta); // overløbs-farve + auto-højde + tæller
       ta.addEventListener('input', () => {
         box.sider[i] = ta.value;
         if (i === 0) box.indhold = ta.value;
@@ -169,32 +214,30 @@ function renderInfo() {
         _infoRenderOverlay(ta);
       });
     });
-    card.querySelector('[data-side-add]')?.addEventListener('click', async () => {
+    card.querySelector('[data-side-add]')?.addEventListener('click', () => {
       if (!Array.isArray(box.sider)) box.sider = [box.indhold || ''];
       if (box.sider.length >= INFO_MAX_SIDER) return;
-      box.sider.push('');
-      _infoDirty.add(box.id);
-      try { await saveInfoBokse(); } catch {}
-      renderInfo();
+      box.sider.push(''); _infoDirty.add(box.id); renderInfo();
     });
-    card.querySelectorAll('[data-side-del]').forEach(btn => btn.addEventListener('click', async () => {
+    card.querySelectorAll('[data-side-del]').forEach(btn => btn.addEventListener('click', () => {
       const i = parseInt(btn.dataset.sideDel, 10);
       box.sider.splice(i, 1);
       if (!box.sider.length) box.sider = [''];
       box.indhold = box.sider[0] || '';
-      _infoDirty.add(box.id);
-      try { await saveInfoBokse('Side fjernet'); } catch {}
-      renderInfo();
+      _infoDirty.add(box.id); renderInfo();
     }));
-    card.querySelector('[data-act="gem"]').addEventListener('click', async () => {
-      try { await saveInfoBokse('Gemt ✓'); renderInfo(); } catch { toast('Fejl ved gem', 'err'); }
+    card.querySelector('[data-act="ryd"]').addEventListener('click', () => {
+      box.overskrift = ''; box.sider = ['']; box.indhold = '';
+      _infoDirty.add(box.id); renderInfo(); // bliver i edit-mode, felter ryddet
     });
-    card.querySelector('[data-act="del"]').addEventListener('click', async () => {
-      if (!confirm('Slet denne info-boks?')) return;
-      _infoDeleted.add(id); _infoDirty.delete(id);
-      infoBokse = infoBokse.filter(b => b.id !== id);
-      try { await saveInfoBokse('Slettet'); } catch { toast('Fejl ved slet', 'err'); }
+    card.querySelector('[data-act="gem"]').addEventListener('click', async () => {
+      box.editMode = false;
+      try { await saveInfoBokse('Gemt ✓'); } catch { toast('Fejl ved gem', 'err'); }
       renderInfo();
+    });
+    card.querySelector('[data-act="annuller"]').addEventListener('click', () => {
+      box.editMode = false; _infoDirty.delete(box.id);
+      refreshInfo(); // genindlæs fra DB → kasser ikke-gemte ændringer
     });
   });
 }
@@ -210,7 +253,7 @@ async function deleteAllInfoBokse() {
 
 async function addInfoBox() {
   const id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'b' + Date.now();
-  infoBokse.push({ id, overskrift: '', indhold: '', sider: [''], output: 'hoved' });
+  infoBokse.push({ id, overskrift: '', indhold: '', sider: [''], output: 'hoved', editMode: true });
   _infoDirty.add(id);
   try { await saveInfoBokse(); } catch { toast('Fejl ved gem', 'err'); }
   renderInfo();
