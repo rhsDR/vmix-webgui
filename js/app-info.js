@@ -114,15 +114,15 @@ function _infoBoxDisplay(b, idx) {
   const fler = vis.length > 1;
   const indholdHTML = vis.map(p => `
     <div style="margin-top:${p.n > 1 ? 8 : 0}px;">
-      ${fler ? `<div style="font-size:10px;font-weight:600;color:#8a8a8a;letter-spacing:.5px;margin-bottom:1px;">SIDE ${p.n}</div>` : ''}
-      <div style="font-size:14px;line-height:1.45;color:#cfcfcf;white-space:pre-wrap;word-break:break-word;">${p.text.trim() ? esc(p.text) : '<span style="color:#666;">(tom)</span>'}</div>
+      ${fler ? `<div style="font-size:12px;font-weight:700;color:#a0a0a0;letter-spacing:.5px;margin-bottom:3px;">SIDE ${p.n}</div>` : ''}
+      <div style="font-size:16px;line-height:1.55;color:#e4e4e4;white-space:pre-wrap;word-break:break-word;">${p.text.trim() ? esc(p.text) : '<span style="color:#666;">(tom)</span>'}</div>
     </div>`).join('');
   return `
-    <div class="ticker-block" style="margin-bottom:8px;" data-box="${b.id}">
+    <div class="ticker-block" style="margin-bottom:14px;" data-box="${b.id}">
       <div class="ticker-body" style="display:block;">
         <div style="display:flex;align-items:center;gap:12px;">
           <span class="ticker-num">INFO ${idx + 1}</span>
-          <span style="flex:1;min-width:0;font-size:16px;font-weight:600;color:${b.overskrift ? '#f0f0f0' : '#777'};">${esc(b.overskrift || '(uden overskrift)')}${fler ? ` <span style="color:#888;font-size:11px;font-weight:600;">· ${vis.length} sider</span>` : ''}</span>
+          <span style="flex:1;min-width:0;font-size:19px;font-weight:700;color:${b.overskrift ? '#f3f3f3' : '#777'};">${esc(b.overskrift || '(uden overskrift)')}${fler ? ` <span style="color:#999;font-size:12px;font-weight:600;">· ${vis.length} sider</span>` : ''}</span>
           <button class="icon-btn" data-act="edit" title="Rediger">✏️</button>
           <button class="icon-btn" data-act="del" title="Slet">🗑</button>
         </div>
@@ -150,7 +150,7 @@ function _infoBoxEdit(b, idx) {
   const addSideBtn = sider.length < INFO_MAX_SIDER
     ? `<button class="btn" data-side-add style="display:inline-block;width:auto;align-self:flex-start;margin-top:8px;padding:5px 12px;font-size:12px;background:#222;border:1px solid #333;color:#bbb;">＋ Tilføj side</button>` : '';
   return `
-    <div class="ticker-block" style="margin-bottom:8px;" data-box="${b.id}">
+    <div class="ticker-block" style="margin-bottom:14px;" data-box="${b.id}">
       <div class="ticker-body" style="display:block;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
           <span class="ticker-num">INFO ${idx + 1}</span>

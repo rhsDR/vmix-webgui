@@ -1188,12 +1188,15 @@
     #infoCards .form-label { font-size: 13px; color: #b0b0b0; margin-bottom: 2px; }
     #infoCards .form-input { font-size: 16px; padding: 8px 11px; }
     #infoCards textarea.form-input { font-size: 16px; line-height: 1.5; min-height: 54px; }
-    #infoCards .ticker-body { padding: 10px 16px 12px; }
+    #infoCards .ticker-body { padding: 14px 18px 16px; }
+    /* INFO-blokke: tydeligere markeret (lysere kant + bg) + lidt rundere. */
+    #infoCards .ticker-block { background: #202020; border-color: #3d3d3d; border-radius: 10px; }
+    #infoCards .ticker-num { color: #bdbdbd; }
     #infoCards .edit-grid { gap: 8px; }
     #infoCards .edit-actions { margin-top: 10px; }
     #infoCards .info-char-count { font-size: 12px; }
     /* INFO-boksene behøver ikke fylde hele panelets bredde — centreret. */
-    #infoList { max-width: 920px; margin: 0 auto; }
+    #infoList { max-width: 1080px; margin: 0 auto; }
 
     /* Overløbs-fremhævning: en backdrop bag textarea'en spejler teksten; det der er ud over
        grænsen vises RØDT. Textarea'en har gennemsigtig tekst (men synlig markør) så man ser
