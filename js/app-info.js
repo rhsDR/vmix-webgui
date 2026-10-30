@@ -106,21 +106,27 @@ function _infoBoxCard(b, idx) {
   return b.editMode ? _infoBoxEdit(b, idx) : _infoBoxDisplay(b, idx);
 }
 
-// DISPLAY-mode: overskrift + indholds-preview + blyant (rediger) + skraldespand (slet blok).
+// DISPLAY-mode: overskrift + FULDT indhold for ALLE sider (ikke afkortet) + blyant (rediger) +
+// skraldespand (slet blok).
 function _infoBoxDisplay(b, idx) {
   const sider = (Array.isArray(b.sider) && b.sider.length) ? b.sider : [b.indhold || ''];
-  const antalSider = sider.filter((s, i) => i === 0 || (s || '').trim()).length;
-  const preview = ((b.indhold || sider[0] || '').split('\n')[0] || '').trim();
+  const vis = sider.map((s, i) => ({ n: i + 1, text: s || '' })).filter(p => p.n === 1 || p.text.trim());
+  const fler = vis.length > 1;
+  const indholdHTML = vis.map(p => `
+    <div style="margin-top:${p.n > 1 ? 8 : 0}px;">
+      ${fler ? `<div style="font-size:10px;font-weight:600;color:#8a8a8a;letter-spacing:.5px;margin-bottom:1px;">SIDE ${p.n}</div>` : ''}
+      <div style="font-size:14px;line-height:1.45;color:#cfcfcf;white-space:pre-wrap;word-break:break-word;">${p.text.trim() ? esc(p.text) : '<span style="color:#666;">(tom)</span>'}</div>
+    </div>`).join('');
   return `
     <div class="ticker-block" style="margin-bottom:8px;" data-box="${b.id}">
-      <div class="ticker-body" style="display:flex;align-items:center;gap:12px;">
-        <span class="ticker-num">INFO ${idx + 1}</span>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:16px;font-weight:600;color:${b.overskrift ? '#f0f0f0' : '#777'};">${esc(b.overskrift || '(uden overskrift)')}${antalSider > 1 ? ` <span style="color:#888;font-size:11px;font-weight:600;">· ${antalSider} sider</span>` : ''}</div>
-          ${preview ? `<div style="font-size:13px;color:#a5a5a5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${esc(preview)}</div>` : ''}
+      <div class="ticker-body" style="display:block;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="ticker-num">INFO ${idx + 1}</span>
+          <span style="flex:1;min-width:0;font-size:16px;font-weight:600;color:${b.overskrift ? '#f0f0f0' : '#777'};">${esc(b.overskrift || '(uden overskrift)')}${fler ? ` <span style="color:#888;font-size:11px;font-weight:600;">· ${vis.length} sider</span>` : ''}</span>
+          <button class="icon-btn" data-act="edit" title="Rediger">✏️</button>
+          <button class="icon-btn" data-act="del" title="Slet">🗑</button>
         </div>
-        <button class="icon-btn" data-act="edit" title="Rediger">✏️</button>
-        <button class="icon-btn" data-act="del" title="Slet">🗑</button>
+        <div style="margin-top:8px;">${indholdHTML}</div>
       </div>
     </div>`;
 }
