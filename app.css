@@ -772,6 +772,8 @@
       transition: all 0.15s;
     }
     .icon-btn:hover { color: #ccc; background: #252525; }
+    /* Skraldespanden lidt større end de øvrige ikoner (🗑-emoji ser mindre ud end ✏️ ved samme px). */
+    .icon-btn[title="Slet"] { font-size: 20px; }
 
     .collapse-arrow { display: inline-block; transition: transform 0.2s; font-style: normal; }
     .kamp-block.collapsed .collapse-arrow { transform: rotate(180deg); }
