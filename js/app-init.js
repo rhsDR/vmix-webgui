@@ -119,12 +119,12 @@ async function init() {
 
     document.getElementById('previewClose').addEventListener('click', () => {
       document.getElementById('previewModal').style.display = 'none';
-      document.getElementById('previewFrame').src = '';
+      { const _pf = document.getElementById('previewFrame'); _pf.removeAttribute('srcdoc'); _pf.src = ''; }
     });
     document.getElementById('previewModal').addEventListener('click', e => {
       if (e.target === e.currentTarget) {
         e.currentTarget.style.display = 'none';
-        document.getElementById('previewFrame').src = '';
+        { const _pf = document.getElementById('previewFrame'); _pf.removeAttribute('srcdoc'); _pf.src = ''; }
       }
     });
 

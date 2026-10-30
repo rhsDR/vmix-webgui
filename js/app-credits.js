@@ -1,3 +1,21 @@
+// Preview af projektets EGEN credit-grafik (custom, fx credits_band) i preview-modalen — samme
+// injektion som afviklingens PRW: __API_ORIGIN/__PROJEKT_ID + fonts + runAnimationIN, og __IS_PREVIEW=false
+// så grafikken henter projektets RIGTIGE credits (ikke demo). Bruges til TV-projekter.
+async function _crLoadCustomPreview(url, frame) {
+  const origin = window.location.origin;
+  let html = '';
+  try { html = await fetch(url, { cache: 'no-store' }).then(r => r.text()); }
+  catch { frame.removeAttribute('srcdoc'); frame.src = url; return; }
+  const _ffCss = (Array.isArray(fontLib) ? fontLib : [])
+    .map(x => (typeof _fontFaceCss === 'function') ? _fontFaceCss(x) : '').filter(Boolean).join('');
+  const boot = `window.__PROJEKT_ID=${JSON.stringify(aktivProjektId || '')};window.__API_ORIGIN=${JSON.stringify(origin)};window.__IS_PREVIEW=false;`;
+  const runJs = `window.addEventListener('load',function(){setTimeout(function(){try{window.runAnimationIN&&window.runAnimationIN();}catch(e){}},300);});`;
+  const inject = `<link rel="stylesheet" href="${origin}/fonts.css"><style>${_ffCss}</style><script>${boot}${runJs}<\/script>`;
+  const doc = html.replace(/(<html[^>]*>)/i, '$1' + inject);
+  frame.removeAttribute('src');
+  frame.srcdoc = doc.includes('__PROJEKT_ID') ? doc : inject + html;
+}
+
 function updateCreditsSendBtn() {
   const badge = document.getElementById('creditsTriggerBadge');
   if (!badge) return;
@@ -80,16 +98,26 @@ function renderCredits() {
     } catch { toast('Fejl ved gem', 'err'); }
   });
   speedBar.querySelector('#creditsUrlCopy').addEventListener('click', () => copyText('https://vmix-control.vercel.app/credits.html?p=' + aktivProjektId));
-  speedBar.querySelector('#previewBtn').addEventListener('click', () => {
+  speedBar.querySelector('#previewBtn').addEventListener('click', async () => {
     const modal = document.getElementById('previewModal');
     const frame = document.getElementById('previewFrame');
-    frame.src = 'credits.html?preview=1&p=' + aktivProjektId + '&t=' + Date.now();
     modal.style.display = 'flex';
     requestAnimationFrame(() => {
       const inner = modal.querySelector('.preview-modal-inner');
       const scale = inner.offsetWidth / 1920;
       frame.style.cssText = `width:1920px;height:1080px;border:none;transform:scale(${scale});transform-origin:top left;`;
     });
+    // TV-projekter: vis projektets EGEN credit-grafik (credits_band), ikke den indbyggede kampdag-credit.
+    if (_crIsTv) {
+      try {
+        const rows = await sbGet('projekt_grafik?projekt_id=eq.' + aktivProjektId + '&kategori=eq.credit&select=file_url&order=sort_order.asc&limit=1');
+        const url = rows[0] && rows[0].file_url;
+        if (url) { await _crLoadCustomPreview(url, frame); return; }
+      } catch {}
+      // ingen credit-grafik fundet → fald tilbage til built-in nedenfor
+    }
+    frame.removeAttribute('srcdoc');
+    frame.src = 'credits.html?preview=1&p=' + aktivProjektId + '&t=' + Date.now();
   });
 
   // Two columns
