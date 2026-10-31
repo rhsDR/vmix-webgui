@@ -1320,15 +1320,10 @@ function renderGrafikTV(container) {
     const trig = gfx.trig;
     const curSlot = (typeof activeSubSlot !== 'undefined' ? activeSubSlot : 0);
     const trigLive = (grafiktState[trig] || 'out') !== 'out';
-    const filled = (typeof subs !== 'undefined' ? subs : [])
+    // KUN subs (plads 1-15). vMix Calls er ikke længere subs i TV — de er rå link-felter i SUBS-fanen.
+    const rows = (typeof subs !== 'undefined' ? subs : [])
       .map((s, i) => ({ slot: i + 1, disp: String(i + 1), navn: s.navn || '', titel: s.titel || '', side: s.side || 'venstre' }))
       .filter(s => s.navn.trim() || s.titel.trim());
-    // vMix Calls listes OGSÅ som subs (pladser 16-23, vist V1-V8) — samme sub-grafik viser dem via
-    // S16+-felterne i /api/vmix; active_sub/trigger bruger plads 16-23.
-    const filledVmc = (typeof vmixCalls !== 'undefined' ? vmixCalls : [])
-      .map((c, i) => ({ slot: 15 + i + 1, disp: 'V' + (i + 1), navn: c.navn || '', titel: c.titel || '', side: c.side || 'venstre' }))
-      .filter(c => c.navn.trim() || c.titel.trim());
-    const rows = filled.concat(filledVmc);
     if (!rows.length) return '<div class="grafik-v2-empty">Ingen subs — udfyld i SUBS-fanen.</div>';
     return rows.map(s => {
       const slotAct = trigLive && String(curSlot) === String(s.slot);
@@ -1337,9 +1332,7 @@ function renderGrafikTV(container) {
       const makroBtn = subMakro
         ? `<button class="${(subMakro.handlinger || []).some(h => h.key !== 'wait' && h.key !== 'alle_af' && h.value !== 'out') ? 'grafik-btn-in' : 'grafik-btn-out'} makro-sub-fire-btn" data-makro-id="${subMakro.id}" title="${esc(subMakro.label)}">▶</button>`
         : `<button class="grafik-btn-prw tv-sub-makro-add" data-mk-trig="${esc(trig)}" data-slot="${s.slot}" title="Opret makro for denne sub">＋</button>`;
-      // Venstre-bar følger SUBS-fanens farvekode: subs = blå (--blue), vMix Calls (plads >15) = magenta.
-      const barColor = s.slot > 15 ? '#a855f7' : 'var(--blue)';
-      return `<div class="grafik-block" style="--g-color:${barColor}">
+      return `<div class="grafik-block" style="--g-color:var(--blue)">
         <span class="grafik-block-num">${s.disp}</span>
         <div class="grafik-block-info">
           <span class="grafik-block-name${!s.navn ? ' muted' : ''}">${esc(s.navn || '—')}</span>
@@ -1439,19 +1432,14 @@ function renderGrafikTV(container) {
     // SUBS — hver plads sætter active_sub + trigger projektets sub-grafik (kræver en sub-grafik).
     const subGfx = catItems('sub')[0];
     if (subGfx) {
-      // Ét PÅ-link PR. PLADS: 1-15 = subs ("Sub N"), 16-23 = vMix Calls ("V k"). ALLE pladser får et FAST
-      // link (uanset om de er udfyldt) så Companion-knapper kan forhåndstildeles — udfyld blot navn/titel i
-      // SUBS-fanen bagefter. Navnet vises i labelen når pladsen er udfyldt. + ét enkelt SUB AF.
+      // Ét PÅ-link PR. SUB-PLADS 1-15 ("Sub N"). ALLE pladser får et FAST link (uanset om de er udfyldt)
+      // så Companion-knapper kan forhåndstildeles — udfyld blot navn/titel i SUBS-fanen bagefter. Navnet
+      // vises i labelen når pladsen er udfyldt. + ét enkelt SUB AF. (vMix Calls er ikke subs i TV længere.)
       const _subArr = (typeof subs !== 'undefined' ? subs : []);
-      const _vmcArr = (typeof vmixCalls !== 'undefined' ? vmixCalls : []);
       html += '<div class="grafik-companion-subhead">SUBS</div>';
       for (let s = 1; s <= 15; s++) {
         const nv = (_subArr[s - 1] && (_subArr[s - 1].navn || '').trim()) ? ': ' + _subArr[s - 1].navn : '';
         html += row('Sub ' + s + nv, T(`key=${encodeURIComponent(subGfx.trig)}&value=in&slot=${s}`), subGfx.color);
-      }
-      for (let k = 1; k <= 8; k++) {
-        const nv = (_vmcArr[k - 1] && (_vmcArr[k - 1].navn || '').trim()) ? ': ' + _vmcArr[k - 1].navn : '';
-        html += row('V' + k + nv, T(`key=${encodeURIComponent(subGfx.trig)}&value=in&slot=${15 + k}`), subGfx.color);
       }
       html += row('SUB AF', T(`key=${encodeURIComponent(subGfx.trig)}&value=out`), subGfx.color);
     }
@@ -1845,12 +1833,9 @@ function _tvSubSlotOpts(selected) {
   const filled = (typeof subs !== 'undefined' ? subs : [])
     .map((s, i) => ({ slot: i + 1, disp: 'Sub ' + (i + 1), navn: s.navn || '', titel: s.titel || '' }))
     .filter(s => s.navn.trim() || s.titel.trim());
-  // vMix Calls kan også vælges som subs (pladser 16-23, vist "vMix Call k").
-  const filledVmc = (typeof vmixCalls !== 'undefined' ? vmixCalls : [])
-    .map((c, i) => ({ slot: 15 + i + 1, disp: 'vMix Call ' + (i + 1), navn: c.navn || '', titel: c.titel || '' }))
-    .filter(c => c.navn.trim() || c.titel.trim());
+  // KUN subs (plads 1-15). vMix Calls er ikke subs i TV længere.
   const head = `<option value="">→ Vælg ved afvikling</option>`;
-  return head + filled.concat(filledVmc).map(s => `<option value="${s.slot}"${String(selected) === String(s.slot) ? ' selected' : ''}>${s.disp}${s.navn ? ': ' + esc(s.navn) : ''}</option>`).join('');
+  return head + filled.map(s => `<option value="${s.slot}"${String(selected) === String(s.slot) ? ' selected' : ''}>${s.disp}${s.navn ? ': ' + esc(s.navn) : ''}</option>`).join('');
 }
 
 // Er key en TV-info-grafiks trigger? (custom-grafik i kategori 'info'). Så får makro-handlingen en

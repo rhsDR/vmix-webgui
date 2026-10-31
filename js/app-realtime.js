@@ -48,6 +48,12 @@ function applyVmixCallRow(row) {
   if (i < 0 || i > 7) return;
   if (vmixCalls[i].editMode || vmixCalls[i].savePending) return;
   vmixCalls[i] = { ...vmixCalls[i], navn: row.navn || '', titel: row.titel || '', link: row.link || '', side: row.side || 'venstre' };
+  // TV: vMix Calls er rå link-felter i SUBS-fanen (ikke subs). Opdater kun link-feltet additivt; kampdag-
+  // grenen nedenfor røres ikke (og kører aldrig i TV pga. early return).
+  if (typeof projektType !== 'undefined' && projektType === 'tv') {
+    if (typeof rerenderVmixLinkTV === 'function') rerenderVmixLinkTV(i);
+    return;
+  }
   rerenderVmixCall(i);
   if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
 }

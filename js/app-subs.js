@@ -2,6 +2,8 @@
 function renderSubs() {
   const container = document.getElementById('subsList');
   if (!container) return;
+  // TV: helt egen layout (kun subs + preview + vMix-link-felter). Kampdag-grenen nedenfor er URØRT.
+  if (typeof projektType !== 'undefined' && projektType === 'tv') return renderSubsTV();
   container.innerHTML = '';
 
   // Top-bar: Ryd alt — nulstiller navn/titel/side for ALLE subs + vMix Calls (i TV ryddes vMix Call-link også).
@@ -246,5 +248,181 @@ async function saveVmixCallRow(i) {
     }
   } catch { toast('Fejl ved gem', 'err'); }
   finally { c.savePending = false; }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// TV-LAYOUT (KUN projektType==='tv'). Kampdag bruger renderSubs ovenfor uændret.
+// Kun subs (ingen vMix-Calls-som-subs) + live preview-vindue + 8 rå vMix Call-link-felter.
+// Alt herunder er additivt og kaldes ALDRIG i kampdag.
+// ───────────────────────────────────────────────────────────────────────────
+function renderSubsTV() {
+  const container = document.getElementById('subsList');
+  if (!container) return;
+  container.innerHTML = '';
+
+  // Top-bar: Ryd alt (genbruger clearAllSubs — den håndterer allerede TV korrekt)
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:14px;';
+  bar.innerHTML = '<button class="btn" id="subsClearAll" style="background:#2a1010;border:1px solid #4a2020;color:#ef4444;">✕ Ryd alt</button>';
+  bar.querySelector('#subsClearAll').addEventListener('click', clearAllSubs);
+  container.appendChild(bar);
+
+  const grid = document.createElement('div');
+  grid.className = 'subs-tv';
+
+  // Venstre kolonne: subs + vMix Call-links
+  const main = document.createElement('div');
+  main.className = 'subs-tv-main';
+
+  // Subs-sektion — GENBRUGER buildSubRow uændret (navn/titel/side, GEM/ANNULLER/RYD)
+  const secSubs = document.createElement('div');
+  secSubs.className = 'subs-section';
+  secSubs.innerHTML = '<div class="subs-section-title" style="color:var(--blue)">Subs</div>';
+  const subsList = document.createElement('div');
+  subsList.id = 'subsTvList';
+  subs.forEach((_, i) => subsList.appendChild(buildSubRow(i)));
+  secSubs.appendChild(subsList);
+  main.appendChild(secSubs);
+
+  // vMix Call-links-sektion — 8 faste felter (kun link + kopiér)
+  const secLinks = document.createElement('div');
+  secLinks.className = 'subs-section';
+  secLinks.innerHTML = '<div class="subs-section-title" style="color:#a855f7">vMix Call-links</div>';
+  const linksWrap = document.createElement('div');
+  linksWrap.id = 'vlinksList';
+  vmixCalls.forEach((_, i) => linksWrap.appendChild(buildVmixLinkRow(i)));
+  secLinks.appendChild(linksWrap);
+  main.appendChild(secLinks);
+
+  grid.appendChild(main);
+
+  // Højre kolonne: preview-vindue
+  const prev = document.createElement('div');
+  prev.className = 'subs-tv-preview';
+  prev.innerHTML =
+    '<div class="subs-section-title" style="color:#9aa5b5">Preview</div>'
+    + '<div class="subs-tv-preview-box"><iframe id="subPreviewFrame" class="subs-tv-preview-iframe"></iframe></div>'
+    + '<div class="subs-tv-preview-hint">Klik en sub for at se den — eller rediger, så opdateres preview mens du skriver.</div>';
+  grid.appendChild(prev);
+
+  container.appendChild(grid);
+
+  // Live preview via container-delegation (rører IKKE buildSubRow):
+  //  • klik på en sub-række → vis den (gemt data, eller buffer hvis i edit-mode)
+  //  • skriv i edit-felterne → opdater preview (debounced) — kun postMessage, ingen gen-animation
+  const _idxFromEvent = e => {
+    const r = e.target.closest('.sub-row'); if (!r) return null;
+    const n = parseInt(String(r.id).replace('sub-', ''), 10);
+    return isNaN(n) ? null : n;
+  };
+  subsList.addEventListener('click', e => {
+    const i = _idxFromEvent(e); if (i == null) return;
+    const s = subs[i]; const d = (s.editMode && s.buf) ? s.buf : s;
+    _subPreviewShow(i + 1, { navn: d.navn, titel: d.titel, side: d.side || 'venstre' });
+  });
+  let _prvDebT = null;
+  subsList.addEventListener('input', e => {
+    const i = _idxFromEvent(e); if (i == null) return;
+    clearTimeout(_prvDebT);
+    _prvDebT = setTimeout(() => {
+      const s = subs[i]; const d = s.buf || s;
+      _subPreviewShow(i + 1, { navn: d.navn, titel: d.titel, side: d.side || 'venstre' });
+    }, 150);
+  });
+}
+
+function buildVmixLinkRow(i) {
+  const c   = vmixCalls[i] || {};
+  const row = document.createElement('div');
+  row.className = 'subs-tv-link-row';
+  row.innerHTML = `
+    <span class="subs-tv-link-num">vMix Call ${i + 1}</span>
+    <input class="form-input subs-tv-link-input" id="vlink-${i}" value="${esc(c.link || '')}" placeholder="Indsæt vMix Call-link">
+    <button class="copy-btn icon-btn" id="vlinkcp-${i}" title="Kopiér link">⎘</button>`;
+  const inp = row.querySelector('#vlink-' + i);
+  inp.addEventListener('change', () => saveVmixLinkTV(i, inp.value));
+  inp.addEventListener('blur',   () => saveVmixLinkTV(i, inp.value));
+  row.querySelector('#vlinkcp-' + i).addEventListener('click', () => copyText(inp.value));
+  return row;
+}
+
+// Realtime: opdater ét link-felt (uden at afbryde aktiv indtastning). Kaldes KUN i TV fra app-realtime.
+function rerenderVmixLinkTV(i) {
+  const inp = document.getElementById('vlink-' + i);
+  if (!inp || inp === document.activeElement) return;
+  inp.value = (vmixCalls[i] && vmixCalls[i].link) || '';
+}
+
+// Gem KUN link-feltet. Rører ALDRIG navn/titel/side eller kampe-tabellen → fuldt kampdag-isoleret.
+async function saveVmixLinkTV(i, url) {
+  const c = vmixCalls[i];
+  url = (url || '').trim();
+  if ((c.link || '') === url) return;
+  c.link = url;
+  try {
+    await sbPatch('vmix_calls?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { link: url });
+    toast('Link gemt ✓', 'ok');
+  } catch { toast('Fejl ved gem', 'err'); }
+}
+
+// Projektets sub-grafik (kategori 'sub') → file_url til preview. SUBS er default-fane i TV (før grafik-
+// fanen er åbnet, så customGrafik kan være tom) → fald tilbage til en direkte sbGet.
+async function _subGrafikUrl() {
+  const g = (typeof customGrafik !== 'undefined' ? customGrafik : []).find(x => x.kategori === 'sub');
+  if (g) return g.file_url;
+  try {
+    const rows = await sbGet('projekt_grafik?projekt_id=eq.' + aktivProjektId + '&kategori=eq.sub&limit=1&select=file_url');
+    return (rows && rows[0]) ? rows[0].file_url : '';
+  } catch { return ''; }
+}
+
+// Preview-state (lokal til SUBS-fanen).
+let _subPrvUrl = '';
+let _subPrvLoaded = false;
+let _subPrvActiveSlot = null;
+let _subPrvPending = null;
+
+// Vis en sub i preview-iframen. Skift til en anden sub → runAnimationIN; samme sub (skriv) → kun
+// postMessage (live tekst-skift). 100% LOKAL (postMessage til egen iframe) — rører ALDRIG active_sub
+// eller den live sub-grafik på air. __IS_PREVIEW=true → grafikken henter IKKE /api/vmix (ingen race
+// med min buffer); cachen fyldes udelukkende af det jeg pusher.
+async function _subPreviewShow(slot, data) {
+  const f = document.getElementById('subPreviewFrame');
+  if (!f) return;
+  const url = await _subGrafikUrl();
+  if (!url) return;
+  data = data || {};
+  const msg = { type: 'vmixData', kind: 'sub', slot: String(slot),
+    navn: data.navn || '', titel: data.titel || '', side: data.side || 'venstre' };
+
+  if (_subPrvLoaded && _subPrvUrl === url && f.contentWindow) {
+    try { f.contentWindow.postMessage(msg, '*'); } catch {}
+    if (_subPrvActiveSlot !== String(slot)) {
+      _subPrvActiveSlot = String(slot);
+      try { f.contentWindow.runAnimationIN && f.contentWindow.runAnimationIN(String(slot)); } catch {}
+    }
+    return;
+  }
+
+  // Indlæs grafikken ÉN gang; postMessage + IN sker i onload.
+  _subPrvPending = { slot: String(slot), msg };
+  const origin = window.location.origin, pid = aktivProjektId;
+  let html = '';
+  try { html = await fetch(url, { cache: 'no-store' }).then(r => r.text()); } catch { return; }
+  const _ffCss = (typeof fontLib !== 'undefined' ? (fontLib || []) : [])
+    .map(x => (typeof _fontFaceCss === 'function') ? _fontFaceCss(x) : '').filter(Boolean).join('');
+  const boot = `window.__PROJEKT_ID=${JSON.stringify(pid || '')};window.__API_ORIGIN=${JSON.stringify(origin)};window.__IS_PREVIEW=true;`;
+  const inject = `<link rel="stylesheet" href="${origin}/fonts.css"><style>${_ffCss}</style><script>${boot}<\/script>`;
+  const doc = html.replace(/(<html[^>]*>)/i, '$1' + inject);
+  f.onload = function () {
+    _subPrvLoaded = true; _subPrvUrl = url; _subPrvActiveSlot = null;
+    const p = _subPrvPending; _subPrvPending = null;
+    if (!p || !f.contentWindow) return;
+    try { f.contentWindow.postMessage(p.msg, '*'); } catch {}
+    _subPrvActiveSlot = p.slot;
+    setTimeout(() => { try { f.contentWindow && f.contentWindow.runAnimationIN && f.contentWindow.runAnimationIN(p.slot); } catch {} }, 250);
+  };
+  f.removeAttribute('src');
+  f.srcdoc = doc.includes('__PROJEKT_ID') ? doc : inject + html;
 }
 
