@@ -1476,15 +1476,11 @@ function renderGrafikTV(container) {
         .filter(b => b.overskrift.trim() || b.indhold.trim());
       if (bokse.length) {
         html += `<div class="grafik-companion-subhead" style="margin-top:${html ? '10px' : '0'}">INFO</div>`;
+        // ÉT step-link pr. boks (ikke pr. side): ét tryk = næste trin (side 1 → 2 → … → ud → forfra).
+        // Companion walker selv siderne, så side 2/3 har ikke egne links.
         html += bokse.map(b => {
-          const base = 'Info ' + b.slot + (b.overskrift ? ': ' + b.overskrift : '');
-          // Side 1 altid; ekstra sider (med tekst) får eget link med slot "boks.side".
-          const pages = b.sider.map((s, i) => ({ n: i + 1, text: s || '' })).filter(p => p.n === 1 || p.text.trim());
-          return pages.map(p => {
-            const sendSlot = p.n === 1 ? String(b.slot) : `${b.slot}.${p.n}`;
-            const lbl = p.n === 1 ? base : base + ' — side ' + p.n;
-            return row(lbl, T(`key=${encodeURIComponent(infoGfx.trig)}&value=in&slot=${sendSlot}`), infoGfx.color);
-          }).join('');
+          const lbl = 'Info ' + b.slot + (b.overskrift ? ': ' + b.overskrift : '') + ' ▶';
+          return row(lbl, T(`key=${encodeURIComponent(infoGfx.trig)}&value=step&slot=${b.slot}`), infoGfx.color);
         }).join('');
         html += row('INFO AF', T(`key=${encodeURIComponent(infoGfx.trig)}&value=out`), infoGfx.color);
       }
@@ -1875,8 +1871,8 @@ function _isTvInfoTrigger(key) {
     && (customGrafik || []).some(g => g.trigger_key === key && g.kategori === 'info');
 }
 
-// <option>-liste over udfyldte info-bokse — ÉN option pr. SIDE (value "boks" for side 1, "boks.side"
-// for side 2+), så en makro kan målrette en bestemt side (ikke kun side 1).
+// <option>-liste over udfyldte info-bokse — ÉN option pr. BOKS (ikke pr. side). Step-afviklingen walker
+// selv siderne, så side 2/3 vælges ikke her. value = boks-nummeret.
 function _tvInfoSlotOpts(selected) {
   const bokse = (typeof infoBokse !== 'undefined' ? infoBokse : [])
     .map((b, i) => ({ slot: i + 1, overskrift: b.overskrift || '',
@@ -1884,12 +1880,8 @@ function _tvInfoSlotOpts(selected) {
     .filter(b => b.overskrift.trim() || b.sider.some(s => (s || '').trim()));
   const opts = [`<option value="">→ Vælg ved afvikling</option>`];
   bokse.forEach(b => {
-    const pages = b.sider.map((s, i) => ({ n: i + 1, text: s || '' })).filter(p => p.n === 1 || p.text.trim());
-    pages.forEach(p => {
-      const val = p.n === 1 ? String(b.slot) : `${b.slot}.${p.n}`;
-      const lbl = `Boks ${b.slot}${b.overskrift ? ': ' + esc(b.overskrift) : ''}${pages.length > 1 ? ' — side ' + p.n : ''}`;
-      opts.push(`<option value="${val}"${String(selected) === val ? ' selected' : ''}>${lbl}</option>`);
-    });
+    const lbl = `Boks ${b.slot}${b.overskrift ? ': ' + esc(b.overskrift) : ''}`;
+    opts.push(`<option value="${b.slot}"${String(selected) === String(b.slot) ? ' selected' : ''}>${lbl}</option>`);
   });
   return opts.join('');
 }
