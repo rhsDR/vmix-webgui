@@ -97,6 +97,13 @@ sbClient.channel('db-changes')
           refreshCredits();
         } else if (p.new.key === 'komm_master') {
           _kommPaaMode = (p.new.value === 'on'); // hold master i sync på tværs af faner/paneler
+        } else if (p.new.key === 'info_live') {
+          // Delt info-afviklings-state (hvilken boks.side kører). Når Companion eller en anden operatør
+          // stepper, følger panelets step-knap med her. Kun eget projekt.
+          if (p.new.projekt_id === aktivProjektId) {
+            grafiktState['_info_slot'] = p.new.value || '';
+            if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
+          }
         } else if (p.new.key === 'info_bokse') {
           // INFO synker på tværs af stationer: parse direkte fra event-payload (ingen DB-genhentning).
           // Spring over hvis den lokale operatør er midt i at redigere en info-boks (undgå at rive input væk).

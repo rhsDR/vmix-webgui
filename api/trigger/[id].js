@@ -66,7 +66,65 @@ async function upsert(pid, key, value) {
   if (!res.ok) throw new Error('Supabase fejl ' + res.status);
 }
 
-async function runStep(pid, h, slotOverride) {
+// INFO step-afvikling (Companion value=step): ét kald = næste trin (off→side1→…→ud→off), som panelets
+// step-knap. Deler state med panelet via settings.info_live, så panel + Companion aldrig er ude af sync.
+// DOBBELT-GATED: kun TV-projekt OG en info-kategori grafik → kampdag kan aldrig ramme den. Kaster med
+// .code=400 ved gate-fejl (mappes til HTTP 400 af kalderen).
+async function infoStep(pid, key, slotOverride, projType) {
+  if (projType !== 'tv') { const e = new Error('step kun i TV-projekt'); e.code = 400; throw e; }
+  let kat = '';
+  try {
+    const gr = await sbGet(`projekt_grafik?projekt_id=eq.${encodeURIComponent(pid)}&trigger_key=eq.${encodeURIComponent(key)}&limit=1&select=kategori`);
+    kat = gr[0]?.kategori || '';
+  } catch {}
+  if (kat !== 'info') { const e = new Error('step kun for info-grafik'); e.code = 400; throw e; }
+
+  // Nuværende live "boks.side" (delt state). Tom = info er af.
+  let liveSlot = '';
+  try {
+    const lr = await sbGet(`settings?projekt_id=eq.${encodeURIComponent(pid)}&key=eq.info_live&limit=1&select=value`);
+    liveSlot = lr[0]?.value || '';
+  } catch {}
+  const live = !!liveSlot;
+  const [curBox, curPageRaw] = String(liveSlot).split('.');
+  const curPage = parseInt(curPageRaw || '1', 10) || 1;
+
+  // Boks: ?slot= vinder; ellers fortsæt den boks der kører (samme fallback som panelet).
+  let box = String(slotOverride || '').split('.')[0];
+  if (!box) box = String(curBox || '');
+  if (!box) { const e = new Error('ingen boks valgt — brug ?slot=<boks>'); e.code = 400; throw e; }
+
+  // Antal sider i boksen (fra settings.info_bokse JSON; boks N = index N-1), samme filter som panelet.
+  let total = 1;
+  try {
+    const br = await sbGet(`settings?projekt_id=eq.${encodeURIComponent(pid)}&key=eq.info_bokse&limit=1&select=value`);
+    const arr = br[0]?.value ? JSON.parse(br[0].value) : [];
+    const bb = Array.isArray(arr) ? arr[parseInt(box) - 1] : null;
+    const sider = (bb && Array.isArray(bb.sider) && bb.sider.length) ? bb.sider : [(bb && bb.indhold) || ''];
+    total = sider.filter((s, i) => i === 0 || (s || '').trim()).length || 1;
+  } catch {}
+
+  const boxLive = live && String(curBox) === String(box);
+  let val, slot;
+  if (!boxLive) { val = 'in'; slot = String(box); }
+  else if (curPage < total) { val = 'in'; slot = `${box}.${curPage + 1}`; }
+  else { val = 'out'; slot = ''; }
+
+  // Persistér delt state + fyr triggeren (broadcast m. slot + settings-værdi), præcis som panelet gør.
+  await upsert(pid, 'info_live', val === 'in' ? slot : '');
+  await Promise.all([
+    sbBroadcastRest(pid, key, val, (val === 'in' && slot) ? { slot: String(slot) } : undefined),
+    upsert(pid, key, val),
+  ]);
+  return { ok: true, key, value: val, slot: slot || undefined, box, total };
+}
+
+async function runStep(pid, h, slotOverride, projType) {
+  // Info step i en makro (Companion kan pege på en step-makro i stedet for den rå key).
+  if (h.value === 'step' && !ALLOWED_KEYS.includes(h.key)) {
+    await infoStep(pid, h.key, slotOverride || h.slot || '', projType);
+    return;
+  }
   if (h.key === 'alle_af') {
     const offKeys = [
       'lt_trigger','ticker_ovl_trigger','breaking_trigger',
@@ -156,13 +214,16 @@ export default async function handler(req, res) {
   if (!id) return res.status(400).json({ error: 'projekt id mangler' });
 
   // Inaktive projekter må IKKE modtage data (triggers). Fail closed. service-role
-  // læser status uden om RLS, så tjekket er uafhængigt af politikker.
+  // læser status uden om RLS, så tjekket er uafhængigt af politikker. type bruges til at
+  // gate info-step (value=step) til TV-projekter — kampdag kan aldrig ramme den.
+  let projType = '';
   try {
-    const pr = await fetch(`${SB_URL}/rest/v1/projekter?id=eq.${encodeURIComponent(id)}&select=aktiv&limit=1`,
+    const pr = await fetch(`${SB_URL}/rest/v1/projekter?id=eq.${encodeURIComponent(id)}&select=aktiv,type&limit=1`,
       { headers: { apikey: _SVC, Authorization: 'Bearer ' + _SVC } });
     const projRows = await pr.json();
     if (!projRows[0]) return res.status(404).json({ error: 'Projekt ikke fundet' });
     if (projRows[0].aktiv === false) return res.status(403).json({ error: 'Projektet er inaktivt — triggers afvist' });
+    projType = projRows[0].type || '';
   } catch {
     return res.status(502).json({ error: 'Kunne ikke tjekke projekt-status' });
   }
@@ -202,11 +263,11 @@ export default async function handler(req, res) {
       if (batch.length) segments.push({ type: 'batch', steps: batch });
       for (const seg of segments) {
         if (seg.type === 'wait') { await new Promise(r => setTimeout(r, seg.ms)); continue; }
-        await Promise.all(seg.steps.map(h => runStep(id, h, slotOverride)));
+        await Promise.all(seg.steps.map(h => runStep(id, h, slotOverride, projType)));
       }
       return res.status(200).json({ ok: true, fired: (macro.handlinger || []).length });
     } catch (err) {
-      return res.status(502).json({ error: String(err.message) });
+      return res.status(err.code || 502).json({ error: String(err.message) });
     }
   }
 
@@ -225,6 +286,11 @@ export default async function handler(req, res) {
   if (!value) return res.status(400).json({ error: 'value mangler' });
 
   try {
+    // INFO step-afvikling: ét Companion-kald = næste trin. Dobbelt-gated til TV + info-grafik i infoStep.
+    if (value === 'step') {
+      const r = await infoStep(id, key, slot, projType);
+      return res.status(200).json(r);
+    }
     if (key === 'komm_alle') {
       const allKeys = ['Komm_score_K-1','Komm_score_K-2','Komm_score_K-3',
                        'Komm_score_K-4','Komm_score_K-5','Komm_score_K-6'];
@@ -278,6 +344,6 @@ export default async function handler(req, res) {
     const [bc] = await Promise.all([sbBroadcastRest(id, key, value), upsert(id, key, value)]);
     res.status(200).json({ ok: true, key, value, slot: slot || undefined, _bc: bc });
   } catch (err) {
-    res.status(502).json({ error: String(err.message) });
+    res.status(err.code || 502).json({ error: String(err.message) });
   }
 }

@@ -167,12 +167,13 @@ async function _fireOneHandling(h, slotOverride) {
       if (!boxLive) { val = 'in'; slot = String(box); }
       else if (curPage < total) { val = 'in'; slot = `${box}.${curPage + 1}`; }
       else { val = 'out'; slot = ''; }
-      if (val === 'in') grafiktState['_info_slot'] = slot;
+      _setInfoLive(val === 'in' ? slot : '');   // delt state (panel + Companion)
       grafiktState[h.key] = val;
       await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: val, slot: (val === 'in' && slot) ? slot : undefined });
       return;
     }
     const eff = slotOverride || h.slot || '';
+    _setInfoLive(h.value !== 'out' ? eff : '');  // delt state (panel + Companion)
     await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value, slot: (h.value !== 'out' && eff) ? String(eff) : undefined });
     grafiktState[h.key] = h.value;
     return;
@@ -228,7 +229,7 @@ async function refreshGrafiktState() {
   const customKeys = customGrafik.map(g => g.trigger_key);
   const kommKeys = KOMM_BOKSE.map(k => k.triggerKey);
   const infoKeys = (infoBokse || []).map(b => 'info_' + b.id);
-  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey).filter(Boolean), ...customKeys, ...kommKeys, ...infoKeys, 'lt_slot', 'score_breaking_trigger', 'overlay_lag_order', 'ticker_lag_order', 'lineup_slots', 'grafik_overlay_map'].join(',');
+  const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey).filter(Boolean), ...customKeys, ...kommKeys, ...infoKeys, 'lt_slot', 'score_breaking_trigger', 'overlay_lag_order', 'ticker_lag_order', 'lineup_slots', 'grafik_overlay_map', 'info_live'].join(',');
   try {
     const rows = await sbGet('settings?select=key,value&key=in.(' + keys + ')&projekt_id=eq.' + aktivProjektId);
     rows.forEach(r => {
@@ -241,6 +242,9 @@ async function refreshGrafiktState() {
         try { lineupSlots = JSON.parse(r.value); } catch { lineupSlots = {}; }
       } else if (r.key === 'grafik_overlay_map') {
         try { grafikOverlayMap = JSON.parse(r.value); } catch { grafikOverlayMap = {}; }
+      } else if (r.key === 'info_live') {
+        // Delt info-afviklings-state: afspejl hvilken boks.side der kører, så panel-step viser rigtigt trin.
+        grafiktState['_info_slot'] = r.value || '';
       } else {
         grafiktState[r.key] = r.value;
       }
@@ -259,8 +263,18 @@ async function refreshGrafiktState() {
   renderGrafik();
 }
 
+// Delt info-afviklings-state: hvilken "boks.side" kører nu. Skrives som settings.info_live så BÅDE
+// panelet og Companion (/api/trigger value=step) deler ÉN sandhed og ikke kommer ud af sync. slot=''
+// = info er af. Kun relevant for TV-info; kampdag rører den aldrig.
+function _setInfoLive(slot) {
+  grafiktState['_info_slot'] = String(slot || '');
+  sbUpsert('settings', { projekt_id: aktivProjektId, key: 'info_live', value: String(slot || '') }).catch(() => {});
+}
+
 async function setGrafiktTrigger(triggerKey, value) {
   grafiktState[triggerKey] = value;
+  // Info-OUT (den generiske OUT-knap) skal også nulstille den delte side-state.
+  if (value === 'out' && _isTvInfoTrigger(triggerKey)) _setInfoLive('');
   _debouncedRenderGrafik();
   try {
     await sbUpsert('settings', { projekt_id: aktivProjektId, key: triggerKey, value });
@@ -1570,7 +1584,7 @@ function renderGrafikTV(container) {
     btn.addEventListener('click', async () => {
       if (btn.disabled) return;
       const slot = btn.dataset.slot, trig = btn.dataset.trig;
-      grafiktState['_info_slot'] = String(slot);
+      _setInfoLive(slot);
       grafiktState[trig] = 'in';
       renderGrafikTV(container);
       try {
@@ -1583,8 +1597,8 @@ function renderGrafikTV(container) {
   container.querySelectorAll('.tv-info-step').forEach(btn =>
     btn.addEventListener('click', async () => {
       const trig = btn.dataset.trig, val = btn.dataset.stepVal, slot = btn.dataset.stepSlot || '';
-      if (val === 'in') { grafiktState['_info_slot'] = String(slot); grafiktState[trig] = 'in'; }
-      else { grafiktState[trig] = 'out'; }
+      if (val === 'in') { _setInfoLive(slot); grafiktState[trig] = 'in'; }
+      else { _setInfoLive(''); grafiktState[trig] = 'out'; }
       renderGrafikTV(container);
       try {
         await sbUpsert('settings', { projekt_id: aktivProjektId, key: trig, value: val, slot: (val === 'in' && slot) ? String(slot) : undefined });
