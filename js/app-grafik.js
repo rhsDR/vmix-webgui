@@ -1249,6 +1249,26 @@ async function _tvLoadPreview(url, container, mode, slot) {
   f.dataset.prvLoaded = url; // husk hvilken grafik der er indlæst → PRW UD kan spille ren ud-animation
 }
 
+// Preview-afviklingens tilstand: hvilken info "boks.side" vises i PREVIEW-vinduet nu ('' = ingen). Rent
+// preview — uafhængigt af on-air (_info_slot/info_live). Bruges af INFO PRW-step-knappen.
+let _infoPrvSlot = '';
+
+// Glat preview-step: er info-grafikken ALLEREDE indlæst i preview-iframen (persisterer på tværs af
+// re-render) → kald dens runAnimationIN(slot)/runAnimationOUT() direkte (tekst-skift uden reload, som
+// on-air). Ellers kold-indlæs via _tvLoadPreview.
+function _tvLoadPreviewStep(url, container, mode, slot) {
+  const f = (container || document).querySelector('.grafik-preview-iframe');
+  const loaded = f && f.dataset.prvLoaded === url && f.contentWindow;
+  if (loaded) {
+    try {
+      if (mode === 'out') { if (f.contentWindow.runAnimationOUT) f.contentWindow.runAnimationOUT(); }
+      else if (f.contentWindow.runAnimationIN) f.contentWindow.runAnimationIN(String(slot || ''));
+    } catch (e) {}
+    return;
+  }
+  _tvLoadPreview(url, container, mode, slot);
+}
+
 function renderGrafikTV(container) {
   container = container || document.getElementById('grafikList');
   if (!container) return;
@@ -1369,6 +1389,9 @@ function renderGrafikTV(container) {
     // curSlot kan være "boks" (side 1) eller "boks.side" (fx "1.2"). Split for at vide hvilken side der er live.
     const [curBox, curPageRaw] = String(curSlot).split('.');
     const curPage = parseInt(curPageRaw || '1', 10) || 1;
+    // PREVIEW-afviklingens tilstand (uafhængig af on-air): hvilken boks.side vises i preview-vinduet nu.
+    const [prvBox, prvPageRaw] = String(_infoPrvSlot).split('.');
+    const prvPage = parseInt(prvPageRaw || '1', 10) || 1;
     return boxes.map(b => {
       const boxLive = trigLive && String(curBox) === String(b.slot);
       // Kun side 1-kontroller + ÉT-TRYKS-TRIN (step). Side 2/3 vælges ikke manuelt — step walker dem selv.
@@ -1380,6 +1403,12 @@ function renderGrafikTV(container) {
       if (!boxLive) { stepVal = 'in'; stepSlot = String(b.slot); stepLbl = '▶ IN'; }
       else if (curPage < totalPages) { stepVal = 'in'; stepSlot = `${b.slot}.${curPage + 1}`; stepLbl = '▶ Side ' + (curPage + 1); }
       else { stepVal = 'out'; stepSlot = ''; stepLbl = '▶ Ud'; }
+      // PRW-knappen er SAMME ét-tryks-afvikling, bare i PREVIEW-vinduet: PRW → PRW 2 → … → PRW UD → forfra.
+      const prvLive = _infoPrvSlot && String(prvBox) === String(b.slot);
+      let prwVal, prwSlot, prwLbl;
+      if (!prvLive) { prwVal = 'in'; prwSlot = String(b.slot); prwLbl = 'PRW'; }
+      else if (prvPage < totalPages) { prwVal = 'in'; prwSlot = `${b.slot}.${prvPage + 1}`; prwLbl = 'PRW ' + (prvPage + 1); }
+      else { prwVal = 'out'; prwSlot = ''; prwLbl = 'PRW UD'; }
       return `<div class="grafik-block" style="--g-color:${gfx.color}">
         <span class="grafik-block-num">${b.slot}</span>
         <div class="grafik-block-info">
@@ -1387,8 +1416,7 @@ function renderGrafikTV(container) {
           ${b.indhold ? `<span class="grafik-block-sub">${esc(b.indhold.split('\n')[0])}</span>` : ''}
         </div>
         <div class="grafik-block-actions">
-          <button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}" title="Preview side 1">PRW</button>
-          <button class="grafik-btn-prw tv-prw-out" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}" title="Preview ud">PRW UD</button>
+          <button class="grafik-btn-prw${prvLive ? ' active' : ''} tv-info-prw-step" data-prw-url="${gfx.prv}" data-prw-val="${prwVal}" data-prw-slot="${prwSlot}" data-box="${b.slot}" title="Ét tryk = næste trin i PREVIEW (PRW → side 2 → … → PRW UD)">${prwLbl}</button>
           <button class="grafik-btn-out" data-trig="${esc(trig)}" data-val="out"${!boxLive ? ' disabled' : ''}>&lt; OUT</button>
           <button class="grafik-btn-in${boxLive ? ' on' : ''} tv-info-step" data-trig="${esc(trig)}" data-step-val="${stepVal}" data-step-slot="${stepSlot}" title="Ét tryk = næste trin (IN → side 2 → … → ud)">${stepLbl}</button>
         </div>
@@ -1572,6 +1600,15 @@ function renderGrafikTV(container) {
 
   container.querySelectorAll('.tv-prw-out').forEach(btn =>
     btn.addEventListener('click', () => _tvLoadPreview(btn.dataset.prwUrl, container, 'out', btn.dataset.prwSlot)));
+
+  // INFO PRW-step: samme ét-tryks-afvikling som den grønne IN-knap, men i PREVIEW-vinduet (rører ikke on-air).
+  container.querySelectorAll('.tv-info-prw-step').forEach(btn =>
+    btn.addEventListener('click', () => {
+      const url = btn.dataset.prwUrl, val = btn.dataset.prwVal, slot = btn.dataset.prwSlot || '';
+      if (val === 'out') { _infoPrvSlot = ''; _tvLoadPreviewStep(url, container, 'out', btn.dataset.box); }
+      else { _infoPrvSlot = slot; _tvLoadPreviewStep(url, container, null, slot); }
+      renderGrafikTV(container);   // opdatér PRW-labelen til næste trin (preview-iframen persisterer)
+    }));
 
 
   container.querySelectorAll('.tv-makro-add').forEach(btn =>
