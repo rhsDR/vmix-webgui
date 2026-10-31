@@ -147,6 +147,27 @@ async function _fireOneHandling(h, slotOverride) {
   // TV info-grafik: send boks-nummeret MED triggeren (slot) → master kalder runAnimationIN(slot) → viser
   // netop den boks. slotOverride (valgt ved afvikling) vinder; 'out' sender ingen slot.
   if (_isTvInfoTrigger(h.key)) {
+    // value 'step' = ét-tryks-afvikling: beregn næste trin (off→side1→…→ud) ud fra panelets tilstand
+    // og fyr det. slotOverride/h.slot angiver BOKSEN (sider walkes automatisk).
+    if (h.value === 'step') {
+      const box = String(slotOverride || h.slot || '').split('.')[0];
+      if (!box) return;
+      const trigLive = (grafiktState[h.key] || 'out') !== 'out';
+      const [curBox, curPageRaw] = String(grafiktState['_info_slot'] || '').split('.');
+      const curPage = parseInt(curPageRaw || '1', 10) || 1;
+      const boxLive = trigLive && String(curBox) === String(box);
+      const bb = (typeof infoBokse !== 'undefined' ? infoBokse : [])[parseInt(box) - 1];
+      const _sider = (bb && Array.isArray(bb.sider) && bb.sider.length) ? bb.sider : [(bb && bb.indhold) || ''];
+      const total = _sider.filter((s, i) => i === 0 || (s || '').trim()).length;
+      let val, slot;
+      if (!boxLive) { val = 'in'; slot = String(box); }
+      else if (curPage < total) { val = 'in'; slot = `${box}.${curPage + 1}`; }
+      else { val = 'out'; slot = ''; }
+      if (val === 'in') grafiktState['_info_slot'] = slot;
+      grafiktState[h.key] = val;
+      await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: val, slot: (val === 'in' && slot) ? slot : undefined });
+      return;
+    }
     const eff = slotOverride || h.slot || '';
     await sbUpsert('settings', { projekt_id: aktivProjektId, key: h.key, value: h.value, slot: (h.value !== 'out' && eff) ? String(eff) : undefined });
     grafiktState[h.key] = h.value;
@@ -607,7 +628,7 @@ function renderGrafik() {
               const s = subs[parseInt(h.slot) - 1];
               return `Sub${s?.navn ? ': ' + s.navn : ' ' + h.slot}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
             }
-            return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
+            return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : h.value === 'step' ? 'STEP ▶' : 'AF'}`;
           }).join(' · ');
           const ltOnStep = (m.handlinger || []).find(h => h.key === 'lt_trigger' && h.value !== 'out');
           let slotPickerHTML = '';
@@ -1609,7 +1630,7 @@ function _afvMakroViewHTML() {
         const summary = (m.handlinger || []).map(h => {
           if (h.key === 'wait') return `⏱ ${h.value}s`;
           if (h.key === 'alle_af') return '■ ALLE AF';
-          return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
+          return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : h.value === 'step' ? 'STEP ▶' : 'AF'}`;
         }).join(' · ');
         // Har makroen et sub-ON-trin, så vis en plads-vælger (som kampdag): forvalgt til makroens
         // faste plads, eller "→ Vælg ved afvikling" hvis ingen — operatøren bestemmer sub ved KØR.
@@ -1893,7 +1914,7 @@ function renderMakroer(leftPanel) {
             const side = h.value === 'home' ? 'Hjemme' : h.value === 'away' ? 'Ude' : 'AF';
             return h.value === 'out' ? 'Opstilling: AF' : `Opstilling K${h.slot || '?'}: ${side}`;
           }
-          return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
+          return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : h.value === 'step' ? 'STEP ▶' : 'AF'}`;
         }
         const labels = g.steps.map(h => {
           if (h.key === 'lt_trigger' && h.slot) {
@@ -1905,7 +1926,7 @@ function renderMakroer(leftPanel) {
             const side = h.value === 'home' ? 'Hjemme' : h.value === 'away' ? 'Ude' : 'AF';
             return h.value === 'out' ? 'Opstilling: AF' : `Opstilling K${h.slot || '?'}: ${side}`;
           }
-          return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : 'AF'}`;
+          return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : h.value === 'step' ? 'STEP ▶' : 'AF'}`;
         });
         return g.steps.length > 1 ? `[${labels.join(' + ')}]` : labels[0];
       }).join(' · ');
@@ -2034,6 +2055,10 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
     ? `<option value="home"${value === 'home' ? ' selected' : ''}>Hjemme</option>
        <option value="away"${value === 'away' ? ' selected' : ''}>Ude</option>
        <option value="out"${value === 'out' ? ' selected' : ''}>AF</option>`
+    : isInfo
+    ? `<option value="in"${value === 'in' ? ' selected' : ''}>PÅ</option>
+       <option value="out"${value === 'out' ? ' selected' : ''}>AF</option>
+       <option value="step"${value === 'step' ? ' selected' : ''}>STEP ▶</option>`
     : `<option value="in"${(value === 'in' || value === 'vmixcall') ? ' selected' : ''}>PÅ</option>
        <option value="out"${value === 'out' ? ' selected' : ''}>AF</option>`;
   const row = document.createElement('div');
@@ -2080,6 +2105,8 @@ function _addMakroHandlingRow(key, value, slot, afterRow) {
     if (info)   slotSel.innerHTML = _tvInfoSlotOpts('');
     if (lineup) {
       valSel.innerHTML = `<option value="home">Hjemme</option><option value="away">Ude</option><option value="out">AF</option>`;
+    } else if (info) {
+      valSel.innerHTML = `<option value="in">PÅ</option><option value="out">AF</option><option value="step">STEP ▶</option>`;
     } else if (!wait && !alleAf) {
       valSel.innerHTML = `<option value="in">PÅ</option><option value="out">AF</option>`;
     }
