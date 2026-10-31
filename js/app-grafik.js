@@ -1378,11 +1378,9 @@ function renderGrafikTV(container) {
     const curPage = parseInt(curPageRaw || '1', 10) || 1;
     return boxes.map(b => {
       const boxLive = trigLive && String(curBox) === String(b.slot);
-      // Side 1 vises altid (> IN); ekstra sider kun hvis de har tekst. Hver ekstra side får sit eget
-      // "PRW n" (preview NETOP den side via slot "boks.side") + "SIDE n" (tag den live).
+      // Kun side 1-kontroller + ÉT-TRYKS-TRIN (step). Side 2/3 vælges ikke manuelt — step walker dem selv.
       const pages = b.sider.map((s, i) => ({ n: i + 1, text: s || '' })).filter(p => p.n === 1 || p.text.trim());
       const in1Act = boxLive && curPage === 1;
-      const extra = pages.filter(p => p.n > 1);
       // ÉT-TRYKS-TRIN: hvert tryk går til NÆSTE (off→side1→side2→…→ud→side1). Næste trin beregnes ud fra
       // den aktuelle tilstand ved render; efter et tryk re-renderes rækken, så knappen viser næste trin.
       const totalPages = pages.length;
@@ -1390,13 +1388,6 @@ function renderGrafikTV(container) {
       if (!boxLive || String(curBox) !== String(b.slot)) { stepVal = 'in'; stepSlot = String(b.slot); stepLbl = '▶ Side 1'; }
       else if (curPage < totalPages) { stepVal = 'in'; stepSlot = `${b.slot}.${curPage + 1}`; stepLbl = '▶ Side ' + (curPage + 1); }
       else { stepVal = 'out'; stepSlot = ''; stepLbl = '▶ Ud'; }
-      // PRW-knapperne samles (PRW, PRW 2, PRW 3, PRW UD); SIDE-knapperne ligger ved > IN.
-      const prwExtra = extra.map(p =>
-        `<button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}.${p.n}" title="Preview side ${p.n}">PRW ${p.n}</button>`).join('');
-      const sideExtra = extra.map(p => {
-        const act = boxLive && curPage === p.n;
-        return `<button class="grafik-btn-in${act ? ' on' : ''} tv-info-slot-in" data-trig="${esc(trig)}" data-slot="${b.slot}.${p.n}" title="Skift til side ${p.n}">SIDE ${p.n}</button>`;
-      }).join('');
       return `<div class="grafik-block" style="--g-color:${gfx.color}">
         <span class="grafik-block-num">${b.slot}</span>
         <div class="grafik-block-info">
@@ -1405,12 +1396,10 @@ function renderGrafikTV(container) {
         </div>
         <div class="grafik-block-actions">
           <button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}" title="Preview side 1">PRW</button>
-          ${prwExtra}
           <button class="grafik-btn-prw tv-prw-out" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}" title="Preview ud">PRW UD</button>
           <button class="grafik-btn-in tv-info-step" data-trig="${esc(trig)}" data-step-val="${stepVal}" data-step-slot="${stepSlot}" title="Ét tryk = næste trin (side for side, slutter med ud)" style="background:#0b7285;border:none;">${stepLbl}</button>
           <button class="grafik-btn-out" data-trig="${esc(trig)}" data-val="out"${!boxLive ? ' disabled' : ''}>&lt; OUT</button>
           <button class="grafik-btn-in${in1Act ? ' on' : ''} tv-info-slot-in" data-trig="${esc(trig)}" data-slot="${b.slot}" title="Vis (side 1)">&gt; IN</button>
-          ${sideExtra}
         </div>
       </div>`;
     }).join('');
