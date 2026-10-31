@@ -38,6 +38,7 @@
     const customStateTime = {};
     const _creditTs = {}; // sidste credit-IN-fyring pr. key — debouncer broadcast+settings-ekko til ét rul
     let   _activeSubSlot = ''; // aktuel active_sub-plads — så settings-stien (_dispatch) viser den RIGTIGE sub, ikke stale 'aktiv'
+    let   _activeInfoSlot = ''; // aktuel info "boks.side" (fra settings.info_live) — så settings-stien viser RIGTIG boks/side når broadcast'ens slot ikke når frem (fx Companion fra server)
 
     // Grafik-definitioner: id matcher iframe-id og Supabase-nøglen i overlay_lag_order
     const GRAPHICS = [
@@ -180,21 +181,28 @@
           var cIframe = customFrameMap[key];
           if (!cIframe) return;
           var isSub = customCat[key] === 'sub';
+          var isInfo = customCat[key] === 'info';
           var isCredit = customCat[key] === 'credit';
           var cPrev = customState[key];
           // Sub-grafik: tillad re-trigger når active_sub-pladsen har ændret sig (value stadig 'in') — ellers
           // de-duppes et plads-skift via settings-stien væk. Send ALTID den aktuelle active_sub-plads med, så
           // grafikken viser den RIGTIGE sub (ikke stale 'aktiv' fra fraCache('')).
+          // Info-grafik: samme princip — send den aktuelle info_live-plads ("boks.side") med, så settings-stien
+          // viser RIGTIG boks/side når broadcast'ens slot ikke nåede frem (fx Companion-trigger fra serveren).
           // Credit: en 'in' skal ALTID kunne rulle credits på igen (uden 'out'). Debounce på _creditTs sikrer
           // kun ÉT runAnimationIN pr. tryk på tværs af broadcast+settings (grafikken loadData'er async).
           var _creditRefire = isCredit && value === 'in';
-          if (cPrev === value && !(isSub && value === 'in' && customSlot[key] !== _activeSubSlot) && !_creditRefire) return;
+          if (cPrev === value
+              && !(isSub && value === 'in' && customSlot[key] !== _activeSubSlot)
+              && !(isInfo && value === 'in' && customSlot[key] !== _activeInfoSlot)
+              && !_creditRefire) return;
           if (_creditRefire) { if (Date.now() - (_creditTs[key] || 0) < 250) return; _creditTs[key] = Date.now(); }
           customState[key] = value;
           customStateTime[key] = Date.now();
           if (isSub && value === 'in') customSlot[key] = _activeSubSlot;
+          if (isInfo && value === 'in') customSlot[key] = _activeInfoSlot;
           try {
-            if (value === 'in') cIframe.contentWindow?.runAnimationIN?.(isSub ? _activeSubSlot : undefined);
+            if (value === 'in') cIframe.contentWindow?.runAnimationIN?.(isSub ? _activeSubSlot : isInfo ? _activeInfoSlot : undefined);
             else if (value === 'out') {
               if (cPrev === 'in') cIframe.contentWindow?.runAnimationOUT?.();
               else if (cIframe.contentWindow?.__forceOut) cIframe.contentWindow.__forceOut();
@@ -250,6 +258,9 @@
               customState[p.key] = p.value;
               customSlot[p.key] = String(p.slot || '');
               customStateTime[p.key] = Date.now();
+              // Hold _activeInfoSlot i sync når broadcast'en bærer en info-plads, så settings-ekkoet
+              // (info_live) ikke re-fyrer samme slot (customSlot-guarden rammer).
+              if (customCat[p.key] === 'info' && p.value === 'in' && p.slot) _activeInfoSlot = String(p.slot);
               try {
                 // p.slot (fx sub-plads 1-15) sendes med til runAnimationIN, så en sub-grafik kan vise
                 // den valgte plads fra cache UDEN at hente. Grafikker uden plads-arg ignorerer det.
@@ -300,6 +311,21 @@
                 if (customCat[k] === 'sub' && customState[k] === 'in') {
                   customSlot[k] = _asSlot;
                   try { var cw = customFrameMap[k].contentWindow; if (cw && cw.runAnimationIN) cw.runAnimationIN(_asSlot); } catch (e) {}
+                }
+              });
+              return;
+            }
+            // info_live ("boks.side") ændret → skift den SYNLIGE info-grafik til den nye boks/side. Samme
+            // pålidelige settings-sti som active_sub — virker også når broadcast'ens slot ikke nåede frem
+            // (Companion fra serveren). Kun info-frames der allerede er 'in' (ellers venter vi på triggeren).
+            if (_tbl === 'settings' && rec.key === 'info_live') {
+              var _isSlot = String(rec.value || '');
+              _activeInfoSlot = _isSlot;
+              if (_isSlot) Object.keys(customFrameMap).forEach(function (k) {
+                // customSlot-guard: hvis broadcast'en allerede satte samme slot, spring re-fyring over (undgå dobbelt).
+                if (customCat[k] === 'info' && customState[k] === 'in' && customSlot[k] !== _isSlot) {
+                  customSlot[k] = _isSlot;
+                  try { var cw = customFrameMap[k].contentWindow; if (cw && cw.runAnimationIN) cw.runAnimationIN(_isSlot); } catch (e) {}
                 }
               });
               return;
@@ -396,14 +422,17 @@
       if (!keys.length) return;
       try {
         const data = await fetch(
-          `${SB_URL}/rest/v1/settings?key=in.(${keys.concat('active_sub').map(k=>encodeURIComponent(k)).join(',')})&projekt_id=eq.${encodeURIComponent(pid)}&select=key,value`,
+          `${SB_URL}/rest/v1/settings?key=in.(${keys.concat('active_sub','info_live').map(k=>encodeURIComponent(k)).join(',')})&projekt_id=eq.${encodeURIComponent(pid)}&select=key,value`,
           { headers: SB_HDR }
         ).then(r => r.json());
-        // Sæt active_sub-pladsen FØR vi dispatcher sub-triggeren, så sub-grafikken straks viser den rigtige
-        // sub (direkte DB-læsning — ikke via den cachede /api/vmix, hvis 'aktiv' ellers ville være forældet).
+        // Sæt active_sub- OG info_live-pladsen FØR vi dispatcher triggerne, så sub-/info-grafikken straks
+        // viser den rigtige plads (direkte DB-læsning — ikke via den cachede /api/vmix, hvis 'aktiv' ellers
+        // ville være forældet). Gælder også efter en master-reload midt i en live info-afvikling.
         const _asRow = (data || []).find(r => r.key === 'active_sub');
         if (_asRow) _activeSubSlot = String(_asRow.value || '');
-        for (const row of data ?? []) if (row.key !== 'active_sub') _dispatch(row.key, row.value);
+        const _ilRow = (data || []).find(r => r.key === 'info_live');
+        if (_ilRow) _activeInfoSlot = String(_ilRow.value || '');
+        for (const row of data ?? []) if (row.key !== 'active_sub' && row.key !== 'info_live') _dispatch(row.key, row.value);
       } catch {}
     }
 
