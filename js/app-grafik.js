@@ -150,11 +150,15 @@ async function _fireOneHandling(h, slotOverride) {
     // value 'step' = ét-tryks-afvikling: beregn næste trin (off→side1→…→ud) ud fra panelets tilstand
     // og fyr det. slotOverride/h.slot angiver BOKSEN (sider walkes automatisk).
     if (h.value === 'step') {
-      const box = String(slotOverride || h.slot || '').split('.')[0];
-      if (!box) return;
       const trigLive = (grafiktState[h.key] || 'out') !== 'out';
       const [curBox, curPageRaw] = String(grafiktState['_info_slot'] || '').split('.');
       const curPage = parseInt(curPageRaw || '1', 10) || 1;
+      // Boks: valgt plads (dropdown/makro) vinder; ellers fortsæt den boks der kører (eller sidst kørte).
+      // Afviklings-dropdownen nulstilles ved re-render efter hvert tryk, så uden dette fallback ville 2.
+      // tryk have tom plads → intet ske. (Panel-step-knappen genberegner selv og var derfor upåvirket.)
+      let box = String(slotOverride || h.slot || '').split('.')[0];
+      if (!box) box = String(curBox || '');
+      if (!box) return;
       const boxLive = trigLive && String(curBox) === String(box);
       const bb = (typeof infoBokse !== 'undefined' ? infoBokse : [])[parseInt(box) - 1];
       const _sider = (bb && Array.isArray(bb.sider) && bb.sider.length) ? bb.sider : [(bb && bb.indhold) || ''];
