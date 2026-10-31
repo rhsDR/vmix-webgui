@@ -1344,6 +1344,13 @@ function renderGrafikTV(container) {
       const pages = b.sider.map((s, i) => ({ n: i + 1, text: s || '' })).filter(p => p.n === 1 || p.text.trim());
       const in1Act = boxLive && curPage === 1;
       const extra = pages.filter(p => p.n > 1);
+      // ÉT-TRYKS-TRIN: hvert tryk går til NÆSTE (off→side1→side2→…→ud→side1). Næste trin beregnes ud fra
+      // den aktuelle tilstand ved render; efter et tryk re-renderes rækken, så knappen viser næste trin.
+      const totalPages = pages.length;
+      let stepVal, stepSlot, stepLbl;
+      if (!boxLive || String(curBox) !== String(b.slot)) { stepVal = 'in'; stepSlot = String(b.slot); stepLbl = '▶ Side 1'; }
+      else if (curPage < totalPages) { stepVal = 'in'; stepSlot = `${b.slot}.${curPage + 1}`; stepLbl = '▶ Side ' + (curPage + 1); }
+      else { stepVal = 'out'; stepSlot = ''; stepLbl = '▶ Ud'; }
       // PRW-knapperne samles (PRW, PRW 2, PRW 3, PRW UD); SIDE-knapperne ligger ved > IN.
       const prwExtra = extra.map(p =>
         `<button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}.${p.n}" title="Preview side ${p.n}">PRW ${p.n}</button>`).join('');
@@ -1361,6 +1368,7 @@ function renderGrafikTV(container) {
           <button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}" title="Preview side 1">PRW</button>
           ${prwExtra}
           <button class="grafik-btn-prw tv-prw-out" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}" title="Preview ud">PRW UD</button>
+          <button class="grafik-btn-in tv-info-step" data-trig="${esc(trig)}" data-step-val="${stepVal}" data-step-slot="${stepSlot}" title="Ét tryk = næste trin (side for side, slutter med ud)" style="background:#0b7285;border:none;">${stepLbl}</button>
           <button class="grafik-btn-out" data-trig="${esc(trig)}" data-val="out"${!boxLive ? ' disabled' : ''}>&lt; OUT</button>
           <button class="grafik-btn-in${in1Act ? ' on' : ''} tv-info-slot-in" data-trig="${esc(trig)}" data-slot="${b.slot}" title="Vis (side 1)">&gt; IN</button>
           ${sideExtra}
@@ -1542,6 +1550,19 @@ function renderGrafikTV(container) {
       renderGrafikTV(container);
       try {
         await sbUpsert('settings', { projekt_id: aktivProjektId, key: trig, value: 'in', slot: slot || undefined });
+      } catch { toast('Fejl ved info-trigger', 'err'); }
+    }));
+
+  // ÉT-TRYKS-TRIN: fyr det beregnede næste trin (in m. side-slot, eller out). Re-render opdaterer så
+  // knappen til det NÆSTE trin, så gentryk går side for side og slutter med ud.
+  container.querySelectorAll('.tv-info-step').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      const trig = btn.dataset.trig, val = btn.dataset.stepVal, slot = btn.dataset.stepSlot || '';
+      if (val === 'in') { grafiktState['_info_slot'] = String(slot); grafiktState[trig] = 'in'; }
+      else { grafiktState[trig] = 'out'; }
+      renderGrafikTV(container);
+      try {
+        await sbUpsert('settings', { projekt_id: aktivProjektId, key: trig, value: val, slot: (val === 'in' && slot) ? String(slot) : undefined });
       } catch { toast('Fejl ved info-trigger', 'err'); }
     }));
 
