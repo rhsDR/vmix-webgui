@@ -79,13 +79,16 @@ async function infoStep(pid, key, slotOverride, projType) {
   } catch {}
   if (kat !== 'info') { const e = new Error('step kun for info-grafik'); e.code = 400; throw e; }
 
-  // Nuværende live "boks.side" (delt state). Tom = info er af.
-  let liveSlot = '';
+  // Live-state: TRIGGER-værdien afgør OM info er på air (sandhed, som panelet bruger); info_live giver
+  // hvilken side. Må IKKE udlede liveness af info_live alene — hvis en OUT (fx Companion INFO AF eller
+  // grafikken selv) satte trigger='out' uden at rydde info_live, ville step ellers tro info stadig var på
+  // sidste side og bare slukke igen (= "intet sker"). Begge læses i ét kald.
+  let liveSlot = '', trigVal = 'out';
   try {
-    const lr = await sbGet(`settings?projekt_id=eq.${encodeURIComponent(pid)}&key=eq.info_live&limit=1&select=value`);
-    liveSlot = lr[0]?.value || '';
+    const rows = await sbGet(`settings?projekt_id=eq.${encodeURIComponent(pid)}&key=in.(info_live,${encodeURIComponent(key)})&select=key,value`);
+    (rows || []).forEach(r => { if (r.key === 'info_live') liveSlot = r.value || ''; else if (r.key === key) trigVal = r.value || 'out'; });
   } catch {}
-  const live = !!liveSlot;
+  const live = trigVal !== 'out';
   const [curBox, curPageRaw] = String(liveSlot).split('.');
   const curPage = parseInt(curPageRaw || '1', 10) || 1;
 
