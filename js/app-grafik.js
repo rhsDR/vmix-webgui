@@ -1815,13 +1815,23 @@ function _isTvInfoTrigger(key) {
     && (customGrafik || []).some(g => g.trigger_key === key && g.kategori === 'info');
 }
 
-// <option>-liste over udfyldte info-bokse (til makro-boks-vælgeren).
+// <option>-liste over udfyldte info-bokse — ÉN option pr. SIDE (value "boks" for side 1, "boks.side"
+// for side 2+), så en makro kan målrette en bestemt side (ikke kun side 1).
 function _tvInfoSlotOpts(selected) {
-  const filled = (typeof infoBokse !== 'undefined' ? infoBokse : [])
-    .map((b, i) => ({ slot: i + 1, overskrift: b.overskrift || '', indhold: b.indhold || '' }))
-    .filter(b => b.overskrift.trim() || b.indhold.trim());
-  const head = `<option value="">→ Vælg ved afvikling</option>`;
-  return head + filled.map(b => `<option value="${b.slot}"${String(selected) === String(b.slot) ? ' selected' : ''}>Boks ${b.slot}${b.overskrift ? ': ' + esc(b.overskrift) : ''}</option>`).join('');
+  const bokse = (typeof infoBokse !== 'undefined' ? infoBokse : [])
+    .map((b, i) => ({ slot: i + 1, overskrift: b.overskrift || '',
+      sider: (Array.isArray(b.sider) && b.sider.length) ? b.sider : [b.indhold || ''] }))
+    .filter(b => b.overskrift.trim() || b.sider.some(s => (s || '').trim()));
+  const opts = [`<option value="">→ Vælg ved afvikling</option>`];
+  bokse.forEach(b => {
+    const pages = b.sider.map((s, i) => ({ n: i + 1, text: s || '' })).filter(p => p.n === 1 || p.text.trim());
+    pages.forEach(p => {
+      const val = p.n === 1 ? String(b.slot) : `${b.slot}.${p.n}`;
+      const lbl = `Boks ${b.slot}${b.overskrift ? ': ' + esc(b.overskrift) : ''}${pages.length > 1 ? ' — side ' + p.n : ''}`;
+      opts.push(`<option value="${val}"${String(selected) === val ? ' selected' : ''}>${lbl}</option>`);
+    });
+  });
+  return opts.join('');
 }
 
 function renderMakroer(leftPanel) {
