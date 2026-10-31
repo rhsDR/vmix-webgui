@@ -1373,12 +1373,11 @@ function renderGrafikTV(container) {
       const boxLive = trigLive && String(curBox) === String(b.slot);
       // Kun side 1-kontroller + ÉT-TRYKS-TRIN (step). Side 2/3 vælges ikke manuelt — step walker dem selv.
       const pages = b.sider.map((s, i) => ({ n: i + 1, text: s || '' })).filter(p => p.n === 1 || p.text.trim());
-      const in1Act = boxLive && curPage === 1;
-      // ÉT-TRYKS-TRIN: hvert tryk går til NÆSTE (off→side1→side2→…→ud→side1). Næste trin beregnes ud fra
-      // den aktuelle tilstand ved render; efter et tryk re-renderes rækken, så knappen viser næste trin.
+      // ÉT-TRYKS-TRIN på den grønne IN-knap: hvert tryk går til NÆSTE trin (af → IN/side 1 → side 2 → …
+      // → ud → forfra). Labelen skifter og viser næste trin. Ingen separat side-knap.
       const totalPages = pages.length;
       let stepVal, stepSlot, stepLbl;
-      if (!boxLive || String(curBox) !== String(b.slot)) { stepVal = 'in'; stepSlot = String(b.slot); stepLbl = '▶ Side 1'; }
+      if (!boxLive) { stepVal = 'in'; stepSlot = String(b.slot); stepLbl = '▶ IN'; }
       else if (curPage < totalPages) { stepVal = 'in'; stepSlot = `${b.slot}.${curPage + 1}`; stepLbl = '▶ Side ' + (curPage + 1); }
       else { stepVal = 'out'; stepSlot = ''; stepLbl = '▶ Ud'; }
       return `<div class="grafik-block" style="--g-color:${gfx.color}">
@@ -1390,9 +1389,8 @@ function renderGrafikTV(container) {
         <div class="grafik-block-actions">
           <button class="grafik-btn-prw tv-prw" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}" title="Preview side 1">PRW</button>
           <button class="grafik-btn-prw tv-prw-out" data-prw-url="${gfx.prv}" data-prw-slot="${b.slot}" title="Preview ud">PRW UD</button>
-          <button class="grafik-btn-in tv-info-step" data-trig="${esc(trig)}" data-step-val="${stepVal}" data-step-slot="${stepSlot}" title="Ét tryk = næste trin (side for side, slutter med ud)" style="background:#0b7285;border:none;">${stepLbl}</button>
           <button class="grafik-btn-out" data-trig="${esc(trig)}" data-val="out"${!boxLive ? ' disabled' : ''}>&lt; OUT</button>
-          <button class="grafik-btn-in${in1Act ? ' on' : ''} tv-info-slot-in" data-trig="${esc(trig)}" data-slot="${b.slot}" title="Vis (side 1)">&gt; IN</button>
+          <button class="grafik-btn-in${boxLive ? ' on' : ''} tv-info-step" data-trig="${esc(trig)}" data-step-val="${stepVal}" data-step-slot="${stepSlot}" title="Ét tryk = næste trin (IN → side 2 → … → ud)">${stepLbl}</button>
         </div>
       </div>`;
     }).join('');
@@ -1550,23 +1548,9 @@ function renderGrafikTV(container) {
       } catch { toast('Fejl ved sub-trigger', 'err'); }
     }));
 
-  // INFO-boks: > IN sender boks-nummeret (slot) MED triggeren → master kalder grafikkens
-  // runAnimationIN(slot) → viser netop den boks (fraCache). Ingen DB-"active" nødvendig; grafikken
-  // har alle bokse cachet og vælger ud fra slot. Skift mellem bokse mens live = rent tekst-skift.
-  container.querySelectorAll('.tv-info-slot-in').forEach(btn =>
-    btn.addEventListener('click', async () => {
-      if (btn.disabled) return;
-      const slot = btn.dataset.slot, trig = btn.dataset.trig;
-      _setInfoLive(slot);
-      grafiktState[trig] = 'in';
-      renderGrafikTV(container);
-      try {
-        await sbUpsert('settings', { projekt_id: aktivProjektId, key: trig, value: 'in', slot: slot || undefined });
-      } catch { toast('Fejl ved info-trigger', 'err'); }
-    }));
-
-  // ÉT-TRYKS-TRIN: fyr det beregnede næste trin (in m. side-slot, eller out). Re-render opdaterer så
-  // knappen til det NÆSTE trin, så gentryk går side for side og slutter med ud.
+  // INFO-boks: ÉT-TRYKS-TRIN på den grønne IN-knap — fyr det beregnede næste trin (in m. side-slot, eller
+  // out). slot sendes MED triggeren → master kalder grafikkens runAnimationIN(slot). Re-render opdaterer så
+  // knappen til det NÆSTE trin, så gentryk går IN → side 2 → … → ud.
   container.querySelectorAll('.tv-info-step').forEach(btn =>
     btn.addEventListener('click', async () => {
       const trig = btn.dataset.trig, val = btn.dataset.stepVal, slot = btn.dataset.stepSlot || '';
