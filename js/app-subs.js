@@ -270,7 +270,7 @@ function renderSubsTV() {
   const grid = document.createElement('div');
   grid.className = 'subs-tv';
 
-  // Venstre kolonne: subs + vMix Call-links
+  // Venstre kolonne: KUN subs
   const main = document.createElement('div');
   main.className = 'subs-tv-main';
 
@@ -284,25 +284,27 @@ function renderSubsTV() {
   secSubs.appendChild(subsList);
   main.appendChild(secSubs);
 
-  // vMix Call-links-sektion — 8 faste felter (kun link + kopiér)
-  const secLinks = document.createElement('div');
-  secLinks.className = 'subs-section';
-  secLinks.innerHTML = '<div class="subs-section-title" style="color:#a855f7">vMix Call-links</div>';
-  const linksWrap = document.createElement('div');
-  linksWrap.id = 'vlinksList';
-  vmixCalls.forEach((_, i) => linksWrap.appendChild(buildVmixLinkRow(i)));
-  secLinks.appendChild(linksWrap);
-  main.appendChild(secLinks);
-
   grid.appendChild(main);
 
-  // Højre kolonne: preview-vindue
+  // Højre kolonne: preview-vindue + vMix Call-links UNDER preview
   const prev = document.createElement('div');
   prev.className = 'subs-tv-preview';
   prev.innerHTML =
     '<div class="subs-section-title" style="color:#9aa5b5">Preview</div>'
     + '<div class="subs-tv-preview-box"><iframe id="subPreviewFrame" class="subs-tv-preview-iframe"></iframe></div>'
     + '<div class="subs-tv-preview-hint">Klik en sub for at se den — eller rediger, så opdateres preview mens du skriver.</div>';
+
+  // vMix Call-links-sektion — 8 faste felter (kun link + kopiér), under preview
+  const secLinks = document.createElement('div');
+  secLinks.className = 'subs-section';
+  secLinks.style.marginTop = '24px';
+  secLinks.innerHTML = '<div class="subs-section-title" style="color:#a855f7">vMix Call-links</div>';
+  const linksWrap = document.createElement('div');
+  linksWrap.id = 'vlinksList';
+  vmixCalls.forEach((_, i) => linksWrap.appendChild(buildVmixLinkRow(i)));
+  secLinks.appendChild(linksWrap);
+  prev.appendChild(secLinks);
+
   grid.appendChild(prev);
 
   container.appendChild(grid);

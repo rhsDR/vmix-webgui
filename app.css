@@ -1092,10 +1092,7 @@
       align-items: start;
     }
     .subs-tv-main { min-width: 0; }
-    .subs-tv-preview {
-      position: sticky;
-      top: 16px;
-    }
+    .subs-tv-preview { min-width: 0; }
     .subs-tv-preview-box {
       background: #000;
       border: 1px solid var(--card-border);
