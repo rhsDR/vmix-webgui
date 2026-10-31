@@ -476,6 +476,9 @@
     const _OPcustomFrameMap = {};
     const _OPcustomState    = {};
     const _OPcustomStateTime = {};
+    const _OPcustomCat      = {}; // kategori pr. trigger-key — så info-grafik kan få sin boks/side-slot med
+    const _OPcustomSlot     = {}; // sidste slot pr. trigger-key — guard mod dobbelt-fyring
+    let   _OPactiveInfoSlot = ''; // aktuel info "boks.side" (fra settings.info_live). Fullscreen har KUN settings-stien (ingen broadcast) → eneste vej slot kan nå info-grafikken
 
     const _OP_BUILTIN = [
       { id: 'lower-third', file: 'lower-third.html',    trigKey: 'lt_trigger' },
@@ -541,12 +544,16 @@
       }
       var cIframe = _OPcustomFrameMap[key];
       if (!cIframe) return;
+      var isInfo = _OPcustomCat[key] === 'info';
       var cPrev = _OPcustomState[key];
-      if (cPrev === value) return;
+      // Info: tillad re-trigger når info_live-pladsen har ændret sig (value stadig 'in'), ellers dedup væk.
+      if (cPrev === value && !(isInfo && value === 'in' && _OPcustomSlot[key] !== _OPactiveInfoSlot)) return;
       _OPcustomState[key] = value;
       _OPcustomStateTime[key] = Date.now();
+      if (isInfo && value === 'in') _OPcustomSlot[key] = _OPactiveInfoSlot;
       try {
-        if (value === 'in') cIframe.contentWindow?.runAnimationIN?.();
+        // Info-grafik får sin boks/side ("boks.side") med fra _OPactiveInfoSlot (info_live) — ligesom master.
+        if (value === 'in') cIframe.contentWindow?.runAnimationIN?.(isInfo ? _OPactiveInfoSlot : undefined);
         else if (value === 'out') {
           if (cPrev === 'in') cIframe.contentWindow?.runAnimationOUT?.();
           else if (cIframe.contentWindow?.__forceOut) cIframe.contentWindow.__forceOut();
@@ -613,6 +620,7 @@
           document.body.appendChild(iframe);
           _OPcustomFrameMap[g.trigger_key] = iframe;
           _OPcustomState[g.trigger_key] = 'out';
+          _OPcustomCat[g.trigger_key] = g.kategori || '';
         }));
         // Initial state for lineup_trigger + lineup_data (erstatter pollTrigger)
         if (!IS_PREVIEW && !IS_EMBED) {
@@ -689,6 +697,19 @@
             });
             return;
           }
+          // info_live ("boks.side"): send ny boks/side til den synlige info-grafik. Fullscreen har kun denne
+          // settings-sti (ingen broadcast), så det er ENESTE måde slot når info-grafikken. customSlot-guard.
+          if (rec.key === 'info_live') {
+            var _isSlot = String(rec.value || '');
+            _OPactiveInfoSlot = _isSlot;
+            if (_isSlot) Object.keys(_OPcustomFrameMap).forEach(function (k) {
+              if (_OPcustomCat[k] === 'info' && _OPcustomState[k] === 'in' && _OPcustomSlot[k] !== _isSlot) {
+                _OPcustomSlot[k] = _isSlot;
+                try { var cw = _OPcustomFrameMap[k].contentWindow; if (cw && cw.runAnimationIN) cw.runAnimationIN(_isSlot); } catch (e) {}
+              }
+            });
+            return;
+          }
           _OPdispatch(rec.key, rec.value, rec.slot);
         }
       });
@@ -698,11 +719,15 @@
         if (!keys.length) return;
         try {
           const data = await fetch(
-            `${SB_URL}/rest/v1/settings?key=in.(${keys.join(',')})&projekt_id=eq.${encodeURIComponent(projektId)}&select=key,value`,
+            `${SB_URL}/rest/v1/settings?key=in.(${keys.concat('info_live').join(',')})&projekt_id=eq.${encodeURIComponent(projektId)}&select=key,value`,
             { headers: SB_HDR }
           ).then(r => r.json());
           if (Array.isArray(data)) {
+            // Sæt info_live-pladsen FØR dispatch, så info-grafikken straks viser rigtig boks/side (også efter reload).
+            const _ilRow = data.find(r => r.key === 'info_live');
+            if (_ilRow) _OPactiveInfoSlot = String(_ilRow.value || '');
             for (const row of data) {
+              if (row.key === 'info_live') continue;
               if (_OPcustomState[row.key] !== row.value) _OPdispatch(row.key, row.value);
             }
           }
