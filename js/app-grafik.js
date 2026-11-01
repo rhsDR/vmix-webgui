@@ -24,6 +24,27 @@ async function loadMakroer() {
   } catch { makroer = []; }
 }
 
+// ── AFVIKLING-GRUPPER (KUN TV) ────────────────────────────────────────────────
+// Samlet grafik-rundown i grupper, gemt som JSON-blob i settings.afvikling_grupper (som info_bokse).
+// KUN TV bruger den; kampdag rører den ALDRIG (load no-opper for kampdag → ingen DB-læsning/skrivning).
+let afviklingGrupper = [];
+async function loadAfviklingGrupper() {
+  if (!aktivProjektId) return;
+  if (typeof projektType !== 'undefined' && projektType !== 'tv') return;   // kampdag: rør den aldrig
+  try {
+    const rows = await sbGet('settings?select=value&key=eq.afvikling_grupper&projekt_id=eq.' + aktivProjektId);
+    const v = rows[0] && rows[0].value ? JSON.parse(rows[0].value) : [];
+    afviklingGrupper = Array.isArray(v) ? v : [];
+  } catch { afviklingGrupper = []; }
+  if (!afviklingGrupper.length) afviklingGrupper = [{ id: crypto.randomUUID(), navn: 'Afvikling', sort_order: 0, items: [] }];
+}
+async function saveAfviklingGrupper(okMsg) {
+  try {
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'afvikling_grupper', value: JSON.stringify(afviklingGrupper) });
+    if (okMsg) toast(okMsg, 'ok');
+  } catch { toast('Fejl ved gem', 'err'); }
+}
+
 async function loadAfviklingslister() {
   if (!aktivProjektId) return;
   try {
@@ -1275,7 +1296,9 @@ function renderGrafikTV(container) {
   const origin = window.location.origin;
   const pid = aktivProjektId;
 
-  const CATS = [['sub', 'SUB'], ['info', 'INFO'], ['ticker', 'TICKER'], ['credit', 'CREDIT'], ['custom', 'CUSTOM']];
+  // Type-faner: sub/info/ticker/credit. 'custom' er IKKE længere en egen fane — custom-grafik optræder i
+  // Afvikling-rundownen. MACROER + AFVIKLING er selvstændige faner (tilføjes i subTabsHTML nedenfor).
+  const CATS = [['sub', 'SUB'], ['info', 'INFO'], ['ticker', 'TICKER'], ['credit', 'CREDIT']];
   const CAT_COLOR = { sub: '#4a9eff', info: '#00b894', ticker: '#aa66ff', credit: '#ffcc44', custom: '#888888' };
   const VALID_CAT = new Set(['sub', 'info', 'ticker', 'credit', 'custom']);
 
@@ -1293,23 +1316,25 @@ function renderGrafikTV(container) {
   const allItems = customRows.slice();
   const _isLive = it => (grafiktState[it.trig] || 'out') !== 'out';
 
-  // Sub-faner = ALLE kategorier (vises altid, også tomme) + AFVIKLING.
+  // Faner: AFVIKLING (først) · SUB · INFO · TICKER · CREDIT · MACROER.
   const tabs = CATS.map(([id, label]) => ({ id, label }));
 
   let active = grafiktActiveSubTab;
-  const validIds = new Set([...tabs.map(t => t.id), 'afvikling']);
-  if (!validIds.has(active)) {
-    const firstWithContent = CATS.find(([id]) => catItems(id).length > 0);
-    active = firstWithContent ? firstWithContent[0] : 'sub';
-  }
+  const validIds = new Set([...tabs.map(t => t.id), 'afvikling', 'macroer']);
+  if (!validIds.has(active)) active = 'afvikling';   // Afvikling er standard-fane
   grafiktActiveSubTab = active;
   const isAfv = active === 'afvikling';
+  const isMacroer = active === 'macroer';
 
-  const subTabsHTML = tabs.map(t => {
+  const typeTabsHTML = tabs.map(t => {
     const live = catItems(t.id).some(_isLive);
     const dot = live ? '<span class="grafik-v2-onair"></span>' : '';
     return `<button class="grafik-v2-tab${active === t.id ? ' active' : ''}" data-gtab="${t.id}" style="--tab-color:${CAT_COLOR[t.id]}">${esc(t.label)}${dot}</button>`;
-  }).join('') + `<button class="grafik-v2-tab${isAfv ? ' active' : ''}" data-gtab="afvikling" style="--tab-color:#ff8c00">AFVIKLING</button>`;
+  }).join('');
+  const subTabsHTML =
+    `<button class="grafik-v2-tab${isAfv ? ' active' : ''}" data-gtab="afvikling" style="--tab-color:#ff8c00">AFVIKLING</button>`
+    + typeTabsHTML
+    + `<button class="grafik-v2-tab${isMacroer ? ' active' : ''}" data-gtab="macroer" style="--tab-color:#888888">MACROER</button>`;
 
   // Kampdag-stil række med ＋(makro)/PRW/< OUT/> IN for info/ticker/credit/custom.
   const rowHTML = it => {
@@ -1426,7 +1451,9 @@ function renderGrafikTV(container) {
 
   let contentHTML;
   if (isAfv) {
-    contentHTML = _afvMakroViewHTML();
+    contentHTML = _tvAfviklingHTML();
+  } else if (isMacroer) {
+    contentHTML = _tvMacroerHTML();
   } else if (active === 'sub') {
     contentHTML = _tvSubListHTML();
   } else if (active === 'info') {
@@ -1619,114 +1646,290 @@ function renderGrafikTV(container) {
     btn.addEventListener('click', () => copyText(btn.dataset.copy));
   });
 
-  if (isAfv) _wireAfvMakroView(container);
+  if (isAfv) _wireTvAfvikling(container);
+  if (isMacroer) _wireTvMacroer(container);
 }
 
-function _afvMakroViewHTML() {
-  const hasLister = afviklingslister.length > 0;
-  const listeOpts = hasLister
-    ? afviklingslister.map(l => `<option value="${l.id}"${l.id === aktivListeId ? ' selected' : ''}>${esc(l.navn)}</option>`).join('')
-    : `<option value="">(ingen lister endnu)</option>`;
-  const listeBar = `
-    <div class="afv-liste-bar">
-      <select id="afv-liste-sel" class="afv-liste-sel" title="Vælg afviklingsliste"${hasLister ? '' : ' disabled'}>${listeOpts}</select>
-      <button class="grafik-btn-prw" id="afv-liste-ny" title="Ny liste">＋ Ny liste</button>
-      ${hasLister ? `<button class="grafik-btn-prw" id="afv-liste-omdoeb" title="Omdøb liste">✎ Omdøb</button>
-      <button class="grafik-btn-prw" id="afv-liste-slet" title="Slet liste">🗑 Slet</button>` : ''}
-    </div>`;
-  const listeMakroer = afviklingslister.length
-    ? makroer.filter(m => m.liste_id === aktivListeId || !m.liste_id)
-    : makroer;
-  const makroRows = listeMakroer.length
-    ? listeMakroer.map(m => {
+// Type-label til afvikling-items.
+function _afvTypeLabel(t) {
+  return { sub: 'Sub', info: 'Info', credit: 'Credit', ticker: 'Ticker', custom: 'Grafik' }[t] || 'Grafik';
+}
+const _AFV_CAT_COLOR = { sub: '#4a9eff', info: '#00b894', ticker: '#aa66ff', credit: '#ffcc44', custom: '#888888' };
+
+// Puljen af UDFYLDTE grafik-enheder i projektet (til Afvikling-rundownen): hver udfyldt sub-plads, hver
+// udfyldt info-boks, og hver credit/ticker/custom-grafik. ref = trig+':'+slot (unik id i gruppe-items).
+function _tvAfviklingPool() {
+  const pool = [];
+  (customGrafik || []).filter(g => g.overlay_mode === 'embed').forEach(g => {
+    const cat = ['sub', 'info', 'ticker', 'credit', 'custom'].includes(g.kategori) ? g.kategori : 'custom';
+    const color = g.color || _AFV_CAT_COLOR[cat] || '#888888';
+    if (cat === 'sub') {
+      (typeof subs !== 'undefined' ? subs : []).forEach((s, i) => {
+        if ((s.navn || '').trim() || (s.titel || '').trim())
+          pool.push({ ref: g.trigger_key + ':' + (i + 1), trig: g.trigger_key, slot: String(i + 1), type: 'sub', label: s.navn || ('Sub ' + (i + 1)), color });
+      });
+    } else if (cat === 'info') {
+      (typeof infoBokse !== 'undefined' ? infoBokse : []).forEach((b, i) => {
+        const fyldt = (b.overskrift || '').trim() || (b.indhold || '').trim() || (Array.isArray(b.sider) && b.sider.some(x => (x || '').trim()));
+        if (fyldt)
+          pool.push({ ref: g.trigger_key + ':' + (i + 1), trig: g.trigger_key, slot: String(i + 1), type: 'info', label: b.overskrift || ('Info ' + (i + 1)), color });
+      });
+    } else {
+      pool.push({ ref: g.trigger_key + ':', trig: g.trigger_key, slot: '', type: cat, label: g.label, color });
+    }
+  });
+  return pool;
+}
+
+// Makroer der matcher en grafik-enhed (samme trigger_key, ikke-'out', og enten samme plads eller fri plads).
+function _afvMatchingMakroer(item) {
+  return (makroer || []).filter(m => (m.handlinger || []).some(h =>
+    h.key === item.trig && h.value !== 'out' &&
+    (!item.slot || !h.slot || String(h.slot) === String(item.slot))
+  ));
+}
+
+// MACROER-fanen (var Custom): KUN makroer — opret/rediger/slet/KØR + drag-omorden.
+function _tvMacroerHTML() {
+  const rows = (makroer || []).length
+    ? makroer.map(m => {
         const summary = (m.handlinger || []).map(h => {
           if (h.key === 'wait') return `⏱ ${h.value}s`;
           if (h.key === 'alle_af') return '■ ALLE AF';
           return `${_makroKeyLabel(h.key)}: ${h.value === 'in' ? 'PÅ' : h.value === 'step' ? 'STEP ▶' : 'AF'}`;
         }).join(' · ');
-        // Har makroen et sub-ON-trin, så vis en plads-vælger (som kampdag): forvalgt til makroens
-        // faste plads, eller "→ Vælg ved afvikling" hvis ingen — operatøren bestemmer sub ved KØR.
-        const subOnStep  = (m.handlinger || []).find(h => _isTvSubTrigger(h.key)  && h.value !== 'out');
-        const infoOnStep = (m.handlinger || []).find(h => _isTvInfoTrigger(h.key) && h.value !== 'out');
-        let slotPickerHTML = '';
-        if (subOnStep || infoOnStep) {
-          const opts = subOnStep ? _tvSubSlotOpts(subOnStep.slot || '') : _tvInfoSlotOpts(infoOnStep.slot || '');
-          if ((opts.match(/<option/g) || []).length > 1) {
-            slotPickerHTML = `<select class="afv-slot-sel" style="background:#15243a;border:1px solid #3b82f6;color:#fff;padding:5px 10px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 0 0 2px rgba(59,130,246,0.2);">${opts}</select>`;
-          }
-        }
-        // KØR følger samme grøn=PÅ / rød=AF-kode som de andre knapper: grøn hvis makroen TÆNDER noget
-        // (mindst ét ikke-wait/alle_af-trin med value ≠ 'out'), ellers rød (kun-sluk-makro). Makroens egen
-        // farve vises KUN i den lille venstre-bar (--g-color), ikke på knappen.
         const fireOn = (m.handlinger || []).some(h => h.key !== 'wait' && h.key !== 'alle_af' && h.value !== 'out');
-        return `<div class="grafik-block afv-makro-row" draggable="true" data-makro-id="${m.id}" style="--g-color:${m.farve || '#4a9eff'}">
+        return `<div class="grafik-block mac-row" draggable="true" data-makro-id="${m.id}" style="--g-color:${m.farve || '#4a9eff'}">
           <span class="afv-drag-handle" style="color:#555;font-size:18px;user-select:none;flex-shrink:0;cursor:grab;padding:0 6px 0 2px;">⠿</span>
           <div class="grafik-block-info">
             <span class="grafik-block-name">${esc(m.label.toUpperCase())}</span>
+            ${summary ? `<span class="grafik-block-sub" style="color:#666">${esc(summary)}</span>` : ''}
           </div>
           <div class="grafik-block-actions">
-            <button class="grafik-btn-prw afv-edit-btn" data-id="${m.id}" title="Redigér">✎</button>
-            ${slotPickerHTML}
-            <button class="${fireOn ? 'grafik-btn-in' : 'grafik-btn-out'} afv-fire-btn" data-id="${m.id}">${fireOn ? '&gt; IN' : '&lt; OUT'}</button>
+            <button class="grafik-btn-prw mac-edit-btn" data-id="${m.id}" title="Redigér">✎</button>
+            <button class="grafik-btn-prw mac-del-btn" data-id="${m.id}" title="Slet" style="color:#c44">✕</button>
+            <button class="${fireOn ? 'grafik-btn-in' : 'grafik-btn-out'} mac-fire-btn" data-id="${m.id}">▶ KØR</button>
           </div>
         </div>`;
       }).join('')
-    : `<div class="grafik-v2-empty">Ingen makroer i denne liste — opret en via ＋ Tilføj</div>`;
-  return `${listeBar}
-    <div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 6px;">
-      MAKROER
-      <button class="grafik-btn-prw" style="padding:3px 8px;font-size:10px;border-radius:4px;" onclick="openMakroModal()">＋ Tilføj</button>
+    : `<div class="grafik-v2-empty">Ingen makroer endnu — klik ＋ Tilføj for at bygge en.</div>`;
+  return `
+    <div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 8px;">
+      MACROER
+      <button class="grafik-btn-prw" style="padding:4px 10px;font-size:11px;border-radius:4px;" onclick="openMakroModal()">＋ Tilføj</button>
     </div>
-    <div id="afv-makro-list">${makroRows}</div>`;
+    <div id="mac-list">${rows}</div>`;
 }
 
-function _wireAfvMakroView(container) {
-  const listeSel = container.querySelector('#afv-liste-sel');
-  if (listeSel) listeSel.addEventListener('change', e => _setAktivListe(e.target.value));
-  const nyBtn = container.querySelector('#afv-liste-ny');
-  if (nyBtn) nyBtn.addEventListener('click', createAfviklingsliste);
-  const omdBtn = container.querySelector('#afv-liste-omdoeb');
-  if (omdBtn) omdBtn.addEventListener('click', renameAktivListe);
-  const sletBtn = container.querySelector('#afv-liste-slet');
-  if (sletBtn) sletBtn.addEventListener('click', deleteAktivListe);
-  container.querySelectorAll('.afv-fire-btn').forEach(btn =>
-    btn.addEventListener('click', () => {
-      const row = btn.closest('.afv-makro-row');
-      const slotSel = row?.querySelector('.afv-slot-sel');
-      fireMakro(btn.dataset.id, slotSel?.value || '');
-    }));
-  container.querySelectorAll('.afv-edit-btn').forEach(btn =>
-    btn.addEventListener('click', () => openMakroModal(btn.dataset.id)));
-  const afvList = container.querySelector('#afv-makro-list');
-  if (afvList && !afvList.dataset.dndInit) {
-    afvList.dataset.dndInit = '1';
-    let dragSrc = null, dropped = false;
-    const _clr = () => afvList.querySelectorAll('.drag-over-top,.drag-over-bottom').forEach(r => r.classList.remove('drag-over-top', 'drag-over-bottom'));
-    afvList.addEventListener('dragstart', e => {
-      dragSrc = e.target.closest('.afv-makro-row'); if (!dragSrc) return;
-      dropped = false; e.dataTransfer.effectAllowed = 'move';
-      setTimeout(() => dragSrc.classList.add('dragging'), 0);
+// AFVIKLING-fanen: samlet grafik-rundown i grupper. Hver gruppe = ordnet liste af items; samme grafik kan
+// være i flere grupper. Pr. item vælges køremåde i en dropdown (standard = makro hvis bygget, ellers rå).
+function _tvAfviklingHTML() {
+  const pool = _tvAfviklingPool();
+  const poolByRef = {}; pool.forEach(p => { poolByRef[p.ref] = p; });
+  const grupper = (afviklingGrupper || []).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+  const addOpts = pool.map(p => `<option value="${esc(p.ref)}">${esc(_afvTypeLabel(p.type))} · ${esc(p.label)}${p.slot ? (' (plads ' + p.slot + ')') : ''}</option>`).join('');
+  const grpHTML = grupper.map((grp, gi) => {
+    const items = grp.items || [];
+    const itemRows = items.length ? items.map(it => {
+      const p = poolByRef[it.ref];
+      if (!p) {
+        return `<div class="grafik-block afv-item" data-item-id="${it.id}" style="--g-color:#444">
+          <div class="grafik-block-info"><span class="grafik-block-name muted">(grafik findes ikke længere)</span></div>
+          <div class="grafik-block-actions"><button class="grafik-btn-prw afv-item-del" data-grp="${grp.id}" data-item="${it.id}" title="Fjern" style="color:#c44">✕</button></div>
+        </div>`;
+      }
+      const macros = _afvMatchingMakroer(p);
+      let mode = it.mode || (macros[0] ? macros[0].id : 'raw');
+      if (mode !== 'raw' && !macros.some(m => m.id === mode)) mode = macros[0] ? macros[0].id : 'raw';
+      const modeOpts = macros.map(m => `<option value="${m.id}"${mode === m.id ? ' selected' : ''}>Makro: ${esc(m.label)}</option>`).join('')
+        + `<option value="raw"${mode === 'raw' ? ' selected' : ''}>Rå ${esc(_afvTypeLabel(p.type))}</option>`;
+      return `<div class="grafik-block afv-item" draggable="true" data-item-id="${it.id}" style="--g-color:${p.color}">
+        <span class="afv-drag-handle afv-item-handle" style="color:#555;font-size:18px;user-select:none;flex-shrink:0;cursor:grab;padding:0 4px;">⠿</span>
+        <div class="grafik-block-info">
+          <span class="grafik-block-name">${esc(p.label)}</span>
+          <span class="grafik-block-sub" style="color:#777">${esc(_afvTypeLabel(p.type))}${p.slot ? (' · plads ' + p.slot) : ''}</span>
+        </div>
+        <div class="grafik-block-actions">
+          <select class="afv-item-mode" data-grp="${grp.id}" data-item="${it.id}" title="Køremåde">${modeOpts}</select>
+          <button class="grafik-btn-out afv-item-out" data-grp="${grp.id}" data-item="${it.id}" title="Sluk grafikken">&lt; OUT</button>
+          <button class="grafik-btn-in afv-item-fire" data-grp="${grp.id}" data-item="${it.id}" title="Kør valgt måde">&gt; KØR</button>
+          <button class="grafik-btn-prw afv-item-del" data-grp="${grp.id}" data-item="${it.id}" title="Fjern fra gruppe" style="color:#c44">✕</button>
+        </div>
+      </div>`;
+    }).join('') : `<div class="grafik-v2-empty" style="margin:4px 0;">Tom gruppe — tilføj grafik nedenfor.</div>`;
+    return `<div class="afv-grp" data-grp-id="${grp.id}">
+      <div class="afv-grp-head">
+        <span class="afv-grp-navn">${esc(grp.navn)}</span>
+        <div class="afv-grp-tools">
+          <button class="grafik-btn-prw afv-grp-up" data-grp="${grp.id}" title="Flyt gruppe op"${gi === 0 ? ' disabled' : ''}>↑</button>
+          <button class="grafik-btn-prw afv-grp-down" data-grp="${grp.id}" title="Flyt gruppe ned"${gi === grupper.length - 1 ? ' disabled' : ''}>↓</button>
+          <button class="grafik-btn-prw afv-grp-rename" data-grp="${grp.id}" title="Omdøb gruppe">✎</button>
+          <button class="grafik-btn-prw afv-grp-del" data-grp="${grp.id}" title="Slet gruppe" style="color:#c44">🗑</button>
+        </div>
+      </div>
+      <div class="afv-item-list" data-grp="${grp.id}">${itemRows}</div>
+      <div class="afv-grp-add">
+        <select class="afv-add-sel" data-grp="${grp.id}"${addOpts ? '' : ' disabled'}>${addOpts || '<option value="">(ingen udfyldte grafikker)</option>'}</select>
+        <button class="grafik-btn-prw afv-add-btn" data-grp="${grp.id}"${addOpts ? '' : ' disabled'}>＋ Tilføj grafik</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `
+    <div class="grafik-section-head" style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 8px;">
+      AFVIKLING
+      <button class="grafik-btn-prw afv-grp-ny" style="padding:4px 10px;font-size:11px;border-radius:4px;">＋ Ny gruppe</button>
+    </div>
+    ${grpHTML || '<div class="grafik-v2-empty">Ingen grupper endnu.</div>'}`;
+}
+
+// Generisk drag-omorden for en liste (genbruges af Macroer + Afvikling-items). onReorder(rows) kaldes med
+// rækkerne i ny DOM-rækkefølge når et drop er sket. parentElement-tjek holder nestede lister adskilt.
+function _wireDragReorder(listEl, rowSel, onReorder) {
+  if (!listEl || listEl.dataset.dndInit) return;
+  listEl.dataset.dndInit = '1';
+  let dragSrc = null, dropped = false;
+  const _clr = () => listEl.querySelectorAll('.drag-over-top,.drag-over-bottom').forEach(r => r.classList.remove('drag-over-top', 'drag-over-bottom'));
+  listEl.addEventListener('dragstart', e => {
+    dragSrc = e.target.closest(rowSel);
+    if (!dragSrc || dragSrc.parentElement !== listEl) { dragSrc = null; return; }
+    dropped = false; e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => dragSrc && dragSrc.classList.add('dragging'), 0);
+  });
+  listEl.addEventListener('dragover', e => {
+    if (!dragSrc) return;
+    e.preventDefault(); const row = e.target.closest(rowSel); _clr();
+    if (row && row !== dragSrc && row.parentElement === listEl) { const rect = row.getBoundingClientRect(); row.classList.add(e.clientY < rect.top + rect.height / 2 ? 'drag-over-top' : 'drag-over-bottom'); }
+  });
+  listEl.addEventListener('dragleave', e => { if (!listEl.contains(e.relatedTarget)) _clr(); });
+  listEl.addEventListener('drop', e => {
+    if (!dragSrc) return;
+    e.preventDefault(); const target = e.target.closest(rowSel); _clr();
+    if (!target || target === dragSrc || target.parentElement !== listEl) return;
+    const rect = target.getBoundingClientRect();
+    listEl.insertBefore(dragSrc, e.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
+    dropped = true;
+  });
+  listEl.addEventListener('dragend', async () => {
+    dragSrc && dragSrc.classList.remove('dragging'); _clr(); dragSrc = null;
+    if (!dropped) return; dropped = false;
+    try { await onReorder([...listEl.querySelectorAll(rowSel)]); } catch { toast('Fejl ved gem af rækkefølge', 'err'); }
+  });
+}
+
+function _wireTvMacroer(container) {
+  container.querySelectorAll('.mac-fire-btn').forEach(btn => btn.addEventListener('click', () => fireMakro(btn.dataset.id)));
+  container.querySelectorAll('.mac-edit-btn').forEach(btn => btn.addEventListener('click', () => openMakroModal(btn.dataset.id)));
+  container.querySelectorAll('.mac-del-btn').forEach(btn => btn.addEventListener('click', () => deleteMakro(btn.dataset.id)));
+  _wireDragReorder(container.querySelector('#mac-list'), '.mac-row', async rows => {
+    await Promise.all(rows.map((row, idx) => sbPatch('projekt_makroer?id=eq.' + row.dataset.makroId, { sort_order: idx })));
+    await loadMakroer();
+  });
+}
+
+// ── Afvikling-gruppe-CRUD (TV) ──
+function _afvFindGrp(id) { return (afviklingGrupper || []).find(g => g.id === id); }
+async function _afvAddGruppe() {
+  const navn = (prompt('Navn på ny gruppe:', 'Gruppe ' + ((afviklingGrupper || []).length + 1)) || '').trim();
+  if (!navn) return;
+  const sort_order = afviklingGrupper.length ? Math.max(...afviklingGrupper.map(g => g.sort_order || 0)) + 1 : 0;
+  afviklingGrupper.push({ id: crypto.randomUUID(), navn, sort_order, items: [] });
+  await saveAfviklingGrupper('Gruppe oprettet'); renderGrafik();
+}
+async function _afvRenameGrp(id) {
+  const g = _afvFindGrp(id); if (!g) return;
+  const navn = (prompt('Nyt navn:', g.navn) || '').trim();
+  if (!navn || navn === g.navn) return;
+  g.navn = navn; await saveAfviklingGrupper('Omdøbt'); renderGrafik();
+}
+async function _afvDelGrp(id) {
+  const g = _afvFindGrp(id); if (!g) return;
+  if (!confirm(`Slet gruppen "${g.navn}"?`)) return;
+  afviklingGrupper = afviklingGrupper.filter(x => x.id !== id);
+  await saveAfviklingGrupper('Gruppe slettet'); renderGrafik();
+}
+async function _afvMoveGrp(id, dir) {
+  const arr = (afviklingGrupper || []).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+  const idx = arr.findIndex(g => g.id === id); if (idx < 0) return;
+  const swap = idx + dir; if (swap < 0 || swap >= arr.length) return;
+  [arr[idx], arr[swap]] = [arr[swap], arr[idx]];
+  arr.forEach((g, i) => { g.sort_order = i; });
+  await saveAfviklingGrupper(); renderGrafik();
+}
+async function _afvAddItem(grpId, ref) {
+  const g = _afvFindGrp(grpId); if (!g || !ref) return;
+  g.items = g.items || [];
+  g.items.push({ id: crypto.randomUUID(), ref, mode: '' });   // mode '' = auto (makro hvis findes, ellers rå)
+  await saveAfviklingGrupper('Tilføjet'); renderGrafik();
+}
+async function _afvDelItem(grpId, itemId) {
+  const g = _afvFindGrp(grpId); if (!g) return;
+  g.items = (g.items || []).filter(it => it.id !== itemId);
+  await saveAfviklingGrupper(); renderGrafik();
+}
+async function _afvSetItemMode(grpId, itemId, mode) {
+  const g = _afvFindGrp(grpId); if (!g) return;
+  const it = (g.items || []).find(x => x.id === itemId); if (!it) return;
+  it.mode = mode; await saveAfviklingGrupper();   // ingen re-render → bevar dropdown-fokus
+}
+
+// Fyr en grafik-enhed RÅT (type-passende), parallelt til de eksisterende afviklings-handlere.
+async function _fireRaw(p, out) {
+  const trig = p.trig, slot = p.slot || '';
+  try {
+    if (p.type === 'sub') {
+      if (!out && slot) { activeSubSlot = parseInt(slot) || 0; grafiktState['active_sub'] = String(slot); await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'active_sub', value: String(slot) }); }
+      grafiktState[trig] = out ? 'out' : 'in';
+      await sbUpsert('settings', { projekt_id: aktivProjektId, key: trig, value: out ? 'out' : 'in', slot: (!out && slot) ? slot : undefined });
+    } else if (p.type === 'info') {
+      _setInfoLive(out ? '' : slot);
+      grafiktState[trig] = out ? 'out' : 'in';
+      await sbUpsert('settings', { projekt_id: aktivProjektId, key: trig, value: out ? 'out' : 'in', slot: (!out && slot) ? slot : undefined });
+    } else {
+      grafiktState[trig] = out ? 'out' : 'in';
+      await sbUpsert('settings', { projekt_id: aktivProjektId, key: trig, value: out ? 'out' : 'in' });
+    }
+  } catch { toast('Fejl ved afvikling', 'err'); }
+}
+
+function _wireTvAfvikling(container) {
+  const nyBtn = container.querySelector('.afv-grp-ny');
+  if (nyBtn) nyBtn.addEventListener('click', _afvAddGruppe);
+  container.querySelectorAll('.afv-grp-rename').forEach(b => b.addEventListener('click', () => _afvRenameGrp(b.dataset.grp)));
+  container.querySelectorAll('.afv-grp-del').forEach(b => b.addEventListener('click', () => _afvDelGrp(b.dataset.grp)));
+  container.querySelectorAll('.afv-grp-up').forEach(b => b.addEventListener('click', () => { if (!b.disabled) _afvMoveGrp(b.dataset.grp, -1); }));
+  container.querySelectorAll('.afv-grp-down').forEach(b => b.addEventListener('click', () => { if (!b.disabled) _afvMoveGrp(b.dataset.grp, 1); }));
+  container.querySelectorAll('.afv-add-btn').forEach(b => b.addEventListener('click', () => {
+    const sel = container.querySelector('.afv-add-sel[data-grp="' + b.dataset.grp + '"]');
+    if (sel && sel.value) _afvAddItem(b.dataset.grp, sel.value);
+  }));
+  container.querySelectorAll('.afv-item-del').forEach(b => b.addEventListener('click', () => _afvDelItem(b.dataset.grp, b.dataset.item)));
+  container.querySelectorAll('.afv-item-mode').forEach(sel => sel.addEventListener('change', () => _afvSetItemMode(sel.dataset.grp, sel.dataset.item, sel.value)));
+  const _poolByRef = {}; _tvAfviklingPool().forEach(p => { _poolByRef[p.ref] = p; });
+  const _resolveItem = (grpId, itemId) => {
+    const g = _afvFindGrp(grpId); const it = g && (g.items || []).find(x => x.id === itemId); if (!it) return null;
+    const p = _poolByRef[it.ref]; if (!p) return null;
+    const macros = _afvMatchingMakroer(p);
+    let mode = it.mode || (macros[0] ? macros[0].id : 'raw');
+    if (mode !== 'raw' && !macros.some(m => m.id === mode)) mode = macros[0] ? macros[0].id : 'raw';
+    return { p, mode };
+  };
+  container.querySelectorAll('.afv-item-fire').forEach(b => b.addEventListener('click', () => {
+    const r = _resolveItem(b.dataset.grp, b.dataset.item); if (!r) return;
+    if (r.mode === 'raw') _fireRaw(r.p, false); else fireMakro(r.mode, r.p.slot || '');
+  }));
+  container.querySelectorAll('.afv-item-out').forEach(b => b.addEventListener('click', () => {
+    const r = _resolveItem(b.dataset.grp, b.dataset.item); if (!r) return;
+    _fireRaw(r.p, true);
+  }));
+  // Item-drag pr. gruppe (hver gruppes liste er sin egen reorder-kontekst)
+  container.querySelectorAll('.afv-item-list').forEach(listEl => {
+    _wireDragReorder(listEl, '.afv-item', async rows => {
+      const g = _afvFindGrp(listEl.dataset.grp); if (!g) return;
+      const byId = {}; (g.items || []).forEach(it => { byId[it.id] = it; });
+      g.items = rows.map(r => byId[r.dataset.itemId]).filter(Boolean);
+      await saveAfviklingGrupper();
     });
-    afvList.addEventListener('dragover', e => {
-      e.preventDefault(); const row = e.target.closest('.afv-makro-row'); _clr();
-      if (row && row !== dragSrc) { const rect = row.getBoundingClientRect(); row.classList.add(e.clientY < rect.top + rect.height / 2 ? 'drag-over-top' : 'drag-over-bottom'); }
-    });
-    afvList.addEventListener('dragleave', e => { if (!afvList.contains(e.relatedTarget)) _clr(); });
-    afvList.addEventListener('drop', e => {
-      e.preventDefault(); const target = e.target.closest('.afv-makro-row'); _clr();
-      if (!target || !dragSrc || target === dragSrc) return;
-      const rect = target.getBoundingClientRect();
-      afvList.insertBefore(dragSrc, e.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
-      dropped = true;
-    });
-    afvList.addEventListener('dragend', async () => {
-      dragSrc?.classList.remove('dragging'); _clr(); dragSrc = null;
-      if (!dropped) return; dropped = false;
-      const rows = [...afvList.querySelectorAll('.afv-makro-row')];
-      try { await Promise.all(rows.map((row, idx) => sbPatch('projekt_makroer?id=eq.' + row.dataset.makroId, { sort_order: idx }))); await loadMakroer(); }
-      catch { toast('Fejl ved gem af rækkefølge', 'err'); }
-    });
-  }
+  });
 }
 
 function renderEgneGrafik(leftPanel) {

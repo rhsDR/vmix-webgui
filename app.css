@@ -1503,6 +1503,33 @@
     .afv-makro-row.dragging { opacity: 0.35; cursor: grabbing; }
     .afv-makro-row.drag-over-top    { border-top: 2px solid var(--orange) !important; }
     .afv-makro-row.drag-over-bottom { border-bottom: 2px solid var(--orange) !important; }
+    /* GRAFIK → Afvikling-rundown (grupper + items) + Macroer-liste. Kun TV; egne klasser. */
+    .mac-row.dragging, .afv-item.dragging { opacity: 0.35; cursor: grabbing; }
+    .mac-row.drag-over-top,    .afv-item.drag-over-top    { border-top: 2px solid var(--orange) !important; }
+    .mac-row.drag-over-bottom, .afv-item.drag-over-bottom { border-bottom: 2px solid var(--orange) !important; }
+    .afv-grp {
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #171717;
+      margin-bottom: 14px;
+      padding: 10px 12px 12px;
+    }
+    .afv-grp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .afv-grp-navn { font-size: 15px; font-weight: 700; color: #e6e6e6; letter-spacing: 0.3px; }
+    .afv-grp-tools { display: flex; gap: 5px; align-items: center; }
+    .afv-item-list { display: flex; flex-direction: column; gap: 8px; min-height: 8px; }
+    .afv-item { cursor: default; }
+    .afv-item-handle { cursor: grab; }
+    .afv-item-handle:active { cursor: grabbing; }
+    .afv-item-mode {
+      background: #15243a; border: 1px solid #3b82f6; color: #fff;
+      padding: 5px 8px; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; max-width: 200px;
+    }
+    .afv-grp-add { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+    .afv-add-sel {
+      flex: 1; min-width: 0; background: #202020; border: 1px solid #3a3a3a; color: #ddd;
+      padding: 6px 9px; border-radius: 5px; font-size: 13px;
+    }
     .lag-handle {
       color: #3a3a3a;
       font-size: 16px;
