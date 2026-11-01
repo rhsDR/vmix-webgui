@@ -2195,6 +2195,10 @@ function openMakroModal(id, prefillHandlinger) {
     listeSel.innerHTML = afviklingslister.map(l => `<option value="${l.id}">${esc(l.navn)}</option>`).join('');
     listeSel.value = (m && m.liste_id) ? m.liste_id : (aktivListeId || (afviklingslister[0]?.id || ''));
   }
+  // TV bruger ikke navngivne lister (afvikling sker i grupper) → skjul LISTE-rækken. Kampdag uændret:
+  // select'en udfyldes stadig, så saveMakro gemmer et gyldigt liste_id (default-listen) i begge tilfælde.
+  const listeRow = document.getElementById('makro-liste-row');
+  if (listeRow) listeRow.style.display = (typeof projektType !== 'undefined' && projektType === 'tv') ? 'none' : '';
   const list = document.getElementById('makro-handlinger-list');
   list.innerHTML = '';
   const src = m?.handlinger?.length ? m.handlinger
