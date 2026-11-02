@@ -126,7 +126,7 @@
   <h2>Fanerne (TV-projekt)</h2>
   <table>
     <tr><th>Fane</th><th>Hvad den gør</th></tr>
-    <tr><td><b>SUBS</b></td><td>Opret/redigér navneskilte (navn + titel) + vMix Calls. Vælg venstre/højre side pr. sub.</td></tr>
+    <tr><td><b>SUBS</b></td><td>Opret/redigér subs (navn + titel, venstre/højre side) med et live-preview ved siden af + gem vMix Call-links.</td></tr>
     <tr><td><b>INFO</b></td><td>Skriv info-bokse (overskrift + indhold, maks 3 linjer).</td></tr>
     <tr><td><b>TICKER</b></td><td>Rulletekst i bunden.</td></tr>
     <tr><td><b>CREDITS</b></td><td>Rulletekst til sluttekster (roller + navne).</td></tr>
@@ -150,7 +150,7 @@
 
 <section id="subs">
   <h2>Subs (navneskilte)</h2>
-  <p>En sub er et navneskilt med <b>navn</b> + <b>titel</b>. Et projekt har <b>15 sub-pladser</b> (venstre kolonne) + <b>8 vMix Call-pladser</b> (højre kolonne).</p>
+  <p>En sub er et navneskilt med <b>navn</b> + <b>titel</b>. Et projekt har <b>15 sub-pladser</b>.</p>
   <ol>
     <li>Gå i <b>SUBS</b>-fanen → klik blyanten på en række → skriv navn + titel.</li>
     <li>Vælg <span class="pill">VENSTRE</span> eller <span class="pill">HØJRE</span> side — grafikken spejlvendes til den side, men teksten forbliver læsbar.</li>
@@ -158,8 +158,11 @@
   </ol>
   <div class="box tip">Side-valget (venstre/højre) opdateres også live hos andre operatører og på overlayet — ingen genindlæsning nødvendig.</div>
 
-  <h3>vMix Calls som subs</h3>
-  <p>De 8 vMix Call-rækker i højre kolonne er en særlig slags sub, typisk til <b>fjern-gæster / opkald</b>. De har ud over navn + titel også et <b>link</b>-felt. De vises som <b>V1–V8</b> i afviklingen og kendes på den <span style="color:#c084fc">magenta</span> kant (almindelige subs er <span style="color:#93c5fd">blå</span>).</p>
+  <h3>Preview-vindue</h3>
+  <p>Til højre i SUBS-fanen er et <b>preview-vindue</b> der viser din sub i projektets sub-grafik. <b>Klik på en sub</b> for at se den — og mens du <b>redigerer</b> en sub, opdateres preview'et <b>live mens du skriver</b>. Preview'et er kun til dig: det rører aldrig det der er på skærmen (on air).</p>
+
+  <h3>vMix Call-links</h3>
+  <p>Under preview'et er der <b>8 felter til vMix Call-links</b>. Her indsætter du de rå gæste-URL'er fra vMix (til fjern-gæster/opkald) og kopierer dem med ⎘-knappen. De er <b>kun link-opbevaring</b> — ikke subs, og de optræder ikke i afviklingen.</p>
 
   <h3>Den aktive sub</h3>
   <p>Systemet husker <b>hvilken sub der er sat på senest</b> ("den aktive sub"). Det er den, en makro eller en Companion-knap uden fast plads-nummer rammer. Sætter du en ny sub på mens en anden er på skærmen, <b>skifter den direkte</b> til den nye uden at tage grafikken af og på.</p>
@@ -168,7 +171,7 @@
   <p>Gå i <b>GRAFIK → SUB</b>. Hver sub har knapper: <span class="btn in">&gt; IN</span> sætter på, <span class="btn out">&lt; OUT</span> tager af.</p>
 
   <h3>Ryd alt</h3>
-  <p>Knappen <b>Ryd alt</b> øverst i SUBS-fanen nulstiller <b>alle</b> subs <b>og</b> alle vMix Calls i projektet (navn, titel, link) på én gang.</p>
+  <p>Knappen <b>Ryd alt</b> øverst i SUBS-fanen nulstiller <b>alle</b> subs (navn, titel, side) <b>og</b> alle vMix Call-links i projektet på én gang.</p>
   <div class="box warn"><b>Ryd alt</b> kan ikke fortrydes. Den rører kun det aktuelle projekt — andre projekter påvirkes ikke.</div>
 </section>
 
@@ -187,8 +190,9 @@
   </ul>
   <h3>Flere sider (lang tekst)</h3>
   <p>Er der mere tekst end der kan være på én skærm, så klik <b>＋ Tilføj side</b> inde i boksen (op til 5 sider). Hver side er sit eget 3-linjers felt med egen tegntæller.</p>
-  <p>I <b>GRAFIK → INFO</b> får en boks med flere sider knapperne <span class="btn in">&gt; IN</span> (side 1) + <b>SIDE 2</b>, <b>SIDE 3</b>… Et tryk på en side-knap skifter til den side <b>mens grafikken er på skærmen</b> — overskriften bliver, og indholdet skifter blødt. <b>PRW 2</b> forhåndsviser side 2 i preview-ruden (uden at sende den på).</p>
-  <div class="box tip">Hver side er ét “skærmbillede”. Operatøren styrer selv tempoet: tryk <b>SIDE 2</b> når seeren har læst side 1.</div>
+  <p>I <b>GRAFIK → INFO</b> afvikles en boks med <b>én grøn knap</b> der tager ét trin ad gangen: <span class="btn in">▶ IN</span> → <span class="btn in">▶ Side 2</span> → … → <span class="btn in">▶ Ud</span> → og forfra. Knappen skifter tekst og viser hvad næste tryk gør; overskriften bliver stående og indholdet skifter blødt mens grafikken er på skærmen. <span class="btn out">&lt; OUT</span> slukker når som helst.</p>
+  <p><b>PRW</b> er den samme afvikling, bare i <b>preview-ruden</b>: PRW → PRW 2 → … → PRW UD. Den rører ikke det der er på skærmen.</p>
+  <div class="box tip">Operatøren styrer selv tempoet: tryk den grønne knap videre når seeren har læst siden. Samme ét-tryks-afvikling kan lægges på en <a href="#companion">Companion</a>-knap (<code>value=step</code>) — så walker én fysisk knap siderne.</div>
   <p class="muted">Info vises på det/de overlay(s) hvor info-grafikken er placeret (typisk Master). Vil du have info på flere overlays, skal info-grafikken sættes op på hvert af dem i <a href="#komponist">komponisten</a>.</p>
 </section>
 
@@ -209,26 +213,33 @@
 
 <section id="afvikling">
   <h2>GRAFIK — afvikling</h2>
-  <p>Her sætter du grafik på og af <b>live</b>. Venstre side = kategori-faner (SUB / INFO / TICKER / CREDIT / CUSTOM / AFVIKLING). Højre side = <b>PREVIEW</b> + <b>ON AIR</b>-monitorer.</p>
-  <h3>Knapper pr. række</h3>
+  <p>Her sætter du grafik på og af <b>live</b>. Venstre side = faner: <b>AFVIKLING</b> (først) · SUB · INFO · TICKER · CREDIT · <b>MACROER</b>. Højre side = <b>PREVIEW</b> + <b>ON AIR</b>-monitorer.</p>
+
+  <h3>AFVIKLING — den samlede rundown</h3>
+  <p>AFVIKLING-fanen samler <b>alle udfyldte grafikker i projektet</b> (hver udfyldt sub, info-boks, credit/ticker/egen grafik) i en liste du selv ordner. Du organiserer dem i <b>grupper</b> (fx ét segment pr. gruppe) — og <b>samme grafik kan ligge i flere grupper</b>.</p>
+  <ul>
+    <li><b>＋ Ny gruppe</b> opretter en gruppe; ✎ omdøber, 🗑 sletter, ↑ ↓ flytter gruppen.</li>
+    <li><b>＋ Tilføj grafik</b> (dropdown i gruppen) lægger en udfyldt grafik ind. <b>Træk ⠿</b> for at ændre rækkefølgen.</li>
+    <li>Pr. række en <b>køremåde-dropdown</b>: står som standard på den <b>makro</b> der er bygget til grafikken — findes ingen makro, kører den som <b>Rå</b> (grafikken som dens egen type). <span class="btn in">&gt; KØR</span> fyrer den valgte måde; <span class="btn out">&lt; OUT</span> slukker.</li>
+  </ul>
+
+  <h3>Type-fanerne (SUB / INFO / TICKER / CREDIT)</h3>
+  <p>Vil du styre én type detaljeret, så brug dens fane. Hver række har:</p>
   <table>
     <tr><th>Knap</th><th>Gør</th></tr>
-    <tr><td><b>PRW</b></td><td>Vis grafikken komme <b>ind</b> i preview-ruden (med rækkens rigtige indhold).</td></tr>
-    <tr><td><b>PRW UD</b></td><td>Vis grafikken gå <b>ud</b> i preview-ruden.</td></tr>
-    <tr><td><span class="btn in">&gt; IN</span></td><td>Sæt på skærmen (on air).</td></tr>
+    <tr><td><b>PRW</b> / <b>PRW UD</b></td><td>Vis grafikken komme <b>ind</b> / gå <b>ud</b> i preview-ruden (kun til dig).</td></tr>
+    <tr><td><span class="btn in">&gt; IN</span></td><td>Sæt på skærmen (on air). På INFO er den grønne knap selve ét-tryks-afviklingen (▶ IN → ▶ Side 2 → ▶ Ud).</td></tr>
     <tr><td><span class="btn out">&lt; OUT</span></td><td>Tag af skærmen.</td></tr>
   </table>
   <div class="box tip">PREVIEW er kun til dig — det går ikke på skærmen. Brug det til at tjekke indholdet før du sætter det <span class="btn in">&gt; IN</span>.</div>
-  <p>Farven i venstre kant viser hvad rækken er: <span class="pill" style="color:#93c5fd">blå = sub</span>, magenta = vMix Call.</p>
 </section>
 
 <section id="makroer">
   <h2>Makroer</h2>
-  <p>En makro kører flere trin i rækkefølge med ét klik — fx "sluk info → vent → sæt sub på". De ligger i <b>GRAFIK → AFVIKLING</b> (og under hver kategori).</p>
+  <p>En makro kører flere trin i rækkefølge med ét klik — fx "sluk info → vent → sæt sub på". De oprettes og styres i <b>GRAFIK → MACROER</b>-fanen.</p>
   <ul>
-    <li><span class="btn in">&gt; IN</span> (grøn) = makroen <b>tænder</b> noget · <span class="btn out">&lt; OUT</span> (rød) = makroen kun slukker.</li>
-    <li>Blyant-ikonet = redigér makroen (se og ret trinene, pauser osv.).</li>
-    <li><b>Plads-vælgeren</b> (den blå dropdown, fx "Vælg ved afvikling"): bruger makroen en sub/info, kan du vælge <i>hvilken</i> plads lige når du kører den. Lader du den stå på "Vælg ved afvikling", bruger den den aktive.</li>
+    <li><b>＋ Tilføj</b> opretter en makro; ✎ redigerer (se og ret trinene, pauser osv.); ✕ sletter; <b>▶ KØR</b> kører den; træk ⠿ for rækkefølge.</li>
+    <li>En makro bygget til en bestemt grafik dukker automatisk op som <b>standard-køremåden</b> for den grafik i <b>AFVIKLING</b>-rundownen — du behøver ikke gøre mere end at bygge den.</li>
   </ul>
   <div class="box warn">En makro må ikke have for lange pauser i alt (Companion-timeout). Får du besked om "makro for lang", så del den op i flere knapper.</div>
 </section>
@@ -247,7 +258,7 @@
   <p>Når du opretter/redigerer en egen grafik, vælger du en <b>datakilde</b>. Den bestemmer <b>hvilken slags projekt-data grafikken henter</b> — og dermed <b>hvor grafikken ligger i afviklingen</b> (GRAFIK-fanen).</p>
   <table>
     <tr><th>Valg</th><th>Betyder</th></tr>
-    <tr><td><b>Ingen / Custom</b></td><td>Henter ingen projektdata — selvstændig grafik (fast tekst/billede). Ligger under CUSTOM og tændes/slukkes som én grafik.</td></tr>
+    <tr><td><b>Ingen / Custom</b></td><td>Henter ingen projektdata — selvstændig grafik (fast tekst/billede). Optræder i AFVIKLING-rundownen og tændes/slukkes som én grafik.</td></tr>
     <tr><td><b>Subs</b></td><td>Viser sub-data (navn/titel). Ligger under SUB — hver sub bliver en række du kan sætte på.</td></tr>
     <tr><td><b>Info</b></td><td>Viser info-bokse. Ligger under INFO — hver boks en række.</td></tr>
     <tr><td><b>Ticker</b></td><td>Viser rulletekst. Ligger under TICKER.</td></tr>
@@ -335,7 +346,8 @@
   <h2>Companion (Stream Deck)</h2>
   <p>Du kan styre grafik fra Bitfocus Companion med faste links. Panelet genererer dem (GRAFIK → Companion-sektionen) — kopiér linket ind i en "Generic HTTP"-knap. Både <b>POST</b> og <b>GET</b> virker.</p>
   <ul>
-    <li><b>Sub/info på en bestemt plads:</b> linket har <code>&amp;slot=</code> til sidst — sæt pladsens nummer ind (fx <code>&amp;slot=3</code>).</li>
+    <li><b>Sub på en bestemt plads:</b> linket har <code>&amp;slot=</code> til sidst — sæt pladsens nummer ind (fx <code>&amp;slot=3</code>).</li>
+    <li><b>Info i trin (step):</b> info-links bruger <code>&amp;value=step&amp;slot=…</code> — ét tryk = næste trin (side 1 → side 2 → … → ud → forfra) på den valgte boks. Så walker én fysisk knap hele info-boksen.</li>
     <li><b>Makro:</b> link med <code>&amp;macro=…</code>. Har makroen et sub/info-trin der skal vælge plads, sæt også <code>&amp;slot=</code>-nummeret.</li>
     <li>Companion viser også feedback (fx den aktive sub) — det kan være op til ~5 sek forsinket, hvilket er normalt.</li>
   </ul>
@@ -403,7 +415,7 @@
     <tr><td><b>Overlay</b></td><td>Et grafik-lag i vMix. Der er tre: Master, Secondary, Fullscreen.</td></tr>
     <tr><td><b>Browser-kilde</b></td><td>En kilde i vMix der viser en webside — her ét overlay-vindue fra systemet.</td></tr>
     <tr><td><b>Sub</b></td><td>Navneskilt (navn + titel). 15 pr. projekt.</td></tr>
-    <tr><td><b>vMix Call</b></td><td>Særlig sub (med link-felt) til fjern-gæster. 8 pr. projekt, vist som V1–V8.</td></tr>
+    <tr><td><b>vMix Call-link</b></td><td>Rå gæste-URL fra vMix til fjern-gæster/opkald. Gemmes + kopieres i SUBS-fanen (8 link-felter) — er ikke en sub.</td></tr>
     <tr><td><b>Aktiv sub</b></td><td>Den sub der er sat på senest — den en makro/Companion-knap uden fast plads rammer.</td></tr>
     <tr><td><b>Info-boks</b></td><td>Overskrift + kort indhold (maks 3 linjer). Flere pr. projekt.</td></tr>
     <tr><td><b>Ticker</b></td><td>Rullende tekst i bunden af skærmen.</td></tr>
