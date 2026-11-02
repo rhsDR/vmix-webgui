@@ -35,7 +35,8 @@ function applyKampRow(row) {
 function applySubRow(row) {
   if (row.projekt_id !== aktivProjektId) return;
   const i = row.slot - 1;
-  if (i < 0 || i > 14) return;
+  if (i < 0) return;                                   // intet øvre loft (TV kan have ubegrænsede pladser)
+  while (subs.length <= i) subs.push(makeSub());       // pad for høje pladser fra en anden operatør (TV)
   if (subs[i].editMode || subs[i].savePending) return;
   subs[i] = { ...subs[i], navn: row.navn || '', titel: row.titel || '', side: row.side || 'venstre' };
   rerenderSub(i);
@@ -77,6 +78,8 @@ sbClient.channel('db-changes')
       p => applyKampRow(p.new))
   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'subs' },
       p => applySubRow(p.new))
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'subs' },
+      p => applySubRow(p.new))   // TV: nye høje sub-pladser (16+) oprettes ved INSERT. Kampdag inserter aldrig subs.
   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'vmix_calls' },
       p => applyVmixCallRow(p.new))
   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickers' },
@@ -109,6 +112,13 @@ sbClient.channel('db-changes')
           if (p.new.projekt_id === aktivProjektId) {
             grafiktState['_info_slot'] = p.new.value || '';
             if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
+          }
+        } else if (p.new.key === 'tv_subs') {
+          // Dynamiske subs (KUN TV): synk aktive sub-pladser mellem operatører. Kampdag skriver den aldrig.
+          if (p.new.projekt_id === aktivProjektId && typeof projektType !== 'undefined' && projektType === 'tv') {
+            try { const v = JSON.parse(p.new.value || '[]'); if (Array.isArray(v)) tvSubs = v.filter(n => Number.isInteger(n) && n >= 1); } catch {}
+            if (typeof _ensureSubsPadded === 'function') _ensureSubsPadded();
+            if (document.getElementById('tab-subs')?.classList.contains('active') && typeof renderSubs === 'function') renderSubs();
           }
         } else if (p.new.key === 'afvikling_grupper') {
           // GRAFIK → Afvikling-grupper (KUN TV). Synk på tværs af operatører. Kampdag skriver den aldrig.

@@ -83,8 +83,8 @@ export default async function handler(req, res) {
     // Aktiv sub
     const activeSubRow = settingsRaw.find(r => r.key === 'active_sub');
     const activeSubSlot = activeSubRow ? parseInt(activeSubRow.value) || 0 : 0;
-    // Plads > 15 = en vMix Call brugt som sub (fortsættelse af sub-pladserne, VMC-k → plads 15+k).
-    const activeSubData = activeSubSlot > 15
+    // KUN kampdag bruger plads >15 som en vMix Call. I TV er plads >15 en almindelig sub → slå altid op i subs.
+    const activeSubData = (projekt.type === 'kampdag' && activeSubSlot > 15)
       ? vmixCallsRaw.find(r => r.slot === activeSubSlot - 15)
       : subsRaw.find(r => r.slot === activeSubSlot);
 
@@ -95,10 +95,9 @@ export default async function handler(req, res) {
       subs[`S${r.slot}_t`] = r.titel || '';
       subs[`S${r.slot}_side`] = r.side || 'venstre';
     });
-    // vMix Calls kan OGSÅ bruges som subs i TV: eksponér dem som FORTSÆTTELSE af sub-pladserne
-    // (VMC1 → S16 … VMC8 → S23), så den samme sub-grafik kan vise dem via S{n}-felterne.
-    // VMC{n}-felterne nedenfor bevares uændret (kampdag/vmixcall-link bruger dem stadig).
-    vmixCallsRaw.forEach(r => {
+    // KUN kampdag: vMix Calls eksponeres OGSÅ som subs (VMC1 → S16 … VMC8 → S23). I TV er plads 16+ rigtige
+    // subs → gaten undgår at tomme vMix-Call-felter overskriver TV-subs 16-23. VMC{n}-felterne bevares nedenfor.
+    if (projekt.type === 'kampdag') vmixCallsRaw.forEach(r => {
       const combo = 15 + r.slot;
       subs[`S${combo}_n`] = r.navn  || '';
       subs[`S${combo}_t`] = r.titel || '';

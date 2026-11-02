@@ -217,7 +217,9 @@ async function saveSubRow(i) {
   s.savePending = true;
   rerenderSub(i);
   try {
-    await sbPatch('subs?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { navn: s.navn, titel: s.titel, side: s.side });
+    // UPSERT (ikke PATCH): nye TV-pladser (16+) har ingen række før første gem → upsert opretter den.
+    // Kampdag-identisk: pladser 1-15 findes → upsert = update. (Kræver unique-constraint på subs(projekt_id,slot).)
+    await sbUpsert('subs', { projekt_id: aktivProjektId, slot: i + 1, navn: s.navn, titel: s.titel, side: s.side });
     toast('Gemt ✓', 'ok');
     flashSaved(document.getElementById('sub-' + i), 'blue');
   } catch { toast('Fejl ved gem', 'err'); }
@@ -255,6 +257,49 @@ async function saveVmixCallRow(i) {
 // Kun subs (ingen vMix-Calls-som-subs) + live preview-vindue + 8 rå vMix Call-link-felter.
 // Alt herunder er additivt og kaldes ALDRIG i kampdag.
 // ───────────────────────────────────────────────────────────────────────────
+
+// Dynamiske subs (TV): tvSubs = liste af AKTIVE plads-numre (ubegrænset). Gemt i settings.tv_subs.
+// Pladserne er slot-STABILE: slet = hul, tilføj = laveste frie nummer (genbrug). Kampdag rører den ALDRIG.
+// Default [1..15] så SUBS-fanen ikke flasher tom før loadTvSubs henter den rigtige liste.
+let tvSubs = Array.from({ length: 15 }, (_, i) => i + 1);
+function _ensureSubsPadded() {
+  const maxSlot = Math.max(15, ...(tvSubs.length ? tvSubs : [15]));
+  while (subs.length < maxSlot) subs.push(makeSub());
+}
+async function loadTvSubs() {
+  if (typeof projektType === 'undefined' || projektType !== 'tv') return;   // KUN TV
+  try {
+    const rows = await sbGet('settings?select=value&key=eq.tv_subs&projekt_id=eq.' + aktivProjektId);
+    const v = rows[0] && rows[0].value ? JSON.parse(rows[0].value) : null;
+    tvSubs = (Array.isArray(v) && v.length) ? v.filter(n => Number.isInteger(n) && n >= 1) : Array.from({ length: 15 }, (_, i) => i + 1);
+  } catch { tvSubs = Array.from({ length: 15 }, (_, i) => i + 1); }
+  _ensureSubsPadded();
+}
+async function saveTvSubs(okMsg) {
+  try {
+    await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'tv_subs', value: JSON.stringify(tvSubs) });
+    if (okMsg) toast(okMsg, 'ok');
+  } catch { toast('Fejl ved gem', 'err'); }
+}
+async function _tvAddSub() {
+  let slot = 1; const used = new Set(tvSubs);     // laveste frie nummer (genbrug huller), intet loft
+  while (used.has(slot)) slot++;
+  tvSubs.push(slot);
+  _ensureSubsPadded();
+  await saveTvSubs();
+  renderSubsTV();
+}
+async function _tvDeleteSub(slot) {
+  const s = subs[slot - 1];
+  const hasData = s && ((s.navn || '').trim() || (s.titel || '').trim());
+  if (hasData && !confirm('Slet sub ' + slot + '?')) return;
+  tvSubs = tvSubs.filter(n => n !== slot);
+  if (s) { s.navn = ''; s.titel = ''; s.side = 'venstre'; s.editMode = false; if (s.buf) { s.buf.navn = ''; s.buf.titel = ''; } }
+  await saveTvSubs();
+  try { await sbDelete('subs?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + slot); } catch {}
+  renderSubsTV();
+}
+
 function renderSubsTV() {
   const container = document.getElementById('subsList');
   if (!container) return;
@@ -280,8 +325,27 @@ function renderSubsTV() {
   secSubs.innerHTML = '<div class="subs-section-title" style="color:var(--blue)">Subs</div>';
   const subsList = document.createElement('div');
   subsList.id = 'subsTvList';
-  subs.forEach((_, i) => subsList.appendChild(buildSubRow(i)));
+  // Vis KUN de aktive pladser (tvSubs), sorteret. Hver buildSubRow(slot-1) pakkes i en wrap med en ✕ slet,
+  // så rerenderSub (ved edit) kun udskifter selve rækken — slet-knappen bliver stående. buildSubRow er URØRT.
+  _ensureSubsPadded();
+  (tvSubs || []).slice().sort((a, b) => a - b).forEach(slot => {
+    const wrap = document.createElement('div');
+    wrap.className = 'sub-tv-wrap';
+    wrap.appendChild(buildSubRow(slot - 1));
+    const del = document.createElement('button');
+    del.className = 'icon-btn sub-tv-del';
+    del.title = 'Slet sub ' + slot;
+    del.textContent = '🗑';
+    del.addEventListener('click', () => _tvDeleteSub(slot));
+    wrap.appendChild(del);
+    subsList.appendChild(wrap);
+  });
   secSubs.appendChild(subsList);
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn sub-tv-add';
+  addBtn.textContent = '＋ Tilføj sub';
+  addBtn.addEventListener('click', _tvAddSub);
+  secSubs.appendChild(addBtn);
   main.appendChild(secSubs);
 
   grid.appendChild(main);

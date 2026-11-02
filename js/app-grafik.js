@@ -1485,12 +1485,12 @@ function renderGrafikTV(container) {
     // SUBS — hver plads sætter active_sub + trigger projektets sub-grafik (kræver en sub-grafik).
     const subGfx = catItems('sub')[0];
     if (subGfx) {
-      // Ét PÅ-link PR. SUB-PLADS 1-15 ("Sub N"). ALLE pladser får et FAST link (uanset om de er udfyldt)
-      // så Companion-knapper kan forhåndstildeles — udfyld blot navn/titel i SUBS-fanen bagefter. Navnet
-      // vises i labelen når pladsen er udfyldt. + ét enkelt SUB AF. (vMix Calls er ikke subs i TV længere.)
+      // Ét PÅ-link PR. AKTIV sub-plads ("Sub N") + ét enkelt SUB AF. Dynamisk antal (tvSubs), ubegrænset.
+      // Companion-knapper kan forhåndstildeles — udfyld navn/titel i SUBS-fanen bagefter. (vMix Calls er ikke subs i TV.)
       const _subArr = (typeof subs !== 'undefined' ? subs : []);
+      const _tvSubsList = (typeof tvSubs !== 'undefined' && tvSubs.length) ? tvSubs.slice().sort((a, b) => a - b) : Array.from({ length: 15 }, (_, i) => i + 1);
       html += '<div class="grafik-companion-subhead">SUBS</div>';
-      for (let s = 1; s <= 15; s++) {
+      for (const s of _tvSubsList) {
         const nv = (_subArr[s - 1] && (_subArr[s - 1].navn || '').trim()) ? ': ' + _subArr[s - 1].navn : '';
         html += row('Sub ' + s + nv, T(`key=${encodeURIComponent(subGfx.trig)}&value=in&slot=${s}`), subGfx.color);
       }
@@ -1672,7 +1672,9 @@ function _tvAfviklingPool() {
       (typeof infoBokse !== 'undefined' ? infoBokse : []).forEach((b, i) => {
         const fyldt = (b.overskrift || '').trim() || (b.indhold || '').trim() || (Array.isArray(b.sider) && b.sider.some(x => (x || '').trim()));
         if (fyldt)
-          pool.push({ ref: g.trigger_key + ':' + (i + 1), trig: g.trigger_key, slot: String(i + 1), type: 'info', label: b.overskrift || ('Info ' + (i + 1)), color });
+          // ref = STABIL boks.id (så gruppe-items ikke skrider når info-bokse slettes/omrokeres);
+          // slot = boksens NUVÆRENDE position (til fyring).
+          pool.push({ ref: g.trigger_key + ':' + (b.id || (i + 1)), trig: g.trigger_key, slot: String(i + 1), type: 'info', label: b.overskrift || ('Info ' + (i + 1)), color });
       });
     } else {
       pool.push({ ref: g.trigger_key + ':', trig: g.trigger_key, slot: '', type: cat, label: g.label, color });

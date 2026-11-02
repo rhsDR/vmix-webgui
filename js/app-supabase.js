@@ -151,7 +151,9 @@ async function fetchAll() {
       enetpulseId: r.enetpulse_id || null
     })),
     subs: {
-      subs:      subsRaw.map(r => ({ navn: r.navn || '', titel: r.titel || '', side: r.side || 'venstre' })),
+      // slot tages MED, så subs placeres ved deres plads (ikke række-rækkefølge) ved load — nødvendigt når
+      // TV kan have huller i pladserne. Kampdag (sammenhængende 1-15) er upåvirket: slot-1 === index.
+      subs:      subsRaw.map(r => ({ slot: r.slot, navn: r.navn || '', titel: r.titel || '', side: r.side || 'venstre' })),
       vmixCalls: vmixCallsRaw.map(r => ({ navn: r.navn || '', titel: r.titel || '', link: r.link || '', side: r.side || 'venstre' }))
     },
     tickers: tickersRaw.map(r => ({

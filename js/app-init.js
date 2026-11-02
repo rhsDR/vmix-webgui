@@ -64,6 +64,8 @@ async function init() {
           const infoBtn = document.querySelector('.tab-btn[data-tab="info"]');
           if (infoBtn) infoBtn.style.display = '';
           refreshInfo();
+          // Dynamiske subs: hent de aktive pladser (tv_subs) og gen-render SUBS-fanen.
+          loadTvSubs().then(() => renderSubs());
         }
         if (rows[0].type === 'tv') {
           // Skjul KAMPE, STAMDATA, GRAFIK og DASHBOARD — aktiver SUBS som standard
@@ -96,7 +98,9 @@ async function init() {
     all.kampe.forEach((data, i) => { kampe[i] = { ...kampe[i], ...data }; });
 
     if (all.subs) {
-      all.subs.subs.forEach((data, i)      => { subs[i]      = { ...subs[i],      ...data }; });
+      // Placér hver sub ved sin PLADS (data.slot-1), ikke ved række-rækkefølge — så huller (TV) ikke
+      // forskyder pladserne. Kampdag byte-identisk: sammenhængende 1-15 → slot-1 === den gamle index.
+      all.subs.subs.forEach(data => { const i = (data.slot || 0) - 1; if (i >= 0) subs[i] = { ...(subs[i] || makeSub()), ...data }; });
       all.subs.vmixCalls.forEach((data, i) => { vmixCalls[i] = { ...vmixCalls[i], ...data }; });
     }
 

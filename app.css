@@ -1136,6 +1136,17 @@
       flex-shrink: 0;
     }
     .subs-tv-link-input { flex: 1; min-width: 0; padding: 6px 9px; font-size: 14px; }
+    /* Dynamiske subs (TV): wrap holder buildSubRow + ✕ slet (så rerenderSub ikke fjerner slet-knappen) */
+    .sub-tv-wrap { display: flex; align-items: center; gap: 8px; }
+    .sub-tv-wrap .sub-row { flex: 1; min-width: 0; margin-bottom: 0; }
+    .sub-tv-wrap { margin-bottom: 10px; }
+    .sub-tv-del { font-size: 18px; color: #7a3b3b; flex-shrink: 0; }
+    .sub-tv-del:hover { color: #ef4444; }
+    .sub-tv-add {
+      margin-top: 8px; background: #152b1a; border: 1px solid #2d5a2d; color: #86efac;
+      padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer;
+    }
+    .sub-tv-add:hover { filter: brightness(1.2); }
     @media (max-width: 1024px) {
       .subs-tv { grid-template-columns: 1fr; }
       .subs-tv-preview { position: static; }
