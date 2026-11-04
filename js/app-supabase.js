@@ -84,7 +84,7 @@ async function sbPatch(path, body, returnRep) {
   const res = await fetch(SB_URL + '/rest/v1/' + path, {
     method: 'PATCH', headers: await sbWriteHeaders({ 'Prefer': returnRep ? 'return=representation' : 'return=minimal' }), body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' PATCH ' + path + ' — ' + (await res.text().catch(() => '')));
   if (returnRep) { try { return await res.json(); } catch { return []; } }
 }
 
@@ -111,7 +111,7 @@ async function sbPost(path, body) {
   const res = await fetch(SB_URL + '/rest/v1/' + path, {
     method: 'POST', headers: await sbWriteHeaders({ 'Prefer': 'return=minimal' }), body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' POST ' + path + ' — ' + (await res.text().catch(() => '')));
 }
 
 // ── FETCH ALL DATA ────────────────────────────────────────────

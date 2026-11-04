@@ -228,7 +228,7 @@ async function saveSubRow(i) {
     }
     toast('Gemt ✓', 'ok');
     flashSaved(document.getElementById('sub-' + i), 'blue');
-  } catch { toast('Fejl ved gem', 'err'); }
+  } catch (e) { console.error('[saveSubRow] fejl ved gem af sub plads ' + (i + 1) + ':', e); toast('Fejl ved gem', 'err'); }
   finally { s.savePending = false; }
 }
 
@@ -294,7 +294,8 @@ async function _tvAddSub() {
   _ensureSubsPadded();
   // Opret en tom række for den nye plads, så saveSubRow's PATCH rammer en eksisterende række ved første gem.
   // Add rammer altid en FRI plads (ikke i tvSubs) → den har ingen række → ingen dublet.
-  try { await sbPost('subs', { projekt_id: aktivProjektId, slot: slot, navn: '', titel: '', side: 'venstre' }); } catch {}
+  try { await sbPost('subs', { projekt_id: aktivProjektId, slot: slot, navn: '', titel: '', side: 'venstre' }); }
+  catch (e) { console.error('[_tvAddSub] INSERT fejl for plads ' + slot + ':', e); toast('Kunne ikke oprette sub ' + slot + ' i databasen', 'err'); }
   await saveTvSubs();
   renderSubsTV();
 }
