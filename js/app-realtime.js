@@ -133,7 +133,20 @@ sbClient.channel('db-changes')
             const _ae = document.activeElement;
             const _editingInfo = _ae && document.getElementById('infoList')?.contains(_ae);
             if (!_editingInfo) {
-              try { const v = JSON.parse(p.new.value || '[]'); infoBokse = Array.isArray(v) ? v : []; } catch {}
+              try {
+                const v = JSON.parse(p.new.value || '[]');
+                if (Array.isArray(v)) {
+                  // Bevar transient edit-state pr. id: editMode gemmes ALDRIG i DB (strippes i saveInfoBokse),
+                  // så et ekko af mit EGET gem (fx ved ＋ Tilføj info-boks) ville ellers rive en netop åbnet
+                  // boks ud af edit-mode (flash edit→display) og kaste endnu-ugemte input væk. Behold derfor
+                  // hele den lokale boks hvis den står i edit-mode; ellers tag remote-versionen.
+                  const _local = new Map((Array.isArray(infoBokse) ? infoBokse : []).map(b => [b.id, b]));
+                  infoBokse = v.map(rb => {
+                    const lb = rb && _local.get(rb.id);
+                    return (lb && lb.editMode) ? lb : rb;
+                  });
+                } else infoBokse = [];
+              } catch {}
               if (typeof renderInfo === 'function' && document.getElementById('tab-info')?.classList.contains('active')) renderInfo();
               // Afviklingen (GRAFIK → INFO) skal også opdatere live hos andre brugere — som subs gør —
               // så en tilføjet/ændret info-boks straks optræder i rækken.

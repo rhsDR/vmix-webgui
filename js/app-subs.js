@@ -217,9 +217,10 @@ async function saveSubRow(i) {
   s.savePending = true;
   rerenderSub(i);
   try {
-    // UPSERT (ikke PATCH): nye TV-pladser (16+) har ingen række før første gem → upsert opretter den.
-    // Kampdag-identisk: pladser 1-15 findes → upsert = update. (Kræver unique-constraint på subs(projekt_id,slot).)
-    await sbUpsert('subs', { projekt_id: aktivProjektId, slot: i + 1, navn: s.navn, titel: s.titel, side: s.side });
+    // PATCH (kampdag-identisk): rækken for pladsen findes altid før gem — pladser 1-15 er seedet, og nye
+    // TV-pladser (16+) oprettes som tom række i _tvAddSub (INSERT). Så PATCH rammer altid en eksisterende række.
+    // (sbUpsert kan IKKE bruges: den stripper slot fra body — lavet til settings — så subs ville gemmes uden plads.)
+    await sbPatch('subs?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { navn: s.navn, titel: s.titel, side: s.side });
     toast('Gemt ✓', 'ok');
     flashSaved(document.getElementById('sub-' + i), 'blue');
   } catch { toast('Fejl ved gem', 'err'); }
@@ -286,6 +287,9 @@ async function _tvAddSub() {
   while (used.has(slot)) slot++;
   tvSubs.push(slot);
   _ensureSubsPadded();
+  // Opret en tom række for den nye plads, så saveSubRow's PATCH rammer en eksisterende række ved første gem.
+  // Add rammer altid en FRI plads (ikke i tvSubs) → den har ingen række → ingen dublet.
+  try { await sbPost('subs', { projekt_id: aktivProjektId, slot: slot, navn: '', titel: '', side: 'venstre' }); } catch {}
   await saveTvSubs();
   renderSubsTV();
 }
