@@ -217,10 +217,15 @@ async function saveSubRow(i) {
   s.savePending = true;
   rerenderSub(i);
   try {
-    // PATCH (kampdag-identisk): rækken for pladsen findes altid før gem — pladser 1-15 er seedet, og nye
-    // TV-pladser (16+) oprettes som tom række i _tvAddSub (INSERT). Så PATCH rammer altid en eksisterende række.
+    // PATCH (kampdag-identisk) med INSERT-fallback: pladser 1-15 er seedet og nye TV-pladser oprettes som tom
+    // række i _tvAddSub, så PATCH rammer normalt en eksisterende række. MEN en TV-plads tilføjet FØR INSERT-
+    // fixen har ingen række → PATCH rammer 0 rækker og gemmer intet. Derfor: ser vi 0 opdaterede rækker,
+    // INSERT'er vi pladsen (self-healing). Kampdag (1-15 findes altid) rammer altid >0 → aldrig INSERT.
     // (sbUpsert kan IKKE bruges: den stripper slot fra body — lavet til settings — så subs ville gemmes uden plads.)
-    await sbPatch('subs?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { navn: s.navn, titel: s.titel, side: s.side });
+    const _patched = await sbPatch('subs?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), { navn: s.navn, titel: s.titel, side: s.side }, true);
+    if (Array.isArray(_patched) && _patched.length === 0) {
+      await sbPost('subs', { projekt_id: aktivProjektId, slot: i + 1, navn: s.navn, titel: s.titel, side: s.side });
+    }
     toast('Gemt ✓', 'ok');
     flashSaved(document.getElementById('sub-' + i), 'blue');
   } catch { toast('Fejl ved gem', 'err'); }

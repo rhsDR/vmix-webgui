@@ -126,6 +126,12 @@ sbClient.channel('db-changes')
             try { const v = JSON.parse(p.new.value || '[]'); if (Array.isArray(v)) afviklingGrupper = v; } catch {}
             if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
           }
+        } else if (p.new.key === 'afvikling_pulje_modes') {
+          // Køremåde for IKKE-grupperede afviklings-grafikker (KUN TV). Synk på tværs af operatører.
+          if (p.new.projekt_id === aktivProjektId && typeof projektType !== 'undefined' && projektType === 'tv' && typeof _afvPuljeModes !== 'undefined') {
+            try { const v = JSON.parse(p.new.value || '{}'); if (v && typeof v === 'object' && !Array.isArray(v)) _afvPuljeModes = v; } catch {}
+            if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
+          }
         } else if (p.new.key === 'info_bokse') {
           // INFO synker på tværs af stationer: parse direkte fra event-payload (ingen DB-genhentning).
           // Spring over hvis den lokale operatør er midt i at redigere en info-boks (undgå at rive input væk).

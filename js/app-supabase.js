@@ -78,11 +78,14 @@ async function sbGet(path) {
   return res.json();
 }
 
-async function sbPatch(path, body) {
+async function sbPatch(path, body, returnRep) {
+  // returnRep=true → bed om de opdaterede rækker (return=representation) så kalderen kan se om PATCH ramte
+  // nogen rækker (fx subs-gem der skal INSERT'e hvis pladsen endnu ikke har en række). Default uændret.
   const res = await fetch(SB_URL + '/rest/v1/' + path, {
-    method: 'PATCH', headers: await sbWriteHeaders({ 'Prefer': 'return=minimal' }), body: JSON.stringify(body)
+    method: 'PATCH', headers: await sbWriteHeaders({ 'Prefer': returnRep ? 'return=representation' : 'return=minimal' }), body: JSON.stringify(body)
   });
   if (!res.ok) throw new Error('HTTP ' + res.status);
+  if (returnRep) { try { return await res.json(); } catch { return []; } }
 }
 
 async function sbUpsert(table, body) {
