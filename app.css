@@ -1525,22 +1525,55 @@
       margin-bottom: 14px;
       padding: 10px 12px 12px;
     }
-    .afv-grp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .afv-grp-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .afv-grp-navn { font-size: 15px; font-weight: 700; color: #e6e6e6; letter-spacing: 0.3px; }
-    .afv-grp-tools { display: flex; gap: 5px; align-items: center; }
-    .afv-item-list { display: flex; flex-direction: column; gap: 8px; min-height: 8px; }
-    .afv-item { cursor: default; }
-    .afv-item-handle { cursor: grab; }
-    .afv-item-handle:active { cursor: grabbing; }
+    .afv-grp-count { font-size: 11px; font-weight: 700; color: #999; background: #242424; border: 1px solid #333; border-radius: 10px; padding: 1px 8px; }
+    .afv-grp-tools { display: flex; gap: 5px; align-items: center; margin-left: auto; }
+    .afv-grp-collapse { background: none; border: none; color: #bbb; font-size: 15px; line-height: 1; cursor: pointer; padding: 2px 4px; flex-shrink: 0; }
+    .afv-grp-collapse:hover { color: #fff; }
+    .afv-item-list { display: flex; flex-direction: column; gap: 8px; min-height: 36px; }
+    .afv-drag-handle { color: #555; font-size: 18px; user-select: none; flex-shrink: 0; cursor: grab; padding: 0 4px; }
+    .afv-drag-handle:active { cursor: grabbing; }
+
+    /* Pulje øverst: udfyldte grafikker der ikke er tildelt en gruppe (drag-kilde) */
+    .afv-pulje { border: 1px dashed #3a3a3a; border-radius: 8px; background: #141414; padding: 10px 12px; margin-bottom: 10px; }
+    .afv-pulje-head { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #bbb; margin-bottom: 8px; }
+    .afv-pulje-list { display: flex; flex-wrap: wrap; gap: 8px; min-height: 34px; }
+    .afv-chip {
+      display: inline-flex; align-items: center; gap: 7px; background: #1d1d1d;
+      border: 1px solid #333; border-left: 3px solid var(--g-color, var(--blue));
+      border-radius: 6px; padding: 6px 11px 6px 8px; cursor: grab; max-width: 100%;
+    }
+    .afv-chip:active { cursor: grabbing; }
+    .afv-chip .afv-drag-handle { padding: 0; font-size: 15px; }
+    .afv-chip-name { font-size: 14px; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .afv-chip-type { font-size: 10px; font-weight: 600; letter-spacing: .5px; color: #888; text-transform: uppercase; }
+    .afv-chip.afv-live { border-color: #22c55e; box-shadow: 0 0 0 1px #22c55e55; }
+
+    /* Rundown-item (kompakt kort) */
+    .afv-item {
+      display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+      background: var(--card); border: 1px solid var(--card-border);
+      border-left: 3px solid var(--g-color, var(--blue)); border-radius: 6px; cursor: default;
+    }
+    .afv-item .grafik-block-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+    .afv-item-main { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
+    .afv-item-ctrls { display: none; gap: 6px; flex-shrink: 0; align-items: center; }
+    .afv-item.expanded { flex-wrap: wrap; }
+    .afv-item.expanded .afv-item-ctrls { display: flex; }
+    .afv-item.selected { outline: 2px solid #ff9d2e; outline-offset: -1px; }
+    .afv-item.afv-live { box-shadow: 0 0 0 1px #22c55e; background: #10210f; }
+    .afv-item.afv-live .grafik-block-name { color: #86efac; }
+    .afv-item-missing { opacity: .7; }
+    .afv-grp.collapsed .afv-grp-head { margin-bottom: 0; }
     .afv-item-mode {
       background: #15243a; border: 1px solid #3b82f6; color: #fff;
       padding: 5px 8px; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; max-width: 200px;
     }
-    .afv-grp-add { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
-    .afv-add-sel {
-      flex: 1; min-width: 0; background: #202020; border: 1px solid #3a3a3a; color: #ddd;
-      padding: 6px 9px; border-radius: 5px; font-size: 13px;
-    }
+    .afv-hint { font-size: 11px; color: #777; margin: 0 2px 12px; }
+    /* SortableJS ghost (pladsholder under drag) */
+    .afv-drag-ghost { opacity: .4; }
+    .sortable-chosen { cursor: grabbing; }
     .lag-handle {
       color: #3a3a3a;
       font-size: 16px;
