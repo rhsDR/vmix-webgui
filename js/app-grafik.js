@@ -1778,7 +1778,7 @@ function _tvAfviklingHTML() {
       return `<div class="afv-item afv-item-missing${sel}" data-item-id="${key}" data-ref="${esc(ctx.ref)}" ${dataAttr} style="--g-color:#444">
         <span class="afv-drag-handle">⠿</span>
         <div class="grafik-block-info"><span class="grafik-block-name muted">(grafik findes ikke længere)</span>
-          <span class="grafik-block-sub" style="color:#777">Træk til puljen eller tryk Delete for at fjerne</span></div>
+          <span class="grafik-block-sub afv-item-sub">Træk til puljen eller tryk Delete for at fjerne</span></div>
       </div>`;
     }
     const macros = _afvMatchingMakroer(p);
@@ -1792,7 +1792,7 @@ function _tvAfviklingHTML() {
       <span class="afv-drag-handle">⠿</span>
       <div class="grafik-block-info">
         <span class="grafik-block-name">${esc(p.label)}</span>
-        <span class="grafik-block-sub" style="color:#777">${esc(_afvTypeLabel(p.type))}${p.slot ? (' · plads ' + p.slot) : ''}</span>
+        <span class="grafik-block-sub afv-item-sub">${esc(_afvTypeLabel(p.type))}${p.slot ? (' · plads ' + p.slot) : ''}</span>
       </div>
       <div class="afv-item-ctrls">
         <select class="afv-item-mode" title="Køremåde">${modeOpts}</select>
@@ -1818,14 +1818,12 @@ function _tvAfviklingHTML() {
       ? items.map(it => _rowHTML(poolByRef[it.ref], { key: it.id, ref: it.ref, mode: it.mode, grpId: grp.id, pulje: false })).join('')
       : `<div class="grafik-v2-empty afv-grp-empty" style="margin:4px 0;">Tom gruppe — træk grafik hertil fra puljen.</div>`;
     return `<div class="afv-grp${collapsed ? ' collapsed' : ''}" data-grp-id="${grp.id}">
-      <div class="afv-grp-head" data-grp="${grp.id}">
+      <div class="afv-grp-head" data-grp="${grp.id}" title="Træk for at flytte gruppen op/ned">
         <button class="afv-grp-collapse" data-grp="${grp.id}" title="${collapsed ? 'Fold ud' : 'Fold sammen'}">${collapsed ? '▸' : '▾'}</button>
         <span class="afv-grp-navn">${esc(grp.navn)}</span>
         <span class="afv-grp-count">${items.length}</span>
         <div class="afv-grp-tools">
           ${_afvClip ? `<button class="grafik-btn-prw afv-grp-paste" data-grp="${grp.id}" title="Indsæt kopieret grafik her">📋 Indsæt</button>` : ''}
-          <button class="grafik-btn-prw afv-grp-up" data-grp="${grp.id}" title="Flyt gruppe op"${gi === 0 ? ' disabled' : ''}>↑</button>
-          <button class="grafik-btn-prw afv-grp-down" data-grp="${grp.id}" title="Flyt gruppe ned"${gi === grupper.length - 1 ? ' disabled' : ''}>↓</button>
           <button class="grafik-btn-prw afv-grp-rename" data-grp="${grp.id}" title="Omdøb gruppe">✎</button>
           <button class="grafik-btn-prw afv-grp-del" data-grp="${grp.id}" title="Slet gruppe" style="color:#c44">🗑</button>
         </div>
@@ -1839,12 +1837,12 @@ function _tvAfviklingHTML() {
       AFVIKLING
       <button class="grafik-btn-prw afv-grp-ny" style="padding:4px 10px;font-size:11px;border-radius:4px;">＋ Ny gruppe</button>
     </div>
-    <div class="afv-hint">Alle grafikker er klar: fyr direkte med IN/OUT · dobbeltklik for køremåde + preview · klik for at markere · Ctrl+C kopiér · Ctrl+V indsæt i seneste gruppe · Delete fjerner fra gruppe</div>
+    <div class="afv-hint">Pil ↑/↓ vælger · <b>Numpad +</b> = on air, <b>Numpad −</b> = af · dobbeltklik for køremåde + preview · Ctrl+C/V kopiér/indsæt · Delete fjerner fra gruppe · træk for at flytte</div>
     <div class="afv-pulje">
-      <div class="afv-pulje-head">GRAFIKKER <span style="color:#777;font-weight:400;">· ikke i en gruppe — fyr direkte eller træk ind i en gruppe</span></div>
+      <div class="afv-pulje-head">GRAFIKKER <span class="afv-pulje-sub">· ikke i en gruppe — fyr direkte eller træk ind i en gruppe</span></div>
       <div class="afv-item-list afv-pulje-list" id="afv-pulje">${puljeRows}</div>
     </div>
-    ${grpHTML || '<div class="grafik-v2-empty">Ingen grupper endnu.</div>'}`;
+    <div id="afv-grupper">${grpHTML || '<div class="grafik-v2-empty">Ingen grupper endnu.</div>'}</div>`;
 }
 
 // Generisk drag-omorden for en liste (genbruges af Macroer + Afvikling-items). onReorder(rows) kaldes med
@@ -1912,18 +1910,57 @@ async function _afvDelGrp(id) {
   afviklingGrupper = afviklingGrupper.filter(x => x.id !== id);
   await saveAfviklingGrupper('Gruppe slettet'); renderGrafik();
 }
-async function _afvMoveGrp(id, dir) {
-  const arr = (afviklingGrupper || []).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-  const idx = arr.findIndex(g => g.id === id); if (idx < 0) return;
-  const swap = idx + dir; if (swap < 0 || swap >= arr.length) return;
-  [arr[idx], arr[swap]] = [arr[swap], arr[idx]];
-  arr.forEach((g, i) => { g.sort_order = i; });
+// Gruppe-rækkefølge læst fra DOM efter et gruppe-drag (SortableJS på #afv-grupper).
+async function _afvReorderGroupsFromDom(container) {
+  const order = [...container.querySelectorAll('#afv-grupper > .afv-grp')].map(el => el.dataset.grpId);
+  const pos = {}; order.forEach((id, i) => { pos[id] = i; });
+  (afviklingGrupper || []).forEach(g => { if (pos[g.id] != null) g.sort_order = pos[g.id]; });
   await saveAfviklingGrupper(); renderGrafik();
 }
 async function _afvToggleCollapse(id) {
   const g = _afvFindGrp(id); if (!g) return;
   g.collapsed = !g.collapsed;
   await saveAfviklingGrupper(); renderGrafik();
+}
+// Resolvér {p, mode} fra et .afv-item-element (gruppe eller pulje). Modul-niveau, så BÅDE klik-handlere og
+// den én-gang-bundne tastatur-afvikling kan bruge den mod den levende DOM.
+function _afvCtxFromEl(el) {
+  if (!el) return null;
+  const ref = el.dataset.ref; if (!ref) return null;
+  const p = _tvAfviklingPool().find(x => x.ref === ref); if (!p) return null;
+  let rawMode;
+  if (el.dataset.pulje === '1') rawMode = _afvPuljeModes[ref] || '';
+  else { const g = _afvFindGrp(el.dataset.grp); const it = g && (g.items || []).find(x => x.id === el.dataset.itemId); rawMode = it ? (it.mode || '') : ''; }
+  const macros = _afvMatchingMakroer(p);
+  let mode = rawMode || (macros[0] ? macros[0].id : 'raw');
+  if (mode !== 'raw' && !macros.some(m => m.id === mode)) mode = macros[0] ? macros[0].id : 'raw';
+  return { p, mode };
+}
+// Pil op/ned: flyt markøren (_afvSel) gennem ALLE .afv-item i dokument-rækkefølge (pulje først, så grupper).
+function _afvNav(dir) {
+  const cont = document.getElementById('grafikList'); if (!cont) return;
+  const items = [...cont.querySelectorAll('.afv-item')]; if (!items.length) return;
+  let idx = _afvSel ? items.findIndex(el => el.dataset.itemId === _afvSel.itemId) : -1;
+  idx = (idx < 0) ? (dir > 0 ? 0 : items.length - 1) : Math.max(0, Math.min(items.length - 1, idx + dir));
+  const el = items[idx]; if (!el) return;
+  _afvSel = { grpId: el.dataset.grp || '', itemId: el.dataset.itemId, pulje: el.dataset.pulje === '1', ref: el.dataset.ref };
+  if (!_afvSel.pulje) _afvLastGrp = el.dataset.grp || _afvLastGrp;
+  cont.querySelectorAll('.afv-item.selected').forEach(x => x.classList.remove('selected'));
+  el.classList.add('selected');
+  el.scrollIntoView({ block: 'nearest' });
+}
+// Numpad +/−: fyr den valgte grafik IN/OUT (makro vs rå respekteres).
+function _afvFireSel(out) {
+  if (!_afvSel) return;
+  const cont = document.getElementById('grafikList'); if (!cont) return;
+  const el = [...cont.querySelectorAll('.afv-item')].find(x => x.dataset.itemId === _afvSel.itemId);
+  const r = _afvCtxFromEl(el); if (!r) return;
+  if (out) _fireRaw(r.p, true);
+  else if (r.mode === 'raw') _fireRaw(r.p, false);
+  else fireMakro(r.mode, r.p.slot || '');
+  renderGrafik();   // straks-highlight
+  const selEl = document.querySelector('#grafikList .afv-item.selected');
+  if (selEl) selEl.scrollIntoView({ block: 'nearest' });   // behold valgte i syne efter re-render
 }
 // Kopiér markeret item til klippebordet (ref+mode). Virker for både gruppe- og pulje-items. Indsættes
 // senere i en (anden) gruppe → samme grafik kan dermed optræde i flere grupper.
@@ -2017,25 +2054,12 @@ function _wireTvAfvikling(container) {
   container.querySelectorAll('.afv-grp-collapse').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); _afvToggleCollapse(b.dataset.grp); }));
   container.querySelectorAll('.afv-grp-rename').forEach(b => b.addEventListener('click', () => _afvRenameGrp(b.dataset.grp)));
   container.querySelectorAll('.afv-grp-del').forEach(b => b.addEventListener('click', () => _afvDelGrp(b.dataset.grp)));
-  container.querySelectorAll('.afv-grp-up').forEach(b => b.addEventListener('click', () => { if (!b.disabled) _afvMoveGrp(b.dataset.grp, -1); }));
-  container.querySelectorAll('.afv-grp-down').forEach(b => b.addEventListener('click', () => { if (!b.disabled) _afvMoveGrp(b.dataset.grp, 1); }));
   container.querySelectorAll('.afv-grp-paste').forEach(b => b.addEventListener('click', () => _afvPasteInto(b.dataset.grp)));
   // Klik på en gruppe-header (ikke en knap) = vælg den som mål for Ctrl+V.
   container.querySelectorAll('.afv-grp-head').forEach(h => h.addEventListener('click', e => { if (!e.target.closest('button')) _afvLastGrp = h.dataset.grp; }));
 
-  // ── Item: køremåde + fyring + preview (kontekst læses fra .afv-item → virker for både gruppe og pulje) ──
-  const _poolByRef = {}; _tvAfviklingPool().forEach(p => { _poolByRef[p.ref] = p; });
-  const _afvCtx = el => {
-    if (!el) return null;
-    const ref = el.dataset.ref; const p = _poolByRef[ref]; if (!p) return null;
-    let rawMode;
-    if (el.dataset.pulje === '1') rawMode = _afvPuljeModes[ref] || '';
-    else { const g = _afvFindGrp(el.dataset.grp); const it = g && (g.items || []).find(x => x.id === el.dataset.itemId); rawMode = it ? (it.mode || '') : ''; }
-    const macros = _afvMatchingMakroer(p);
-    let mode = rawMode || (macros[0] ? macros[0].id : 'raw');
-    if (mode !== 'raw' && !macros.some(m => m.id === mode)) mode = macros[0] ? macros[0].id : 'raw';
-    return { p, mode };
-  };
+  // ── Item: køremåde + fyring + preview (kontekst læses fra .afv-item via modul-funktionen _afvCtxFromEl,
+  //    så samme resolver bruges af klik OG den én-gang-bundne tastatur-afvikling) ──
   container.querySelectorAll('.afv-item-mode').forEach(sel => sel.addEventListener('change', () => {
     const el = sel.closest('.afv-item'); if (!el) return;
     if (el.dataset.pulje === '1') _afvSetPuljeMode(el.dataset.ref, sel.value);
@@ -2043,13 +2067,13 @@ function _wireTvAfvikling(container) {
   }));
   container.querySelectorAll('.afv-item-fire').forEach(b => b.addEventListener('click', e => {
     e.stopPropagation();
-    const r = _afvCtx(b.closest('.afv-item')); if (!r) return;
+    const r = _afvCtxFromEl(b.closest('.afv-item')); if (!r) return;
     if (r.mode === 'raw') _fireRaw(r.p, false); else fireMakro(r.mode, r.p.slot || '');
     renderGrafikTV(container);   // on-air-highlight straks (grafiktState sat synkront før evt. await)
   }));
   container.querySelectorAll('.afv-item-out').forEach(b => b.addEventListener('click', e => {
     e.stopPropagation();
-    const r = _afvCtx(b.closest('.afv-item')); if (!r) return;
+    const r = _afvCtxFromEl(b.closest('.afv-item')); if (!r) return;
     _fireRaw(r.p, true);
     renderGrafikTV(container);
   }));
@@ -2091,7 +2115,19 @@ function _wireTvAfvikling(container) {
   mkSort(container.querySelector('#afv-pulje'));
   container.querySelectorAll('.afv-item-list[data-grp]').forEach(mkSort);
 
-  // ── Tastatur (bindes kun én gang på document): Delete = fjern markeret gruppe-item · Ctrl+C/V = kopiér/indsæt ──
+  // Gruppe-omrokering: separat SortableJS på gruppe-containeren (egen group-navn 'afv-grp' → blandes ikke
+  // med item-dragget 'afv'). Træk i gruppe-headeren; knapper/select starter ikke drag.
+  const grpCont = container.querySelector('#afv-grupper');
+  if (grpCont && typeof Sortable !== 'undefined') {
+    _afvSortables.push(Sortable.create(grpCont, {
+      group: 'afv-grp', animation: 150, handle: '.afv-grp-head', draggable: '.afv-grp',
+      filter: 'button, select', preventOnFilter: false, ghostClass: 'afv-drag-ghost',
+      onEnd: evt => { if (evt.oldIndex === evt.newIndex) return; _afvReorderGroupsFromDom(container); }
+    }));
+  }
+
+  // ── Tastatur (bindes kun én gang på document): pil = navigér · Numpad +/− = on air/af · Delete = fjern
+  //    gruppe-item · Ctrl+C/V = kopiér/indsæt ──
   if (!_afvKeyBound) {
     _afvKeyBound = true;
     document.addEventListener('keydown', e => {
@@ -2099,6 +2135,12 @@ function _wireTvAfvikling(container) {
       if (typeof grafiktActiveSubTab === 'undefined' || grafiktActiveSubTab !== 'afvikling') return;
       const ae = document.activeElement;
       if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;   // skriv-felt → rør ikke
+      // Navigering (pil op/ned) — gennem ALLE grafikker (pulje + grupper) i visuel rækkefølge.
+      if (e.key === 'ArrowDown') { e.preventDefault(); _afvNav(1); return; }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); _afvNav(-1); return; }
+      // Afvikling: Numpad + = valgte grafik on air, Numpad − = af (også alm. +/−).
+      if (e.code === 'NumpadAdd'      || e.key === '+') { e.preventDefault(); _afvFireSel(false); return; }
+      if (e.code === 'NumpadSubtract' || e.key === '-') { e.preventDefault(); _afvFireSel(true);  return; }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         // Kun gruppe-items kan fjernes (pulje-items er ikke i en gruppe).
         if (_afvSel && !_afvSel.pulje && _afvSel.grpId && _afvSel.itemId) { e.preventDefault(); _afvRemoveItem(_afvSel.grpId, _afvSel.itemId); }

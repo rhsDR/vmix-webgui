@@ -1525,19 +1525,23 @@
       margin-bottom: 14px;
       padding: 10px 12px 12px;
     }
-    .afv-grp-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    .afv-grp-navn { font-size: 15px; font-weight: 700; color: #e6e6e6; letter-spacing: 0.3px; }
-    .afv-grp-count { font-size: 11px; font-weight: 700; color: #999; background: #242424; border: 1px solid #333; border-radius: 10px; padding: 1px 8px; }
+    .afv-grp-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: grab; }
+    .afv-grp-head:active { cursor: grabbing; }
+    .afv-grp-navn { font-size: 16px; font-weight: 700; color: #e6e6e6; letter-spacing: 0.3px; }
+    .afv-grp-count { font-size: 12px; font-weight: 700; color: #aaa; background: #242424; border: 1px solid #333; border-radius: 10px; padding: 1px 8px; }
     .afv-grp-tools { display: flex; gap: 5px; align-items: center; margin-left: auto; }
-    .afv-grp-collapse { background: none; border: none; color: #bbb; font-size: 15px; line-height: 1; cursor: pointer; padding: 2px 4px; flex-shrink: 0; }
+    .afv-grp-tools button { cursor: pointer; }   /* knapper beholder peger-cursor (header har grab) */
+    .afv-grp-rename, .afv-grp-del { font-size: 15px; padding: 5px 9px; }   /* lidt større ikoner */
+    .afv-grp-collapse { background: none; border: none; color: #bbb; font-size: 16px; line-height: 1; cursor: pointer; padding: 2px 4px; flex-shrink: 0; }
     .afv-grp-collapse:hover { color: #fff; }
-    .afv-item-list { display: flex; flex-direction: column; gap: 8px; min-height: 36px; }
+    .afv-item-list { display: flex; flex-direction: column; gap: 12px; min-height: 36px; }
     .afv-drag-handle { color: #555; font-size: 18px; user-select: none; flex-shrink: 0; cursor: grab; padding: 0 4px; }
     .afv-drag-handle:active { cursor: grabbing; }
 
     /* Pulje øverst: udfyldte grafikker der ikke er i en gruppe — fyrbare rækker (klar til afvikling) */
     .afv-pulje { border: 1px dashed #3a3a3a; border-radius: 8px; background: #141414; padding: 10px 12px; margin-bottom: 10px; }
-    .afv-pulje-head { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #bbb; margin-bottom: 8px; }
+    .afv-pulje-head { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: #bbb; margin-bottom: 8px; }
+    .afv-pulje-sub { color: #9a9a9a; font-weight: 400; letter-spacing: 0; }
     .afv-pulje-list { min-height: 36px; }   /* arver kolonne-layout fra .afv-item-list */
 
     /* Rundown-item (kompakt kort). Kontroller (køremåde + PRW) ligger FØR IN/OUT i DOM og er skjult til
@@ -1548,19 +1552,24 @@
       border-left: 3px solid var(--g-color, var(--blue)); border-radius: 6px; cursor: default;
     }
     .afv-item .grafik-block-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+    .afv-item .grafik-block-name { font-size: 16px; }
+    .afv-item-sub { color: #9a9a9a; font-size: 13px; }   /* type · plads — tydeligere end før (#777) */
     .afv-item-main { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
     .afv-item-ctrls { display: none; gap: 6px; flex-shrink: 0; align-items: center; }
     .afv-item.expanded .afv-item-ctrls { display: flex; }
     .afv-item.selected { outline: 2px solid #ff9d2e; outline-offset: -1px; }
-    .afv-item.afv-live { box-shadow: 0 0 0 1px #22c55e; background: #10210f; }
-    .afv-item.afv-live .grafik-block-name { color: #86efac; }
+    /* On air: HELE blokken lysegrå (ingen grøn kant/ring). Kun baggrunden ændres, så type-farvebjælken til
+       venstre bevares. Navn forbliver hvidt, under-linje lysnes for kontrast mod den lyse baggrund. */
+    .afv-item.afv-live { background: #4a4a52; }
+    .afv-item.afv-live .grafik-block-name { color: #fff; }
+    .afv-item.afv-live .afv-item-sub { color: #cfcfd6; }
     .afv-item-missing { opacity: .7; }
     .afv-grp.collapsed .afv-grp-head { margin-bottom: 0; }
     .afv-item-mode {
       background: #15243a; border: 1px solid #3b82f6; color: #fff;
       padding: 5px 8px; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; max-width: 200px;
     }
-    .afv-hint { font-size: 11px; color: #777; margin: 0 2px 12px; }
+    .afv-hint { font-size: 12px; color: #9a9a9a; margin: 0 2px 12px; }
     /* SortableJS ghost (pladsholder under drag) */
     .afv-drag-ghost { opacity: .4; }
     .sortable-chosen { cursor: grabbing; }
