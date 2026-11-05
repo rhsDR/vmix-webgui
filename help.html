@@ -22,6 +22,7 @@
   section { margin-bottom:52px; scroll-margin-top:84px; }
   h2 { font-size:26px; color:#fff; border-bottom:2px solid var(--line); padding-bottom:10px; margin:0 0 14px; letter-spacing:.3px; }
   h3 { font-size:20px; color:#fff; margin:28px 0 8px; }
+  h4 { font-size:16px; color:#fff; margin:20px 0 6px; }
   p, li { color:var(--tx); }
   p { margin:10px 0; }
   ul,ol { padding-left:24px; }
@@ -150,11 +151,12 @@
 
 <section id="subs">
   <h2>Subs (navneskilte)</h2>
-  <p>En sub er et navneskilt med <b>navn</b> + <b>titel</b>. Et projekt har <b>15 sub-pladser</b>.</p>
+  <p>En sub er et navneskilt med <b>navn</b> + <b>titel</b>. I et TV-projekt opretter du selv de sub-pladser du skal bruge — der er <b>ingen øvre grænse</b>.</p>
   <ol>
-    <li>Gå i <b>SUBS</b>-fanen → klik blyanten på en række → skriv navn + titel.</li>
+    <li>Gå i <b>SUBS</b>-fanen → klik <b>＋ Tilføj sub</b> for hver plads du mangler (en ny plads får det laveste ledige nummer).</li>
+    <li>Klik <b>blyanten</b> på en række → skriv navn + titel.</li>
     <li>Vælg <span class="pill">VENSTRE</span> eller <span class="pill">HØJRE</span> side — grafikken spejlvendes til den side, men teksten forbliver læsbar.</li>
-    <li>Gem.</li>
+    <li>Gem. <b>🗑</b> ud for en række fjerner den sub-plads igen.</li>
   </ol>
   <div class="box tip">Side-valget (venstre/højre) opdateres også live hos andre operatører og på overlayet — ingen genindlæsning nødvendig.</div>
 
@@ -216,12 +218,35 @@
   <p>Her sætter du grafik på og af <b>live</b>. Venstre side = faner: <b>AFVIKLING</b> (først) · SUB · INFO · TICKER · CREDIT · <b>MACROER</b>. Højre side = <b>PREVIEW</b> + <b>ON AIR</b>-monitorer.</p>
 
   <h3>AFVIKLING — den samlede rundown</h3>
-  <p>AFVIKLING-fanen samler <b>alle udfyldte grafikker i projektet</b> (hver udfyldt sub, info-boks, credit/ticker/egen grafik) i en liste du selv ordner. Du organiserer dem i <b>grupper</b> (fx ét segment pr. gruppe) — og <b>samme grafik kan ligge i flere grupper</b>.</p>
+  <p>AFVIKLING-fanen samler <b>alle udfyldte grafikker i projektet</b> (hver udfyldt sub, info-boks, credit/ticker/egen grafik) i én liste. <b>Øverst</b> ligger <b>GRAFIKKER</b> — en pulje med alt det udfyldte der ikke er lagt i en gruppe endnu. <b>Nedenunder</b> ligger dine <b>grupper</b> (fx ét segment pr. gruppe).</p>
+  <div class="box tip"><b>Alt ligger klar med det samme.</b> En grafik behøver <i>ikke</i> at ligge i en gruppe for at komme på skærmen — du kan fyre den direkte fra puljen. Grupperne er kun til at ordne afviklingen i den rækkefølge du vil køre den.</div>
+
+  <h4>Byg rundownen</h4>
   <ul>
-    <li><b>＋ Ny gruppe</b> opretter en gruppe; ✎ omdøber, 🗑 sletter, ↑ ↓ flytter gruppen.</li>
-    <li><b>＋ Tilføj grafik</b> (dropdown i gruppen) lægger en udfyldt grafik ind. <b>Træk ⠿</b> for at ændre rækkefølgen.</li>
-    <li>Pr. række en <b>køremåde-dropdown</b>: står som standard på den <b>makro</b> der er bygget til grafikken — findes ingen makro, kører den som <b>Rå</b> (grafikken som dens egen type). <span class="btn in">&gt; KØR</span> fyrer den valgte måde; <span class="btn out">&lt; OUT</span> slukker.</li>
+    <li><b>＋ Ny gruppe</b> opretter en gruppe. På gruppe-headeren: <b>✎</b> omdøber og <b>🗑</b> sletter. <b>Træk i selve headeren</b> for at flytte en gruppe op/ned.</li>
+    <li><b>Træk en grafik</b> fra puljen op i en gruppe — eller mellem grupper, eller rundt internt for at ændre rækkefølgen. <b>Træk den tilbage i puljen</b> for at fjerne den fra gruppen.</li>
+    <li><b>Samme grafik kan ligge i flere grupper.</b> Markér en grafik, <kbd>Ctrl</kbd>+<kbd>C</kbd>, vælg en gruppe og <kbd>Ctrl</kbd>+<kbd>V</kbd> (eller <b>📋 Indsæt</b> på gruppen) for at lægge en kopi ind.</li>
+    <li><b>▸ / ▾</b> på en gruppe folder den sammen/ud, så en lang rundown bliver overskuelig.</li>
   </ul>
+
+  <h4>Hver grafik-blok</h4>
+  <ul>
+    <li><span class="btn in">&gt; IN</span> sætter på skærmen, <span class="btn out">&lt; OUT</span> tager af — de to knapper sidder altid yderst til højre.</li>
+    <li><b>Dobbeltklik</b> på en blok folder dens <b>køremåde-dropdown</b> + <b>PRW</b> ud (de er skjult til daglig, så listen er ren). Køremåden står som standard på den <b>makro</b> der er bygget til grafikken — findes ingen makro, kører den <b>Rå</b> (som sin egen type).</li>
+    <li>En grafik der er <b>på skærmen</b> vises med hele blokken i <b>lys grå</b>, så du altid kan se hvad der er live.</li>
+  </ul>
+
+  <h4>Afvikl fra tastaturet</h4>
+  <p>Står du i AFVIKLING-fanen, kan du køre hele rundownen uden musen:</p>
+  <table>
+    <tr><th>Tast</th><th>Gør</th></tr>
+    <tr><td><kbd>↑</kbd> / <kbd>↓</kbd></td><td>Flyt markøren op/ned gennem alle grafikker (både grupper og pulje).</td></tr>
+    <tr><td><kbd>Numpad +</kbd></td><td>Sæt den markerede grafik <b>på skærmen</b> (IN).</td></tr>
+    <tr><td><kbd>Numpad −</kbd></td><td>Tag den markerede grafik <b>af</b> (OUT).</td></tr>
+    <tr><td><kbd>Delete</kbd></td><td>Fjern den markerede grafik fra sin gruppe (pulje-grafikker fjernes ikke).</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>Ctrl</kbd>+<kbd>V</kbd></td><td>Kopiér den markerede grafik og indsæt en kopi i en gruppe.</td></tr>
+  </table>
+  <div class="box tip">Subs kommer nu på skærmen <b>lige så hurtigt</b> som resten af grafikken — du kan trygt afvikle en stribe navne i højt tempo med <kbd>Numpad +</kbd>.</div>
 
   <h3>Type-fanerne (SUB / INFO / TICKER / CREDIT)</h3>
   <p>Vil du styre én type detaljeret, så brug dens fane. Hver række har:</p>
@@ -414,7 +439,7 @@
     <tr><th>Begreb</th><th>Betyder</th></tr>
     <tr><td><b>Overlay</b></td><td>Et grafik-lag i vMix. Der er tre: Master, Secondary, Fullscreen.</td></tr>
     <tr><td><b>Browser-kilde</b></td><td>En kilde i vMix der viser en webside — her ét overlay-vindue fra systemet.</td></tr>
-    <tr><td><b>Sub</b></td><td>Navneskilt (navn + titel). 15 pr. projekt.</td></tr>
+    <tr><td><b>Sub</b></td><td>Navneskilt (navn + titel). I TV-projekter opretter du selv så mange du vil (＋ Tilføj sub).</td></tr>
     <tr><td><b>vMix Call-link</b></td><td>Rå gæste-URL fra vMix til fjern-gæster/opkald. Gemmes + kopieres i SUBS-fanen (8 link-felter) — er ikke en sub.</td></tr>
     <tr><td><b>Aktiv sub</b></td><td>Den sub der er sat på senest — den en makro/Companion-knap uden fast plads rammer.</td></tr>
     <tr><td><b>Info-boks</b></td><td>Overskrift + kort indhold (maks 3 linjer). Flere pr. projekt.</td></tr>
