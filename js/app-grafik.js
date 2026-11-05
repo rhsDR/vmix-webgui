@@ -30,7 +30,9 @@ async function loadMakroer() {
 let afviklingGrupper = [];
 // Rundown-UI-state (transient, kun TV, gemmes ikke i DB — overlever re-render via id/ref):
 let _afvExpanded = new Set();     // item-id'er hvis kontroller (køremåde-dropdown + PRW) er foldet ud (dobbeltklik)
-let _afvSel = null;               // { grpId, itemId } markeret item (til kopiering)
+let _afvSel = null;               // { grpId, itemId } ANKER-item (sidst klikket; Shift-interval, numpad-fyr, Ctrl+C)
+let _afvMultiSel = new Set();     // itemId'er i markeringen (kilde til .selected highlight; flyt/slet flere samlet)
+let _afvDragIds = null;           // transient: ordnede ids ved start af et multi-træk
 let _afvSelGrp = null;            // id på markeret GRUPPE (klik på gruppe-header) → Ctrl+C kopierer hele gruppen
 let _afvClip = null;              // kopieret: {kind:'item',ref,mode} ELLER {kind:'group',navn,items:[{ref,mode}]}
 let _afvLastGrp = null;           // seneste gruppe brugeren rørte (mål for Ctrl+V af en grafik)
@@ -1805,7 +1807,7 @@ function _tvAfviklingHTML() {
   // Kontroller (køremåde + PRW) ligger FØR IN/OUT og er skjult til dobbeltklik, så IN/OUT bliver yderst til højre.
   const _rowHTML = (p, ctx) => {
     const key = ctx.key;
-    const sel = (_afvSel && _afvSel.itemId === key) ? ' selected' : '';
+    const sel = _afvMultiSel.has(key) ? ' selected' : '';
     const dataAttr = ctx.pulje ? 'data-pulje="1"' : ('data-grp="' + ctx.grpId + '"');
     if (!p) {
       return `<div class="afv-item afv-item-missing${sel}" data-item-id="${key}" data-ref="${esc(ctx.ref)}" ${dataAttr} style="--g-color:#444">
@@ -1871,7 +1873,7 @@ function _tvAfviklingHTML() {
       AFVIKLING
       <button class="grafik-btn-prw afv-grp-ny" style="padding:4px 10px;font-size:11px;border-radius:4px;">＋ Ny gruppe</button>
     </div>
-    <div class="afv-hint">Klik = markér (grafik el. gruppe-header) · Pil ↑/↓ flyt markør · <b>Numpad +/−</b> = on air/af · dobbeltklik = køremåde + preview · <b>⧉ / Ctrl+C</b> kopiér · <b>Ctrl+V / 📋</b> indsæt (grafik eller hel gruppe) · <b>træk</b> = flyt · Delete fjerner markeret</div>
+    <div class="afv-hint">Klik = markér · <b>Ctrl/⌘-klik</b> + <b>Shift-klik</b> = vælg flere (træk flytter dem samlet) · Pil ↑/↓ flyt markør · <b>Numpad +/−</b> = on air/af · dobbeltklik = køremåde + preview · <b>⧉ / Ctrl+C</b> kopiér · <b>Ctrl+V / 📋</b> indsæt · <b>træk</b> = flyt · Delete fjerner markeret</div>
     <div class="afv-pulje">
       <div class="afv-pulje-head">GRAFIKKER <span class="afv-pulje-sub">· din liste · fyr direkte · ⧉/Ctrl+C+V = dublet her · træk ned i en gruppe = flyt</span>${_afvClip && _afvClip.kind === 'item' ? ` <button class="grafik-btn-prw afv-pulje-paste" title="Indsæt kopieret grafik i GRAFIKKER">📋 Indsæt</button>` : ''}</div>
       <div class="afv-item-list afv-pulje-list" id="afv-pulje">${puljeRows}</div>
@@ -1987,7 +1989,13 @@ function _afvCtxFromEl(el) {
   if (mode !== 'raw' && !macros.some(m => m.id === mode)) mode = macros[0] ? macros[0].id : 'raw';
   return { p, mode };
 }
+// Alle .afv-item-id'er i visuel (dokument-)rækkefølge: GRAFIKKER først, så grupper. Bruges til Shift-interval
+// og multi-træk-rækkefølge.
+function _afvOrderedItemIds(cont) {
+  return [...cont.querySelectorAll('.afv-item')].map(n => n.dataset.itemId).filter(Boolean);
+}
 // Pil op/ned: flyt markøren (_afvSel) gennem ALLE .afv-item i dokument-rækkefølge (pulje først, så grupper).
+// Enkelt-markering (rydder evt. multi-markering).
 function _afvNav(dir) {
   const cont = document.getElementById('grafikList'); if (!cont) return;
   const items = [...cont.querySelectorAll('.afv-item')]; if (!items.length) return;
@@ -1995,6 +2003,7 @@ function _afvNav(dir) {
   idx = (idx < 0) ? (dir > 0 ? 0 : items.length - 1) : Math.max(0, Math.min(items.length - 1, idx + dir));
   const el = items[idx]; if (!el) return;
   _afvSel = { grpId: el.dataset.grp || '', itemId: el.dataset.itemId, pulje: el.dataset.pulje === '1', ref: el.dataset.ref };
+  _afvMultiSel = new Set([el.dataset.itemId]);
   _afvSelGrp = null;   // item valgt → ryd gruppe-markering
   if (!_afvSel.pulje) _afvLastGrp = el.dataset.grp || _afvLastGrp;
   cont.querySelectorAll('.afv-item.selected').forEach(x => x.classList.remove('selected'));
@@ -2082,22 +2091,54 @@ async function _afvPasteClip() {
   if (target) await _afvPasteInto(target);
   else await _afvPasteIntoPulje();
 }
-// Fjern det markerede item (Delete): en GRAFIKKER-DUBLET (ikke den eneste forekomst) eller et gruppe-item.
-// Den eneste/sidste forekomst i GRAFIKKER kan ikke fjernes (grafikken er altid tilgængelig) → besked.
+// Fjern det/de markerede items (Delete): gruppe-items fjernes altid; GRAFIKKER-dubletter fjernes, men den
+// SIDSTE forekomst af en ref i GRAFIKKER beskyttes hvis refen ikke også ligger i en gruppe (altid tilgængelig).
+// Virker for både enkelt-markering (_afvSel) og multi-markering (_afvMultiSel).
 async function _afvRemoveSel() {
-  if (!_afvSel || !_afvSel.itemId) return;
-  const { itemId, pulje, ref } = _afvSel;
-  if (pulje) {
-    if (afviklingPulje.filter(x => x.ref === ref).length <= 1) {
-      toast('Grafikken er altid tilgængelig i GRAFIKKER — tøm selve subben/boksen hvis den ikke skal bruges', 'err'); return;
-    }
-    afviklingPulje = afviklingPulje.filter(x => x.id !== itemId); _afvSel = null;
-    await saveAfviklingPulje(); renderGrafik();
-  } else {
-    const g = _afvFindGrp(_afvSel.grpId); if (!g) return;
-    g.items = (g.items || []).filter(it => it.id !== itemId); _afvSel = null;
-    await saveAfviklingGrupper(); renderGrafik();
+  const ids = (_afvMultiSel && _afvMultiSel.size > 1) ? [..._afvMultiSel]
+            : (_afvSel && _afvSel.itemId) ? [_afvSel.itemId] : [];
+  if (!ids.length) return;
+  const idSet = new Set(ids);
+  // 1) Grupper: fjern markerede gruppe-items.
+  let grpChanged = false;
+  (afviklingGrupper || []).forEach(g => {
+    const b = (g.items || []).length;
+    g.items = (g.items || []).filter(it => !idSet.has(it.id));
+    if ((g.items || []).length !== b) grpChanged = true;
+  });
+  // 2) assigned EFTER gruppe-sletning (så en ref der kun lå i en nu-slettet gruppe ikke tæller som assigned).
+  const assigned = new Set();
+  (afviklingGrupper || []).forEach(g => (g.items || []).forEach(it => assigned.add(it.ref)));
+  // 3) GRAFIKKER: fjern markerede, men behold sidste forekomst af en ref der ikke er i en gruppe.
+  const byRef = {}; afviklingPulje.forEach(it => { (byRef[it.ref] = byRef[it.ref] || []).push(it); });
+  const keep = new Set();
+  Object.keys(byRef).forEach(ref => {
+    const arr = byRef[ref]; const del = arr.filter(it => idSet.has(it.id));
+    if (del.length && del.length === arr.length && !assigned.has(ref)) keep.add(del[del.length - 1].id);
+  });
+  const pb = afviklingPulje.length;
+  afviklingPulje = afviklingPulje.filter(it => !(idSet.has(it.id) && !keep.has(it.id)));
+  const puljeChanged = afviklingPulje.length !== pb;
+  if (!grpChanged && !puljeChanged) {
+    toast('Grafikken er altid tilgængelig i GRAFIKKER — tøm selve subben/boksen hvis den ikke skal bruges', 'err'); return;
   }
+  _afvSel = null; _afvMultiSel = new Set();
+  if (puljeChanged) await saveAfviklingPulje();
+  if (grpChanged) await saveAfviklingGrupper();
+  renderGrafik();
+}
+// Multi-træk: saml alle markerede rækker sammenhængende omkring den trukne (evt.item) i målisten
+// (evt.item.parentNode), i _afvDragIds-rækkefølge. Ankeret beholder sin drop-plads; øvrige (også dem fra andre
+// lister) flyttes ind ved ankeret. _afvRebuildFromDom læser bagefter DOM og persisterer.
+function _afvGatherSelected(evt, container, ids) {
+  if (!ids || !ids.length || !container) return;
+  const anchor = evt.item, parent = anchor.parentNode; if (!parent) return;
+  const esc = id => (window.CSS && CSS.escape) ? CSS.escape(id) : id;
+  const nodes = ids.map(id => container.querySelector('.afv-item[data-item-id="' + esc(id) + '"]')).filter(Boolean);
+  const k = nodes.indexOf(anchor); if (k < 0) return;
+  for (let i = 0; i < k; i++) parent.insertBefore(nodes[i], anchor);                      // før ankeret, i rækkefølge
+  let prev = anchor;
+  for (let i = k + 1; i < nodes.length; i++) { parent.insertBefore(nodes[i], prev.nextSibling); prev = nodes[i]; }   // efter ankeret
 }
 // Genopbyg BÅDE GRAFIKKER-listen OG grupperne ud fra DOM efter et SortableJS-drop (flyt/omrokér mellem lister).
 // Et item identificeres på sit data-item-id (bevar mode); et nyt (ukendt id) får nyt id. Dubletter bevares.
@@ -2174,7 +2215,7 @@ function _wireTvAfvikling(container) {
   // Klik på en gruppe-header (ikke en knap) = markér GRUPPEN (mål for Ctrl+V + Ctrl+C kopierer hele gruppen).
   container.querySelectorAll('.afv-grp-head').forEach(h => h.addEventListener('click', e => {
     if (e.target.closest('button')) return;
-    _afvLastGrp = h.dataset.grp; _afvSelGrp = h.dataset.grp; _afvSel = null;
+    _afvLastGrp = h.dataset.grp; _afvSelGrp = h.dataset.grp; _afvSel = null; _afvMultiSel = new Set();
     container.querySelectorAll('.afv-item.selected').forEach(x => x.classList.remove('selected'));
     container.querySelectorAll('.afv-grp-head.afv-grp-selected').forEach(x => x.classList.remove('afv-grp-selected'));
     h.classList.add('afv-grp-selected');
@@ -2207,6 +2248,7 @@ function _wireTvAfvikling(container) {
     const el = b.closest('.afv-item'); if (!el) return;
     const pulje = el.dataset.pulje === '1';
     _afvSel = { grpId: el.dataset.grp || '', itemId: el.dataset.itemId, pulje, ref: el.dataset.ref };
+    _afvMultiSel = new Set([el.dataset.itemId]); _afvSelGrp = null;
     _afvCopySel();
   }));
 
@@ -2214,13 +2256,33 @@ function _wireTvAfvikling(container) {
   container.querySelectorAll('.afv-item').forEach(el => {
     el.addEventListener('click', e => {
       if (e.target.closest('button, select, .afv-drag-handle')) return;
+      const id = el.dataset.itemId;
       const pulje = el.dataset.pulje === '1';
-      if (!pulje) _afvLastGrp = el.dataset.grp || _afvLastGrp;   // pulje har ingen gruppe → behold sidste mål
-      _afvSel = { grpId: el.dataset.grp || '', itemId: el.dataset.itemId, pulje, ref: el.dataset.ref };
+      const mk = { grpId: el.dataset.grp || '', itemId: id, pulje, ref: el.dataset.ref };
       _afvSelGrp = null;   // grafik valgt → ryd gruppe-markering
-      container.querySelectorAll('.afv-item.selected').forEach(x => x.classList.remove('selected'));
+      if (e.shiftKey && _afvSel && _afvSel.itemId) {
+        // Shift: interval fra ankeret til dette (visuel rækkefølge), tilføj til markeringen.
+        const order = _afvOrderedItemIds(container);
+        const a = order.indexOf(_afvSel.itemId), b = order.indexOf(id);
+        if (a >= 0 && b >= 0) { const lo = Math.min(a, b), hi = Math.max(a, b); for (let i = lo; i <= hi; i++) _afvMultiSel.add(order[i]); }
+        else _afvMultiSel.add(id);
+        _afvSel = mk;
+      } else if (e.ctrlKey || e.metaKey) {
+        // Ctrl/⌘: toggle i markeringen.
+        if (_afvMultiSel.has(id)) {
+          _afvMultiSel.delete(id);
+          if (_afvSel && _afvSel.itemId === id) {
+            const firstEl = [...container.querySelectorAll('.afv-item')].find(n => _afvMultiSel.has(n.dataset.itemId));
+            _afvSel = firstEl ? { grpId: firstEl.dataset.grp || '', itemId: firstEl.dataset.itemId, pulje: firstEl.dataset.pulje === '1', ref: firstEl.dataset.ref } : null;
+          }
+        } else { _afvMultiSel.add(id); _afvSel = mk; }
+      } else {
+        // Alm. klik: enkelt-markering.
+        _afvMultiSel = new Set([id]); _afvSel = mk;
+      }
+      if (!pulje && _afvSel && _afvSel.itemId === id) _afvLastGrp = el.dataset.grp || _afvLastGrp;
+      container.querySelectorAll('.afv-item').forEach(x => x.classList.toggle('selected', _afvMultiSel.has(x.dataset.itemId)));
       container.querySelectorAll('.afv-grp-head.afv-grp-selected').forEach(x => x.classList.remove('afv-grp-selected'));
-      el.classList.add('selected');
     });
     el.addEventListener('dblclick', e => {
       if (e.target.closest('button, select, .afv-drag-handle')) return;
@@ -2237,8 +2299,26 @@ function _wireTvAfvikling(container) {
     _afvSortables.push(Sortable.create(el, {
       group: 'afv', animation: 150, handle: '.afv-drag-handle', draggable: '.afv-item',
       ghostClass: 'afv-drag-ghost', fallbackOnBody: true, swapThreshold: 0.65,
+      onStart: evt => {
+        const id = evt.item.dataset.itemId;
+        if (_afvMultiSel.has(id) && _afvMultiSel.size > 1) {
+          _afvDragIds = _afvOrderedItemIds(container).filter(x => _afvMultiSel.has(x));   // multi-træk
+        } else {
+          _afvDragIds = null;
+          if (!_afvMultiSel.has(id)) {   // træk af en UMARKERET grafik = enkelt-flyt (ryd markering til den ene)
+            _afvMultiSel = new Set([id]);
+            _afvSel = { grpId: evt.item.dataset.grp || '', itemId: id, pulje: evt.item.dataset.pulje === '1', ref: evt.item.dataset.ref };
+          }
+        }
+      },
       onEnd: evt => {
-        if (evt.from === evt.to && evt.oldIndex === evt.newIndex) return;        // intet flyttet
+        const noMove = (evt.from === evt.to && evt.oldIndex === evt.newIndex);
+        if (_afvDragIds) {                                   // multi-træk
+          const ids = _afvDragIds; _afvDragIds = null;
+          if (noMove) return;                                // droppet på plads → rør intet
+          _afvGatherSelected(evt, container, ids); _afvRebuildFromDom(container); return;
+        }
+        if (noMove) return;                                  // intet flyttet
         _afvRebuildFromDom(container);   // GRAFIKKER er nu en rigtig liste → også omrokering i puljen persisteres
       }
     }));
