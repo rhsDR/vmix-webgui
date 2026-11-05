@@ -1612,10 +1612,10 @@ function renderGrafikTV(container) {
       grafiktState[trig] = 'in';
       renderGrafikTV(container);
       try {
-        if (slot) await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'active_sub', value: String(slot) });
-        // slot sendes MED i broadcast'en (sbUpsert medtager body.slot), så sub-grafikken kan vise den
-        // valgte plads fra sin cache UDEN at hente → ingen delay. active_sub (ovenfor) bevares til
-        // /api/vmix + Companion. slot strippes fra selve DB-rækken i sbUpsert.
+        // active_sub IKKE-blokerende: pladsen rider med i trig-broadcast'en (sbUpsert medtager body.slot),
+        // så sub-grafikken viser den valgte plads fra sin cache STRAKS — vi venter ikke på active_sub-skrivet.
+        // active_sub bevares til /api/vmix + Companion + fallback. slot strippes fra selve DB-rækken i sbUpsert.
+        if (slot) sbUpsert('settings', { projekt_id: aktivProjektId, key: 'active_sub', value: String(slot) }).catch(() => {});
         await sbUpsert('settings', { projekt_id: aktivProjektId, key: trig, value: 'in', slot: slot || undefined });
       } catch { toast('Fejl ved sub-trigger', 'err'); }
     }));
@@ -2029,7 +2029,13 @@ async function _fireRaw(p, out) {
   const trig = p.trig, slot = p.slot || '';
   try {
     if (p.type === 'sub') {
-      if (!out && slot) { activeSubSlot = parseInt(slot) || 0; grafiktState['active_sub'] = String(slot); await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'active_sub', value: String(slot) }); }
+      // active_sub skrives IKKE-blokerende (fire-and-forget): pladsen rider med i trig-broadcast'en, så
+      // grafikken fyrer STRAKS med den rigtige sub. active_sub bruges kun til /api/vmix + Companion + fallback,
+      // så vi venter ikke på den (sparer ~én netværks-rundtur pr. sub-IN).
+      if (!out && slot) {
+        activeSubSlot = parseInt(slot) || 0; grafiktState['active_sub'] = String(slot);
+        sbUpsert('settings', { projekt_id: aktivProjektId, key: 'active_sub', value: String(slot) }).catch(() => {});
+      }
       grafiktState[trig] = out ? 'out' : 'in';
       await sbUpsert('settings', { projekt_id: aktivProjektId, key: trig, value: out ? 'out' : 'in', slot: (!out && slot) ? slot : undefined });
     } else if (p.type === 'info') {
