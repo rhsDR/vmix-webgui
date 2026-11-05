@@ -126,16 +126,10 @@ sbClient.channel('db-changes')
             try { const v = JSON.parse(p.new.value || '[]'); if (Array.isArray(v)) afviklingGrupper = v; } catch {}
             if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
           }
-        } else if (p.new.key === 'afvikling_pulje_modes') {
-          // Køremåde for IKKE-grupperede afviklings-grafikker (KUN TV). Synk på tværs af operatører.
-          if (p.new.projekt_id === aktivProjektId && typeof projektType !== 'undefined' && projektType === 'tv' && typeof _afvPuljeModes !== 'undefined') {
-            try { const v = JSON.parse(p.new.value || '{}'); if (v && typeof v === 'object' && !Array.isArray(v)) _afvPuljeModes = v; } catch {}
-            if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
-          }
-        } else if (p.new.key === 'afvikling_pulje_hidden') {
-          // Refs trukket ud af GRAFIKKER-puljen (KUN TV). Synk på tværs af operatører.
-          if (p.new.projekt_id === aktivProjektId && typeof projektType !== 'undefined' && projektType === 'tv' && typeof _afvPuljeHidden !== 'undefined') {
-            try { const v = JSON.parse(p.new.value || '[]'); if (Array.isArray(v)) _afvPuljeHidden = new Set(v); } catch {}
+        } else if (p.new.key === 'afvikling_pulje') {
+          // GRAFIKKER-listen (KUN TV). Eksplicit, orderbar liste m. dubletter. Synk på tværs af operatører.
+          if (p.new.projekt_id === aktivProjektId && typeof projektType !== 'undefined' && projektType === 'tv' && typeof afviklingPulje !== 'undefined') {
+            try { const v = JSON.parse(p.new.value || '[]'); if (Array.isArray(v)) { afviklingPulje = v.filter(it => it && it.ref).map(it => ({ id: it.id || crypto.randomUUID(), ref: it.ref, mode: it.mode || '' })); if (typeof _afvNeedMigrate !== 'undefined') _afvNeedMigrate = false; } } catch {}
             if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
           }
         } else if (p.new.key === 'info_bokse') {

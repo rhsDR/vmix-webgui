@@ -36,41 +36,48 @@ let _afvClip = null;              // kopieret: {kind:'item',ref,mode} ELLER {kin
 let _afvLastGrp = null;           // seneste gruppe brugeren rørte (mål for Ctrl+V af en grafik)
 let _afvSortables = [];           // aktive SortableJS-instanser (destrueres ved re-wire)
 let _afvKeyBound = false;         // document-keydown (copy/paste/delete) bindes kun én gang
-// Køremåde pr. IKKE-grupperet grafik (pulje), keyet på ref, gemt i settings.afvikling_pulje_modes. Pulje-
-// items er fyrbare direkte (uden at skulle i en gruppe); denne holder deres valgte køremåde persistent.
-let _afvPuljeModes = {};
-async function saveAfviklingPuljeModes() {
-  try { await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'afvikling_pulje_modes', value: JSON.stringify(_afvPuljeModes) }); }
+// GRAFIKKER-listen: en redigerbar, persisteret liste af grafik-enheder (settings.afvikling_pulje), ligesom en
+// gruppe. Samme grafik MÅ optræde flere gange (dubletter, hver med egen id + køremåde). Fyrbar direkte.
+let afviklingPulje = [];          // [{id, ref, mode}]
+let _afvNeedMigrate = false;      // true hvis afvikling_pulje-nøglen manglede → seed fra gammel palet ved 1. render
+let _afvMigModes = {};            // (midlertidig) gamle pulje-køremåder til migration
+let _afvMigHidden = new Set();    // (midlertidig) gamle "trukket ud"-refs til migration
+async function saveAfviklingPulje() {
+  try { await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'afvikling_pulje', value: JSON.stringify(afviklingPulje) }); }
   catch { toast('Fejl ved gem', 'err'); }
 }
-// Refs der er TRUKKET ud af puljen (gemt i settings.afvikling_pulje_hidden). Skelner træk (flyt → skjul)
-// fra kopiér (behold i puljen): en grafik vises i puljen medmindre den BÅDE er her OG stadig i en gruppe.
-let _afvPuljeHidden = new Set();
-async function saveAfviklingPuljeHidden() {
-  try { await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'afvikling_pulje_hidden', value: JSON.stringify([..._afvPuljeHidden]) }); }
-  catch { toast('Fejl ved gem', 'err'); }
+// Sørg for at hver UDFYLDT grafik er repræsenteret mindst ét sted (GRAFIKKER eller en gruppe): fjern døde refs
+// fra GRAFIKKER (grafik tømt) og tilføj refs der ikke er nogen steder (ny udfyldt grafik → dukker op i GRAFIKKER).
+// Returnerer true hvis listen ændrede sig. Rører ALDRIG grupper. Dubletter i GRAFIKKER bevares.
+function _afvSyncPulje(pool) {
+  const poolRefs = new Set(pool.map(p => p.ref));
+  const before = afviklingPulje.length;
+  afviklingPulje = afviklingPulje.filter(it => poolRefs.has(it.ref));   // drop døde refs
+  const present = new Set(afviklingPulje.map(it => it.ref));
+  (afviklingGrupper || []).forEach(g => (g.items || []).forEach(it => present.add(it.ref)));
+  pool.forEach(p => { if (!present.has(p.ref)) { afviklingPulje.push({ id: crypto.randomUUID(), ref: p.ref, mode: '' }); present.add(p.ref); } });
+  return afviklingPulje.length !== before;
 }
 async function loadAfviklingGrupper() {
   if (!aktivProjektId) return;
   if (typeof projektType !== 'undefined' && projektType !== 'tv') return;   // kampdag: rør den aldrig
+  _afvNeedMigrate = false; _afvMigModes = {}; _afvMigHidden = new Set();
   try {
-    const rows = await sbGet('settings?select=key,value&key=in.(afvikling_grupper,afvikling_pulje_modes,afvikling_pulje_hidden)&projekt_id=eq.' + aktivProjektId);
+    const rows = await sbGet('settings?select=key,value&key=in.(afvikling_grupper,afvikling_pulje,afvikling_pulje_modes,afvikling_pulje_hidden)&projekt_id=eq.' + aktivProjektId);
     const grpRow = rows.find(r => r.key === 'afvikling_grupper');
-    const pmRow  = rows.find(r => r.key === 'afvikling_pulje_modes');
-    const phRow  = rows.find(r => r.key === 'afvikling_pulje_hidden');
+    const plRow  = rows.find(r => r.key === 'afvikling_pulje');
     const v = grpRow && grpRow.value ? JSON.parse(grpRow.value) : [];
     afviklingGrupper = Array.isArray(v) ? v : [];
-    try { const pm = pmRow && pmRow.value ? JSON.parse(pmRow.value) : {}; _afvPuljeModes = (pm && typeof pm === 'object' && !Array.isArray(pm)) ? pm : {}; } catch { _afvPuljeModes = {}; }
-    if (phRow && phRow.value) {
-      try { const ph = JSON.parse(phRow.value); _afvPuljeHidden = new Set(Array.isArray(ph) ? ph : []); } catch { _afvPuljeHidden = new Set(); }
+    if (plRow && plRow.value) {
+      try { const pl = JSON.parse(plRow.value); afviklingPulje = Array.isArray(pl) ? pl.filter(it => it && it.ref).map(it => ({ id: it.id || crypto.randomUUID(), ref: it.ref, mode: it.mode || '' })) : []; } catch { afviklingPulje = []; }
     } else {
-      // Migration: nøglen mangler (ældre projekt) → seed som dagens udseende (alt der ligger i en gruppe er
-      // skjult fra puljen) og persistér én gang, så en senere KOPI ikke bliver gen-skjult ved reload.
-      _afvPuljeHidden = new Set();
-      (afviklingGrupper || []).forEach(g => (g.items || []).forEach(it => { if (it.ref) _afvPuljeHidden.add(it.ref); }));
-      if (_afvPuljeHidden.size) saveAfviklingPuljeHidden();
+      // Migration fra den gamle AFLEDTE palet (afvikling_pulje_modes + afvikling_pulje_hidden). Pool-data er måske
+      // ikke loadet endnu her → udskyd selve seedingen til 1. render (_tvAfviklingHTML), hvor pool er klar.
+      afviklingPulje = []; _afvNeedMigrate = true;
+      try { const r = rows.find(x => x.key === 'afvikling_pulje_modes'); const o = r && r.value ? JSON.parse(r.value) : {}; if (o && typeof o === 'object' && !Array.isArray(o)) _afvMigModes = o; } catch {}
+      try { const r = rows.find(x => x.key === 'afvikling_pulje_hidden'); const a = r && r.value ? JSON.parse(r.value) : []; if (Array.isArray(a)) _afvMigHidden = new Set(a); } catch {}
     }
-  } catch { afviklingGrupper = []; _afvPuljeModes = {}; _afvPuljeHidden = new Set(); }
+  } catch { afviklingGrupper = []; afviklingPulje = []; _afvNeedMigrate = false; }
   if (!afviklingGrupper.length) afviklingGrupper = [{ id: crypto.randomUUID(), navn: 'Afvikling', sort_order: 0, items: [] }];
 }
 async function saveAfviklingGrupper(okMsg) {
@@ -1770,26 +1777,32 @@ function _tvMacroerHTML() {
     <div id="mac-list">${rows}</div>`;
 }
 
-// AFVIKLING-fanen: samlet grafik-rundown. ØVERST en PULJE med alle udfyldte grafikker der IKKE er tildelt
-// en gruppe. Nedenunder GRUPPER (kollapsbare). Grafikker trækkes (drag-and-drop, SortableJS) mellem pulje
-// og grupper og omrokeres. Samme grafik kan stå i flere grupper (kopiér/indsæt). Pr. item er køremåde-
-// dropdown + PRW SKJULT som standard og foldes ud ved DOBBELTKLIK. On-air-grafik highlightes.
+// AFVIKLING-fanen: samlet grafik-rundown. ØVERST GRAFIKKER — en redigerbar LISTE (afviklingPulje, dubletter
+// tilladt) over udfyldte grafikker, fyrbare direkte. Nedenunder GRUPPER (kollapsbare). Items trækkes
+// (SortableJS) mellem lister og omrokeres; KOPIÉR laver dubletter (også i GRAFIKKER), TRÆK flytter. Samme
+// grafik kan stå flere steder. Pr. item er køremåde-dropdown + PRW skjult og foldes ud ved DOBBELTKLIK.
 function _tvAfviklingHTML() {
   const pool = _tvAfviklingPool();
   const poolByRef = {}; pool.forEach(p => { poolByRef[p.ref] = p; });
   const grupper = (afviklingGrupper || []).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
-  // Pulje = udfyldte grafikker der er FYRBARE direkte her (alle grafikker ligger klar til afvikling).
-  // En grafik skjules KUN hvis den er TRUKKET ud (_afvPuljeHidden) OG stadig ligger i en gruppe.
-  // → KOPIÉR beholder den i puljen (hidden urørt); TRÆK fjerner den (hidden opdateres i _afvRebuildFromDom).
-  // ∩-guard: en skjult ref der ikke længere er i nogen gruppe dukker automatisk op igen (fx gruppe slettet).
-  const assigned = new Set();
-  grupper.forEach(g => (g.items || []).forEach(it => assigned.add(it.ref)));
-  const puljeItems = pool.filter(p => !(_afvPuljeHidden.has(p.ref) && assigned.has(p.ref)));
+  // Migration (1. render efter opgradering): byg GRAFIKKER-listen fra den gamle afledte palet, så udseendet
+  // bevares (refs der IKKE var trukket-skjult), og persistér. Pool er klar her.
+  if (_afvNeedMigrate) {
+    _afvNeedMigrate = false;
+    const asg = new Set(); grupper.forEach(g => (g.items || []).forEach(it => asg.add(it.ref)));
+    afviklingPulje = pool.filter(p => !(_afvMigHidden.has(p.ref) && asg.has(p.ref)))
+                         .map(p => ({ id: crypto.randomUUID(), ref: p.ref, mode: _afvMigModes[p.ref] || '' }));
+    _afvMigModes = {}; _afvMigHidden = new Set();
+    saveAfviklingPulje();
+  }
+  // GRAFIKKER er nu en EKSPLICIT liste (dubletter tilladt). Hold den synk med udfyldte grafikker: nye dukker op,
+  // tømte forsvinder. Fire-and-forget gem hvis noget ændrede sig (ingen re-render → in-memory er allerede korrekt).
+  if (_afvSyncPulje(pool)) saveAfviklingPulje();
+  const puljeItems = afviklingPulje.map(it => ({ it, p: poolByRef[it.ref] })).filter(x => x.p);
 
-  // Fælles række-builder (bruges af både pulje og grupper). key = unik id til markér/udfold (gruppe: item.id,
-  // pulje: 'P:'+ref). Kontroller (køremåde + PRW) ligger FØR IN/OUT og er skjult til dobbeltklik, så IN/OUT
-  // bliver på deres plads yderst til højre.
+  // Fælles række-builder (bruges af både GRAFIKKER-listen og grupper). key = item.id (unik, også i puljen nu).
+  // Kontroller (køremåde + PRW) ligger FØR IN/OUT og er skjult til dobbeltklik, så IN/OUT bliver yderst til højre.
   const _rowHTML = (p, ctx) => {
     const key = ctx.key;
     const sel = (_afvSel && _afvSel.itemId === key) ? ' selected' : '';
@@ -1798,7 +1811,7 @@ function _tvAfviklingHTML() {
       return `<div class="afv-item afv-item-missing${sel}" data-item-id="${key}" data-ref="${esc(ctx.ref)}" ${dataAttr} style="--g-color:#444">
         <span class="afv-drag-handle">⠿</span>
         <div class="grafik-block-info"><span class="grafik-block-name muted">(grafik findes ikke længere)</span>
-          <span class="grafik-block-sub afv-item-sub">Træk til puljen eller tryk Delete for at fjerne</span></div>
+          <span class="grafik-block-sub afv-item-sub">Tryk Delete for at fjerne den</span></div>
       </div>`;
     }
     const macros = _afvMatchingMakroer(p);
@@ -1828,9 +1841,8 @@ function _tvAfviklingHTML() {
   };
 
   const puljeRows = puljeItems.length
-    ? puljeItems.map(p => _rowHTML(p, { key: 'P:' + p.ref, ref: p.ref, mode: _afvPuljeModes[p.ref], pulje: true })).join('')
-    : (pool.length ? '<div class="grafik-v2-empty" style="margin:0;">Alle grafikker er lagt i en gruppe.</div>'
-                   : '<div class="grafik-v2-empty" style="margin:0;">Ingen udfyldte grafikker endnu — udfyld subs/info eller opret grafik.</div>');
+    ? puljeItems.map(x => _rowHTML(x.p, { key: x.it.id, ref: x.it.ref, mode: x.it.mode, pulje: true })).join('')
+    : '<div class="grafik-v2-empty" style="margin:0;">Ingen udfyldte grafikker endnu — udfyld subs/info eller opret grafik.</div>';
 
   const grpHTML = grupper.map((grp, gi) => {
     const items = grp.items || [];
@@ -1859,9 +1871,9 @@ function _tvAfviklingHTML() {
       AFVIKLING
       <button class="grafik-btn-prw afv-grp-ny" style="padding:4px 10px;font-size:11px;border-radius:4px;">＋ Ny gruppe</button>
     </div>
-    <div class="afv-hint">Klik = markér (grafik el. gruppe-header) · Pil ↑/↓ flyt markør · <b>Numpad +/−</b> = on air/af · dobbeltklik = køremåde + preview · <b>⧉ / Ctrl+C</b> kopiér (grafik el. hel gruppe) · <b>Ctrl+V / 📋</b> indsæt · <b>træk</b> = flyt · Delete fjerner fra gruppe</div>
+    <div class="afv-hint">Klik = markér (grafik el. gruppe-header) · Pil ↑/↓ flyt markør · <b>Numpad +/−</b> = on air/af · dobbeltklik = køremåde + preview · <b>⧉ / Ctrl+C</b> kopiér · <b>Ctrl+V / 📋</b> indsæt (grafik eller hel gruppe) · <b>træk</b> = flyt · Delete fjerner markeret</div>
     <div class="afv-pulje">
-      <div class="afv-pulje-head">GRAFIKKER <span class="afv-pulje-sub">· fyr direkte · kopiér (⧉/Ctrl+C) for at beholde her · træk ned i en gruppe for at flytte</span></div>
+      <div class="afv-pulje-head">GRAFIKKER <span class="afv-pulje-sub">· din liste · fyr direkte · ⧉/Ctrl+C+V = dublet her · træk ned i en gruppe = flyt</span>${_afvClip && _afvClip.kind === 'item' ? ` <button class="grafik-btn-prw afv-pulje-paste" title="Indsæt kopieret grafik i GRAFIKKER">📋 Indsæt</button>` : ''}</div>
       <div class="afv-item-list afv-pulje-list" id="afv-pulje">${puljeRows}</div>
     </div>
     <div id="afv-grupper">${grpHTML || '<div class="grafik-v2-empty">Ingen grupper endnu.</div>'}</div>`;
@@ -1913,16 +1925,6 @@ function _wireTvMacroer(container) {
 
 // ── Afvikling-gruppe-CRUD (TV) ──
 function _afvFindGrp(id) { return (afviklingGrupper || []).find(g => g.id === id); }
-// Fjern "forældreløse" refs fra hidden (refs der ikke længere er i NOGEN gruppe), så en senere KOPI ikke
-// fejlagtigt skjules af en forældet hidden-post. Returnerer true hvis noget blev fjernet. Tilføjer aldrig.
-function _afvPruneHidden() {
-  if (!_afvPuljeHidden.size) return false;
-  const assigned = new Set();
-  (afviklingGrupper || []).forEach(g => (g.items || []).forEach(it => { if (it.ref) assigned.add(it.ref); }));
-  let changed = false;
-  [..._afvPuljeHidden].forEach(ref => { if (!assigned.has(ref)) { _afvPuljeHidden.delete(ref); changed = true; } });
-  return changed;
-}
 async function _afvAddGruppe() {
   const navn = (prompt('Navn på ny gruppe:', 'Gruppe ' + ((afviklingGrupper || []).length + 1)) || '').trim();
   if (!navn) return;
@@ -1941,11 +1943,9 @@ async function _afvDelGrp(id) {
   if (!confirm(`Slet gruppen "${g.navn}"?`)) return;
   afviklingGrupper = afviklingGrupper.filter(x => x.id !== id);
   await saveAfviklingGrupper('Gruppe slettet');
-  if (_afvPruneHidden()) await saveAfviklingPuljeHidden();
-  renderGrafik();
+  renderGrafik();   // _afvSyncPulje ved render bringer evt. hjemløse grafikker tilbage i GRAFIKKER
 }
-// Kopiér en HEL gruppe → ny gruppe "… (kopi)" lige under kilden, items klonet med egne id'er (samme
-// ref+mode). Rører ikke _afvPuljeHidden (ren gruppe-til-gruppe duplikering).
+// Kopiér en HEL gruppe → ny gruppe "… (kopi)" lige under kilden, items klonet med egne id'er (samme ref+mode).
 async function _afvCopyGroup(id) {
   const src = _afvFindGrp(id); if (!src) return;
   const dup = {
@@ -1980,7 +1980,7 @@ function _afvCtxFromEl(el) {
   const ref = el.dataset.ref; if (!ref) return null;
   const p = _tvAfviklingPool().find(x => x.ref === ref); if (!p) return null;
   let rawMode;
-  if (el.dataset.pulje === '1') rawMode = _afvPuljeModes[ref] || '';
+  if (el.dataset.pulje === '1') { const it = afviklingPulje.find(x => x.id === el.dataset.itemId); rawMode = it ? (it.mode || '') : ''; }
   else { const g = _afvFindGrp(el.dataset.grp); const it = g && (g.items || []).find(x => x.id === el.dataset.itemId); rawMode = it ? (it.mode || '') : ''; }
   const macros = _afvMatchingMakroer(p);
   let mode = rawMode || (macros[0] ? macros[0].id : 'raw');
@@ -2020,8 +2020,11 @@ function _afvFireSel(out) {
 function _afvCopySel() {
   if (!_afvSel) { toast('Markér en grafik først (klik på den)', 'err'); return; }
   let ref, mode;
-  if (_afvSel.pulje) { ref = _afvSel.ref; mode = _afvPuljeModes[ref] || ''; }
-  else {
+  if (_afvSel.pulje) {
+    const it = afviklingPulje.find(x => x.id === _afvSel.itemId);
+    if (!it) { toast('Markér en grafik først', 'err'); return; }
+    ref = it.ref; mode = it.mode || '';
+  } else {
     const g = _afvFindGrp(_afvSel.grpId);
     const it = g && (g.items || []).find(x => x.id === _afvSel.itemId);
     if (!it) { toast('Markér en grafik først', 'err'); return; }
@@ -2029,7 +2032,7 @@ function _afvCopySel() {
   }
   if (!ref) return;
   _afvClip = { kind: 'item', ref, mode };
-  toast('Grafik kopieret — vælg en gruppe og indsæt (Ctrl+V eller 📋 Indsæt)', 'ok');
+  toast('Grafik kopieret — indsæt med Ctrl+V eller 📋 Indsæt (i GRAFIKKER eller en gruppe)', 'ok');
   renderGrafik();   // vis 📋 Indsæt-knapperne
 }
 // Kopiér hele den markerede GRUPPE til klippebordet ({kind:'group',navn,items}). Indsættes med Ctrl+V som ny gruppe.
@@ -2047,7 +2050,13 @@ async function _afvPasteInto(grpId) {
   _afvLastGrp = grpId;
   await saveAfviklingGrupper('Indsat'); renderGrafik();
 }
-// Ctrl+V: indsæt det kopierede — en GRAFIK i en målgruppe, eller en hel GRUPPE som ny gruppe.
+// Indsæt en kopieret GRAFIK i GRAFIKKER-listen (dublet — bliver uden for en gruppe).
+async function _afvPasteIntoPulje() {
+  if (!_afvClip || _afvClip.kind !== 'item') return;
+  afviklingPulje.push({ id: crypto.randomUUID(), ref: _afvClip.ref, mode: _afvClip.mode || '' });
+  await saveAfviklingPulje(); toast('Indsat i GRAFIKKER', 'ok'); renderGrafik();
+}
+// Ctrl+V: indsæt det kopierede — en GRAFIK i GRAFIKKER eller en gruppe, eller en hel GRUPPE som ny gruppe.
 async function _afvPasteClip() {
   if (!_afvClip) { toast('Intet kopieret endnu (Ctrl+C eller ⧉ først)', 'err'); return; }
   if (_afvClip.kind === 'group') {
@@ -2063,58 +2072,63 @@ async function _afvPasteClip() {
     await saveAfviklingGrupper('Gruppe indsat'); renderGrafik();
     return;
   }
-  // kind: 'item' → find en målgruppe: sidst rørte, ellers den markerede grafiks gruppe, ellers første gruppe.
+  // kind: 'item' → indsæt hvor brugeren er: markeret GRAFIKKER-grafik → GRAFIKKER-listen; ellers en målgruppe
+  // (sidst rørte → markeret grafiks gruppe → første gruppe); findes ingen gruppe → GRAFIKKER.
+  if (_afvSel && _afvSel.pulje) { await _afvPasteIntoPulje(); return; }
   const groups = (afviklingGrupper || []);
-  if (!groups.length) { toast('Opret en gruppe at indsætte i først', 'err'); return; }
-  let target = (_afvLastGrp && _afvFindGrp(_afvLastGrp)) ? _afvLastGrp
-             : (_afvSel && _afvSel.grpId && _afvFindGrp(_afvSel.grpId)) ? _afvSel.grpId
-             : groups.slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))[0].id;
-  await _afvPasteInto(target);
+  const target = (_afvLastGrp && _afvFindGrp(_afvLastGrp)) ? _afvLastGrp
+               : (_afvSel && _afvSel.grpId && _afvFindGrp(_afvSel.grpId)) ? _afvSel.grpId
+               : (groups.length ? groups.slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))[0].id : null);
+  if (target) await _afvPasteInto(target);
+  else await _afvPasteIntoPulje();
 }
-// Fjern et item fra en gruppe (Delete-tasten). Pulje-items kan ikke fjernes (de er ikke i en gruppe).
-async function _afvRemoveItem(grpId, itemId) {
-  const g = _afvFindGrp(grpId); if (!g) return;
-  g.items = (g.items || []).filter(it => it.id !== itemId);
-  if (_afvSel && _afvSel.itemId === itemId) _afvSel = null;
-  await saveAfviklingGrupper();
-  if (_afvPruneHidden()) await saveAfviklingPuljeHidden();
-  renderGrafik();
+// Fjern det markerede item (Delete): en GRAFIKKER-DUBLET (ikke den eneste forekomst) eller et gruppe-item.
+// Den eneste/sidste forekomst i GRAFIKKER kan ikke fjernes (grafikken er altid tilgængelig) → besked.
+async function _afvRemoveSel() {
+  if (!_afvSel || !_afvSel.itemId) return;
+  const { itemId, pulje, ref } = _afvSel;
+  if (pulje) {
+    if (afviklingPulje.filter(x => x.ref === ref).length <= 1) {
+      toast('Grafikken er altid tilgængelig i GRAFIKKER — tøm selve subben/boksen hvis den ikke skal bruges', 'err'); return;
+    }
+    afviklingPulje = afviklingPulje.filter(x => x.id !== itemId); _afvSel = null;
+    await saveAfviklingPulje(); renderGrafik();
+  } else {
+    const g = _afvFindGrp(_afvSel.grpId); if (!g) return;
+    g.items = (g.items || []).filter(it => it.id !== itemId); _afvSel = null;
+    await saveAfviklingGrupper(); renderGrafik();
+  }
 }
-// Genopbyg grupperne ud fra DOM efter et SortableJS-drop (pulje↔gruppe, gruppe↔gruppe, omrokering).
+// Genopbyg BÅDE GRAFIKKER-listen OG grupperne ud fra DOM efter et SortableJS-drop (flyt/omrokér mellem lister).
+// Et item identificeres på sit data-item-id (bevar mode); et nyt (ukendt id) får nyt id. Dubletter bevares.
 async function _afvRebuildFromDom(container) {
   const oldById = {};
+  afviklingPulje.forEach(it => { oldById[it.id] = it; });
   (afviklingGrupper || []).forEach(g => (g.items || []).forEach(it => { oldById[it.id] = it; }));
-  const byGrp = {};
-  container.querySelectorAll('.afv-item-list[data-grp]').forEach(listEl => {
+  const readList = listEl => {
     const arr = [];
     listEl.querySelectorAll(':scope > .afv-item').forEach(node => {
       const ref = node.dataset.ref; if (!ref) return;
-      const iid = node.dataset.itemId;
-      const old = iid && oldById[iid];
-      // Allerede et gruppe-item (UUID i oldById): bevar mode. Ellers kom det fra puljen (data-item-id='P:ref')
-      // → nyt gruppe-item, bær pulje-køremåden med så valget ikke tabes ved træk.
-      arr.push(old ? { id: iid, ref: old.ref, mode: old.mode || '' }
-                   : { id: crypto.randomUUID(), ref, mode: _afvPuljeModes[ref] || '' });
+      const iid = node.dataset.itemId; const old = iid && oldById[iid];
+      arr.push(old ? { id: iid, ref: old.ref, mode: old.mode || '' } : { id: crypto.randomUUID(), ref, mode: '' });
     });
-    byGrp[listEl.dataset.grp] = arr;
-  });
+    return arr;
+  };
+  const puljeEl = container.querySelector('#afv-pulje');
+  if (puljeEl) afviklingPulje = readList(puljeEl);
+  const byGrp = {};
+  container.querySelectorAll('.afv-item-list[data-grp]').forEach(listEl => { byGrp[listEl.dataset.grp] = readList(listEl); });
   (afviklingGrupper || []).forEach(g => { if (byGrp[g.id]) g.items = byGrp[g.id]; });
-  // Opdatér "trukket ud af puljen" ud fra DOM: en ref er skjult hvis den nu er i en gruppe MEN ikke længere
-  // står i pulje-DOM'en (= den blev TRUKKET ned). En kopi (ingen drag) rører ikke denne sti, så den bliver.
-  // Idempotent for gruppe↔gruppe-træk (kopier står stadig i pulje-DOM → forbliver synlige).
-  const puljeRefs = new Set([...container.querySelectorAll('#afv-pulje > .afv-item')].map(n => n.dataset.ref));
-  const assignedNow = new Set();
-  (afviklingGrupper || []).forEach(g => (g.items || []).forEach(it => { if (it.ref) assignedNow.add(it.ref); }));
-  _afvPuljeHidden = new Set(_tvAfviklingPool().map(p => p.ref).filter(ref => assignedNow.has(ref) && !puljeRefs.has(ref)));
-  await saveAfviklingGrupper(); await saveAfviklingPuljeHidden(); renderGrafik();
+  await saveAfviklingPulje(); await saveAfviklingGrupper(); renderGrafik();
 }
 async function _afvSetItemMode(grpId, itemId, mode) {
   const g = _afvFindGrp(grpId); if (!g) return;
   const it = (g.items || []).find(x => x.id === itemId); if (!it) return;
   it.mode = mode; await saveAfviklingGrupper();   // ingen re-render → bevar dropdown-fokus
 }
-async function _afvSetPuljeMode(ref, mode) {
-  _afvPuljeModes[ref] = mode; await saveAfviklingPuljeModes();   // ingen re-render → bevar dropdown-fokus
+async function _afvSetPuljeItemMode(itemId, mode) {
+  const it = afviklingPulje.find(x => x.id === itemId); if (!it) return;
+  it.mode = mode; await saveAfviklingPulje();   // ingen re-render → bevar dropdown-fokus
 }
 
 // Fyr en grafik-enhed RÅT (type-passende), parallelt til de eksisterende afviklings-handlere.
@@ -2155,6 +2169,8 @@ function _wireTvAfvikling(container) {
   container.querySelectorAll('.afv-grp-del').forEach(b => b.addEventListener('click', () => _afvDelGrp(b.dataset.grp)));
   container.querySelectorAll('.afv-grp-copy').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); _afvCopyGroup(b.dataset.grp); }));
   container.querySelectorAll('.afv-grp-paste').forEach(b => b.addEventListener('click', () => _afvPasteInto(b.dataset.grp)));
+  const puljePasteBtn = container.querySelector('.afv-pulje-paste');
+  if (puljePasteBtn) puljePasteBtn.addEventListener('click', _afvPasteIntoPulje);
   // Klik på en gruppe-header (ikke en knap) = markér GRUPPEN (mål for Ctrl+V + Ctrl+C kopierer hele gruppen).
   container.querySelectorAll('.afv-grp-head').forEach(h => h.addEventListener('click', e => {
     if (e.target.closest('button')) return;
@@ -2168,7 +2184,7 @@ function _wireTvAfvikling(container) {
   //    så samme resolver bruges af klik OG den én-gang-bundne tastatur-afvikling) ──
   container.querySelectorAll('.afv-item-mode').forEach(sel => sel.addEventListener('change', () => {
     const el = sel.closest('.afv-item'); if (!el) return;
-    if (el.dataset.pulje === '1') _afvSetPuljeMode(el.dataset.ref, sel.value);
+    if (el.dataset.pulje === '1') _afvSetPuljeItemMode(el.dataset.itemId, sel.value);
     else _afvSetItemMode(el.dataset.grp, el.dataset.itemId, sel.value);
   }));
   container.querySelectorAll('.afv-item-fire').forEach(b => b.addEventListener('click', e => {
@@ -2223,8 +2239,7 @@ function _wireTvAfvikling(container) {
       ghostClass: 'afv-drag-ghost', fallbackOnBody: true, swapThreshold: 0.65,
       onEnd: evt => {
         if (evt.from === evt.to && evt.oldIndex === evt.newIndex) return;        // intet flyttet
-        if (!(evt.from && evt.from.dataset.grp) && !(evt.to && evt.to.dataset.grp)) return; // ren pulje-omrokering (ingen gruppe) → ingen dataændring
-        _afvRebuildFromDom(container);
+        _afvRebuildFromDom(container);   // GRAFIKKER er nu en rigtig liste → også omrokering i puljen persisteres
       }
     }));
   };
@@ -2258,8 +2273,8 @@ function _wireTvAfvikling(container) {
       if (e.code === 'NumpadAdd'      || e.key === '+') { e.preventDefault(); _afvFireSel(false); return; }
       if (e.code === 'NumpadSubtract' || e.key === '-') { e.preventDefault(); _afvFireSel(true);  return; }
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        // Kun gruppe-items kan fjernes (pulje-items er ikke i en gruppe).
-        if (_afvSel && !_afvSel.pulje && _afvSel.grpId && _afvSel.itemId) { e.preventDefault(); _afvRemoveItem(_afvSel.grpId, _afvSel.itemId); }
+        // Fjern markeret: GRAFIKKER-dublet eller gruppe-item (_afvRemoveSel beskytter eneste forekomst).
+        if (_afvSel && _afvSel.itemId) { e.preventDefault(); _afvRemoveSel(); }
         return;
       }
       if (!(e.ctrlKey || e.metaKey)) return;
