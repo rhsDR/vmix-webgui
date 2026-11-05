@@ -1563,6 +1563,11 @@
     .afv-item.afv-live { background: #4a4a52; }
     .afv-item.afv-live .grafik-block-name { color: #fff; }
     .afv-item.afv-live .afv-item-sub { color: #cfcfd6; }
+    /* Afspejl tilstanden: den knap der matcher grafikkens nuværende tilstand lyser KRAFTIGT (mættet),
+       den anden beholder sit dæmpede standard-look. KUN rundownen (.afv-item) = TV-only; kampdag urørt.
+       On air → IN kraftig grøn. Af → OUT kraftig rød. Hover-brightness fra basis-reglen gælder stadig. */
+    .afv-item.afv-live .afv-item-fire { background: #16a34a; color: #f0fdf4; }
+    .afv-item:not(.afv-live) .afv-item-out { background: #dc2626; color: #fef2f2; }
     .afv-item-missing { opacity: .7; }
     .afv-grp.collapsed .afv-grp-head { margin-bottom: 0; }
     .afv-item-mode {
