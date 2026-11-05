@@ -1558,6 +1558,7 @@
     .afv-item-ctrls { display: none; gap: 6px; flex-shrink: 0; align-items: center; }
     .afv-item.expanded .afv-item-ctrls { display: flex; }
     .afv-item.selected { outline: 2px solid #ff9d2e; outline-offset: -1px; }
+    .afv-grp-head.afv-grp-selected { outline: 2px solid #ff9d2e; outline-offset: -2px; border-radius: 6px; }
     /* On air: HELE blokken lysegrå (ingen grøn kant/ring). Kun baggrunden ændres, så type-farvebjælken til
        venstre bevares. Navn forbliver hvidt, under-linje lysnes for kontrast mod den lyse baggrund. */
     .afv-item.afv-live { background: #4a4a52; }

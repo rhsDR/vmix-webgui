@@ -31,8 +31,9 @@ let afviklingGrupper = [];
 // Rundown-UI-state (transient, kun TV, gemmes ikke i DB — overlever re-render via id/ref):
 let _afvExpanded = new Set();     // item-id'er hvis kontroller (køremåde-dropdown + PRW) er foldet ud (dobbeltklik)
 let _afvSel = null;               // { grpId, itemId } markeret item (til kopiering)
-let _afvClip = null;              // { ref, mode } kopieret item (Ctrl+C) → indsæt i en anden gruppe (Ctrl+V / 📋)
-let _afvLastGrp = null;           // seneste gruppe brugeren rørte (mål for Ctrl+V)
+let _afvSelGrp = null;            // id på markeret GRUPPE (klik på gruppe-header) → Ctrl+C kopierer hele gruppen
+let _afvClip = null;              // kopieret: {kind:'item',ref,mode} ELLER {kind:'group',navn,items:[{ref,mode}]}
+let _afvLastGrp = null;           // seneste gruppe brugeren rørte (mål for Ctrl+V af en grafik)
 let _afvSortables = [];           // aktive SortableJS-instanser (destrueres ved re-wire)
 let _afvKeyBound = false;         // document-keydown (copy/paste/delete) bindes kun én gang
 // Køremåde pr. IKKE-grupperet grafik (pulje), keyet på ref, gemt i settings.afvikling_pulje_modes. Pulje-
@@ -1838,12 +1839,12 @@ function _tvAfviklingHTML() {
       ? items.map(it => _rowHTML(poolByRef[it.ref], { key: it.id, ref: it.ref, mode: it.mode, grpId: grp.id, pulje: false })).join('')
       : `<div class="grafik-v2-empty afv-grp-empty" style="margin:4px 0;">Tom gruppe — træk grafik hertil fra puljen.</div>`;
     return `<div class="afv-grp${collapsed ? ' collapsed' : ''}" data-grp-id="${grp.id}">
-      <div class="afv-grp-head" data-grp="${grp.id}" title="Træk for at flytte gruppen op/ned">
+      <div class="afv-grp-head${_afvSelGrp === grp.id ? ' afv-grp-selected' : ''}" data-grp="${grp.id}" title="Klik = markér gruppen · træk for at flytte gruppen op/ned">
         <button class="afv-grp-collapse" data-grp="${grp.id}" title="${collapsed ? 'Fold ud' : 'Fold sammen'}">${collapsed ? '▸' : '▾'}</button>
         <span class="afv-grp-navn">${esc(grp.navn)}</span>
         <span class="afv-grp-count">${items.length}</span>
         <div class="afv-grp-tools">
-          ${_afvClip ? `<button class="grafik-btn-prw afv-grp-paste" data-grp="${grp.id}" title="Indsæt kopieret grafik her">📋 Indsæt</button>` : ''}
+          ${_afvClip && _afvClip.kind === 'item' ? `<button class="grafik-btn-prw afv-grp-paste" data-grp="${grp.id}" title="Indsæt kopieret grafik her">📋 Indsæt</button>` : ''}
           <button class="grafik-btn-prw afv-grp-copy" data-grp="${grp.id}" title="Kopiér hele gruppen">⧉</button>
           <button class="grafik-btn-prw afv-grp-rename" data-grp="${grp.id}" title="Omdøb gruppe">✎</button>
           <button class="grafik-btn-prw afv-grp-del" data-grp="${grp.id}" title="Slet gruppe" style="color:#c44">🗑</button>
@@ -1858,7 +1859,7 @@ function _tvAfviklingHTML() {
       AFVIKLING
       <button class="grafik-btn-prw afv-grp-ny" style="padding:4px 10px;font-size:11px;border-radius:4px;">＋ Ny gruppe</button>
     </div>
-    <div class="afv-hint">Pil ↑/↓ vælger · <b>Numpad +</b> = on air, <b>Numpad −</b> = af · dobbeltklik for køremåde + preview · <b>⧉ / Ctrl+C</b> kopiér (bliver i GRAFIKKER) → indsæt i en gruppe · <b>træk</b> = flyt · Delete fjerner fra gruppe</div>
+    <div class="afv-hint">Klik = markér (grafik el. gruppe-header) · Pil ↑/↓ flyt markør · <b>Numpad +/−</b> = on air/af · dobbeltklik = køremåde + preview · <b>⧉ / Ctrl+C</b> kopiér (grafik el. hel gruppe) · <b>Ctrl+V / 📋</b> indsæt · <b>træk</b> = flyt · Delete fjerner fra gruppe</div>
     <div class="afv-pulje">
       <div class="afv-pulje-head">GRAFIKKER <span class="afv-pulje-sub">· fyr direkte · kopiér (⧉/Ctrl+C) for at beholde her · træk ned i en gruppe for at flytte</span></div>
       <div class="afv-item-list afv-pulje-list" id="afv-pulje">${puljeRows}</div>
@@ -1994,8 +1995,10 @@ function _afvNav(dir) {
   idx = (idx < 0) ? (dir > 0 ? 0 : items.length - 1) : Math.max(0, Math.min(items.length - 1, idx + dir));
   const el = items[idx]; if (!el) return;
   _afvSel = { grpId: el.dataset.grp || '', itemId: el.dataset.itemId, pulje: el.dataset.pulje === '1', ref: el.dataset.ref };
+  _afvSelGrp = null;   // item valgt → ryd gruppe-markering
   if (!_afvSel.pulje) _afvLastGrp = el.dataset.grp || _afvLastGrp;
   cont.querySelectorAll('.afv-item.selected').forEach(x => x.classList.remove('selected'));
+  cont.querySelectorAll('.afv-grp-head.afv-grp-selected').forEach(x => x.classList.remove('afv-grp-selected'));
   el.classList.add('selected');
   el.scrollIntoView({ block: 'nearest' });
 }
@@ -2012,30 +2015,61 @@ function _afvFireSel(out) {
   const selEl = document.querySelector('#grafikList .afv-item.selected');
   if (selEl) selEl.scrollIntoView({ block: 'nearest' });   // behold valgte i syne efter re-render
 }
-// Kopiér markeret item til klippebordet (ref+mode). Virker for både gruppe- og pulje-items. Indsættes
-// senere i en (anden) gruppe → samme grafik kan dermed optræde i flere grupper.
+// Kopiér markeret GRAFIK til klippebordet ({kind:'item',ref,mode}). Virker for både gruppe- og pulje-items.
+// Indsættes senere i en gruppe (Ctrl+V / 📋) → samme grafik kan optræde flere steder.
 function _afvCopySel() {
-  if (!_afvSel) return;
+  if (!_afvSel) { toast('Markér en grafik først (klik på den)', 'err'); return; }
   let ref, mode;
   if (_afvSel.pulje) { ref = _afvSel.ref; mode = _afvPuljeModes[ref] || ''; }
   else {
     const g = _afvFindGrp(_afvSel.grpId);
     const it = g && (g.items || []).find(x => x.id === _afvSel.itemId);
-    if (!it) return;
+    if (!it) { toast('Markér en grafik først', 'err'); return; }
     ref = it.ref; mode = it.mode || '';
   }
   if (!ref) return;
-  _afvClip = { ref, mode };
-  toast('Kopieret — vælg en gruppe og indsæt (Ctrl+V eller 📋 Indsæt)', 'ok');
+  _afvClip = { kind: 'item', ref, mode };
+  toast('Grafik kopieret — vælg en gruppe og indsæt (Ctrl+V eller 📋 Indsæt)', 'ok');
   renderGrafik();   // vis 📋 Indsæt-knapperne
 }
+// Kopiér hele den markerede GRUPPE til klippebordet ({kind:'group',navn,items}). Indsættes med Ctrl+V som ny gruppe.
+function _afvCopyGroupToClip(grpId) {
+  const g = _afvFindGrp(grpId); if (!g) { toast('Markér en gruppe først', 'err'); return; }
+  _afvClip = { kind: 'group', navn: g.navn || 'Gruppe', items: (g.items || []).map(it => ({ ref: it.ref, mode: it.mode || '' })) };
+  toast('Gruppe kopieret — indsæt med Ctrl+V', 'ok');
+}
+// Indsæt en kopieret GRAFIK i en bestemt gruppe (📋-knap eller Ctrl+V-fallback).
 async function _afvPasteInto(grpId) {
-  if (!_afvClip) return;
+  if (!_afvClip || _afvClip.kind !== 'item') return;
   const g = _afvFindGrp(grpId); if (!g) return;
   g.items = g.items || [];
   g.items.push({ id: crypto.randomUUID(), ref: _afvClip.ref, mode: _afvClip.mode || '' });   // dublet = egen id
   _afvLastGrp = grpId;
   await saveAfviklingGrupper('Indsat'); renderGrafik();
+}
+// Ctrl+V: indsæt det kopierede — en GRAFIK i en målgruppe, eller en hel GRUPPE som ny gruppe.
+async function _afvPasteClip() {
+  if (!_afvClip) { toast('Intet kopieret endnu (Ctrl+C eller ⧉ først)', 'err'); return; }
+  if (_afvClip.kind === 'group') {
+    const dup = {
+      id: crypto.randomUUID(), navn: _afvClip.navn + ' (kopi)', sort_order: 0, collapsed: false,
+      items: (_afvClip.items || []).map(it => ({ id: crypto.randomUUID(), ref: it.ref, mode: it.mode || '' }))
+    };
+    const sorted = (afviklingGrupper || []).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    const i = _afvSelGrp ? sorted.findIndex(x => x.id === _afvSelGrp) : -1;
+    sorted.splice(i < 0 ? sorted.length : i + 1, 0, dup);
+    sorted.forEach((g, idx) => { g.sort_order = idx; });
+    afviklingGrupper = sorted;
+    await saveAfviklingGrupper('Gruppe indsat'); renderGrafik();
+    return;
+  }
+  // kind: 'item' → find en målgruppe: sidst rørte, ellers den markerede grafiks gruppe, ellers første gruppe.
+  const groups = (afviklingGrupper || []);
+  if (!groups.length) { toast('Opret en gruppe at indsætte i først', 'err'); return; }
+  let target = (_afvLastGrp && _afvFindGrp(_afvLastGrp)) ? _afvLastGrp
+             : (_afvSel && _afvSel.grpId && _afvFindGrp(_afvSel.grpId)) ? _afvSel.grpId
+             : groups.slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))[0].id;
+  await _afvPasteInto(target);
 }
 // Fjern et item fra en gruppe (Delete-tasten). Pulje-items kan ikke fjernes (de er ikke i en gruppe).
 async function _afvRemoveItem(grpId, itemId) {
@@ -2121,8 +2155,14 @@ function _wireTvAfvikling(container) {
   container.querySelectorAll('.afv-grp-del').forEach(b => b.addEventListener('click', () => _afvDelGrp(b.dataset.grp)));
   container.querySelectorAll('.afv-grp-copy').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); _afvCopyGroup(b.dataset.grp); }));
   container.querySelectorAll('.afv-grp-paste').forEach(b => b.addEventListener('click', () => _afvPasteInto(b.dataset.grp)));
-  // Klik på en gruppe-header (ikke en knap) = vælg den som mål for Ctrl+V.
-  container.querySelectorAll('.afv-grp-head').forEach(h => h.addEventListener('click', e => { if (!e.target.closest('button')) _afvLastGrp = h.dataset.grp; }));
+  // Klik på en gruppe-header (ikke en knap) = markér GRUPPEN (mål for Ctrl+V + Ctrl+C kopierer hele gruppen).
+  container.querySelectorAll('.afv-grp-head').forEach(h => h.addEventListener('click', e => {
+    if (e.target.closest('button')) return;
+    _afvLastGrp = h.dataset.grp; _afvSelGrp = h.dataset.grp; _afvSel = null;
+    container.querySelectorAll('.afv-item.selected').forEach(x => x.classList.remove('selected'));
+    container.querySelectorAll('.afv-grp-head.afv-grp-selected').forEach(x => x.classList.remove('afv-grp-selected'));
+    h.classList.add('afv-grp-selected');
+  }));
 
   // ── Item: køremåde + fyring + preview (kontekst læses fra .afv-item via modul-funktionen _afvCtxFromEl,
   //    så samme resolver bruges af klik OG den én-gang-bundne tastatur-afvikling) ──
@@ -2161,7 +2201,9 @@ function _wireTvAfvikling(container) {
       const pulje = el.dataset.pulje === '1';
       if (!pulje) _afvLastGrp = el.dataset.grp || _afvLastGrp;   // pulje har ingen gruppe → behold sidste mål
       _afvSel = { grpId: el.dataset.grp || '', itemId: el.dataset.itemId, pulje, ref: el.dataset.ref };
+      _afvSelGrp = null;   // grafik valgt → ryd gruppe-markering
       container.querySelectorAll('.afv-item.selected').forEach(x => x.classList.remove('selected'));
+      container.querySelectorAll('.afv-grp-head.afv-grp-selected').forEach(x => x.classList.remove('afv-grp-selected'));
       el.classList.add('selected');
     });
     el.addEventListener('dblclick', e => {
@@ -2222,8 +2264,8 @@ function _wireTvAfvikling(container) {
       }
       if (!(e.ctrlKey || e.metaKey)) return;
       const k = e.key.toLowerCase();
-      if (k === 'c' && _afvSel) { e.preventDefault(); _afvCopySel(); }
-      else if (k === 'v' && _afvClip && _afvLastGrp) { e.preventDefault(); _afvPasteInto(_afvLastGrp); }
+      if (k === 'c') { e.preventDefault(); if (_afvSelGrp) _afvCopyGroupToClip(_afvSelGrp); else _afvCopySel(); }
+      else if (k === 'v') { e.preventDefault(); _afvPasteClip(); }
     });
   }
 }
