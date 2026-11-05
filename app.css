@@ -1772,7 +1772,9 @@
     .grafik-btn-in, .grafik-btn-out { padding: 8px 16px; font-size: 13px; border-radius: 5px; }
     .grafik-btn-in { background: #1a6b32; color: #4ade80; }
     .grafik-btn-in:hover:not(:disabled) { filter: brightness(1.25); }
-    .grafik-btn-in.on { background: #166534; color: #86efac; }
+    /* Aktiv/live IN-knap lyser KRAFTIGT grøn (samme mættede grøn som rundownens .afv-live IN).
+       Delt klasse → gælder alle faner inkl. kampdag (bevidst, brugergodkendt). */
+    .grafik-btn-in.on { background: #16a34a; color: #f0fdf4; }
     .grafik-btn-in:disabled { opacity: 1; background: #262626; color: #565656; cursor: not-allowed; }
     .grafik-btn-out { background: #6b1a1a; color: #f87171; }
     .grafik-btn-out:hover:not(:disabled) { filter: brightness(1.25); }
