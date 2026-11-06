@@ -1540,8 +1540,8 @@
 
     /* Pulje øverst: udfyldte grafikker der ikke er i en gruppe — fyrbare rækker (klar til afvikling) */
     .afv-pulje { border: 1px dashed #3a3a3a; border-radius: 8px; background: #141414; padding: 10px 12px; margin-bottom: 10px; }
-    .afv-pulje-head { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: #bbb; margin-bottom: 8px; }
-    .afv-pulje-sub { color: #9a9a9a; font-weight: 400; letter-spacing: 0; }
+    .afv-pulje-head { font-size: 14px; font-weight: 700; letter-spacing: 1px; color: #bbb; margin-bottom: 8px; }
+    .afv-pulje-sub { font-size: 14px; color: #aaa; font-weight: 400; letter-spacing: 0; }
     .afv-pulje-list { min-height: 36px; }   /* arver kolonne-layout fra .afv-item-list */
 
     /* Rundown-item (kompakt kort). Kontroller (køremåde + PRW) ligger FØR IN/OUT i DOM og er skjult til
@@ -1576,7 +1576,7 @@
       background: #15243a; border: 1px solid #3b82f6; color: #fff;
       padding: 5px 8px; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; max-width: 200px;
     }
-    .afv-hint { font-size: 12px; color: #9a9a9a; margin: 0 2px 12px; }
+    .afv-hint { font-size: 14px; line-height: 1.6; color: #aaa; margin: 0 2px 12px; }
     /* SortableJS ghost (pladsholder under drag) */
     .afv-drag-ghost { opacity: .4; }
     .sortable-chosen { cursor: grabbing; }
