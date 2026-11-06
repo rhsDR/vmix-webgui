@@ -193,8 +193,9 @@ async function runStep(pid, h, slotOverride, projType) {
       const gr = await sbGet(`projekt_grafik?projekt_id=eq.${encodeURIComponent(pid)}&trigger_key=eq.${encodeURIComponent(h.key)}&limit=1&select=kategori`);
       kat = gr[0]?.kategori || '';
     } catch {}
-    if (kat === 'sub') await upsert(pid, 'active_sub', String(_eff));
-    await Promise.all([sbBroadcastRest(pid, h.key, h.value, { slot: String(_eff) }), upsert(pid, h.key, h.value)]);
+    // active_sub skrives PARALLELT med broadcast+trigger (ikke serielt før) → sparer en rundtur, stadig awaited.
+    const _subWrite = (kat === 'sub') ? upsert(pid, 'active_sub', String(_eff)) : Promise.resolve();
+    await Promise.all([sbBroadcastRest(pid, h.key, h.value, { slot: String(_eff) }), upsert(pid, h.key, h.value), _subWrite]);
     return;
   }
   await Promise.all([sbBroadcastRest(pid, h.key, h.value), upsert(pid, h.key, h.value)]);
@@ -216,23 +217,34 @@ export default async function handler(req, res) {
   const { id } = req.query;
   if (!id) return res.status(400).json({ error: 'projekt id mangler' });
 
+  const macroId      = req.query.macro;
+  const slotOverride = req.query.slot || '';
+  const _key0        = req.query.key || '';
+  // En CUSTOM-key (TV-grafik: ikke en indbygget ALLOWED_KEY og ikke en makro) kræver ét projekt_grafik-opslag
+  // (validering + kategori). Hent det PARALLELT med projekt-status → spar en seriel rundtur. Kampdag (ALLOWED_KEYS)
+  // og makroer: _needGrafik=false → INGEN ekstra fetch, projekt-læsningen er præcis som før.
+  const _needGrafik  = !macroId && _key0 && !ALLOWED_KEYS.includes(_key0);
+
   // Inaktive projekter må IKKE modtage data (triggers). Fail closed. service-role
   // læser status uden om RLS, så tjekket er uafhængigt af politikker. type bruges til at
   // gate info-step (value=step) til TV-projekter — kampdag kan aldrig ramme den.
   let projType = '';
+  let _grafikRow = null;
   try {
-    const pr = await fetch(`${SB_URL}/rest/v1/projekter?id=eq.${encodeURIComponent(id)}&select=aktiv,type&limit=1`,
-      { headers: { apikey: _SVC, Authorization: 'Bearer ' + _SVC } });
-    const projRows = await pr.json();
+    const [projRows, grRows] = await Promise.all([
+      fetch(`${SB_URL}/rest/v1/projekter?id=eq.${encodeURIComponent(id)}&select=aktiv,type&limit=1`,
+        { headers: { apikey: _SVC, Authorization: 'Bearer ' + _SVC } }).then(r => r.json()),
+      _needGrafik
+        ? sbGet(`projekt_grafik?projekt_id=eq.${encodeURIComponent(id)}&trigger_key=eq.${encodeURIComponent(_key0)}&limit=1&select=id,kategori`).catch(() => null)
+        : Promise.resolve(null)
+    ]);
     if (!projRows[0]) return res.status(404).json({ error: 'Projekt ikke fundet' });
     if (projRows[0].aktiv === false) return res.status(403).json({ error: 'Projektet er inaktivt — triggers afvist' });
     projType = projRows[0].type || '';
+    _grafikRow = (grRows && grRows[0]) ? grRows[0] : null;
   } catch {
     return res.status(502).json({ error: 'Kunne ikke tjekke projekt-status' });
   }
-
-  const macroId      = req.query.macro;
-  const slotOverride = req.query.slot || '';
   if (macroId) {
     try {
       const rows = await sbGet(`projekt_makroer?id=eq.${encodeURIComponent(macroId)}&projekt_id=eq.${encodeURIComponent(id)}&limit=1`);
@@ -274,18 +286,12 @@ export default async function handler(req, res) {
     }
   }
 
-  const key   = req.query.key   || '';
+  const key   = _key0;
   const value = req.query.value || '';
   const slot  = req.query.slot  || '';
 
-  if (!ALLOWED_KEYS.includes(key)) {
-    try {
-      const customRows = await sbGet(`projekt_grafik?projekt_id=eq.${encodeURIComponent(id)}&trigger_key=eq.${encodeURIComponent(key)}&limit=1&select=id`);
-      if (!customRows.length) return res.status(400).json({ error: 'Ukendt key: ' + key });
-    } catch {
-      return res.status(400).json({ error: 'Ukendt key: ' + key });
-    }
-  }
+  // Custom-key valideres via _grafikRow fra den parallelle batch ovenfor (intet nyt opslag).
+  if (!ALLOWED_KEYS.includes(key) && !_grafikRow) return res.status(400).json({ error: 'Ukendt key: ' + key });
   if (!value) return res.status(400).json({ error: 'value mangler' });
 
   try {
@@ -335,13 +341,12 @@ export default async function handler(req, res) {
     // (info-grafik viser boksen via runAnimationIN(slot)); for SUB sættes active_sub også (fallback + /api/vmix).
     // Kategori afgør om active_sub sættes (så info ikke forurener active_sub).
     if (slot && value !== 'out' && !ALLOWED_KEYS.includes(key)) {
-      let kat = '';
-      try {
-        const gr = await sbGet(`projekt_grafik?projekt_id=eq.${encodeURIComponent(id)}&trigger_key=eq.${encodeURIComponent(key)}&limit=1&select=kategori`);
-        kat = gr[0]?.kategori || '';
-      } catch {}
-      if (kat === 'sub') await upsert(id, 'active_sub', String(slot));
-      const [bc] = await Promise.all([sbBroadcastRest(id, key, value, { slot: String(slot) }), upsert(id, key, value)]);
+      const kat = _grafikRow?.kategori || '';   // kategori fra den parallelle batch (intet nyt opslag)
+      // active_sub skrives PARALLELT med broadcast+trigger (ikke serielt FØR) → sparer en seriel rundtur, men
+      // stadig awaited så serverless-funktionen ikke fryses før skrivet er færdigt. broadcast bærer slot →
+      // grafikken fyrer STRAKS; active_sub er kun til /api/vmix + Companion-feedback + masters (selv-korrigerende) fallback.
+      const _subWrite = (kat === 'sub') ? upsert(id, 'active_sub', String(slot)) : Promise.resolve();
+      const [bc] = await Promise.all([sbBroadcastRest(id, key, value, { slot: String(slot) }), upsert(id, key, value), _subWrite]);
       return res.status(200).json({ ok: true, key, value, slot, _bc: bc });
     }
     const [bc] = await Promise.all([sbBroadcastRest(id, key, value), upsert(id, key, value)]);
