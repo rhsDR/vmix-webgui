@@ -225,6 +225,15 @@ export default async function handler(req, res) {
   // og makroer: _needGrafik=false → INGEN ekstra fetch, projekt-læsningen er præcis som før.
   const _needGrafik  = !macroId && _key0 && !ALLOWED_KEYS.includes(_key0);
 
+  // FYR BROADCAST'EN STRAKS (som panelet broadcaster over sin åbne ws) — grafikken kommer frem af broadcast'en
+  // ALENE; projekt-/key-validering + settings-skrivning sker bagefter (parallelt), så de ikke forsinker visningen.
+  // Gælder simple single-key-triggers UNDTAGEN dem der skal beregne/skrive data FØR visning (step/komm_alle/
+  // lineup) + makroer. Broadcast'en bærer key+value+slot (alt fra query → ingen DB nødvendig).
+  const _val0  = req.query.value || '';
+  const _slot0 = req.query.slot || '';
+  const _fastFire = !macroId && _key0 && _val0 && _val0 !== 'step' && _key0 !== 'komm_alle' && _key0 !== 'lineup_trigger';
+  const _bcEarly = _fastFire ? sbBroadcastRest(id, _key0, _val0, _slot0 ? { slot: String(_slot0) } : undefined) : null;
+
   // Inaktive projekter må IKKE modtage data (triggers). Fail closed. service-role
   // læser status uden om RLS, så tjekket er uafhængigt af politikker. type bruges til at
   // gate info-step (value=step) til TV-projekter — kampdag kan aldrig ramme den.
@@ -287,8 +296,8 @@ export default async function handler(req, res) {
   }
 
   const key   = _key0;
-  const value = req.query.value || '';
-  const slot  = req.query.slot  || '';
+  const value = _val0;
+  const slot  = _slot0;
 
   // Custom-key valideres via _grafikRow fra den parallelle batch ovenfor (intet nyt opslag).
   if (!ALLOWED_KEYS.includes(key) && !_grafikRow) return res.status(400).json({ error: 'Ukendt key: ' + key });
@@ -326,7 +335,9 @@ export default async function handler(req, res) {
     }
     if (key === 'lt_trigger') {
       if ((value === 'in' || value === 'vmixcall') && slot) await upsert(id, 'lt_slot', String(slot));
-      const [bc] = await Promise.all([sbBroadcastRest(id, 'lt_trigger', value, slot ? { slot } : undefined), upsert(id, key, value)]);
+      // broadcast = _bcEarly (allerede fyret øverst). lt_slot skrives FØR lt_trigger (rækkefølge bevaret for
+      // kampdag-fallback). Vi flytter KUN broadcast'en frem — ikke skrive-rækkefølgen.
+      const [bc] = await Promise.all([_bcEarly || sbBroadcastRest(id, 'lt_trigger', value, slot ? { slot } : undefined), upsert(id, key, value)]);
       return res.status(200).json({ ok: true, key, value, slot: slot || undefined, _bc: bc });
     }
     if (key === 'lineup_trigger' && slot && value !== 'out') {
@@ -346,10 +357,10 @@ export default async function handler(req, res) {
       // stadig awaited så serverless-funktionen ikke fryses før skrivet er færdigt. broadcast bærer slot →
       // grafikken fyrer STRAKS; active_sub er kun til /api/vmix + Companion-feedback + masters (selv-korrigerende) fallback.
       const _subWrite = (kat === 'sub') ? upsert(id, 'active_sub', String(slot)) : Promise.resolve();
-      const [bc] = await Promise.all([sbBroadcastRest(id, key, value, { slot: String(slot) }), upsert(id, key, value), _subWrite]);
+      const [bc] = await Promise.all([_bcEarly || sbBroadcastRest(id, key, value, { slot: String(slot) }), upsert(id, key, value), _subWrite]);
       return res.status(200).json({ ok: true, key, value, slot, _bc: bc });
     }
-    const [bc] = await Promise.all([sbBroadcastRest(id, key, value), upsert(id, key, value)]);
+    const [bc] = await Promise.all([_bcEarly || sbBroadcastRest(id, key, value), upsert(id, key, value)]);
     res.status(200).json({ ok: true, key, value, slot: slot || undefined, _bc: bc });
   } catch (err) {
     res.status(err.code || 502).json({ error: String(err.message) });
