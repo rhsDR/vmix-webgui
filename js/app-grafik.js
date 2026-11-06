@@ -32,6 +32,7 @@ let afviklingGrupper = [];
 let _afvExpanded = new Set();     // item-id'er hvis kontroller (køremåde-dropdown + PRW) er foldet ud (dobbeltklik)
 let _afvSel = null;               // { grpId, itemId } ANKER-item (sidst klikket; Shift-interval, numpad-fyr, Ctrl+C)
 let _afvMultiSel = new Set();     // itemId'er i markeringen (kilde til .selected highlight; flyt/slet flere samlet)
+let _afvAnchorId = null;          // fast ende af et interval (Shift-klik / Shift+pil); fokus = _afvSel.itemId
 let _afvDragIds = null;           // transient: ordnede ids ved start af et multi-træk
 let _afvSelGrp = null;            // id på markeret GRUPPE (klik på gruppe-header) → Ctrl+C kopierer hele gruppen
 let _afvClip = null;              // kopieret: {kind:'item',ref,mode} ELLER {kind:'group',navn,items:[{ref,mode}]}
@@ -1873,7 +1874,7 @@ function _tvAfviklingHTML() {
       AFVIKLING
       <button class="grafik-btn-prw afv-grp-ny" style="padding:4px 10px;font-size:11px;border-radius:4px;">＋ Ny gruppe</button>
     </div>
-    <div class="afv-hint">Klik = markér · <b>Ctrl/⌘-klik</b> + <b>Shift-klik</b> = vælg flere (træk flytter dem samlet) · Pil ↑/↓ flyt markør · <b>Numpad +/−</b> = on air/af · dobbeltklik = køremåde + preview · <b>⧉ / Ctrl+C</b> kopiér · <b>Ctrl+V / 📋</b> indsæt · <b>træk</b> = flyt · Delete fjerner markeret</div>
+    <div class="afv-hint">Klik = markér · <b>Ctrl/⌘-klik</b> + <b>Shift-klik</b> = vælg flere (træk flytter dem samlet) · Pil ↑/↓ flyt markør (<b>Shift+pil</b> = marker flere) · <b>Numpad +/−</b> = on air/af · dobbeltklik = køremåde + preview · <b>⧉ / Ctrl+C</b> kopiér · <b>Ctrl+V / 📋</b> indsæt · <b>træk</b> = flyt · Delete fjerner markeret</div>
     <div class="afv-pulje">
       <div class="afv-pulje-head">GRAFIKKER <span class="afv-pulje-sub">· din liste · fyr direkte · ⧉/Ctrl+C+V = dublet her · træk ned i en gruppe = flyt</span>${_afvClip && _afvClip.kind === 'item' ? ` <button class="grafik-btn-prw afv-pulje-paste" title="Indsæt kopieret grafik i GRAFIKKER">📋 Indsæt</button>` : ''}</div>
       <div class="afv-item-list afv-pulje-list" id="afv-pulje">${puljeRows}</div>
@@ -1994,21 +1995,28 @@ function _afvCtxFromEl(el) {
 function _afvOrderedItemIds(cont) {
   return [...cont.querySelectorAll('.afv-item')].map(n => n.dataset.itemId).filter(Boolean);
 }
-// Pil op/ned: flyt markøren (_afvSel) gennem ALLE .afv-item i dokument-rækkefølge (pulje først, så grupper).
-// Enkelt-markering (rydder evt. multi-markering).
-function _afvNav(dir) {
+// Pil op/ned: flyt fokus (_afvSel) gennem ALLE .afv-item i dokument-rækkefølge. `extend` (Shift) = udvid
+// intervallet fra ankeret (_afvAnchorId) i stedet for enkelt-markering.
+function _afvNav(dir, extend) {
   const cont = document.getElementById('grafikList'); if (!cont) return;
   const items = [...cont.querySelectorAll('.afv-item')]; if (!items.length) return;
-  let idx = _afvSel ? items.findIndex(el => el.dataset.itemId === _afvSel.itemId) : -1;
-  idx = (idx < 0) ? (dir > 0 ? 0 : items.length - 1) : Math.max(0, Math.min(items.length - 1, idx + dir));
-  const el = items[idx]; if (!el) return;
+  let focus = _afvSel ? items.findIndex(el => el.dataset.itemId === _afvSel.itemId) : -1;
+  const newIdx = (focus < 0) ? (dir > 0 ? 0 : items.length - 1) : Math.max(0, Math.min(items.length - 1, focus + dir));
+  const el = items[newIdx]; if (!el) return;
   _afvSel = { grpId: el.dataset.grp || '', itemId: el.dataset.itemId, pulje: el.dataset.pulje === '1', ref: el.dataset.ref };
-  _afvMultiSel = new Set([el.dataset.itemId]);
-  _afvSelGrp = null;   // item valgt → ryd gruppe-markering
+  _afvSelGrp = null;
   if (!_afvSel.pulje) _afvLastGrp = el.dataset.grp || _afvLastGrp;
-  cont.querySelectorAll('.afv-item.selected').forEach(x => x.classList.remove('selected'));
+  if (extend && _afvAnchorId != null) {
+    // Udvid interval [anker .. nyt fokus].
+    const order = items.map(n => n.dataset.itemId);
+    const a = order.indexOf(_afvAnchorId);
+    if (a >= 0) { const lo = Math.min(a, newIdx), hi = Math.max(a, newIdx); _afvMultiSel = new Set(order.slice(lo, hi + 1)); }
+    else { _afvMultiSel = new Set([el.dataset.itemId]); _afvAnchorId = el.dataset.itemId; }
+  } else {
+    _afvMultiSel = new Set([el.dataset.itemId]); _afvAnchorId = el.dataset.itemId;   // enkelt-markering → nyt anker
+  }
+  cont.querySelectorAll('.afv-item').forEach(x => x.classList.toggle('selected', _afvMultiSel.has(x.dataset.itemId)));
   cont.querySelectorAll('.afv-grp-head.afv-grp-selected').forEach(x => x.classList.remove('afv-grp-selected'));
-  el.classList.add('selected');
   el.scrollIntoView({ block: 'nearest' });
 }
 // Numpad +/−: fyr den valgte grafik IN/OUT (makro vs rå respekteres).
@@ -2122,7 +2130,7 @@ async function _afvRemoveSel() {
   if (!grpChanged && !puljeChanged) {
     toast('Grafikken er altid tilgængelig i GRAFIKKER — tøm selve subben/boksen hvis den ikke skal bruges', 'err'); return;
   }
-  _afvSel = null; _afvMultiSel = new Set();
+  _afvSel = null; _afvMultiSel = new Set(); _afvAnchorId = null;
   if (puljeChanged) await saveAfviklingPulje();
   if (grpChanged) await saveAfviklingGrupper();
   renderGrafik();
@@ -2215,7 +2223,7 @@ function _wireTvAfvikling(container) {
   // Klik på en gruppe-header (ikke en knap) = markér GRUPPEN (mål for Ctrl+V + Ctrl+C kopierer hele gruppen).
   container.querySelectorAll('.afv-grp-head').forEach(h => h.addEventListener('click', e => {
     if (e.target.closest('button')) return;
-    _afvLastGrp = h.dataset.grp; _afvSelGrp = h.dataset.grp; _afvSel = null; _afvMultiSel = new Set();
+    _afvLastGrp = h.dataset.grp; _afvSelGrp = h.dataset.grp; _afvSel = null; _afvMultiSel = new Set(); _afvAnchorId = null;
     container.querySelectorAll('.afv-item.selected').forEach(x => x.classList.remove('selected'));
     container.querySelectorAll('.afv-grp-head.afv-grp-selected').forEach(x => x.classList.remove('afv-grp-selected'));
     h.classList.add('afv-grp-selected');
@@ -2248,7 +2256,7 @@ function _wireTvAfvikling(container) {
     const el = b.closest('.afv-item'); if (!el) return;
     const pulje = el.dataset.pulje === '1';
     _afvSel = { grpId: el.dataset.grp || '', itemId: el.dataset.itemId, pulje, ref: el.dataset.ref };
-    _afvMultiSel = new Set([el.dataset.itemId]); _afvSelGrp = null;
+    _afvMultiSel = new Set([el.dataset.itemId]); _afvAnchorId = el.dataset.itemId; _afvSelGrp = null;
     _afvCopySel();
   }));
 
@@ -2260,25 +2268,27 @@ function _wireTvAfvikling(container) {
       const pulje = el.dataset.pulje === '1';
       const mk = { grpId: el.dataset.grp || '', itemId: id, pulje, ref: el.dataset.ref };
       _afvSelGrp = null;   // grafik valgt → ryd gruppe-markering
-      if (e.shiftKey && _afvSel && _afvSel.itemId) {
-        // Shift: interval fra ankeret til dette (visuel rækkefølge), tilføj til markeringen.
+      const anchorId = (_afvAnchorId != null) ? _afvAnchorId : (_afvSel && _afvSel.itemId);
+      if (e.shiftKey && anchorId != null) {
+        // Shift: interval [anker .. dette] i visuel rækkefølge (erstatter markeringen). Ankeret bevares.
         const order = _afvOrderedItemIds(container);
-        const a = order.indexOf(_afvSel.itemId), b = order.indexOf(id);
-        if (a >= 0 && b >= 0) { const lo = Math.min(a, b), hi = Math.max(a, b); for (let i = lo; i <= hi; i++) _afvMultiSel.add(order[i]); }
-        else _afvMultiSel.add(id);
-        _afvSel = mk;
+        const a = order.indexOf(anchorId), b = order.indexOf(id);
+        if (a >= 0 && b >= 0) { const lo = Math.min(a, b), hi = Math.max(a, b); _afvMultiSel = new Set(order.slice(lo, hi + 1)); }
+        else { _afvMultiSel = new Set([id]); _afvAnchorId = id; }
+        _afvSel = mk;   // fokus flytter til klikket
       } else if (e.ctrlKey || e.metaKey) {
-        // Ctrl/⌘: toggle i markeringen.
+        // Ctrl/⌘: toggle i markeringen; nyt anker på det klikkede.
         if (_afvMultiSel.has(id)) {
           _afvMultiSel.delete(id);
           if (_afvSel && _afvSel.itemId === id) {
             const firstEl = [...container.querySelectorAll('.afv-item')].find(n => _afvMultiSel.has(n.dataset.itemId));
             _afvSel = firstEl ? { grpId: firstEl.dataset.grp || '', itemId: firstEl.dataset.itemId, pulje: firstEl.dataset.pulje === '1', ref: firstEl.dataset.ref } : null;
           }
-        } else { _afvMultiSel.add(id); _afvSel = mk; }
+          _afvAnchorId = _afvSel ? _afvSel.itemId : null;
+        } else { _afvMultiSel.add(id); _afvSel = mk; _afvAnchorId = id; }
       } else {
-        // Alm. klik: enkelt-markering.
-        _afvMultiSel = new Set([id]); _afvSel = mk;
+        // Alm. klik: enkelt-markering → nyt anker.
+        _afvMultiSel = new Set([id]); _afvSel = mk; _afvAnchorId = id;
       }
       if (!pulje && _afvSel && _afvSel.itemId === id) _afvLastGrp = el.dataset.grp || _afvLastGrp;
       container.querySelectorAll('.afv-item').forEach(x => x.classList.toggle('selected', _afvMultiSel.has(x.dataset.itemId)));
@@ -2306,7 +2316,7 @@ function _wireTvAfvikling(container) {
         } else {
           _afvDragIds = null;
           if (!_afvMultiSel.has(id)) {   // træk af en UMARKERET grafik = enkelt-flyt (ryd markering til den ene)
-            _afvMultiSel = new Set([id]);
+            _afvMultiSel = new Set([id]); _afvAnchorId = id;
             _afvSel = { grpId: evt.item.dataset.grp || '', itemId: id, pulje: evt.item.dataset.pulje === '1', ref: evt.item.dataset.ref };
           }
         }
@@ -2347,8 +2357,8 @@ function _wireTvAfvikling(container) {
       const ae = document.activeElement;
       if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;   // skriv-felt → rør ikke
       // Navigering (pil op/ned) — gennem ALLE grafikker (pulje + grupper) i visuel rækkefølge.
-      if (e.key === 'ArrowDown') { e.preventDefault(); _afvNav(1); return; }
-      if (e.key === 'ArrowUp')   { e.preventDefault(); _afvNav(-1); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); _afvNav(1, e.shiftKey); return; }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); _afvNav(-1, e.shiftKey); return; }
       // Afvikling: Numpad + = valgte grafik on air, Numpad − = af (også alm. +/−).
       if (e.code === 'NumpadAdd'      || e.key === '+') { e.preventDefault(); _afvFireSel(false); return; }
       if (e.code === 'NumpadSubtract' || e.key === '-') { e.preventDefault(); _afvFireSel(true);  return; }
