@@ -1553,7 +1553,6 @@
       -webkit-user-select: none; -moz-user-select: none; user-select: none;   /* Ctrl/Shift-klik markerer ikke teksten */
     }
     .afv-item .grafik-block-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
-    .afv-item .grafik-block-name { font-size: 17px; }
     .afv-item-sub { color: #9a9a9a; font-size: 14px; }   /* type · plads — tydeligere end før (#777) */
     .afv-item-main { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
     .afv-item-ctrls { display: none; gap: 6px; flex-shrink: 0; align-items: center; }
@@ -1576,9 +1575,6 @@
       background: #15243a; border: 1px solid #3b82f6; color: #fff;
       padding: 5px 8px; border-radius: 5px; font-size: 13px; font-weight: 600; cursor: pointer; max-width: 200px;
     }
-    /* AFVIKLING-knapper lidt større end standard (kun i rundown — kampdag-knapper uændret) */
-    .afv-item .grafik-btn-in, .afv-item .grafik-btn-out { font-size: 14px; }
-    .afv-item .grafik-btn-prw { font-size: 12px; }
     .afv-hint { font-size: 14px; line-height: 1.6; color: #aaa; margin: 0 2px 12px; }
     /* SortableJS ghost (pladsholder under drag) */
     .afv-drag-ghost { opacity: .4; }
@@ -1742,7 +1738,7 @@
     }
     .grafik-block-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
     .grafik-block-name {
-      font-size: 15px;
+      font-size: 17px;
       font-weight: 700;
       color: #fff;
       overflow: hidden;
@@ -1764,7 +1760,7 @@
     .grafik-btn-prw {
       padding: 4px 10px;
       border-radius: 4px;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
       letter-spacing: 0.5px;
       cursor: pointer;
@@ -1774,7 +1770,7 @@
       line-height: 1.4;
     }
     /* > IN / < OUT større så de er nemmere at ramme (generel design-ændring, gælder alle afviklingslister) */
-    .grafik-btn-in, .grafik-btn-out { padding: 8px 16px; font-size: 13px; border-radius: 5px; }
+    .grafik-btn-in, .grafik-btn-out { padding: 8px 16px; font-size: 14px; border-radius: 5px; }
     .grafik-btn-in { background: #1a6b32; color: #4ade80; }
     .grafik-btn-in:hover:not(:disabled) { filter: brightness(1.25); }
     /* Aktiv/live IN-knap lyser KRAFTIGT grøn (samme mættede grøn som rundownens .afv-live IN).
