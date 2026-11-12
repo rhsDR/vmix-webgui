@@ -12,6 +12,7 @@
       --green:       #22c55e;
       --input-bg:    #0d0d0d;
       --yellow:      #eab308;
+      --gutter:      clamp(16px, calc((100vw - 1440px) / 2), 340px);
     }
 
     body {
@@ -27,14 +28,16 @@
 
     /* ── Header ───────────────────────────────────────────── */
     .header {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      padding: 14px clamp(8px, 22vw, 340px);
+      padding: 14px var(--gutter);
       border-bottom: 1px solid #252525;
       background: linear-gradient(180deg, #161616 0%, transparent 100%);
       position: relative;
     }
+    .header > :first-child { justify-self: start; }
+    .header > :last-child  { justify-self: end; }
     .header-title {
       font-size: 15px;
       font-weight: 700;
@@ -49,9 +52,8 @@
       letter-spacing: normal;
     }
     .header-logo {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
+      position: static;
+      justify-self: center;
       height: 36px;
     }
     .clock {
@@ -69,7 +71,7 @@
     .tabs {
       display: flex;
       gap: 6px;
-      padding: 12px clamp(8px, 22vw, 340px);
+      padding: 12px var(--gutter);
       border-bottom: 1px solid #252525;
     }
     .tab-btn {
@@ -95,7 +97,7 @@
       box-shadow: 0 2px 14px rgba(249,115,22,0.4);
     }
 
-    .tab-pane { display: none; padding: 20px clamp(8px, 22vw, 340px); }
+    .tab-pane { display: none; padding: 20px var(--gutter); }
     .tab-pane.active { display: block; }
     .coming-soon { padding: 60px; text-align: center; color: #6a6a6a; font-size: 12px; letter-spacing: 3px; }
 
@@ -1139,6 +1141,10 @@
     /* Dynamiske subs (TV): wrap holder buildSubRow + ✕ slet (så rerenderSub ikke fjerner slet-knappen) */
     .sub-tv-wrap { display: flex; align-items: center; gap: 8px; }
     .sub-tv-wrap .sub-row { flex: 1; min-width: 0; margin-bottom: 0; }
+    /* Sikkerhedsnet: smalt sub-kort → ombryd knapperne til ny linje i stedet for at overløbe preview.
+       Scopet til TV-sub-kort (.subs-tv); kampdag-sub-kort uberørt. */
+    .subs-tv .sub-row { flex-wrap: wrap; row-gap: 8px; }
+    .subs-tv .sub-edit-fields { min-width: 200px; }
     .sub-tv-wrap { margin-bottom: 10px; }
     .sub-tv-del { font-size: 18px; color: #7a3b3b; flex-shrink: 0; }
     .sub-tv-del:hover { color: #ef4444; }
@@ -1147,7 +1153,7 @@
       padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer;
     }
     .sub-tv-add:hover { filter: brightness(1.2); }
-    @media (max-width: 1024px) {
+    @media (max-width: 1200px) {
       .subs-tv { grid-template-columns: 1fr; }
       .subs-tv-preview { position: static; }
     }
@@ -1622,7 +1628,7 @@
     .lag-subrow.drag-over { border-top-color: var(--orange); }
 
     /* ── GRAFIK V2 — to-kolonnet layout ─────────────────────── */
-    #tab-grafik { padding: 20px clamp(8px, 22vw, 340px); overflow: hidden; }
+    #tab-grafik { padding: 20px var(--gutter); overflow: hidden; }
 
     .grafik-v2-wrap {
       display: grid;
