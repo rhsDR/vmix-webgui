@@ -208,6 +208,10 @@ export default async function handler(req, res) {
   if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
   res.setHeader('Cache-Control', 'no-store');
 
+  // Keep-warm: en ekstern pinger (?warm=1) holder denne Lambda varm uden at fyre noget eller røre DB'en,
+  // så sporadiske Companion-tryk rammer en varm funktion i stedet for en cold start. Returnér straks.
+  if (req.query.warm) return res.status(200).json({ ok: true, warm: true });
+
   // Token-lås: alle kald (Companion m.fl.) skal medsende ?token= der matcher
   // TRIGGER_TOKEN-miljøvariablen i Vercel. Uden env-var afvises alt (fail closed).
   const TRIGGER_TOKEN = process.env.TRIGGER_TOKEN;
