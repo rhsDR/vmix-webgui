@@ -42,10 +42,11 @@ manglende token". De nye adresser indeholder tokenet automatisk:
 - `api/trigger/[id].js`: kræver nu `?token=` der matcher `TRIGGER_TOKEN`.
 - `api/trigger-token.js` (ny): udleverer tokenet til loggede brugere, så
   panelet kan vise færdige Companion-URLs.
-- `api/enetpulse.js`, `api/fixture-search.js`, `api/player.js`,
-  `api/standings.js`: kræver nu login (gyldig session fra panelet).
-- `app.js`: sender automatisk login-token med til datakilderne og indsætter
-  trigger-tokenet i de viste Companion-URLs.
+- `api/enetpulse.js`, `api/player.js`, `api/standings.js`: kræver nu login
+  (gyldig session fra panelet). (`api/fixture-search.js` er senere fjernet — ubrugt.)
+- Panelet (`js/app-supabase.js`, før i den nu slettede monolit `app.js`): sender
+  automatisk login-token med til datakilderne og indsætter trigger-tokenet i de
+  viste Companion-URLs.
 - `api/team-image.js` er bevidst stadig åben: den bruges som billede-adresse
   i overlay-siderne (billeder kan ikke sende login), og svarene caches af
   Vercels CDN, så kvote-risikoen er minimal.

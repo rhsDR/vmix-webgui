@@ -296,51 +296,6 @@ function cancelEdit(i) {
 }
 
 
-async function searchFixtureByDate(i, div, date) {
-  const resultsEl = div.querySelector('#efixresults-' + i);
-  resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Henter kampe…</span>';
-  try {
-    const res = await apiFetch('/api/fixture-search?date=' + encodeURIComponent(date));
-    const data = await res.json();
-    if (data.error) {
-      resultsEl.innerHTML = `<span style="color:var(--red);font-size:12px;">${esc(data.error)}</span>`;
-      return;
-    }
-    if (!data.fixtures || data.fixtures.length === 0) {
-      resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Ingen kampe den dag</span>';
-      return;
-    }
-    resultsEl.innerHTML = '';
-    data.fixtures.forEach(f => {
-      const el = document.createElement('div');
-      el.className = 'fixture-result-item';
-      el.innerHTML = `
-        <div class="fix-teams">${esc(f.home)} vs ${esc(f.away)}</div>
-        <div class="fix-meta">${esc(f.league)} · ${esc(f.date)}</div>`;
-      el.addEventListener('click', async () => {
-        try {
-          await sbPatch('kampe?projekt_id=eq.' + aktivProjektId + '&slot=eq.' + (i + 1), {
-            fixture_id: f.id,
-            hold1_lang: f.home,
-            hold1_kort: f.home_kort || f.home,
-            hold2_lang: f.away,
-            hold2_kort: f.away_kort || f.away
-          });
-          kampe[i].fixtureId = f.id;
-          kampe[i].hold1Lang = f.home;
-          kampe[i].hold1Kort = f.home_kort || f.home;
-          kampe[i].hold2Lang = f.away;
-          kampe[i].hold2Kort = f.away_kort || f.away;
-          toast('Kamp valgt ✓', 'ok');
-          _broadcastKampState(i);
-          rerender(i);
-        } catch { toast('Fejl ved gem af fixture', 'err'); }
-      });
-      resultsEl.appendChild(el);
-    });
-  } catch { resultsEl.innerHTML = '<span style="color:var(--red);font-size:12px;">Hentning fejlede</span>'; }
-}
-
 async function searchEnetpulseByDate(i, div, date) {
   const resultsEl = div.querySelector('#enetresults-' + i);
   resultsEl.innerHTML = '<span style="color:#555;font-size:12px;">Henter kampe…</span>';
