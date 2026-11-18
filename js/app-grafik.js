@@ -391,8 +391,10 @@ async function setGrafiktTrigger(triggerKey, value) {
 }
 
 // Vis/skjul komm-boks for en kamp-slot ud fra on-air, gatet af master-kontakten.
-// Kaldes fra toggleOnAir (lokal handling) og applyKampRow (ændring fra andet panel).
-// On air → vis KUN hvis master er på. Off air → skjul altid (hvis den er på).
+// Kaldes fra toggleOnAir og saveKamp (NULSTIL) (lokal handling) og applyKampRow (ændring fra andet panel).
+// On air → vis KUN hvis master (KOMM PÅ) er på. Off air → send ALTID OUT: grafiktState hentes først når
+// GRAFIK-fanen åbnes, så efter F5 tror panelet fejlagtigt at boksen er af og sendte aldrig OUT → boksen
+// blev stående. Ekstra OUT er ufarligt (secondary ignorerer OUT til en skjult boks).
 function syncKommBoks(slot, onAir) {
   const boks = KOMM_BOKSE.find(k => k.slot === slot);
   if (!boks) return;
@@ -400,7 +402,7 @@ function syncKommBoks(slot, onAir) {
   if (onAir) {
     if (_kommPaaMode && cur === 'out') setGrafiktTrigger(boks.triggerKey, 'in');
   } else {
-    if (cur !== 'out') setGrafiktTrigger(boks.triggerKey, 'out');
+    setGrafiktTrigger(boks.triggerKey, 'out');
   }
 }
 

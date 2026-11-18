@@ -356,6 +356,7 @@ async function saveKamp(i, div) {
   const k   = kampe[i];
   const buf = k.buf;
   const prevEnetpulseId = k.enetpulseId;
+  const wasOnAir = k.onAir;   // NULSTIL tager kampen af air → kommentator-boksen skal også af (se nedenfor)
 
   const h1 = dropdowns.holds.find(h => h.lang === buf.hold1Lang);
   const h2 = dropdowns.holds.find(h => h.lang === buf.hold2Lang);
@@ -395,6 +396,7 @@ async function saveKamp(i, div) {
     });
     toast('Gemt ✓', 'ok');
     _broadcastKampState(i);
+    if (buf.nulstilScoreOgOnAir && wasOnAir) syncKommBoks(i + 1, false);
     if (k.enetpulseId !== prevEnetpulseId) fetchLiveMatches();
     // Synk link + kommentator navn/titel til vmix_calls slot
     if (i < 6 && vmixCalls[i]) {
