@@ -73,6 +73,79 @@ function applyTickerRow(row) {
   rerenderTicker(i);
 }
 
+// ── Genopretning efter netudfald ──────────────────────────────
+// supabase-js genforbinder selv, men ændringer der skete MENS forbindelsen var nede, kommer aldrig som events.
+// Kanalens status bruges derfor til (1) en offline-bjælke i panelet (kun panelet — aldrig on air) og (2) at hente
+// data igen, når forbindelsen er tilbage. Genhentningen bruger de samme række-appliers som realtime, så rækker
+// man er i gang med at redigere (editMode/savePending) ikke overskrives.
+let _dbSubscribedOnce = false;
+let _offlineTimer = null;
+
+function _setOfflineBanner(show) {
+  let el = document.getElementById('offlineBanner');
+  if (show && !el) {
+    el = document.createElement('div');
+    el.id = 'offlineBanner';
+    el.className = 'offline-banner';
+    el.textContent = 'Forbindelse tabt — genopretter… Panelet viser måske ikke det aktuelle, og tryk når måske ikke frem.';
+    document.body.appendChild(el);
+  }
+  if (el) el.style.display = show ? '' : 'none';
+}
+
+function _onDbChannelStatus(status) {
+  if (status === 'SUBSCRIBED') {
+    clearTimeout(_offlineTimer); _offlineTimer = null;
+    _setOfflineBanner(false);
+    if (_dbSubscribedOnce) _resyncAfterReconnect();   // første gang = normal start; senere = genforbundet
+    _dbSubscribedOnce = true;
+  } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+    // Vis først bjælken efter 2 s, så et kort blink ikke får den til at blinke.
+    if (!_offlineTimer) _offlineTimer = setTimeout(() => { _offlineTimer = null; _setOfflineBanner(true); }, 2000);
+  }
+}
+
+async function _resyncAfterReconnect() {
+  if (!aktivProjektId) return;
+  const isTv = typeof projektType !== 'undefined' && projektType === 'tv';
+  const pf = 'projekt_id=eq.' + aktivProjektId;
+  try {
+    const [kampeRows, subsRows, vcRows, tkRows, stRows] = await Promise.all([
+      sbGet('kampe?' + pf + '&order=slot.asc'),
+      sbGet('subs?' + pf + '&order=slot.asc'),
+      sbGet('vmix_calls?' + pf + '&order=slot.asc'),
+      sbGet('tickers?' + pf + '&order=slot.asc'),
+      sbGet('settings?' + pf + '&key=in.(active_sub,komm_master)&select=key,value'),
+    ]);
+    (kampeRows || []).forEach(applyKampRow);       // kalder også syncKommBoks hvis en kamp skiftede on air
+    (subsRows  || []).forEach(applySubRow);
+    (vcRows    || []).forEach(applyVmixCallRow);
+    (tkRows    || []).forEach(applyTickerRow);
+    (stRows    || []).forEach(r => {
+      if (r.key === 'active_sub') { activeSubSlot = parseInt(r.value) || 0; subs.forEach((_, i) => rerenderSub(i)); }
+      else if (r.key === 'komm_master') _kommPaaMode = (r.value === 'on');
+    });
+  } catch (e) { console.error('[genopretning] kunne ikke hente rækker igen:', e); }
+  try { await refreshCredits(); } catch (e) { console.error('[genopretning] credits:', e); }
+  try { await refreshGrafiktState(); } catch (e) { console.error('[genopretning] grafik-tilstand:', e); }   // renderer selv
+  if (isTv) {
+    try {
+      await loadTvSubs();
+      const _ae = document.activeElement;
+      const _editingSub = _ae && document.getElementById('subsTvList')?.contains(_ae);
+      if (!_editingSub && document.getElementById('tab-subs')?.classList.contains('active')) renderSubs();
+    } catch (e) { console.error('[genopretning] subs:', e); }
+    try { await loadAfviklingGrupper(); } catch (e) { console.error('[genopretning] afvikling:', e); }
+    const _ae2 = document.activeElement;
+    const _editingInfo = (_ae2 && document.getElementById('infoList')?.contains(_ae2)) || (infoBokse || []).some(b => b.editMode);
+    if (!_editingInfo) {   // rør ikke INFO midt i en redigering (fokus i et felt ELLER en boks åben i redigering)
+      try { await loadInfoBokse(); if (document.getElementById('tab-info')?.classList.contains('active')) renderInfo(); }
+      catch (e) { console.error('[genopretning] info:', e); }
+    }
+    if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
+  }
+}
+
 sbClient.channel('db-changes')
   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kampe' },
       p => applyKampRow(p.new))
@@ -180,5 +253,5 @@ sbClient.channel('db-changes')
           if (document.getElementById('tab-grafik-ops')?.classList.contains('active')) _debouncedRenderGrafikOps();
         }
       })
-  .subscribe();
+  .subscribe(_onDbChannelStatus);
 

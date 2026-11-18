@@ -2313,3 +2313,12 @@
     .ga-validate-btn.fix:hover { background: #1e3350; }
     .ga-validate-btn.save { background: #1a3a1a; border: 1px solid #2d5a2d; color: #86efac; }
     .ga-validate-btn.save:hover { background: #21501f; }
+
+    /* Offline-bjælke: vises (kun i panelet, aldrig on air) når realtime-forbindelsen er nede — se app-realtime.js.
+       Samme røde advarsels-farver som "Ryd alt"/slet-knapperne; tekst ≥15 px (læsbarheds-baseline). */
+    .offline-banner {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 10000;
+      background: #2a1010; border-bottom: 1px solid #4a2020; color: #ef4444;
+      font-size: 15px; font-weight: 600; text-align: center; padding: 10px 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.5);
+    }
