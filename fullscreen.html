@@ -676,9 +676,29 @@
     }
 
     if (projektId) {
+      // Genforbindelse (ikke første åbning — der hentes alt ved load): hent opstillingens tilstand igen, hvis den
+      // blev ændret under et netudfald. Samme logik som den live lineup_trigger-handler nedenfor. Sikkert: DB står
+      // 'home'/'away' mens opstillingen er på; resetTrigger sætter først 'out', når den skjules.
+      var _opWsOpens = 0;
+      function _OPonWsOpen() {
+        if (++_opWsOpens === 1 || IS_PREVIEW || IS_EMBED) return;
+        fetch(`${SB_URL}/rest/v1/settings?projekt_id=eq.${encodeURIComponent(projektId)}&key=in.(lineup_trigger,lineup_data)&select=key,value`, { headers: SB_HDR })
+          .then(function (r) { return r.ok ? r.json() : []; })
+          .then(function (rows) {
+            if (!Array.isArray(rows)) return;
+            var dataRow = rows.find(function (r) { return r.key === 'lineup_data'; });
+            var trigRow = rows.find(function (r) { return r.key === 'lineup_trigger'; });
+            if (dataRow && dataRow.value) { try { lineupData = JSON.parse(dataRow.value); } catch (e) {} }
+            var lv = trigRow ? trigRow.value : 'out';
+            if ((lv === 'home' || lv === 'away') && currentSide !== lv && lineupData) showSide(lv);
+            else if (lv === 'out' && currentSide !== null) hideSide();
+          })
+          .catch(function () {});
+      }
       // Transportlaget (join/heartbeat/reconnect) bor i js/realtime-ws.js
       createRealtimeWS({
         topic: 'op-grafik-' + projektId,
+        onOpen: _OPonWsOpen,
         postgresChanges: [
           { event: 'UPDATE', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + projektId },
           { event: 'INSERT', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + projektId }

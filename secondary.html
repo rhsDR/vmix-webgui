@@ -195,8 +195,22 @@
           } catch {}
         }
         // Transportlaget (join/heartbeat/reconnect) bor i js/realtime-ws.js
+        // Genforbindelse (ikke første åbning — der hentes alt ved load): hent det vi kan have misset under et
+        // netudfald. Komm-boksene via _dispatch (IN kun hvis skjult, OUT kun hvis synlig → ufarligt at gentage),
+        // custom-grafik + info_live via fetchInitialCustomState (springer selvafsluttende grafik over).
+        var _wsOpens = 0;
+        function _onWsOpen() {
+          if (++_wsOpens === 1) return;
+          var kk = Object.keys(_TRIG);
+          fetch(`${SB_URL}/rest/v1/settings?projekt_id=eq.${encodeURIComponent(_pid)}&key=in.(${kk.map(encodeURIComponent).join(',')})&select=key,value`, { headers: SB_HDR })
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(function (rows) { (Array.isArray(rows) ? rows : []).forEach(function (r) { _dispatch(r.key, r.value); }); })
+            .catch(function () {});
+          if (typeof fetchInitialCustomState === 'function') fetchInitialCustomState();
+        }
         _rtConn = createRealtimeWS({
           topic: 'triggers-' + _pid,
+          onOpen: _onWsOpen,
           postgresChanges: [
             { event: 'UPDATE', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + _pid },
             { event: 'INSERT', schema: 'public', table: 'settings', filter: 'projekt_id=eq.' + _pid }
