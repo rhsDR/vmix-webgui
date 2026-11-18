@@ -35,6 +35,7 @@
     const customState    = {};
     const customSlot     = {}; // sidste sub-plads pr. trigger-key — så skift mellem subs (value stadig 'in') går igennem
     const customCat      = {}; // kategori pr. trigger-key (fx 'sub') — så active_sub-skift kun rammer sub-grafik
+    const customAhs      = {}; // auto-skjul-sekunder pr. trigger-key (0 = ingen)
     const customStateTime = {};
     const _creditTs = {}; // sidste credit-IN-fyring pr. key — debouncer broadcast+settings-ekko til ét rul
     let   _activeSubSlot = ''; // aktuel active_sub-plads — så settings-stien (_dispatch) viser den RIGTIGE sub, ikke stale 'aktiv'
@@ -201,6 +202,7 @@
           if (_creditRefire) { if (Date.now() - (_creditTs[key] || 0) < 250) return; _creditTs[key] = Date.now(); }
           customState[key] = value;
           customStateTime[key] = Date.now();
+          if (value === 'in') _armAutoHideReset(key);
           if (isSub && value === 'in') customSlot[key] = _activeSubSlot;
           if (isInfo && value === 'in') customSlot[key] = _activeInfoSlot;
           try {
@@ -273,6 +275,7 @@
               customState[p.key] = p.value;
               customSlot[p.key] = String(p.slot || '');
               customStateTime[p.key] = Date.now();
+              if (p.value === 'in') _armAutoHideReset(p.key);
               // Hold _activeInfoSlot i sync når broadcast'en bærer en info-plads, så settings-ekkoet
               // (info_live) ikke re-fyrer samme slot (customSlot-guarden rammer).
               if (customCat[p.key] === 'info' && p.value === 'in' && p.slot) _activeInfoSlot = String(p.slot);
@@ -391,6 +394,15 @@
     // Iframen er "klar" når den er loadet (grafikkens runAnimationIN findes). Triggere der ankommer før, udskydes
     // til da — ellers blev kaldet droppet stille, mens state blev sat til 'in', og dedup'en blokerede derefter,
     // så grafikken aldrig kom på efter en reload. Timeout, så intet kan hænge.
+    // Selvafsluttende custom-grafik: credits eller auto-skjul. De står stadig 'in' i DB, når de er færdige.
+    function _isSelfEnding(key) { return customCat[key] === 'credit' || (customAhs[key] || 0) > 0; }
+    // Auto-skjul: når grafikken har skjult sig selv (inject-wrapperen kalder runAnimationOUT), sættes overlayets
+    // state tilbage til 'out', så et nyt IN går igennem dedup'en. Kun hvis der ikke er kommet en nyere trigger.
+    function _armAutoHideReset(key) {
+      var s = customAhs[key] || 0; if (!s) return;
+      var t0 = customStateTime[key];
+      setTimeout(function () { if (customStateTime[key] === t0 && customState[key] === 'in') customState[key] = 'out'; }, s * 1000 + 250);
+    }
     function _markReady(iframe) {
       iframe._ready = new Promise(function (res) {
         var done = function () { iframe._isReady = true; res(); };
@@ -447,6 +459,7 @@
             customFrameMap[g.trigger_key] = iframe;
             customState[g.trigger_key] = 'out';
             customCat[g.trigger_key] = g.kategori || '';
+            customAhs[g.trigger_key] = _ahs;
           }));
           applyOrder(DEFAULT_ORDER);
         }
@@ -472,7 +485,13 @@
         if (_asRow) _activeSubSlot = String(_asRow.value || '');
         const _ilRow = (data || []).find(r => r.key === 'info_live');
         if (_ilRow) _activeInfoSlot = String(_ilRow.value || '');
-        for (const row of data ?? []) if (row.key !== 'active_sub' && row.key !== 'info_live') _dispatch(row.key, row.value);
+        for (const row of data ?? []) {
+          if (row.key === 'active_sub' || row.key === 'info_live') continue;
+          // Selvafsluttende grafik (credits/auto-skjul) står stadig 'in' i DB, når den er færdig → afspil den IKKE
+          // igen ved reload/genforbindelse (fx credits der ruller igen). Næste rigtige IN virker som normalt.
+          if (row.value === 'in' && _isSelfEnding(row.key)) continue;
+          _dispatch(row.key, row.value);
+        }
       } catch {}
     }
 

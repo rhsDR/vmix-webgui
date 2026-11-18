@@ -477,6 +477,7 @@
     const _OPcustomState    = {};
     const _OPcustomStateTime = {};
     const _OPcustomCat      = {}; // kategori pr. trigger-key — så info-grafik kan få sin boks/side-slot med
+    const _OPcustomAhs      = {}; // auto-skjul-sekunder pr. trigger-key (0 = ingen)
     const _OPcustomSlot     = {}; // sidste slot pr. trigger-key — guard mod dobbelt-fyring
     let   _OPactiveInfoSlot = ''; // aktuel info "boks.side" (fra settings.info_live). Fullscreen har KUN settings-stien (ingen broadcast) → eneste vej slot kan nå info-grafikken
 
@@ -552,6 +553,7 @@
       if (cPrev === value && !(isInfo && value === 'in' && _OPcustomSlot[key] !== _OPactiveInfoSlot)) return;
       _OPcustomState[key] = value;
       _OPcustomStateTime[key] = Date.now();
+      if (value === 'in') _OParmAutoHideReset(key);
       if (isInfo && value === 'in') _OPcustomSlot[key] = _OPactiveInfoSlot;
       try {
         // Info-grafik får sin boks/side ("boks.side") med fra _OPactiveInfoSlot (info_live) — ligesom master.
@@ -581,6 +583,13 @@
     // Iframen er "klar" når den er loadet (grafikkens runAnimationIN findes). Triggere der ankommer før, udskydes
     // til da — ellers blev kaldet droppet stille, mens state blev sat til 'in', og dedup'en blokerede derefter,
     // så grafikken aldrig kom på efter en reload. Timeout, så intet kan hænge.
+    // Auto-skjul: når grafikken har skjult sig selv, sættes overlayets state tilbage til 'out', så et nyt IN går
+    // igennem dedup'en. Kun hvis der ikke er kommet en nyere trigger.
+    function _OParmAutoHideReset(key) {
+      var s = _OPcustomAhs[key] || 0; if (!s) return;
+      var t0 = _OPcustomStateTime[key];
+      setTimeout(function () { if (_OPcustomStateTime[key] === t0 && _OPcustomState[key] === 'in') _OPcustomState[key] = 'out'; }, s * 1000 + 250);
+    }
     function _markReady(iframe) {
       iframe._ready = new Promise(function (res) {
         var done = function () { iframe._isReady = true; res(); };
@@ -648,6 +657,7 @@
           _OPcustomFrameMap[g.trigger_key] = iframe;
           _OPcustomState[g.trigger_key] = 'out';
           _OPcustomCat[g.trigger_key] = g.kategori || '';
+          _OPcustomAhs[g.trigger_key] = _ahs;
         }));
         // Initial state for lineup_trigger + lineup_data (erstatter pollTrigger)
         if (!IS_PREVIEW && !IS_EMBED) {

@@ -59,6 +59,7 @@
     const customState    = {};
     const customStateTime = {};
     const customCat      = {}; // kategori pr. trigger-key — så info-grafik kan få sin boks/side-slot med
+    const customAhs      = {}; // auto-skjul-sekunder pr. trigger-key (0 = ingen)
     const customSlot     = {}; // sidste slot pr. trigger-key — guard mod dobbelt-fyring
     let   _activeInfoSlot = ''; // aktuel info "boks.side" (fra settings.info_live) — så info-step viser RIGTIG boks/side når info-grafikken er sat til Secondary
 
@@ -181,6 +182,7 @@
           if (cPrev === value && !(isInfo && value === 'in' && customSlot[key] !== _activeInfoSlot)) return;
           customState[key] = value;
           customStateTime[key] = Date.now();
+          if (value === 'in') _armAutoHideReset(key);
           if (isInfo && value === 'in') customSlot[key] = _activeInfoSlot;
           try {
             // Info-grafik får sin boks/side ("boks.side") med fra _activeInfoSlot (info_live) — ligesom master.
@@ -272,6 +274,15 @@
     // Iframen er "klar" når den er loadet (grafikkens runAnimationIN findes). Triggere der ankommer før, udskydes
     // til da — ellers blev kaldet droppet stille, mens state blev sat til 'in', og dedup'en blokerede derefter,
     // så grafikken aldrig kom på efter en reload. Timeout, så intet kan hænge.
+    // Selvafsluttende custom-grafik: credits eller auto-skjul. De står stadig 'in' i DB, når de er færdige.
+    function _isSelfEnding(key) { return customCat[key] === 'credit' || (customAhs[key] || 0) > 0; }
+    // Auto-skjul: når grafikken har skjult sig selv, sættes overlayets state tilbage til 'out', så et nyt IN går
+    // igennem dedup'en. Kun hvis der ikke er kommet en nyere trigger.
+    function _armAutoHideReset(key) {
+      var s = customAhs[key] || 0; if (!s) return;
+      var t0 = customStateTime[key];
+      setTimeout(function () { if (customStateTime[key] === t0 && customState[key] === 'in') customState[key] = 'out'; }, s * 1000 + 250);
+    }
     function _markReady(iframe) {
       iframe._ready = new Promise(function (res) {
         var done = function () { iframe._isReady = true; res(); };
@@ -342,6 +353,7 @@
           customFrameMap[g.trigger_key] = iframe;
           customState[g.trigger_key] = 'out';
           customCat[g.trigger_key] = g.kategori || '';
+          customAhs[g.trigger_key] = _ahs;
         }));
       } catch {}
     }
@@ -365,6 +377,8 @@
         if (_ilRow) _activeInfoSlot = String(_ilRow.value || '');
         for (const row of data) {
           if (row.key === 'info_live') continue;
+          // Selvafsluttende grafik (credits/auto-skjul) står stadig 'in' i DB, når den er færdig → afspil ikke igen.
+          if (row.value === 'in' && _isSelfEnding(row.key)) continue;
           if (customState[row.key] === row.value) continue;
           const prev = customState[row.key];
           customState[row.key] = row.value;
