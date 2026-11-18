@@ -1124,8 +1124,15 @@ function renderGrafik() {
     });
   });
 
+  // PRW UD ligger i preview-panelet, som BEVARES mellem renders → bind kun én gang. Før fik knappen en ny
+  // handler ved hver render (hver trigger-ændring), og hver handler kaldte selv renderGrafik() → efter et langt
+  // show sendte ét klik hundredvis af skrivninger, og antallet fordobledes pr. klik.
   const prwOutBtn = container.querySelector('#grafik-prw-out-btn');
-  if (prwOutBtn) prwOutBtn.addEventListener('click', async () => {
+  if (prwOutBtn && !prwOutBtn.dataset.bound) {
+   prwOutBtn.dataset.bound = '1';
+   prwOutBtn.addEventListener('click', async () => {
+    // Handleren lever på tværs af renders → slå den aktive grafik op NU (afledes kun af grafiktActiveSubTab).
+    const g = OVERLAY_GRAPHICS.find(x => x.id === grafiktActiveSubTab);
     try {
       if (grafiktActivePrvKey.startsWith('custom-')) {
         const cId = grafiktActivePrvKey.slice(7);
@@ -1142,7 +1149,8 @@ function renderGrafik() {
     const prvIframe = container.querySelector('.grafik-preview-iframe');
     if (prvIframe) { prvIframe.removeAttribute('srcdoc'); prvIframe.src = 'about:blank'; }
     renderGrafik();
-  });
+   });
+  }
 
   container.querySelectorAll('.grafik-vmix-call-btn').forEach(btn =>
     btn.addEventListener('click', async () => {
@@ -1236,7 +1244,8 @@ function renderGrafik() {
       [{ key: 'lt_trigger', value: 'in', slot: btn.dataset.slot }])));
 
   const companionDetails = container.querySelector('#grafik-companion-details');
-  if (companionDetails) {
+  if (companionDetails && !companionDetails.dataset.bound) {   // persistent element → bind kun én gang
+    companionDetails.dataset.bound = '1';
     companionDetails.addEventListener('toggle', () => { grafiktCompanionOpen = companionDetails.open; });
   }
 
