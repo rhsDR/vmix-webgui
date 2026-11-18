@@ -70,35 +70,41 @@
     const pf      = pid ? '&projekt_id=eq.' + encodeURIComponent(pid) : '';
     const preview = params.get('preview') || '';
 
-    // Sæt iframe-sources (preview overstyre normale sources)
+    // Beregn iframe-sources (preview overstyrer normale sources). De SÆTTES først, når projekttypen er kendt.
     const originalSrcs = {};
+    let _builtinsOk = null;   // null = typen ukendt endnu · true = kampdag (load) · false = andet projekt (load aldrig)
     GRAPHICS.forEach(g => {
-      const frame = document.getElementById(g.id + '-frame');
-      if (!frame) return;
       let src = g.file + '?p=' + pid + (g.embed ? '&embed=1' : '');
       if (preview === 'credits'             && g.id === 'credits')    src = g.file + '?preview=1&p=' + pid;
       if ((preview === 'home' || preview === 'away') && g.id === 'overlay-3') src = g.file + '?preview=' + preview + '&p=' + pid;
       originalSrcs[g.id] = src;
-      frame.src = src;
     });
 
-    // De indbyggede grafikker (lower-third/live-boks/ticker/score/lineup/credits) hører til KAMPDAG.
-    // Kun kampdag-projekter må loade dem; alle andre typer (tv + evt. fremtidige) skal ikke dele dem i
-    // overlayet. Sikker default: ved fetch-fejl / ukendt / tom type BEHOLDES de (så en live kampdag
-    // aldrig taber sine overlays). Custom-grafik loades uændret via loadCustomGrafik.
-    (async function _stripBuiltinsForNonKampdag() {
+    // De indbyggede grafikker (lower-third/live-boks/ticker/score/lineup/credits) hører til KAMPDAG. Slå projekt-
+    // typen op FØRST og start dem kun for kampdag — før startede de straks og blev slukket bagefter for TV (støj i
+    // konsollen). Sker kun ved load, ikke ved tryk. Sikker default: fejl, timeout (3 s), ukendt eller tom type →
+    // load som hidtil, så en live kampdag aldrig taber sine overlays. Custom-grafik loades uændret via loadCustomGrafik.
+    (async function _loadBuiltinsForProjectType() {
       let _type = '';
       try {
-        const r = await fetch(`${SB_URL}/rest/v1/projekter?id=eq.${encodeURIComponent(pid)}&select=type`, { headers: SB_HDR });
+        const ctrl = new AbortController();
+        const _to = setTimeout(() => ctrl.abort(), 3000);
+        const r = await fetch(`${SB_URL}/rest/v1/projekter?id=eq.${encodeURIComponent(pid)}&select=type`, { headers: SB_HDR, signal: ctrl.signal });
+        clearTimeout(_to);
         const rows = await r.json();
-        if (!rows || !rows[0]) return;          // intet projekt fundet → behold (sikkert)
-        _type = rows[0].type || '';
-      } catch { return; }                        // fetch-fejl → behold (sikkert for kampdag)
-      if (_type === 'kampdag' || _type === '') return; // kun kampdag (+ ukendt/tom) beholder de indbyggede
+        _type = (rows && rows[0] && rows[0].type) || '';
+      } catch { _type = ''; }
+      _builtinsOk = (_type === 'kampdag' || _type === '');
       GRAPHICS.forEach(g => {
         const f = document.getElementById(g.id + '-frame');
-        if (f) f.src = 'about:blank';
-        originalSrcs[g.id] = 'about:blank'; // så overlay-map-restore heller ikke loader dem igen
+        if (!f) return;
+        if (_builtinsOk) {
+          // Spring frames over, som overlay-mappet allerede har sat til about:blank (tildelt et andet overlay).
+          if (f.src !== 'about:blank') f.src = originalSrcs[g.id];
+        } else {
+          originalSrcs[g.id] = 'about:blank'; // så overlay-map-restore aldrig loader dem
+          if (f.src !== 'about:blank') f.src = 'about:blank';
+        }
       });
     })();
 
@@ -162,7 +168,7 @@
             if (frame.src !== 'about:blank') frame.src = 'about:blank';
           } else {
             const expected = originalSrcs[g.id];
-            if (expected && frame.src === 'about:blank') frame.src = expected;
+            if (_builtinsOk === true && expected && frame.src === 'about:blank') frame.src = expected;
           }
         });
       } catch {}
@@ -367,7 +373,7 @@
                 if (!frame) return;
                 var target = gm[g.id] || 'hoved';
                 if (target !== 'hoved') { if (frame.src !== 'about:blank') frame.src = 'about:blank'; }
-                else { var exp = originalSrcs[g.id]; if (exp && frame.src === 'about:blank') frame.src = exp; }
+                else { var exp = originalSrcs[g.id]; if (_builtinsOk === true && exp && frame.src === 'about:blank') frame.src = exp; }
               }); return;
             }
             if (rec.key === 'lt_trigger' || rec.key === 'lt_slot') return;

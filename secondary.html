@@ -30,28 +30,34 @@
     const _params = new URLSearchParams(window.location.search);
     const _pid    = _params.get('p') || '';
     const _testOt = _params.get('test_ot') || '';
-    [1,2,3,4,5,6].forEach(function(n){
-      let src = 'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid + '&embed=1';
-      if (_testOt) src += '&test_ot=' + encodeURIComponent(_testOt);
-      document.getElementById('komm-k'+n+'-frame').src = src;
-    });
-
     // Kun KAMPDAG-projekter loader de indbyggede grafikker (komm-bokse + lower-third/ticker/live-boks/
     // lineup/credits) i dette overlay. Andre typer (tv m.fl.) viser kun deres egen custom-grafik.
-    // Sikker default: ved fetch-fejl / ukendt / tom type BEHOLDES de (kampdag taber aldrig sine overlays).
-    var _isKampdag = true;
-    (async function _secStripBuiltinsForNonKampdag() {
+    // Slå projekttypen op FØRST og start dem kun for kampdag — før startede komm-boksene straks og blev slukket
+    // bagefter for TV (støj i konsollen). Sker kun ved load, ikke ved tryk. Sikker default: fejl, timeout (3 s),
+    // ukendt eller tom type → load som hidtil (kampdag taber aldrig sine overlays).
+    var _isKampdag = null;   // null = typen ukendt endnu
+    function _startKommFrames() {
+      [1,2,3,4,5,6].forEach(function(n){
+        let src = 'Graphics/Komm_score_boks/Komm_BOKS_K-'+n+'.html?p=' + _pid + '&embed=1';
+        if (_testOt) src += '&test_ot=' + encodeURIComponent(_testOt);
+        document.getElementById('komm-k'+n+'-frame').src = src;
+      });
+    }
+    (async function _secResolveProjectType() {
       let _t = '';
       try {
-        const r = await fetch(`${SB_URL}/rest/v1/projekter?id=eq.${encodeURIComponent(_pid)}&select=type`, { headers: SB_HDR });
+        const ctrl = new AbortController();
+        const _to = setTimeout(function(){ ctrl.abort(); }, 3000);
+        const r = await fetch(`${SB_URL}/rest/v1/projekter?id=eq.${encodeURIComponent(_pid)}&select=type`, { headers: SB_HDR, signal: ctrl.signal });
+        clearTimeout(_to);
         const rows = await r.json();
-        if (!rows || !rows[0]) return;
-        _t = rows[0].type || '';
-      } catch { return; }
-      if (_t === 'kampdag' || _t === '') return;
-      _isKampdag = false;
-      [1,2,3,4,5,6].forEach(function(n){ var f = document.getElementById('komm-k'+n+'-frame'); if (f) f.src = 'about:blank'; });
-      BUILTIN_GRAPHICS.forEach(function(bg){ var f = document.getElementById('builtin-'+bg.id+'-frame'); if (f) f.remove(); });
+        _t = (rows && rows[0] && rows[0].type) || '';
+      } catch { _t = ''; }
+      _isKampdag = (_t === 'kampdag' || _t === '');
+      // Kampdag: start alle komm-bokse (som før ved load); _syncKommBuiltins anvender derefter overlay-mappet.
+      // Andet: _syncKommBuiltins fjerner komm-bokse og indbyggede grafikker.
+      if (_isKampdag) _startKommFrames();
+      _syncKommBuiltins();
     })();
 
     // SB_URL / SB_ANON / SB_HDR kommer fra js/supabase-config.js
@@ -82,6 +88,7 @@
       return idx >= 0 ? String((_lagOrder.length - idx) * 1000) : '500';
     }
     function _syncKommBuiltins() {
+      if (_isKampdag === null) return;   // projekttypen er ikke kendt endnu — _secResolveProjectType kalder igen
       // Ikke-kampdag: ingen indbyggede grafikker i dette overlay (kun egen custom-grafik).
       if (!_isKampdag) {
         [1,2,3,4,5,6].forEach(function(n){ var f = document.getElementById('komm-k'+n+'-frame'); if (f && (f.src || '').indexOf('about:blank') === -1) f.src = 'about:blank'; });
