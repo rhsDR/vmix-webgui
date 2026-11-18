@@ -68,9 +68,14 @@ const _sfx       = _isPreview ? '_prv' : '';
 let _animating      = false;
 let _currentSlot    = null;
 let _currentTrigger = null; // 'in' | 'vmixcall' — hvilken type er på air
+// ÉN polle-kæde: alle planlægninger går gennem schedulePoll, som rydder en evt. ventende poll først.
+// (Før startede hver realtime-animation en ekstra setTimeout(pollTrigger)-kæde oven i den kørende →
+// efter N subs pollede kilden databasen fra N+1 parallelle kæder.)
+let _pollT = null;
+function schedulePoll(ms) { clearTimeout(_pollT); _pollT = setTimeout(pollTrigger, ms); }
 
 async function pollTrigger() {
-  if (_animating) { setTimeout(pollTrigger, 2000); return; }
+  if (_animating) { schedulePoll(2000); return; }
   try {
     const rows = await fetch(
       SB_URL + '/rest/v1/settings?select=key,value&key=in.(lt_trigger' + _sfx + ',lt_slot' + _sfx + ')' + _pf,
@@ -89,11 +94,11 @@ async function pollTrigger() {
         _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
         _csPlay('el5', 0.24, 0,    'irregular',  3, 1);
         _csPlay('el6', 0.24, 0.08, 'wipe-step',  3, 1);
-        setTimeout(() => { _animating = false; setTimeout(pollTrigger, 2000); }, 900);
+        setTimeout(() => { _animating = false; schedulePoll(2000); }, 900);
         return;
       }
     } else if (trigger === 'vmixcall' && (!_spxVisible || slot !== _currentSlot || _currentTrigger !== 'vmixcall')) {
-      if (!slot) { setTimeout(pollTrigger, 2000); return; }
+      if (!slot) { schedulePoll(2000); return; }
       const call = _vmixCache[slot];
       if (call) {
         _animating = true;
@@ -102,14 +107,14 @@ async function pollTrigger() {
           _currentTrigger = 'vmixcall';
           _updateContent({ f0: call.titel || '', f1: call.navn || '', f2: 'SPORT', f3: 'venstre' });
           setTimeout(() => runAnimationIN(skipLabel), 50);
-          setTimeout(() => { _animating = false; setTimeout(pollTrigger, 2000); }, 2700);
+          setTimeout(() => { _animating = false; schedulePoll(2000); }, 2700);
         };
         if (_spxVisible) { runAnimationOUT(false); setTimeout(() => doShow(true), 2200); }
         else              { doShow(false); }
         return;
       }
     } else if (trigger === 'in' && (!_spxVisible || slot !== _currentSlot || _currentTrigger === 'vmixcall')) {
-      if (!slot) { setTimeout(pollTrigger, 2000); return; }
+      if (!slot) { schedulePoll(2000); return; }
       const sub = _subsCache[slot];
       if (sub) {
         _animating = true;
@@ -118,7 +123,7 @@ async function pollTrigger() {
           _currentTrigger = 'in';
           _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
           setTimeout(() => runAnimationIN(skipLabel), 50);
-          setTimeout(() => { _animating = false; setTimeout(pollTrigger, 2000); }, 2700);
+          setTimeout(() => { _animating = false; schedulePoll(2000); }, 2700);
         };
         if (_spxVisible) { runAnimationOUT(false); setTimeout(() => doShow(true), 2200); }
         else              { doShow(false); }
@@ -127,11 +132,11 @@ async function pollTrigger() {
     } else if (trigger === 'out' && _spxVisible) {
       _animating = true;
       runAnimationOUT(false);
-      setTimeout(() => { _currentSlot = null; _currentTrigger = null; _animating = false; setTimeout(pollTrigger, 2000); }, 2600);
+      setTimeout(() => { _currentSlot = null; _currentTrigger = null; _animating = false; schedulePoll(2000); }, 2600);
       return;
     }
   } catch(e) { console.error('LT poll fejl:', e); }
-  setTimeout(pollTrigger, 500);
+  schedulePoll(500);
 }
 pollTrigger();
 var _subsCache = {};
@@ -208,7 +213,7 @@ window.addEventListener('message', function(evt) {
     if (!_spxVisible) return;
     _animating = true;
     runAnimationOUT(false);
-    setTimeout(function() { _currentSlot = null; _currentTrigger = null; _animating = false; setTimeout(pollTrigger, 2000); }, 2600);
+    setTimeout(function() { _currentSlot = null; _currentTrigger = null; _animating = false; schedulePoll(2000); }, 2600);
   } else if (v === 'update' && s) {
     if (!_spxVisible || _currentTrigger === 'vmixcall') { _animating = false; return; }
     var sub = _subsCache[s];
@@ -218,7 +223,7 @@ window.addEventListener('message', function(evt) {
     _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
     _csPlay('el5', 0.24, 0,    'irregular',  3, 1);
     _csPlay('el6', 0.24, 0.08, 'wipe-step',  3, 1);
-    setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 900);
+    setTimeout(function() { _animating = false; schedulePoll(2000); }, 900);
   } else if (v === 'in' && s) {
     if (_spxVisible && s === _currentSlot && _currentTrigger === 'in') return;
     var sub = _subsCache[s];
@@ -228,7 +233,7 @@ window.addEventListener('message', function(evt) {
       _currentSlot = s; _currentTrigger = 'in';
       _updateContent({ f0: sub.titel || '', f1: sub.navn || '', f2: 'SPORT', f3: 'venstre' });
       setTimeout(function() { runAnimationIN(skipLabel); }, 50);
-      setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 2700);
+      setTimeout(function() { _animating = false; schedulePoll(2000); }, 2700);
     };
     if (_spxVisible) { runAnimationOUT(false); setTimeout(function() { doShow(true); }, 2200); }
     else { doShow(false); }
@@ -241,7 +246,7 @@ window.addEventListener('message', function(evt) {
       _currentSlot = s; _currentTrigger = 'vmixcall';
       _updateContent({ f0: call.titel || '', f1: call.navn || '', f2: 'SPORT', f3: 'venstre' });
       setTimeout(function() { runAnimationIN(skipLabel); }, 50);
-      setTimeout(function() { _animating = false; setTimeout(pollTrigger, 2000); }, 2700);
+      setTimeout(function() { _animating = false; schedulePoll(2000); }, 2700);
     };
     if (_spxVisible) { runAnimationOUT(false); setTimeout(function() { doShow(true); }, 2200); }
     else { doShow(false); }

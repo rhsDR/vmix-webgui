@@ -173,6 +173,8 @@
           // Custom grafikker med overlay_target='komm'
           var cIframe = customFrameMap[key];
           if (!cIframe) return;
+          // Ikke loadet endnu → udskyd hele dispatch'en (også state-ændringen) til iframen er klar.
+          if (cIframe._ready && !cIframe._isReady) { cIframe._ready.then(function () { _dispatch(key, value, slot); }); return; }
           var isInfo = customCat[key] === 'info';
           var cPrev = customState[key];
           // Info: tillad re-trigger når info_live-pladsen har ændret sig (value stadig 'in'), ellers dedup væk.
@@ -254,6 +256,30 @@
 
     // @font-face for brugeruploadede fonte (custom_fonts) — injiceres i custom-grafik
     // uden serverless-funktion (Vercel Hobby-grænse = 12 functions).
+    // Hent en custom-grafiks HTML robust: tjek r.ok (en fejl-side må ALDRIG loades som grafik), ét genforsøg
+    // efter 2 s, og cache-bust (_cb) så Supabase Storage' CDN aldrig serverer en gammel version.
+    async function _fetchGrafikHtml(url) {
+      for (let i = 0; i < 2; i++) {
+        try {
+          const r = await fetch(url + (url.indexOf('?') > -1 ? '&' : '?') + '_cb=' + Date.now(), { cache: 'no-store' });
+          if (r.ok) return await r.text();
+          console.error('[custom-grafik] HTTP ' + r.status + ' ved hentning af ' + url);
+        } catch (e) { console.error('[custom-grafik] hentning fejlede: ' + url, e); }
+        if (i === 0) await new Promise(res => setTimeout(res, 2000));
+      }
+      return null;
+    }
+    // Iframen er "klar" når den er loadet (grafikkens runAnimationIN findes). Triggere der ankommer før, udskydes
+    // til da — ellers blev kaldet droppet stille, mens state blev sat til 'in', og dedup'en blokerede derefter,
+    // så grafikken aldrig kom på efter en reload. Timeout, så intet kan hænge.
+    function _markReady(iframe) {
+      iframe._ready = new Promise(function (res) {
+        var done = function () { iframe._isReady = true; res(); };
+        iframe.addEventListener('load', done, { once: true });
+        setTimeout(done, 5000);
+      });
+    }
+
     function _buildFontFaceCss(rows) {
       const FMT = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' };
       return (Array.isArray(rows) ? rows : []).map(f => {
@@ -300,13 +326,14 @@
           const frameId = 'custom-komm-' + g.id.slice(0, 8) + '-frame';
           if (document.getElementById(frameId)) return;
           let html;
-          try { html = await fetch(g.file_url + (g.file_url.indexOf('?') > -1 ? '&' : '?') + '_cb=' + Date.now(), { cache: 'no-store' }).then(r => r.text()); } catch { return; }
+          html = await _fetchGrafikHtml(g.file_url); if (html == null) return;
           const _ahs = (g.auto_hide_seconds > 0) ? Number(g.auto_hide_seconds) : 0;
           const inject = `<link rel="stylesheet" crossorigin="anonymous" href="${location.origin}/fonts.css"><style>${_fontFaceCss}</style><script>window.__PROJEKT_ID=${JSON.stringify(_pid)};window.__API_ORIGIN=${JSON.stringify(location.origin)};window.__IS_PREVIEW=false;(function(){var _f=window.fetch;window.fetch=function(u,o){if(typeof u==='string'&&u.indexOf('supabase.co')!==-1)return Promise.resolve({ok:true,json:function(){return Promise.resolve([])}});return _f.apply(this,arguments);};})();window.__forceOut=function(){if(typeof window._spxVisible!=='undefined')window._spxVisible=false;if(window.gsap)window.gsap.killTweensOf('*');if(document.body)document.body.style.opacity='0';};document.addEventListener('DOMContentLoaded',function(){if(document.body)document.body.style.opacity='0';var _ahs=${_ahs};var _aht=null;var _o=window.runAnimationIN;if(typeof _o==='function')window.runAnimationIN=function(){if(document.body)document.body.style.opacity='';if(_aht){clearTimeout(_aht);_aht=null;}_o.apply(this,arguments);if(_ahs>0)_aht=setTimeout(function(){_aht=null;if(typeof window.runAnimationOUT==='function')window.runAnimationOUT();},_ahs*1000);};});Object.defineProperty(window,'supabase',{value:{createClient:()=>({channel:()=>({on:()=>({on:()=>({subscribe:()=>{}}),subscribe:()=>{}}),subscribe:()=>{}})})},writable:false,configurable:false});<\/script>`;
           const injectedHtml = html.replace(/(<html[^>]*>)/i, '$1' + inject);
           html = injectedHtml.includes('__PROJEKT_ID') ? injectedHtml : inject + html;
           const blob = new Blob([html], { type: 'text/html' });
           const iframe = document.createElement('iframe');
+          _markReady(iframe);
           iframe.id = frameId;
           iframe.allowTransparency = true;
           iframe.src = URL.createObjectURL(blob);
@@ -325,6 +352,8 @@
       if (!_pid) return;
       const keys = Object.keys(customFrameMap);
       if (!keys.length) return;
+      // Vent til grafikkerne er loadet — denne sti kalder runAnimationIN direkte (ikke via _dispatch).
+      await Promise.all(keys.map(k => customFrameMap[k]._ready));
       try {
         const data = await fetch(
           `${SB_URL}/rest/v1/settings?key=in.(${keys.concat('info_live').map(k=>encodeURIComponent(k)).join(',')})&projekt_id=eq.${encodeURIComponent(_pid)}&select=key,value`,

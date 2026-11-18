@@ -1,5 +1,6 @@
 // ── LIVE DASHBOARD — funktioner (state i app-state.js) ──────────
 function startLivePolling() {
+  clearInterval(liveTimer);   // kaldes ved hvert klik på DASHBOARD — uden dette stables intervaller (N× Enetpulse-kald)
   fetchLiveMatches();
   liveTimer = setInterval(fetchLiveMatches, 60000);
 }

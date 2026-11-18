@@ -31,6 +31,7 @@ const ALLOWED_KEYS = [
   'breaking_trigger',
   'ticker_ovl_trigger',
   'stilling_trigger',
+  'score_trigger',        // stillingsboks — panelets Companion-links bruger netop denne nøgle (app-grafik.js)
   'lineup_trigger',
   'credits_trigger',
   'lt_trigger',

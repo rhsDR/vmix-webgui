@@ -85,10 +85,18 @@ sbClient.channel('db-changes')
   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickers' },
       p => applyTickerRow(p.new))
   .on('postgres_changes', { event: '*', schema: 'public', table: 'credits' },
-      () => refreshCredits())
+      p => {
+        // Kun eget projekt. (DELETE-payloads kan mangle projekt_id → så genindlæser vi for en sikkerheds skyld.)
+        const r = (p && (p.new && p.new.projekt_id ? p.new : p.old)) || {};
+        if (r.projekt_id && r.projekt_id !== aktivProjektId) return;
+        refreshCredits();
+      })
   .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' },
       p => {
         if (!p.new) return; // DELETE – ignorer
+        // Kanalen modtager ALLE projekters settings. Uden dette filter ændrede et andet projekts triggere
+        // (credits/lineup/active_sub/overlay_lag_order/komm_master/grafiktState) dette panels state.
+        if (p.new.projekt_id !== aktivProjektId) return;
         if (p.new.key === 'credits_trigger') {
           creditsTriggerActive = p.new.value === 'in';
           updateCreditsSendBtn();

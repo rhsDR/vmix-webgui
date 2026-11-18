@@ -915,9 +915,12 @@ function _fontDeriveFamily(fname) {
 
 async function loadFontLib() {
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/custom_fonts?select=*&order=family.asc`, { headers: SB_HDR });
-    fontLib = r.ok ? await r.json() : [];
-  } catch { fontLib = []; }
+    // SB_HEADERS (app-supabase.js) — SB_HDR findes kun i overlay-siderne (supabase-config.js), ikke i app.html,
+    // så det gav en ReferenceError der blev slugt → fontbiblioteket var altid tomt.
+    const r = await fetch(`${SB_URL}/rest/v1/custom_fonts?select=*&order=family.asc`, { headers: SB_HEADERS });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    fontLib = await r.json();
+  } catch (e) { fontLib = []; console.error('[loadFontLib] kunne ikke hente fontbiblioteket:', e); }
 }
 
 function _fontCssFamily(f) { return String(f.family || '').replace(/["'\\<>]/g, '').trim(); }
