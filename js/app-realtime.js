@@ -118,7 +118,11 @@ sbClient.channel('db-changes')
           if (p.new.projekt_id === aktivProjektId && typeof projektType !== 'undefined' && projektType === 'tv') {
             try { const v = JSON.parse(p.new.value || '[]'); if (Array.isArray(v)) tvSubs = v.filter(n => Number.isInteger(n) && n >= 1); } catch {}
             if (typeof _ensureSubsPadded === 'function') _ensureSubsPadded();
-            if (document.getElementById('tab-subs')?.classList.contains('active') && typeof renderSubs === 'function') renderSubs();
+            // Spring DOM-renderen over hvis brugeren er midt i at redigere en sub (fx lige efter ＋ Tilføj sub,
+            // hvor ekkoet af mit eget tv_subs-gem ellers ville rive det fokuserede input væk). Data er synket ovenfor.
+            const _ae = document.activeElement;
+            const _editingSub = _ae && document.getElementById('subsTvList')?.contains(_ae);
+            if (!_editingSub && document.getElementById('tab-subs')?.classList.contains('active') && typeof renderSubs === 'function') renderSubs();
           }
         } else if (p.new.key === 'afvikling_grupper') {
           // GRAFIK → Afvikling-grupper (KUN TV). Synk på tværs af operatører. Kampdag skriver den aldrig.

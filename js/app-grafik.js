@@ -1699,7 +1699,7 @@ function renderGrafikTV(container) {
 function _afvTypeLabel(t) {
   return { sub: 'Sub', info: 'Info', credit: 'Credit', ticker: 'Ticker', custom: 'Grafik' }[t] || 'Grafik';
 }
-const _AFV_CAT_COLOR = { sub: '#4a9eff', info: '#00b894', ticker: '#aa66ff', credit: '#a855f7', custom: '#888888' };
+const _AFV_CAT_COLOR = { sub: '#4a9eff', info: '#00b894', ticker: '#aa66ff', credit: '#f59e0b', custom: '#888888' };
 
 // Puljen af UDFYLDTE grafik-enheder i projektet (til Afvikling-rundownen): hver udfyldt sub-plads, hver
 // udfyldt info-boks, og hver credit/ticker/custom-grafik. ref = trig+':'+slot (unik id i gruppe-items).
@@ -1708,8 +1708,8 @@ function _tvAfviklingPool() {
   const _pid = (typeof aktivProjektId !== 'undefined' ? aktivProjektId : '');
   (customGrafik || []).filter(g => g.overlay_mode === 'embed').forEach(g => {
     const cat = ['sub', 'info', 'ticker', 'credit', 'custom'].includes(g.kategori) ? g.kategori : 'custom';
-    // Credit tvinges lilla (uanset grafikkens egen g.color), så den ikke ligner info's teal i afviklingsblokke.
-    const color = (cat === 'credit') ? '#a855f7' : (g.color || _AFV_CAT_COLOR[cat] || '#888888');
+    // Credit tvinges orange (uanset grafikkens egen g.color), så den ikke ligner info's teal — og ikke vMix' lilla.
+    const color = (cat === 'credit') ? '#f59e0b' : (g.color || _AFV_CAT_COLOR[cat] || '#888888');
     const prv = (g.file_url || '') + '?p=' + encodeURIComponent(_pid) + '&preview=1';   // preview-URL (dobbeltklik → PRW)
     if (cat === 'sub') {
       (typeof subs !== 'undefined' ? subs : []).forEach((s, i) => {
