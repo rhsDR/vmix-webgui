@@ -118,13 +118,14 @@ async function fetchLiveMatches() {
         }
         const modal = document.getElementById('previewModal');
         const frame = document.getElementById('previewFrame');
-        frame.src = 'overlay-3?preview=home&p=' + aktivProjektId + '&t=' + Date.now();
+        // "overlay-3" er kun det interne id for Fullscreen — siden hedder fullscreen (overlay-3 gav 404).
+        frame.src = 'fullscreen?preview=home&p=' + aktivProjektId + '&t=' + Date.now();
         modal.style.display = 'flex';
       });
     });
     grid.querySelectorAll('.lu-vmix-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const url = `${location.origin}/overlay-3?p=${aktivProjektId}`;
+        const url = `${location.origin}/fullscreen?p=${aktivProjektId}`;
         navigator.clipboard.writeText(url);
         btn.textContent = '✓ Kopieret!';
         setTimeout(() => { btn.textContent = '⧉ vMix URL'; }, 2000);
