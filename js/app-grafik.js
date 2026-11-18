@@ -50,12 +50,23 @@ async function saveAfviklingPulje() {
   catch { toast('Fejl ved gem', 'err'); }
 }
 // Sørg for at hver UDFYLDT grafik er repræsenteret mindst ét sted (GRAFIKKER eller en gruppe): fjern døde refs
-// fra GRAFIKKER (grafik tømt) og tilføj refs der ikke er nogen steder (ny udfyldt grafik → dukker op i GRAFIKKER).
-// Returnerer true hvis listen ændrede sig. Rører ALDRIG grupper. Dubletter i GRAFIKKER bevares.
+// fra GRAFIKKER (grafik tømt) OG fra grupperne (slettet grafik forsvinder automatisk — ingen manuel Delete),
+// og tilføj refs der ikke er nogen steder (ny udfyldt grafik → dukker op i GRAFIKKER).
+// Returnerer true hvis GRAFIKKER-listen ændrede sig. Grupper gemmes internt (fire-and-forget) hvis de ændres.
+// Dubletter i GRAFIKKER bevares.
 function _afvSyncPulje(pool) {
   const poolRefs = new Set(pool.map(p => p.ref));
   const before = afviklingPulje.length;
-  afviklingPulje = afviklingPulje.filter(it => poolRefs.has(it.ref));   // drop døde refs
+  afviklingPulje = afviklingPulje.filter(it => poolRefs.has(it.ref));   // drop døde refs fra GRAFIKKER
+  // Drop også døde refs fra grupperne, så en slettet/tømt grafik bare forsvinder fra afviklingen.
+  let _grpChanged = false;
+  (afviklingGrupper || []).forEach(g => {
+    if (!Array.isArray(g.items)) return;
+    const n = g.items.length;
+    g.items = g.items.filter(it => poolRefs.has(it.ref));
+    if (g.items.length !== n) _grpChanged = true;
+  });
+  if (_grpChanged) saveAfviklingGrupper();
   const present = new Set(afviklingPulje.map(it => it.ref));
   (afviklingGrupper || []).forEach(g => (g.items || []).forEach(it => present.add(it.ref)));
   pool.forEach(p => { if (!present.has(p.ref)) { afviklingPulje.push({ id: crypto.randomUUID(), ref: p.ref, mode: '' }); present.add(p.ref); } });
