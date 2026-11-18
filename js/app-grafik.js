@@ -1287,7 +1287,7 @@ async function _tvLoadPreview(url, container, mode, slot) {
   const origin = window.location.origin;
   const pid = aktivProjektId;
   let html = '';
-  try { html = await fetch(url, { cache: 'no-store' }).then(r => r.text()); }
+  try { html = await fetch(url + (url.indexOf('?') > -1 ? '&' : '?') + '_cb=' + Date.now(), { cache: 'no-store' }).then(r => r.text()); }
   catch { f.removeAttribute('srcdoc'); f.src = url; return; } // fallback: direkte (uden auto-afspil)
   const _ffCss = (typeof fontLib !== 'undefined' ? (fontLib || []) : [])
     .map(x => (typeof _fontFaceCss === 'function') ? _fontFaceCss(x) : '').filter(Boolean).join('');
