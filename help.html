@@ -153,8 +153,8 @@
   <h2>Subs (navneskilte)</h2>
   <p>En sub er et navneskilt med <b>navn</b> + <b>titel</b>. I et TV-projekt opretter du selv de sub-pladser du skal bruge — der er <b>ingen øvre grænse</b>.</p>
   <ol>
-    <li>Gå i <b>SUBS</b>-fanen → klik <b>＋ Tilføj sub</b> for hver plads du mangler (en ny plads får det laveste ledige nummer).</li>
-    <li>Klik <b>blyanten</b> på en række → skriv navn + titel.</li>
+    <li>Gå i <b>SUBS</b>-fanen → klik <b>＋ Tilføj sub</b> for hver plads du mangler. Den nye plads åbner <b>direkte i redigering</b> med markøren i Navn-feltet (og får det laveste ledige nummer).</li>
+    <li>Skriv navn + titel. Vil du rette en eksisterende sub, så klik <b>blyanten</b> på rækken.</li>
     <li>Vælg <span class="pill">VENSTRE</span> eller <span class="pill">HØJRE</span> side — grafikken spejlvendes til den side, men teksten forbliver læsbar.</li>
     <li>Gem. <b>🗑</b> ud for en række fjerner den sub-plads igen.</li>
   </ol>
@@ -235,7 +235,10 @@
     <li><span class="btn in">&gt; IN</span> sætter på skærmen, <span class="btn out">&lt; OUT</span> tager af — de to knapper sidder altid yderst til højre.</li>
     <li><b>Dobbeltklik</b> på en blok folder dens <b>køremåde-dropdown</b> + <b>PRW</b> ud (de er skjult til daglig, så listen er ren). Køremåden står som standard på den <b>makro</b> der er bygget til grafikken — findes ingen makro, kører den <b>Rå</b> (som sin egen type).</li>
     <li>En grafik der er <b>på skærmen</b> vises med hele blokken i <b>lys grå</b>, så du altid kan se hvad der er live.</li>
+    <li>Under navnet står en kort undertekst: <b>titlen</b> for en sub, de <b>første 15 tegn af indholdet</b> for en info-boks, og <b>typen</b> (Ticker / Credit / Grafik) for resten.</li>
+    <li><b>Credits</b> har altid en <b>limegrøn</b> kant i venstre side, så de ikke forveksles med info.</li>
   </ul>
+  <div class="box tip"><b>Slettet grafik forsvinder af sig selv.</b> Sletter du en sub eller info-boks — eller tømmer den helt — forsvinder den automatisk fra hele afviklingen, også fra grupperne. Du skal ikke fjerne den manuelt. Fylder du den igen, dukker den op i GRAFIKKER (ikke tilbage i gruppen).</div>
 
   <h4>Afvikl fra tastaturet</h4>
   <p>Står du i AFVIKLING-fanen, kan du køre hele rundownen uden musen:</p>
@@ -377,6 +380,14 @@
     <li><b>Makro:</b> link med <code>&amp;macro=…</code>. Har makroen et sub/info-trin der skal vælge plads, sæt også <code>&amp;slot=</code>-nummeret.</li>
     <li>Companion viser også feedback (fx den aktive sub) — det kan være op til ~5 sek forsinket, hvilket er normalt.</li>
   </ul>
+
+  <h3>Kortere links med Base URL</h3>
+  <p>I Companion → <b>Connections</b> → din <b>Generic HTTP</b>-forbindelse kan du sætte <b>Base URL</b> til <code>https://vmix-control.vercel.app</code> (uden <code>/</code> til sidst). Så skriver du i hver knaps <b>URI</b>-felt kun resten, fra <code>/api/trigger/…</code>. Et link der starter med <code>http</code> ignorerer Base URL.</p>
+
+  <h3>Hurtigere første tryk (valgfrit)</h3>
+  <p>Første tryk efter en længere pause kan tage lidt længere, fordi serveren skal "vågne". Det undgår du ved at lade en gratis tjeneste (fx <b>cron-job.org</b> eller <b>UptimeRobot</b>) kalde dette link hvert 5. minut:</p>
+  <p><code>https://vmix-control.vercel.app/api/trigger/0?token=&lt;token&gt;&amp;warm=1</code></p>
+  <p>Det holder serveren vågen og <b>fyrer ingen grafik</b>. Brug samme token som i dine Companion-links.</p>
   <div class="box warn"><b>POST vs GET:</b> POST er standard og sikrest. GET kan testes direkte i en browser, men da tokenet står i selve URL'en, kan link-preview i chat/mail (Slack/Teams) komme til at <b>fyre</b> en GET-trigger automatisk. Paste derfor aldrig GET-links (med token) i delte kanaler — hold dem i Companion.</div>
 </section>
 
@@ -384,13 +395,15 @@
   <h2>Fejlfinding</h2>
   <h3>Grafikken opdaterer ikke / viser gammelt</h3>
   <ul>
-    <li>Rettede du grafik-<b>koden</b>? Genindlæs browser-kilden i vMix.</li>
+    <li>Har du uploadet en <b>ny version af en grafik</b> eller rettet grafik-<b>koden</b>? Genindlæs browser-kilden i vMix — den nyeste version hentes altid frisk, så du behøver ikke vente eller tømme cache.</li>
     <li>Rettede du <b>tekst</b> (navn/titel/info)? Det bør ske live — hvis ikke, genindlæs kilden én gang.</li>
+    <li>Ser <b>panelet</b> forældet ud efter en opdatering? Lav en hård genindlæsning af panelet (<kbd>Ctrl</kbd>+<kbd>F5</kbd>).</li>
   </ul>
   <h3>Companion-knap virker ikke</h3>
   <ul>
-    <li>Tjek at linket har den rigtige <code>token</code> og bruger <b>POST</b>.</li>
+    <li>Tjek at linket har den rigtige <code>token</code> (både POST og GET virker).</li>
     <li>Skifter subben ikke? Tjek at <code>&amp;slot=</code> har et tal til sidst.</li>
+    <li>Bruger du <b>Base URL</b>? Tjek at der ikke står dobbelt skråstreg (<code>//api</code>) — Base URL uden <code>/</code> til sidst, URI med <code>/</code> først.</li>
   </ul>
   <h3>Uploadet font vises ikke i vMix</h3>
   <ul>
