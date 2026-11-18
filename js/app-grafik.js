@@ -219,11 +219,19 @@ async function _fireOneHandling(h, slotOverride) {
     return;
   }
   if (h.key === 'komm_alle') {
+    // Samme betydning som ALLE PÅ/AF-knapperne og serverens komm_alle (api/trigger): sæt OGSÅ master-kontakten
+    // (komm_master). Før satte makroen kun boksene → master blev stående 'off', så en kamp der kom ON AIR
+    // igen fik ikke sin kommentator-boks tilbage (syncKommBoks er gatet af _kommPaaMode).
     const kommKeys = KOMM_BOKSE.map(k => k.triggerKey);
     if (h.value === 'out') {
+      _kommPaaMode = false;
       kommKeys.forEach(k => { grafiktState[k] = 'out'; });
-      await Promise.all(kommKeys.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k, value: 'out' })));
+      await Promise.all([
+        sbUpsert('settings', { projekt_id: aktivProjektId, key: 'komm_master', value: 'off' }),
+        ...kommKeys.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k, value: 'out' }))
+      ]);
     } else {
+      _kommPaaMode = true;
       let activeSlots = [];
       try {
         const rows = await sbGet('kampe?projekt_id=eq.' + aktivProjektId + '&on_air=eq.true&select=slot');
@@ -231,7 +239,10 @@ async function _fireOneHandling(h, slotOverride) {
       } catch {}
       const onKeys = activeSlots.map(s => `Komm_score_K-${s}`);
       onKeys.forEach(k => { grafiktState[k] = 'in'; });
-      if (onKeys.length) await Promise.all(onKeys.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k, value: 'in' })));
+      await Promise.all([
+        sbUpsert('settings', { projekt_id: aktivProjektId, key: 'komm_master', value: 'on' }),
+        ...onKeys.map(k => sbUpsert('settings', { projekt_id: aktivProjektId, key: k, value: 'in' }))
+      ]);
     }
     return;
   }
