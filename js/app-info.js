@@ -17,6 +17,7 @@ async function loadInfoBokse() {
     const rows = await sbGet('settings?select=value&key=eq.info_bokse&projekt_id=eq.' + aktivProjektId);
     const v = rows[0] && rows[0].value ? JSON.parse(rows[0].value) : [];
     infoBokse = Array.isArray(v) ? v : [];
+    if (typeof _afvSrcOk !== 'undefined') _afvSrcOk.info = true;   // afviklingen må synke (app-grafik.js)
     // Normalisér: hver boks ligger altid på et gyldigt overlay (default Master).
     let changed = false;
     infoBokse.forEach(b => {
@@ -25,7 +26,11 @@ async function loadInfoBokse() {
       if (!Array.isArray(b.sider) || !b.sider.length) b.sider = [b.indhold || ''];
     });
     if (changed) { try { await saveInfoBokse(); } catch {} }
-  } catch { infoBokse = []; }
+  } catch (e) {
+    infoBokse = [];
+    if (typeof _afvSrcOk !== 'undefined') _afvSrcOk.info = false;   // afviklingen rører ikke info-refs
+    console.error('[loadInfoBokse] kunne ikke hente info-bokse:', e);
+  }
 }
 
 async function refreshInfo() { await loadInfoBokse(); renderInfo(); }

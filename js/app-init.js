@@ -106,6 +106,7 @@ async function init() {
       // forskyder pladserne. Kampdag byte-identisk: sammenhængende 1-15 → slot-1 === den gamle index.
       all.subs.subs.forEach(data => { const i = (data.slot || 0) - 1; if (i >= 0) subs[i] = { ...(subs[i] || makeSub()), ...data }; });
       all.subs.vmixCalls.forEach((data, i) => { vmixCalls[i] = { ...vmixCalls[i], ...data }; });
+      if (typeof _afvSrcOk !== 'undefined') _afvSrcOk.subs = true;   // subs hentet OK → afviklingen må synke
     }
 
     if (all.tickers) {

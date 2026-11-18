@@ -3,7 +3,15 @@ async function loadKunstomGrafik() {
   if (!aktivProjektId) return;
   try {
     customGrafik = await sbGet('projekt_grafik?projekt_id=eq.' + aktivProjektId + '&order=sort_order');
-  } catch { customGrafik = []; }
+    _afvSrcOk.grafik = true;
+  } catch (e) {
+    // Behold den forrige liste og STOP her: en tom fallback ville få afviklingen til at rydde rundown'en og
+    // lag-rækkefølgen nedenfor til at smide alle custom-lag ud (og gemme det ved næste ændring).
+    _afvSrcOk.grafik = false;
+    console.error('[loadKunstomGrafik] kunne ikke hente projektets grafikker:', e);
+    if (typeof projektType !== 'undefined' && projektType === 'tv') toast('Kunne ikke hente grafikker — afviklingen er ikke ændret. Genindlæs siden.', 'err');
+    return;
+  }
   customGrafik.forEach(g => BROADCAST_TRIGGER_KEYS.add(g.trigger_key));
   const validCustomIds = new Set(customGrafik.map(g => 'custom-' + g.id.slice(0, 8)));
   // Fjern udgaaede custom-IDs fra begge lister
@@ -45,7 +53,20 @@ let afviklingPulje = [];          // [{id, ref, mode}]
 let _afvNeedMigrate = false;      // true hvis afvikling_pulje-nøglen manglede → seed fra gammel palet ved 1. render
 let _afvMigModes = {};            // (midlertidig) gamle pulje-køremåder til migration
 let _afvMigHidden = new Set();    // (midlertidig) gamle "trukket ud"-refs til migration
+// Load-sikring: rundown'en må kun synkes (ryd døde refs / tilføj nye / gem) når ALLE kilder er hentet uden fejl.
+// Ellers kan én netværksfejl ved load (→ tom pool) slette den gemte rundown i DB hos alle operatører.
+// Sættes af loadKunstomGrafik, loadAfviklingGrupper, loadInfoBokse (app-info.js) og init (subs, app-init.js).
+var _afvSrcOk = { grafik: false, grupper: false, info: false, subs: false };
+function _afvSourcesReady() { return _afvSrcOk.grafik && _afvSrcOk.grupper && _afvSrcOk.info && _afvSrcOk.subs; }
+// Blokér skriv af rundown'en hvis den ikke er indlæst korrekt — ellers overskriver vi DB med en tom fallback.
+function _afvCanSave() {
+  if (_afvSrcOk.grupper) return true;
+  console.warn('[afvikling] gem blokeret: rundown ikke indlæst korrekt');
+  toast('Afviklingen er ikke indlæst korrekt — genindlæs siden, før du ændrer den.', 'err');
+  return false;
+}
 async function saveAfviklingPulje() {
+  if (!_afvCanSave()) return;
   try { await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'afvikling_pulje', value: JSON.stringify(afviklingPulje) }); }
   catch { toast('Fejl ved gem', 'err'); }
 }
@@ -55,6 +76,9 @@ async function saveAfviklingPulje() {
 // Returnerer true hvis GRAFIKKER-listen ændrede sig. Grupper gemmes internt (fire-and-forget) hvis de ændres.
 // Dubletter i GRAFIKKER bevares.
 function _afvSyncPulje(pool) {
+  if (!_afvSourcesReady()) return false;   // en kilde fejlede/er ikke hentet → rør intet
+  // Sikkerhedsnet: tom pool mens der står grafik i listerne = sandsynligvis ufuldstændig load → rør intet.
+  if (!pool.length && (afviklingPulje.length || (afviklingGrupper || []).some(g => (g.items || []).length))) return false;
   const poolRefs = new Set(pool.map(p => p.ref));
   const before = afviklingPulje.length;
   afviklingPulje = afviklingPulje.filter(it => poolRefs.has(it.ref));   // drop døde refs fra GRAFIKKER
@@ -91,10 +115,18 @@ async function loadAfviklingGrupper() {
       try { const r = rows.find(x => x.key === 'afvikling_pulje_modes'); const o = r && r.value ? JSON.parse(r.value) : {}; if (o && typeof o === 'object' && !Array.isArray(o)) _afvMigModes = o; } catch {}
       try { const r = rows.find(x => x.key === 'afvikling_pulje_hidden'); const a = r && r.value ? JSON.parse(r.value) : []; if (Array.isArray(a)) _afvMigHidden = new Set(a); } catch {}
     }
-  } catch { afviklingGrupper = []; afviklingPulje = []; _afvNeedMigrate = false; }
+    _afvSrcOk.grupper = true;
+  } catch (e) {
+    // Behold det vi har i hukommelsen; gem er blokeret (_afvCanSave) så en tom fallback aldrig skrives til DB.
+    _afvSrcOk.grupper = false; _afvNeedMigrate = false;
+    console.error('[loadAfviklingGrupper] kunne ikke hente afviklingen:', e);
+    toast('Kunne ikke hente afviklingen — genindlæs siden.', 'err');
+    return;
+  }
   if (!afviklingGrupper.length) afviklingGrupper = [{ id: crypto.randomUUID(), navn: 'Afvikling', sort_order: 0, items: [] }];
 }
 async function saveAfviklingGrupper(okMsg) {
+  if (!_afvCanSave()) return;
   try {
     await sbUpsert('settings', { projekt_id: aktivProjektId, key: 'afvikling_grupper', value: JSON.stringify(afviklingGrupper) });
     if (okMsg) toast(okMsg, 'ok');
@@ -566,7 +598,7 @@ function renderGrafik() {
           <span class="grafik-block-sub"${breakingScoreLive ? ' style="color:#ff4444"' : ''}>${breakingScoreLive ? '● LIVE' : 'IKKE AKTIV'}</span>
         </div>
         <div class="grafik-block-actions">
-          <button class="grafik-btn-prw${grafiktActivePrvKey === 'score-breaking' ? ' active' : ''}" data-prv-type="simple" data-prv-key="score_breaking_trigger" data-prv-id="score-breaking" data-prv-url="${origin}/Graphics/Stillings_boks/Stillings_boks_BREAKING_uden_live_boks_supabase.html?p=${pid}&preview=1">PRW</button>
+          <button class="grafik-btn-prw${grafiktActivePrvKey === 'score-breaking' ? ' active' : ''}" data-prv-type="simple" data-prv-key="score_breaking_trigger" data-prv-id="score-breaking" data-prv-url="${origin}/Graphics/Stillings_boks/Stillings_boks_BREAKING_MASTER.html?p=${pid}&preview=1">PRW</button>
           <button class="grafik-btn-out" data-trig="score_breaking_trigger" data-val="out"${!breakingScoreLive ? ' disabled' : ''}>&lt; OUT</button>
           <button class="grafik-btn-in${breakingScoreLive ? ' on' : ''}" data-trig="score_breaking_trigger" data-val="in">&gt; IN</button>
         </div>
@@ -1803,7 +1835,7 @@ function _tvAfviklingHTML() {
 
   // Migration (1. render efter opgradering): byg GRAFIKKER-listen fra den gamle afledte palet, så udseendet
   // bevares (refs der IKKE var trukket-skjult), og persistér. Pool er klar her.
-  if (_afvNeedMigrate) {
+  if (_afvNeedMigrate && _afvSourcesReady()) {   // migrér kun fra en KOMPLET pool (ellers gemmes en tom liste)
     _afvNeedMigrate = false;
     const asg = new Set(); grupper.forEach(g => (g.items || []).forEach(it => asg.add(it.ref)));
     afviklingPulje = pool.filter(p => !(_afvMigHidden.has(p.ref) && asg.has(p.ref)))
@@ -2376,9 +2408,12 @@ function _wireTvAfvikling(container) {
       if (e.key === 'ArrowDown') { e.preventDefault(); _afvNav(1, e.shiftKey); return; }
       if (e.key === 'ArrowUp')   { e.preventDefault(); _afvNav(-1, e.shiftKey); return; }
       // Afvikling: Numpad + = valgte grafik on air, Numpad − = af (også alm. +/−).
-      if (e.code === 'NumpadAdd'      || e.key === '+') { e.preventDefault(); _afvFireSel(false); return; }
-      if (e.code === 'NumpadSubtract' || e.key === '-') { e.preventDefault(); _afvFireSel(true);  return; }
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+      // Holdes Ctrl/⌘/Alt, er +/− browser-zoom (Ctrl ±) — det må ALDRIG sætte grafik on/off air.
+      const _mod = e.ctrlKey || e.metaKey || e.altKey;
+      if (!_mod && (e.code === 'NumpadAdd'      || e.key === '+')) { e.preventDefault(); _afvFireSel(false); return; }
+      if (!_mod && (e.code === 'NumpadSubtract' || e.key === '-')) { e.preventDefault(); _afvFireSel(true);  return; }
+      // Kun Delete fjerner (Backspace trykkes for let ved et uheld og fjernede poster uden bekræftelse).
+      if (e.key === 'Delete') {
         // Fjern markeret: GRAFIKKER-dublet eller gruppe-item (_afvRemoveSel beskytter eneste forekomst).
         if (_afvSel && _afvSel.itemId) { e.preventDefault(); _afvRemoveSel(); }
         return;
