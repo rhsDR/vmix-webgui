@@ -297,7 +297,12 @@ async function _tvAddSub() {
   try { await sbPost('subs', { projekt_id: aktivProjektId, slot: slot, navn: '', titel: '', side: 'venstre' }); }
   catch (e) { console.error('[_tvAddSub] INSERT fejl for plads ' + slot + ':', e); toast('Kunne ikke oprette sub ' + slot + ' i databasen', 'err'); }
   await saveTvSubs();
+  // Åbn den nye sub direkte i edit-mode (frisk buffer) + fokus i navnefeltet, så man kan skrive med det samme.
+  const _ns = subs[slot - 1];
+  if (_ns) { _ns.buf = { navn: _ns.navn || '', titel: _ns.titel || '', side: _ns.side || 'venstre' }; _ns.editMode = true; }
   renderSubsTV();
+  const _inp = document.getElementById('sn-' + (slot - 1));
+  if (_inp) _inp.focus();
 }
 async function _tvDeleteSub(slot) {
   const s = subs[slot - 1];

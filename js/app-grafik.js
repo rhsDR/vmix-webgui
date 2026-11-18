@@ -1699,7 +1699,7 @@ function renderGrafikTV(container) {
 function _afvTypeLabel(t) {
   return { sub: 'Sub', info: 'Info', credit: 'Credit', ticker: 'Ticker', custom: 'Grafik' }[t] || 'Grafik';
 }
-const _AFV_CAT_COLOR = { sub: '#4a9eff', info: '#00b894', ticker: '#aa66ff', credit: '#ffcc44', custom: '#888888' };
+const _AFV_CAT_COLOR = { sub: '#4a9eff', info: '#00b894', ticker: '#aa66ff', credit: '#a855f7', custom: '#888888' };
 
 // Puljen af UDFYLDTE grafik-enheder i projektet (til Afvikling-rundownen): hver udfyldt sub-plads, hver
 // udfyldt info-boks, og hver credit/ticker/custom-grafik. ref = trig+':'+slot (unik id i gruppe-items).
@@ -1708,12 +1708,13 @@ function _tvAfviklingPool() {
   const _pid = (typeof aktivProjektId !== 'undefined' ? aktivProjektId : '');
   (customGrafik || []).filter(g => g.overlay_mode === 'embed').forEach(g => {
     const cat = ['sub', 'info', 'ticker', 'credit', 'custom'].includes(g.kategori) ? g.kategori : 'custom';
-    const color = g.color || _AFV_CAT_COLOR[cat] || '#888888';
+    // Credit tvinges lilla (uanset grafikkens egen g.color), så den ikke ligner info's teal i afviklingsblokke.
+    const color = (cat === 'credit') ? '#a855f7' : (g.color || _AFV_CAT_COLOR[cat] || '#888888');
     const prv = (g.file_url || '') + '?p=' + encodeURIComponent(_pid) + '&preview=1';   // preview-URL (dobbeltklik → PRW)
     if (cat === 'sub') {
       (typeof subs !== 'undefined' ? subs : []).forEach((s, i) => {
         if ((s.navn || '').trim() || (s.titel || '').trim())
-          pool.push({ ref: g.trigger_key + ':' + (i + 1), trig: g.trigger_key, slot: String(i + 1), type: 'sub', label: s.navn || ('Sub ' + (i + 1)), color, prv });
+          pool.push({ ref: g.trigger_key + ':' + (i + 1), trig: g.trigger_key, slot: String(i + 1), type: 'sub', label: s.navn || ('Sub ' + (i + 1)), titel: s.titel || '', color, prv });
       });
     } else if (cat === 'info') {
       (typeof infoBokse !== 'undefined' ? infoBokse : []).forEach((b, i) => {
@@ -1721,7 +1722,7 @@ function _tvAfviklingPool() {
         if (fyldt)
           // ref = STABIL boks.id (så gruppe-items ikke skrider når info-bokse slettes/omrokeres);
           // slot = boksens NUVÆRENDE position (til fyring).
-          pool.push({ ref: g.trigger_key + ':' + (b.id || (i + 1)), trig: g.trigger_key, slot: String(i + 1), type: 'info', label: b.overskrift || ('Info ' + (i + 1)), color, prv });
+          pool.push({ ref: g.trigger_key + ':' + (b.id || (i + 1)), trig: g.trigger_key, slot: String(i + 1), type: 'info', label: b.overskrift || ('Info ' + (i + 1)), indhold: (b.indhold || '').trim() || ((Array.isArray(b.sider) ? b.sider : []).map(x => (x || '').trim()).find(Boolean) || ''), color, prv });
       });
     } else {
       pool.push({ ref: g.trigger_key + ':', trig: g.trigger_key, slot: '', type: cat, label: g.label, color, prv });
@@ -1824,11 +1825,15 @@ function _tvAfviklingHTML() {
       + `<option value="raw"${mode === 'raw' ? ' selected' : ''}>Rå ${esc(_afvTypeLabel(p.type))}</option>`;
     const exp = _afvExpanded.has(key) ? ' expanded' : '';
     const live = _afvItemLive(p) ? ' afv-live' : '';
+    // Undertekst: sub → titlen; info → første 15 tegn af indholdet; øvrige → type-label (uden pladsnr.).
+    const _subTxt = p.type === 'sub'  ? (p.titel || '')
+                  : p.type === 'info' ? ((p.indhold || '').slice(0, 15) + ((p.indhold || '').length > 15 ? '…' : ''))
+                  : _afvTypeLabel(p.type);
     return `<div class="afv-item${exp}${sel}${live}" data-item-id="${key}" data-ref="${esc(p.ref)}" ${dataAttr} style="--g-color:${p.color}" title="Dobbeltklik for køremåde + preview">
       <span class="afv-drag-handle">⠿</span>
       <div class="grafik-block-info">
         <span class="grafik-block-name">${esc(p.label)}</span>
-        <span class="grafik-block-sub afv-item-sub">${esc(_afvTypeLabel(p.type))}${p.slot ? (' · plads ' + p.slot) : ''}</span>
+        ${_subTxt ? `<span class="grafik-block-sub afv-item-sub">${esc(_subTxt)}</span>` : ''}
       </div>
       <div class="afv-item-ctrls">
         <select class="afv-item-mode" title="Køremåde">${modeOpts}</select>

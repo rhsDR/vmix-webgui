@@ -10,6 +10,10 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     if (btn.dataset.tab === 'grafik') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadAfviklingslister(), loadAfviklingGrupper(), loadInfoBokse(), loadCompanionToken()]).then(() => refreshGrafiktState()); fetchLineupDataForGrafik(); }
     if (btn.dataset.tab === 'grafik-ops') { Promise.all([loadKunstomGrafik(), loadMakroer(), loadAfviklingslister(), loadFontLib(), loadInfoBokse(), loadCompanionToken()]).then(async () => { await refreshGrafiktState(); renderGrafikOps(); renderGraphicsAgent(); }); }
     if (btn.dataset.tab === 'info') refreshInfo();
+    // SUBS (kun TV): gen-render ved faneskift, så subs oprettet mens man var i afvikling vises uden F5.
+    // loadTvSubs er no-op for kampdag (tidlig return) + gate → kampdag urørt.
+    if (btn.dataset.tab === 'subs' && typeof projektType !== 'undefined' && projektType === 'tv')
+      loadTvSubs().then(() => renderSubs());
   });
 });
 
