@@ -1,3 +1,9 @@
 /players
 players/TEST/Test-Spiller-99999.png
 players/index.json
+
+# Kodegennemgang (sikkerhedsfund) — må ALDRIG pushes, Vercel ville servere den offentligt
+review/
+
+# Python-artefakter
+__pycache__/
