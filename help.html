@@ -386,8 +386,8 @@
 
   <h3>Hurtigere første tryk (valgfrit)</h3>
   <p>Første tryk efter en længere pause kan tage lidt længere, fordi serveren skal "vågne". Det undgår du ved at lade en gratis tjeneste (fx <b>cron-job.org</b> eller <b>UptimeRobot</b>) kalde dette link hvert 5. minut:</p>
-  <p><code>https://vmix-control.vercel.app/api/trigger/0?token=&lt;token&gt;&amp;warm=1</code></p>
-  <p>Det holder serveren vågen og <b>fyrer ingen grafik</b>. Brug samme token som i dine Companion-links.</p>
+  <p><code>https://vmix-control.vercel.app/api/trigger/0?warm=1</code></p>
+  <p>Det holder serveren vågen og <b>fyrer ingen grafik</b>. Linket skal <b>ikke</b> have din token på — så ligger den hemmelige token ikke hos en ekstern tjeneste.</p>
   <div class="box warn"><b>POST vs GET:</b> POST er standard og sikrest. GET kan testes direkte i en browser, men da tokenet står i selve URL'en, kan link-preview i chat/mail (Slack/Teams) komme til at <b>fyre</b> en GET-trigger automatisk. Paste derfor aldrig GET-links (med token) i delte kanaler — hold dem i Companion.</div>
 </section>
 
