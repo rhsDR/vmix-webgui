@@ -37,6 +37,15 @@ function _ensureBcChannel(pid) {
   if (_bcChannel) _bcChannel.unsubscribe();
   const _sbRt = window.supabase.createClient(SB_URL, SB_ANON);
   _bcChannel = _sbRt.channel('triggers-' + pid);
+  // "Grafik færdig" fra overlayet (master/secondary): en selvafsluttende grafik (credits/auto-skjul) er kørt af
+  // skærmen → vis den som AF i panelet. KUN panelets visning — intet skrives i DB, så udsendelsen påvirkes ikke.
+  _bcChannel.on('broadcast', { event: 'grafik_done' }, msg => {
+    const p = msg && msg.payload;
+    if (!p || p.projekt_id !== aktivProjektId || !p.key) return;
+    if ((grafiktState[p.key] || 'out') === 'out') return;
+    grafiktState[p.key] = 'out';
+    if (document.getElementById('tab-grafik')?.classList.contains('active')) _debouncedRenderGrafik();
+  });
   _bcChannel.subscribe();
   _bcProjektId = pid;
 }

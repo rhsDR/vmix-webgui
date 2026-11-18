@@ -347,6 +347,9 @@ async function fireMakro(id, slotOverride = '') {
 
 async function refreshGrafiktState() {
   const customKeys = customGrafik.map(g => g.trigger_key);
+  // Selvafsluttende custom-grafik (credits/auto-skjul) står stadig 'in' i DB efter den er færdig. Vis den som af,
+  // medmindre panelet selv ved at den kører lige nu (grafiktState 'in' fra denne session — slukkes af 'grafik_done').
+  const _selfEnd = new Set((customGrafik || []).filter(g => g.kategori === 'credit' || (g.auto_hide_seconds || 0) > 0).map(g => g.trigger_key));
   const kommKeys = KOMM_BOKSE.map(k => k.triggerKey);
   const infoKeys = (infoBokse || []).map(b => 'info_' + b.id);
   const keys = [...OVERLAY_GRAPHICS.map(g => g.triggerKey).filter(Boolean), ...customKeys, ...kommKeys, ...infoKeys, 'lt_slot', 'score_breaking_trigger', 'overlay_lag_order', 'ticker_lag_order', 'lineup_slots', 'grafik_overlay_map', 'info_live'].join(',');
@@ -365,6 +368,8 @@ async function refreshGrafiktState() {
       } else if (r.key === 'info_live') {
         // Delt info-afviklings-state: afspejl hvilken boks.side der kører, så panel-step viser rigtigt trin.
         grafiktState['_info_slot'] = r.value || '';
+      } else if (r.value === 'in' && _selfEnd.has(r.key) && grafiktState[r.key] !== 'in') {
+        grafiktState[r.key] = 'out';
       } else {
         grafiktState[r.key] = r.value;
       }

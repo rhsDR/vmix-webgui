@@ -70,6 +70,9 @@ async function init() {
           refreshInfo();
           // Dynamiske subs: hent de aktive pladser (tv_subs) og gen-render SUBS-fanen.
           loadTvSubs().then(() => renderSubs());
+          // Lyt på trigger-kanalen fra start (ellers først ved panelets første broadcast), så "grafik færdig"
+          // fra overlayet også når frem, når fx credits er startet fra Companion.
+          if (typeof _ensureBcChannel === 'function') _ensureBcChannel(aktivProjektId);
         }
         if (rows[0].type === 'tv') {
           // Skjul KAMPE, STAMDATA, GRAFIK og DASHBOARD — aktiver SUBS som standard
