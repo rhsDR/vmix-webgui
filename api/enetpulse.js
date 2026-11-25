@@ -404,6 +404,7 @@ function normalizeEventDetails(raw, statsRaw, id) {
     awayGoals,
     periods:   getPeriodScores(home, away),
     starttime: copenhagenTime(ev.startdate || ''),
+    startdate: ev.startdate || '',   // fuld dato/tid — DASHBOARD bruger den til at vide, hvornår der skal spørges
     status:    mapStatus(ev),
     league:    ev.tournament_stage_name || ev.tournament_name || '',
     stats:     normalizeStats(statsRaw, homePartFK, awayPartFK),

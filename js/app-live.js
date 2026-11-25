@@ -1,8 +1,41 @@
 // ── LIVE DASHBOARD — funktioner (state i app-state.js) ──────────
+// DASHBOARD spørger Enetpulse hvert minut — men KUN når der er brug for det:
+//  • holder pause, når browserfanen ikke er synlig (henter straks igen, når den bliver synlig);
+//  • holder pause, når ingen kamp er i gang: alle færdige/udsat, eller næste kickoff er > 15 min væk
+//    (genoptager selv 15 min før kickoff);
+//  • fejlede sidste hentning (fx Enetpulse nede), spørges kun hvert 5. minut.
+// Ved klik på DASHBOARD hentes altid én gang med det samme.
+let _liveSidsteKampe = null;   // kampe fra sidste vellykkede hentning (null = ukendt/fejl)
+let _liveTick = 0;
+
+function _liveBehoverOpdatering() {
+  if (!_liveSidsteKampe || !_liveSidsteKampe.length) return (++_liveTick % 5) === 0;   // ukendt/fejl → hvert 5. min
+  const nu = Date.now();
+  return _liveSidsteKampe.some(m => {
+    const s = m.status && m.status.short;
+    if (['1H', '2H', 'HT', 'ET', 'P', 'LIVE'].includes(s)) return true;   // i gang
+    if (s === 'FT' || s === 'PST') return false;                          // færdig / udsat
+    const t = m.startdate ? Date.parse(String(m.startdate).replace(' ', 'T')) : NaN;
+    if (isNaN(t)) return true;                                            // ukendt start → spørg (sikkert)
+    return t - nu < 15 * 60000;                                           // starter inden for 15 min (eller burde være i gang)
+  });
+}
+
+function _livePollTick() {
+  if (document.hidden) return;
+  if (!_liveBehoverOpdatering()) return;
+  fetchLiveMatches();
+}
+
+// Bliver browserfanen synlig igen, mens DASHBOARD er åben: hent straks (hvis der er brug for det).
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && liveTimer && _liveBehoverOpdatering()) fetchLiveMatches();
+});
+
 function startLivePolling() {
   clearInterval(liveTimer);   // kaldes ved hvert klik på DASHBOARD — uden dette stables intervaller (N× Enetpulse-kald)
   fetchLiveMatches();
-  liveTimer = setInterval(fetchLiveMatches, 60000);
+  liveTimer = setInterval(_livePollTick, 60000);
 }
 
 function stopLivePolling() {
@@ -25,6 +58,9 @@ async function fetchLiveMatches() {
 
   try {
     const enetData = await apiFetch('/api/enetpulse?ids=' + enetIds.join(',')).then(r => r.json()).catch(() => ({ matches: [] }));
+    // Husk kampenes status til pause-logikken (fejl/ingen data → null = "ukendt").
+    const _ok = (enetData.matches || []).filter(m => m && m.id && !m.error);
+    _liveSidsteKampe = _ok.length ? _ok : null;
 
     const enetMap = {};
     (enetData.matches || []).forEach(m => { if (m.id) enetMap[String(m.id)] = m; });
