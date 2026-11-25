@@ -41,6 +41,24 @@ async function saveFixturesCache(date, events) {
   } catch { /* ikke kritisk */ }
 }
 
+// Hent Enetpulse' dagsprogram og kast en LÆSBAR fejl, hvis Enetpulse afviser eller ikke sender events
+// (fx udløbet adgang). Før blev et fejlsvar behandlet som "ingen kampe", så årsagen aldrig blev synlig.
+async function fetchDaily(date, username, token) {
+  const url = `${EAPI_BASE}/event/daily/?sportFK=1&date=${encodeURIComponent(date)}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
+  const r = await fetch(url);
+  const text = await r.text();
+  let json = null;
+  try { json = JSON.parse(text); } catch {}
+  const enetErr = json && (json.error_message || json.message || json.error);
+  if (!r.ok || !json || enetErr) {
+    const why = enetErr || (json ? 'uventet svar' : 'ikke-JSON svar') ;
+    const e = new Error('Enetpulse svarede ' + r.status + ': ' + String(why).slice(0, 200));
+    e.enet = { status: r.status, body: text.slice(0, 300) };
+    throw e;
+  }
+  return json;
+}
+
 function participantName(p) {
   return p.participant?.name || p.name || p.participant_name || p.shortName || '';
 }
@@ -428,8 +446,9 @@ export default async function handler(req, res) {
   // ── DEBUG: rå enetpulse JSON for første event ─────────────────
   if (date && debug === '1') {
     try {
-      const url = `${EAPI_BASE}/event/daily/?sportFK=1&date=${encodeURIComponent(date)}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
-      const raw = await fetch(url).then(r => r.json());
+      let raw;
+      try { raw = await fetchDaily(date, username, token); }
+      catch (e) { return res.status(200).json({ total_events: 0, tournament_fks: {}, error: e.message, enet: e.enet || null }); }
       const evList = Object.values(raw?.events || {});
       const sample = evList[0] || null;
       const tournamentMap = {};
@@ -443,6 +462,7 @@ export default async function handler(req, res) {
       });
       return res.status(200).json({
         total_events: evList.length,
+        raw_keys: raw ? Object.keys(raw).slice(0, 10) : [],
         tournament_fks: tournamentMap,
         all_matches: allMatches,
         sample_event_keys: sample ? Object.keys(sample) : [],
@@ -465,8 +485,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ fixtures: fresh, fromCache: true });
       }
 
-      const url = `${EAPI_BASE}/event/daily/?sportFK=1&date=${encodeURIComponent(date)}&username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}`;
-      const raw  = await fetch(url).then(r => r.json());
+      const raw  = await fetchDaily(date, username, token);   // kaster læsbar fejl ved afvist/udløbet adgang
       const fixtures = normalizeFixtures(raw);
       await saveFixturesCache(date, fixtures);
       return res.status(200).json({ fixtures, fromCache: false });
